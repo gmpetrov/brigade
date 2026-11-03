@@ -13,9 +13,11 @@
 // installs runs (a running bridge starts the CLI again from its own folder). Whenever
 // the shared copy is not ready (its install failed, say), a link is taken away and the
 // adapter installs into the teammate's home, as before. Older shared copies go a day
-// after a newer one replaced them, once nothing runs from them.
+// after a newer one replaced them, once no teammate's link points to them and no bridge
+// runs from them: a bridge started through a link keeps the copy it started from when the
+// link moves on, so the runner keeps, beside that copy, which processes still hold it.
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHarnessSandboxTemplate } from '@ai-sdk/harness/agent'
@@ -40,11 +42,16 @@ export const bridgeLink = (home: string, harness: BridgeHarness) =>
  */
 const INSTALL_DIR = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
 const ROOT = process.env.BRIGADE_BRIDGES_DIR ?? join(INSTALL_DIR, 'bridges')
-const ENABLED =
+/** A cloud computer's installed runner: where teammates' bootstrap folders may be links. */
+const ON_CLOUD =
   CLOUD &&
-  process.env.BRIGADE_SHARED_BRIDGES !== '0' &&
   (Boolean(process.env.BRIGADE_BRIDGES_DIR) ||
     existsSync(join(INSTALL_DIR, 'bin', 'brigade-runner')))
+/**
+ * Shared bridges in use. BRIGADE_SHARED_BRIDGES=0 turns them off: the teammates' links are
+ * then taken away (useSharedBridge), and the adapters install in their homes as before.
+ */
+const enabled = () => ON_CLOUD && process.env.BRIGADE_SHARED_BRIDGES !== '0'
 
 /** An older shared copy stays this long after a newer one replaced it. */
 const SUPERSEDED_KEEP_MS = 24 * 60 * 60_000
@@ -54,30 +61,53 @@ const INSTALL_TIMEOUT_MS = 15 * 60_000
 export const sharedName = (harness: BridgeHarness, identity: string) => `${harness}-${identity}`
 
 /**
+ * In the scripts below, `holders` prints the pids of the teammate's processes that name a
+ * file in its bootstrap folder ($L: its bridges) or run the adapter's install (its store).
+ * Both are searched for from the environment, and the script's own shell left out, so that
+ * its own words never match.
+ */
+const HOLDERS = `
+B="--store-dir .pnpm"; B="$B-store"
+holders() {
+  ps -o pid=,args= -u "$(id -u)" | A="$L/" B="$B" awk -v me="$$" \\
+    '$1 != me && (index($0, ENVIRON["A"]) || index($0, ENVIRON["B"])) { printf "%s ", $1 }'
+}
+`
+
+/**
  * The shell, run as the teammate, that points its bootstrap folder at the shared copy.
  * $1 the folder, $2 the shared copy, $3 "convert" to replace a folder of its own. Exit 0:
  * linked; 3: its own folder stays (not asked to convert, or a bridge or an install of its
- * own runs). A link is swapped in one rename: a bridge started from the old target keeps it.
+ * own runs). A link to another copy is swapped in one rename: the bridges started through
+ * it keep running from that copy, and are printed as "held <copy> <pid>…" (recordHolders).
  */
 export const LINK_SCRIPT = `
 L=$1; T=$2
-[ "$(readlink -- "$L" 2>/dev/null)" = "$T" ] && exit 0
-if [ -e "$L" ] && [ ! -L "$L" ]; then
+${HOLDERS}
+O=$(readlink -- "$L" 2>/dev/null)
+[ "$O" = "$T" ] && exit 0
+if [ -n "$O" ]; then
+  H=$(holders); [ -z "$H" ] || echo "held $O $H"
+elif [ -e "$L" ]; then
   [ "$3" = convert ] || exit 3
-  # Its bridges name a file in the folder, and the adapter installs with this store. Both
-  # searched for from the environment, and this shell left out: its own words never match.
-  B="--store-dir .pnpm"; B="$B-store"
-  ps -o pid=,args= -u "$(id -u)" | A="$L/" B="$B" awk -v me="$$" \\
-    '$1 != me && (index($0, ENVIRON["A"]) || index($0, ENVIRON["B"])) { found = 1 } END { exit !found }' &&
-    exit 3
+  [ -z "$(holders)" ] || exit 3
   mv -T -- "$L" "$L.old-$$" || exit 3
 fi
 mkdir -p -- "$(dirname -- "$L")"
 ln -sfn -- "$T" "$L.link-$$" && mv -Tf -- "$L.link-$$" "$L" || exit 1
 rm -rf -- "$L.old-$$"
 `
-/** As the teammate: take a link away, so that the adapter installs into its home again. */
-export const UNLINK_SCRIPT = `[ -L "$1" ] && rm -f -- "$1"; exit 0`
+/**
+ * As the teammate: take a link away, so that the adapter installs into its home again. The
+ * bridges started through it are printed as with LINK_SCRIPT. A folder of its own stays.
+ */
+export const UNLINK_SCRIPT = `
+L=$1
+${HOLDERS}
+O=$(readlink -- "$L" 2>/dev/null) || exit 0
+H=$(holders); [ -z "$H" ] || echo "held $O $H"
+rm -f -- "$L"
+`
 
 type Shared = { identity: string; dir: string }
 
@@ -104,7 +134,7 @@ const RETRY_AFTER_MS = 10 * 60_000
  * is none (not a cloud computer, or the install failed: tried again RETRY_AFTER_MS later).
  */
 export function sharedBridge(harness: BridgeHarness, now = Date.now()): Promise<Shared | null> {
-  if (!ENABLED) return Promise.resolve(null)
+  if (!enabled()) return Promise.resolve(null)
   let install = installs.get(harness)
   if (!install) {
     if (now - (failed.get(harness) ?? -Infinity) < RETRY_AFTER_MS) return Promise.resolve(null)
@@ -165,33 +195,56 @@ function serially<T>(key: string, work: () => Promise<T>): Promise<T> {
   return next
 }
 
+/** A script run as the teammate (`sh -c script sh args…`): what it printed. Rejects on failure. */
+export type Exec = (script: string, args: string[]) => Promise<string>
+
+const asTeammateSh =
+  (runAs: string): Exec =>
+  (script, args) =>
+    run('sh', ['-c', script, 'sh', ...args], { runAs }).then(String)
+
+/**
+ * Point a teammate's bootstrap folder at a shared copy (LINK_SCRIPT), or take its link away
+ * when there is none (UNLINK_SCRIPT), and keep which processes still hold the copy it left.
+ */
+export async function linkTeammate(
+  folder: string,
+  shared: string | null,
+  convert: boolean,
+  exec: Exec,
+  root = ROOT,
+): Promise<'linked' | 'own'> {
+  try {
+    const out = shared
+      ? await exec(LINK_SCRIPT, [folder, shared, convert ? 'convert' : ''])
+      : await exec(UNLINK_SCRIPT, [folder])
+    await recordHolders(out, root)
+    return shared ? 'linked' : 'own'
+  } catch (error) {
+    // It may have said which processes hold the copy before it failed.
+    await recordHolders(String((error as { stdout?: unknown }).stdout ?? ''), root)
+    throw error
+  }
+}
+
 /**
  * Before a teammate's turn: its bootstrap folder made a link to the shared bridge (its own
- * copy replaced when nothing of it runs, with `convert`), or, with no shared copy, a link
- * taken away so that the adapter installs as before. Never throws: the turn goes on either way.
+ * copy replaced when nothing of it runs, with `convert`), or, with no shared copy (shared
+ * bridges off, or its install failed), a link taken away so that the adapter installs as
+ * before. Never throws: the turn goes on either way. `home` and `exec`: for tests.
  */
 export function useSharedBridge(
   runAs: string,
   harness: BridgeHarness,
-  options: { convert?: boolean } = { convert: true },
+  options: { convert?: boolean; home?: string; exec?: Exec } = {},
 ): Promise<'linked' | 'own'> {
-  if (!ENABLED) return Promise.resolve('own')
-  const link = bridgeLink(teammateHome(runAs), harness)
+  if (!ON_CLOUD) return Promise.resolve('own')
+  const folder = bridgeLink(options.home ?? teammateHome(runAs), harness)
+  const exec = options.exec ?? asTeammateSh(runAs)
   return serially(`${runAs}:${harness}`, async () => {
-    const shared = await sharedBridge(harness)
+    const shared = enabled() ? await sharedBridge(harness) : null
     try {
-      if (!shared) {
-        await run('sh', ['-c', UNLINK_SCRIPT, 'sh', link], { runAs })
-        return 'own' as const
-      }
-      await run(
-        'sh',
-        ['-c', LINK_SCRIPT, 'sh', link, shared.dir, options.convert ? 'convert' : ''],
-        {
-          runAs,
-        },
-      )
-      return 'linked' as const
+      return await linkTeammate(folder, shared?.dir ?? null, options.convert ?? true, exec)
     } catch (error) {
       const code = (error as { code?: number }).code
       if (code !== 3) console.warn(`could not link ${runAs}'s ${harness} bridge: ${String(error)}`)
@@ -209,36 +262,118 @@ async function hasOwn(runAs: string, harness: BridgeHarness) {
   )
 }
 
-/**
- * Now and then on a cloud computer: the teammates' own copies replaced by links (those that
- * keep theirs for now are tried again next time), then the older shared copies removed.
- */
-export async function tidyBridges(teammates: string[], now = Date.now()) {
-  if (!ENABLED) return
-  for (const harness of BRIDGE_HARNESSES)
-    for (const runAs of teammates)
-      if (await hasOwn(runAs, harness)) await useSharedBridge(runAs, harness, { convert: true })
-  await removeSuperseded(now)
+/** Where the teammates' bootstrap folders point, as each reads its own; null if one could not. */
+async function linkTargets(teammates: string[]) {
+  const targets: string[] = []
+  for (const runAs of teammates) {
+    const out = await run(
+      'sh',
+      [
+        '-c',
+        'D=$1; shift; for H; do readlink -- "$D/$H" || true; done',
+        'sh',
+        join(teammateHome(runAs), '.ai-sdk-harness', '.harness-bootstrap'),
+        ...BRIDGE_HARNESSES,
+      ],
+      { runAs },
+    ).catch(() => null)
+    if (!out) return null
+    targets.push(...out.toString().split('\n').filter(Boolean))
+  }
+  return targets
 }
 
 /**
- * The names under ROOT of shared copies no current recipe names, with the time each was
- * first seen superseded; those superseded for SUPERSEDED_KEEP_MS that no process runs
- * from go. A teammate's link to one then points nowhere until its next turn links it again.
+ * Now and then on a cloud computer: the teammates' own copies replaced by links (those that
+ * keep theirs for now are tried again next time), or, shared bridges off, their links taken
+ * away; then the older shared copies removed (removeSuperseded).
  */
-async function removeSuperseded(now: number) {
+export async function tidyBridges(teammates: string[], now = Date.now()) {
+  if (!ON_CLOUD) return
+  for (const harness of BRIDGE_HARNESSES)
+    for (const runAs of teammates)
+      if (!enabled() || (await hasOwn(runAs, harness))) await useSharedBridge(runAs, harness)
+  if (!enabled()) return
   const current = new Set<string>()
   for (const harness of BRIDGE_HARNESSES) {
     const template = await identityOf(harness).catch(() => null)
-    if (template) current.add(sharedName(harness, template.identity))
+    if (!template) return
+    current.add(sharedName(harness, template.identity))
   }
-  const names = await readdir(ROOT).catch(() => [] as string[])
-  const old = staleCopies(names, current)
-  if (old.length === 0) return
-  const args = (await run('ps', ['-A', '-o', 'args=']).catch(() => Buffer.alloc(0))).toString()
-  for (const name of old) {
-    const home = join(ROOT, name)
-    const mark = join(home, '.superseded')
+  // Unknown where a teammate's folder points: nothing goes.
+  const linked = await linkTargets(teammates)
+  if (!linked) return
+  const processes = (await run('ps', ['-A', '-o', 'args=']).catch(() => null))?.toString()
+  if (processes === undefined) return
+  await removeSuperseded({ root: ROOT, current, linked, processes, now })
+}
+
+/** A process, by its pid and start time (/proc/<pid>/stat), so that a reused pid is not it. */
+type Holder = { pid: number; start: string }
+
+/** When a process started, in clock ticks since boot; null when it is gone. */
+async function startOf(pid: number) {
+  const stat = await readFile(`/proc/${pid}/stat`, 'utf8').catch(() => null)
+  // Its name, in parentheses, may hold spaces: the fields after it, the 22nd counting from 1.
+  return stat?.slice(stat.lastIndexOf(')') + 2).split(' ')[19] ?? null
+}
+
+/** The shared copy (its folder under root) a path is in, if any. */
+function copyOf(path: string, root: string) {
+  if (!path.startsWith(`${root}/`)) return null
+  const name = path.slice(root.length + 1).split('/')[0]
+  return name ? join(root, name) : null
+}
+
+const holdersFile = (copy: string) => join(copy, '.holders')
+
+async function readHolders(copy: string): Promise<Holder[]> {
+  const text = await readFile(holdersFile(copy), 'utf8').catch(() => '[]')
+  try {
+    return JSON.parse(text) as Holder[]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * From what LINK_SCRIPT or UNLINK_SCRIPT printed ("held <copy> <pid>…"): beside each copy a
+ * link left, the processes still running from it, which keep it (removeSuperseded).
+ */
+export async function recordHolders(out: string, root = ROOT) {
+  for (const line of out.split('\n')) {
+    const match = /^held (\S+) ([\d ]+)$/.exec(line.trim())
+    const copy = match && copyOf(match[1]!, root)
+    if (!copy || !existsSync(copy)) continue
+    const holders = await readHolders(copy)
+    for (const pid of match[2]!.trim().split(/\s+/).map(Number)) {
+      const start = await startOf(pid)
+      if (start && !holders.some((h) => h.pid === pid && h.start === start))
+        holders.push({ pid, start })
+    }
+    await writeFile(holdersFile(copy), JSON.stringify(holders)).catch((error: unknown) =>
+      console.warn(`could not note what runs from ${copy}: ${String(error)}`),
+    )
+  }
+}
+
+/**
+ * Remove the shared copies under root that no current recipe names (current), once they have
+ * been superseded for SUPERSEDED_KEEP_MS, while no teammate's folder points to them (linked),
+ * no process names them (processes) and none of the processes a link left on them runs.
+ */
+export async function removeSuperseded(options: {
+  root: string
+  current: Set<string>
+  linked: string[]
+  processes: string
+  now: number
+}) {
+  const { root, current, linked, processes, now } = options
+  const names = await readdir(root).catch(() => [] as string[])
+  for (const name of staleCopies(names, current)) {
+    const copy = join(root, name)
+    const mark = join(copy, '.superseded')
     const since = await stat(mark).then(
       (s) => s.mtimeMs,
       async () => {
@@ -247,10 +382,15 @@ async function removeSuperseded(now: number) {
       },
     )
     if (now - since < SUPERSEDED_KEEP_MS) continue
-    if (args.includes(home)) continue
-    await rm(home, { recursive: true, force: true }).then(
+    if (processes.includes(copy)) continue
+    if (linked.some((target) => copyOf(target, root) === copy)) continue
+    let held = false
+    for (const holder of await readHolders(copy))
+      if ((await startOf(holder.pid)) === holder.start) held = true
+    if (held) continue
+    await rm(copy, { recursive: true, force: true }).then(
       () => console.log(`removed the shared bridge ${name}, replaced by a newer one`),
-      (error: unknown) => console.warn(`could not remove ${home}: ${String(error)}`),
+      (error: unknown) => console.warn(`could not remove ${copy}: ${String(error)}`),
     )
   }
 }

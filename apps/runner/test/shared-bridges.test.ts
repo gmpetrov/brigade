@@ -1,18 +1,30 @@
 import assert from 'node:assert/strict'
-import { spawn, spawnSync } from 'node:child_process'
+import { execFile, spawn, spawnSync } from 'node:child_process'
 import { existsSync, lstatSync, readlinkSync } from 'node:fs'
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
 // The runner's pnpm shim, which the harness's environment writes, somewhere of the test's own.
 process.env.BRIGADE_SHIM_DIR = await mkdtemp(join(tmpdir(), 'shared-bridges-shims-'))
+// As on a cloud computer, with shared copies under a folder of the test's own. Nothing here
+// installs a real bridge: those tests that turn sharing on call the scripts themselves.
+process.env.BRIGADE_CLOUD = '1'
+process.env.BRIGADE_BRIDGES_DIR = await mkdtemp(join(tmpdir(), 'shared-bridges-root-'))
 const { createHarnessSandboxTemplate } = await import('@ai-sdk/harness/agent')
 const { harnessEnv } = await import('../src/harness/env.js')
 const { createLocalSandboxSession } = await import('../src/harness/local-sandbox.js')
-const { bridgeLink, installInto, LINK_SCRIPT, staleCopies, UNLINK_SCRIPT } =
-  await import('../src/shared-bridges.js')
+const {
+  bridgeLink,
+  installInto,
+  LINK_SCRIPT,
+  linkTeammate,
+  removeSuperseded,
+  staleCopies,
+  UNLINK_SCRIPT,
+  useSharedBridge,
+} = await import('../src/shared-bridges.js')
 type Adapter = import('../src/shared-bridges.js').Adapter
 
 // The scripts as the runner runs them as a teammate, here as this user.
@@ -191,4 +203,101 @@ test("a link to a shared copy of another recipe would fail the turn: it is the i
   const home = join(root, 'bt-ada')
   assert.equal(link(bridgeLink(home, 'claude-code'), stale).status, 0)
   await assert.rejects(prepareAs(home))
+})
+
+/** The scripts as the runner runs them as a teammate (Exec), here as this user. */
+const exec = (script: string, args: string[]) =>
+  new Promise<string>((resolve, reject) =>
+    execFile('sh', ['-c', script, 'sh', ...args], (error, stdout) =>
+      error ? reject(Object.assign(error, { stdout })) : resolve(stdout),
+    ),
+  )
+
+/** A process whose command line names a file in the folder, as a bridge started through it. */
+async function bridgeFrom(folder: string, t: { after: (fn: () => void) => void }) {
+  const child = spawn('sh', ['-c', 'sleep 60', `${folder}/bridge.mjs`], { stdio: 'ignore' })
+  t.after(() => void child.kill())
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return {
+    pid: child.pid!,
+    stop: async () => {
+      child.kill()
+      await new Promise((resolve) => child.once('exit', resolve))
+    },
+  }
+}
+
+test('moving a link on says which of its bridges still run from the copy it left', async (t) => {
+  const { root, folder, shared } = await setup(t)
+  const older = join(root, 'bridges', 'claude-code-99999999', 'claude-code')
+  await mkdir(older, { recursive: true })
+  await mkdir(join(folder, '..'), { recursive: true })
+  await symlink(older, folder)
+  const bridge = await bridgeFrom(folder, t)
+  const moved = link(folder, shared, false)
+  assert.equal(moved.status, 0)
+  assert.equal(moved.stdout.trim(), `held ${older} ${bridge.pid}`)
+  assert.equal(readlinkSync(folder), shared)
+})
+
+test("an older shared copy stays while a bridge started through a teammate's link runs from it", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'shared-bridges-old-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const older = join(root, 'claude-code-99999999')
+  const newer = join(root, 'claude-code-0123abcd')
+  await mkdir(bridgeLink(older, 'claude-code'), { recursive: true })
+  await mkdir(bridgeLink(newer, 'claude-code'), { recursive: true })
+  const folder = bridgeLink(join(root, 'bt-ada'), 'claude-code')
+  await mkdir(join(folder, '..'), { recursive: true })
+  await symlink(bridgeLink(older, 'claude-code'), folder)
+  // Started through the link: its command line names the link, never the copy.
+  const bridge = await bridgeFrom(folder, t)
+  // The next turn moves the link on to the newer copy.
+  assert.equal(
+    await linkTeammate(folder, bridgeLink(newer, 'claude-code'), true, exec, root),
+    'linked',
+  )
+  // Superseded two days ago.
+  await writeFile(join(older, '.superseded'), '')
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60_000)
+  await utimes(join(older, '.superseded'), twoDaysAgo, twoDaysAgo)
+  const tidy = (linked: string[], processes = '') =>
+    removeSuperseded({
+      root,
+      current: new Set(['claude-code-0123abcd']),
+      linked,
+      processes,
+      now: Date.now(),
+    })
+  await tidy([bridgeLink(newer, 'claude-code')])
+  assert.ok(existsSync(older), 'kept while the bridge runs')
+  await bridge.stop()
+  // Another teammate's link to it, or a process naming it, keeps it too.
+  await tidy([bridgeLink(older, 'claude-code')])
+  assert.ok(existsSync(older))
+  await tidy([], `/usr/bin/claude-x ${older}/.ai-sdk-harness/x`)
+  assert.ok(existsSync(older))
+  await tidy([bridgeLink(newer, 'claude-code')])
+  assert.ok(!existsSync(older), 'gone once nothing holds it')
+  assert.ok(existsSync(newer))
+})
+
+test("shared bridges turned off: a teammate's link is taken away, and its turn installs in its home", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'shared-bridges-off-'))
+  t.after(async () => {
+    delete process.env.BRIGADE_SHARED_BRIDGES
+    spawnSync('chmod', ['-R', 'u+w', root])
+    await rm(root, { recursive: true, force: true })
+  })
+  // Linked while they were on, to a copy that has no marker for this recipe, read-only.
+  const copy = bridgeLink(join(root, 'bridges', 'claude-code-99999999'), 'claude-code')
+  await mkdir(copy, { recursive: true })
+  spawnSync('chmod', ['-R', 'a-w', join(root, 'bridges')])
+  const home = join(root, 'bt-ada')
+  assert.equal(link(bridgeLink(home, 'claude-code'), copy).status, 0)
+  process.env.BRIGADE_SHARED_BRIDGES = '0'
+  assert.equal(await useSharedBridge('bt-ada', 'claude-code', { home, exec }), 'own')
+  assert.ok(!existsSync(bridgeLink(home, 'claude-code')))
+  await prepareAs(home)
+  assert.ok(lstatSync(bridgeLink(home, 'claude-code')).isDirectory())
 })

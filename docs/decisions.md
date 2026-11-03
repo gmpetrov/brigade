@@ -68,8 +68,11 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   `/opt/brigade/bridges/<harness>-<identity>` (readable by every teammate, writable by none), and each teammate's
   bootstrap folder becomes a link to it (`apps/runner/src/shared-bridges.ts`): 600 to 900 MB per teammate were copies
   of the same files, plus the versions each update left. A teammate's own copy is replaced only while none of its
-  bridges or installs runs; without a shared copy (its install failed), the adapter installs in the home as before.
-  An older shared copy goes a day after a newer one replaced it, once nothing runs from it.
+  bridges or installs runs. Without a shared copy (its install failed, or `BRIGADE_SHARED_BRIDGES=0`), the link is
+  taken away and the adapter installs in the home as before. An older shared copy goes a day after a newer one
+  replaced it, once no teammate's folder points to it and no process runs from it: a bridge started through a link
+  keeps the copy it started from when the link moves on, so the runner notes those processes beside the copy
+  (`.holders`, by pid and start time).
 - **Teammates find the runner's Node first** (`asTeammate` in `apps/runner/src/thread-net.ts`). sudo gives what a
   teammate runs the computer's `secure_path`, whose `node` is the system's (v20 on Ubuntu 24.04), too old for the
   workspace's projects: each teammate, and the preview scripts, downloaded a Node of their own. Turns, previews,
