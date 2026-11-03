@@ -1,14 +1,13 @@
 'use client'
-// Messages a person wrote during its teammate's turn and answered on the side (message.side):
-// together, one Aside, in the thread's own card. Each is the person's message in a pale bubble,
-// the teammate's reply from a copy of its conversation, and what became of the message, with how
-// to change it. Open while the turn runs; after it, one line that opens it. docs/side-replies.md.
-import { ChevronDown, Clock, CornerDownRight, Ellipsis, ListPlus } from 'lucide-react'
+// A message a person wrote during its teammate's turn and answered on the side (message.side),
+// in its turn's Aside (aside-group.tsx): the person's message in a pale bubble, then the
+// teammate's reply from a copy of its conversation, and what became of the message, with how
+// to change it. docs/side-replies.md.
+import { Clock, CornerDownRight, Ellipsis, ListPlus } from 'lucide-react'
 import { useState } from 'react'
-import { TeammateAvatar } from '@/components/dashboard'
+import type { SideState } from '@/components/aside-group'
 import { Markdown } from '@/components/markdown'
 import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,77 +16,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Hint } from '@/components/ui/tooltip'
 
-/** A message answered on the side: its latest state (message.side), and whether it went into the turn. */
-export type SideState = {
-  messageId: string
-  status: 'answering' | 'answered' | 'failed'
-  teammateId?: string
-  text?: string
-  route?: 'answer' | 'steer' | 'queue'
-  /** With route steer: when it goes into the running turn, unless its sender keeps it. */
-  steerAt?: string
-  /** It went into the running turn (message.user, steered). */
-  steered?: boolean
-}
+export type { SideState }
 
 export type SideAction = 'keep' | 'queue' | 'steer'
-
-/** Still moving: its reply is coming, or it is about to go into the turn. */
-const unsettled = (side: SideState) =>
-  side.status === 'answering' || (side.route === 'steer' && !side.steered)
-
-/**
- * The asides of one turn, in a row. While that turn runs they show open, under who answers;
- * after it, "Aside · 2 messages" folds them, as "Worked for" folds the turn's work.
- */
-export function AsideGroup({
-  sides,
-  teammate,
-  live,
-  children,
-}: {
-  sides: SideState[]
-  teammate?: { id: string; name: string }
-  /** The turn they were written during still runs. */
-  live: boolean
-  children: React.ReactNode
-}) {
-  const [toggled, setToggled] = useState<boolean>()
-  const open = live || sides.some(unsettled) || !!toggled
-  const card = (
-    <div
-      aria-label="Aside"
-      className="flex max-w-xl min-w-0 flex-col gap-3 rounded-xl border bg-card px-4 py-3 text-sm"
-    >
-      {live && (
-        <Hint
-          label={`${teammate?.name ?? 'The teammate'} answers from a copy of its conversation, without stopping its turn`}
-        >
-          <p className="flex items-center gap-2 self-start text-xs text-muted-foreground">
-            {teammate && <TeammateAvatar teammate={teammate} className="size-5 flex-none" />}
-            <span className="font-semibold text-foreground">Aside</span>
-            {teammate && <span>while {teammate.name} works</span>}
-          </p>
-        </Hint>
-      )}
-      {children}
-    </div>
-  )
-  if (live) return card
-  return (
-    <Collapsible open={open} onOpenChange={setToggled} className="flex flex-col gap-2">
-      <CollapsibleTrigger className="group flex items-center gap-1.5 self-start text-left text-sm text-muted-foreground hover:text-foreground">
-        <span className="text-foreground">Aside</span>·{' '}
-        {sides.length === 1 ? '1 message' : `${sides.length} messages`}
-        <ChevronDown
-          className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
-          aria-hidden
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent>{card}</CollapsibleContent>
-    </Collapsible>
-  )
-}
 
 /** The teammate's reply to one message of an aside, what became of the message, and how to change it. */
 export function SideReply({

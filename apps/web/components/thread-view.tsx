@@ -146,7 +146,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
-import { AsideGroup, SideReply, type SideAction, type SideState } from '@/components/side-reply'
+import { AsideGroup } from '@/components/aside-group'
+import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
   storedFileUrl,
@@ -159,6 +160,7 @@ import { useTicketReplies } from '@/lib/ticket-replies'
 import { turnWait } from '@/lib/turn-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
+import { revealSeq } from '@/lib/reveal'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
@@ -945,11 +947,13 @@ function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
       <button
         type="button"
         className="flex max-w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() =>
+        onClick={() => {
+          // Folded away (a turn's Aside), it opens where it is.
+          revealSeq(reply.seq)
           document
             .querySelector(`[data-seq="${reply.seq}"]`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
+        }}
       >
         <Reply className="size-3.5 shrink-0" aria-hidden />
         <span className="truncate">
@@ -3009,7 +3013,15 @@ export function ThreadItems({
         <AsideGroup
           key={items[node.is[0]!]!.key}
           sides={node.is.map((i) => (items[i] as Extract<Item, { kind: 'user' }>).side!)}
-          {...(asideTeammate(node.is) ? { teammate: asideTeammate(node.is)! } : {})}
+          seqs={node.is.map((i) => (items[i] as Extract<Item, { kind: 'user' }>).seq)}
+          {...(asideTeammate(node.is)
+            ? {
+                teammate: asideTeammate(node.is)!,
+                avatar: (
+                  <TeammateAvatar teammate={asideTeammate(node.is)!} className="size-5 flex-none" />
+                ),
+              }
+            : {})}
           live={node.live}
         >
           {node.is.map((i) => render(items[i]!, i))}
