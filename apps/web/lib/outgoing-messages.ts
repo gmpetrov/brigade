@@ -20,6 +20,22 @@ export function updateOutgoing(threadId: string, update: (list: Outgoing[]) => O
   for (const listener of listeners.get(threadId) ?? []) listener()
 }
 
+/**
+ * The computer never said it got this attempt: not delivered. Read from the store as it is
+ * then, not from a view, which may have gone (another thread opened) and come back since.
+ * A message the thread has shown is gone from the store by then, and one sent again has
+ * another `sentAt`: neither changes.
+ */
+export function expireAttempt(threadId: string, messageId: string, sentAt: number) {
+  updateOutgoing(threadId, (list) =>
+    list.some((o) => o.messageId === messageId && o.sentAt === sentAt)
+      ? list.map((o) =>
+          o.messageId === messageId && o.sentAt === sentAt ? { ...o, state: 'failed' } : o,
+        )
+      : list,
+  )
+}
+
 /** A thread's messages on their way, and their setter. */
 export function useOutgoing(threadId: string) {
   const subscribe = useCallback(

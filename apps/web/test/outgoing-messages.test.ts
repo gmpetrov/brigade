@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Outgoing } from '../components/queued-messages'
-import { outgoingOf, updateOutgoing } from '../lib/outgoing-messages'
+import { expireAttempt, outgoingOf, updateOutgoing } from '../lib/outgoing-messages'
 
 const message = (messageId: string): Outgoing => ({
   messageId,
@@ -32,4 +32,22 @@ test('a message refused after its thread closed is still there, with its draft',
   // Discarded, it goes.
   updateOutgoing('t1', (list) => list.filter((o) => o.messageId !== 'm1'))
   assert.deepEqual(outgoingOf('t1'), [])
+})
+
+// Sent, the thread closed before the API answered, then the computer never confirmed: the
+// deadline reads the store as it is then, not the view that sent it, which only saw it sending.
+test('a message never confirmed fails after its thread closed and opened again', () => {
+  updateOutgoing('t3', (list) => [...list, message('m3')])
+  // The API takes it after the view went.
+  updateOutgoing('t3', (list) => list.map((o) => ({ ...o, state: 'sent', sentAt: 1000 })))
+  expireAttempt('t3', 'm3', 1000)
+  assert.equal(outgoingOf('t3')[0]?.state, 'failed')
+  // An attempt sent again since waits its own time.
+  updateOutgoing('t3', (list) => list.map((o) => ({ ...o, state: 'sent', sentAt: 2000 })))
+  expireAttempt('t3', 'm3', 1000)
+  assert.equal(outgoingOf('t3')[0]?.state, 'sent')
+  // One the thread showed is gone: its deadline changes nothing.
+  updateOutgoing('t3', () => [])
+  expireAttempt('t3', 'm3', 2000)
+  assert.deepEqual(outgoingOf('t3'), [])
 })

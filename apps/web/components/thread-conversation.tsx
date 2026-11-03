@@ -83,7 +83,7 @@ import {
   type Outgoing,
   type OutgoingDraft,
 } from '@/components/queued-messages'
-import { useOutgoing } from '@/lib/outgoing-messages'
+import { expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -631,8 +631,6 @@ export function ThreadConversation({
         ),
     )
   }, [outgoing, seen, events])
-  const pendingRef = useRef(pendingOut)
-  pendingRef.current = pendingOut
   const inThreadOut = pendingOut.filter(inThread)
   const lastOut = inThreadOut.at(-1)
   // Once the thread has them, they go, and their files' previews with them.
@@ -1120,12 +1118,7 @@ export function ThreadConversation({
       // first. A move waits for the turn, then for the files to be handed over: longer. Only
       // this attempt: one sent again since waits its own time.
       setTimeout(
-        () => {
-          if (
-            pendingRef.current.some((o) => o.messageId === message.messageId && o.sentAt === sentAt)
-          )
-            update({ state: 'failed' })
-        },
+        () => expireAttempt(id, message.messageId, sentAt),
         moving ? 30 * 60_000 : starting ? 10 * 60_000 : 20_000,
       )
     } catch (err) {
