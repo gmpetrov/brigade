@@ -22,6 +22,8 @@ import { useState } from 'react'
 import { brigadeNote, handOffNote, notePreview } from '@/components/brigade-notes'
 import { useDashboard } from '@/components/dashboard'
 import type { MoveTarget, Upload } from '@/components/attachments'
+import type { Picked } from '@/components/thread-conversation'
+import type { DesignEdit } from '@/lib/pending-edits'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import {
@@ -63,8 +65,17 @@ export type Outgoing = {
   movingTo?: string
   /** What sending it again takes. */
   with: { attachmentIds: string[]; pick?: string; replyTo?: ReplyTo; moveTo?: MoveTarget }
-  /** Back in the composer as it was written: its files, quote and edits too. */
-  restore?: () => void
+  /** What the composer held, to put back there on Edit: its files are `uploads`. */
+  draft?: OutgoingDraft
+}
+
+/** A composer's message as it was written: its text, quote, computer, picked elements and design edits. */
+export type OutgoingDraft = {
+  text: string
+  replyTo?: ReplyTo
+  moveTo?: MoveTarget
+  elements: Picked[]
+  designEdits: DesignEdit[]
 }
 
 /** Refused, or never confirmed: the person sends it again or edits it. */

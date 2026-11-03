@@ -77,7 +77,13 @@ import { PendingEdits, type PendingEditRow } from '@/components/pending-edits'
 import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
-import { inThread, QueuedMessages, type Outgoing } from '@/components/queued-messages'
+import {
+  inThread,
+  QueuedMessages,
+  type Outgoing,
+  type OutgoingDraft,
+} from '@/components/queued-messages'
+import { useOutgoing } from '@/lib/outgoing-messages'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -165,7 +171,7 @@ export type ThreadHeading = {
  * An element picked in the preview, by the id its page gave it, and the upload of its
  * picture; `drawing` while its page draws it, when the message waits for the picture.
  */
-type Picked = {
+export type Picked = {
   id: string
   element: PreviewElement
   upload?: string
@@ -612,7 +618,8 @@ export function ThreadConversation({
     focusComposer()
   }
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
-  const [outgoing, setOutgoing] = useState<Outgoing[]>([])
+  // Kept per thread: one not through is still here after another thread opened.
+  const [outgoing, setOutgoing] = useOutgoing(id)
   const pendingOut = useMemo(() => {
     // A runner too old for message ids shows the message without one: matched by its text.
     const plain = events.filter((e) => e.event.type === 'message.user' && !e.event.messageId)
@@ -634,7 +641,7 @@ export function ThreadConversation({
     if (gone.length === 0) return
     for (const o of gone) for (const u of o.uploads) if (u.preview) URL.revokeObjectURL(u.preview)
     setOutgoing((list) => list.filter((o) => !gone.some((g) => g.messageId === o.messageId)))
-  }, [outgoing, pendingOut])
+  }, [outgoing, pendingOut, setOutgoing])
 
   // At the end, the thread follows what comes in, streamed words included. Scrolled up to
   // read, nothing moves: a button goes back down. An older page above does not move the view.
@@ -1029,14 +1036,12 @@ export function ThreadConversation({
     await deliver(sending, attachmentIds, undefined, replying, moving, {
       uploads: taken.uploads,
       // Not through, and edited: back in the composer, as it was.
-      restore: () => {
-        setText((current) => current || written)
-        files.put(taken.uploads)
-        setReplyTo((current) => current ?? replying)
-        setMoveTo((current) => current ?? moving)
-        // Edits added since stay, after the ones it took.
-        setElements((current) => withUnsent(current, picked))
-        restoreDesignEdits(id, commented)
+      draft: {
+        text: written,
+        ...(replying ? { replyTo: replying } : {}),
+        ...(moving ? { moveTo: moving } : {}),
+        elements: picked,
+        designEdits: commented,
       },
     })
   }
@@ -1059,7 +1064,7 @@ export function ThreadConversation({
   /**
    * Send a message to the thread: the composer's, or a choice someone clicked. It shows at once,
    * in the thread or (the teammate working) above the composer. Refused, it throws, unless it can
-   * go back to the composer (`restore`): then it stays, marked, to send again or edit.
+   * go back to the composer (`draft`): then it stays, marked, to send again or edit.
    */
   async function deliver(
     sending: string,
@@ -1067,7 +1072,7 @@ export function ThreadConversation({
     pick?: string,
     replyTo?: ReplyTo,
     moveTo?: MoveTarget,
-    how: { messageId?: string; uploads?: Upload[]; restore?: () => void } = {},
+    how: { messageId?: string; uploads?: Upload[]; draft?: OutgoingDraft } = {},
   ) {
     const message: Outgoing = {
       messageId: how.messageId ?? newMessageId(),
@@ -1084,7 +1089,7 @@ export function ThreadConversation({
         ...(moveTo ? { moveTo } : {}),
       },
       ...(moveTo ? { movingTo: moveTo.name } : {}),
-      ...(how.restore ? { restore: how.restore } : {}),
+      ...(how.draft ? { draft: how.draft } : {}),
     }
     const update = (patch: Partial<Outgoing>) =>
       setOutgoing((list) =>
@@ -1124,7 +1129,7 @@ export function ThreadConversation({
         moving ? 30 * 60_000 : starting ? 10 * 60_000 : 20_000,
       )
     } catch (err) {
-      if (!how.restore) {
+      if (!how.draft) {
         setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
         throw err
       }
@@ -1137,13 +1142,21 @@ export function ThreadConversation({
     void deliver(m.text, m.with.attachmentIds, m.with.pick, m.with.replyTo, m.with.moveTo, {
       messageId: m.messageId,
       uploads: m.uploads,
-      ...(m.restore ? { restore: m.restore } : {}),
+      ...(m.draft ? { draft: m.draft } : {}),
     }).catch((err: Error) => setError(err.message))
   /** Back in the composer, to change and send as a new message. */
   const editOutgoing = (m: Outgoing) => {
     setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))
-    if (m.restore) m.restore()
-    else setText((current) => current || m.text)
+    const draft = m.draft
+    if (draft) {
+      setText((current) => current || draft.text)
+      files.put(m.uploads)
+      setReplyTo((current) => current ?? draft.replyTo)
+      setMoveTo((current) => current ?? draft.moveTo)
+      // Edits added since stay, after the ones it took.
+      setElements((current) => withUnsent(current, draft.elements))
+      restoreDesignEdits(id, draft.designEdits)
+    } else setText((current) => current || m.text)
     focusComposer()
   }
   const discardOutgoing = (m: Outgoing) => {
