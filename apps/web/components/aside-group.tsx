@@ -2,7 +2,7 @@
 // A turn's asides together (side-reply.tsx): open while the turn runs, one line once it ends.
 // docs/side-replies.md.
 import { ChevronDown } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Hint } from '@/components/ui/tooltip'
 import { onRevealSeq } from '@/lib/reveal'
@@ -51,7 +51,9 @@ export function AsideGroup({
   const [toggled, setToggled] = useState<boolean>()
   const open = live || sides.some(unsettled) || !!toggled
   const key = seqs.join(' ')
-  useEffect(() => {
+  // Before the thread's own layout effects: going to a message of a page just loaded asks
+  // in the same commit that mounts this.
+  useLayoutEffect(() => {
     const mine = new Set(key.split(' ').map(Number))
     return onRevealSeq((seq) => {
       if (mine.has(seq)) setToggled(true)
