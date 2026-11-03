@@ -15,8 +15,10 @@ const write = (description: string) => ({ description, write: true })
  * registered. Contact support". A v2 secret key belongs to one project, with the permissions
  * chosen as it was made (read only, or read and write per area), so the row shows that project.
  *
- * Tools from RevenueCat's Tools Reference, with its read and write marks. A tool the server adds
- * later and marks readOnlyHint is a read; any other unlisted tool is a write (types.ts).
+ * Tools from RevenueCat's Tools Reference, with its read and write marks, which the server's own
+ * readOnlyHint marks agree with. The server lists a key only the tools its permissions reach: a
+ * read-only project key got 114 of these, without billing, audiences or IAM. A tool the server
+ * adds later and marks readOnlyHint is a read; any other unlisted tool is a write (types.ts).
  */
 export const revenuecat: ConnectorDefinition = {
   kind: 'revenuecat',
@@ -191,7 +193,8 @@ export const revenuecat: ConnectorDefinition = {
 
 /**
  * The key's project, as its row shows it: list-projects answers RevenueCat's API v2 list,
- * { object: 'list', items: [{ object: 'project', id, name, created_at }], next_page }. A key
+ * { object: 'list', items: [{ object: 'project', id, name, created_at, icon_url, ... }],
+ * next_page, url }. A key
  * reaches one project; should it reach more, the first and how many others.
  */
 export function revenuecatAccountName(output: unknown): string | null {

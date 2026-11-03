@@ -299,12 +299,21 @@ test('Ahrefs tools that change something are writes, as its server marks them', 
 })
 
 test("a RevenueCat account shows as its key's project", () => {
-  // API v2's list of projects, as list-projects answers it.
+  // list-projects' answer to a project's key, as RevenueCat's server gave it.
   const one = {
     object: 'list',
-    items: [{ object: 'project', id: 'proj1ab2c3d4', name: 'NoCo AI', created_at: 1730000000000 }],
+    items: [
+      {
+        object: 'project',
+        id: 'proj2220e338',
+        name: 'NoCo AI',
+        created_at: '2026-06-14T07:33:34.157Z',
+        icon_url: 'https://www.appatar.io/com.nocontactai/small?store=app_store',
+        icon_url_large: 'https://www.appatar.io/com.nocontactai/large?store=app_store',
+      },
+    ],
     next_page: null,
-    url: '/v2/projects',
+    url: 'https://api.revenuecat.com/v2/projects',
   }
   assert.equal(revenuecatAccountName(one), 'NoCo AI')
   const two = { ...one, items: [...one.items, { object: 'project', id: 'proj9', name: 'Talkie' }] }
