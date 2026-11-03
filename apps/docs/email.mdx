@@ -10,8 +10,8 @@ where you see which teammate has it and approve what it sends.
 ## Turn it on
 
 Email is off until an owner or admin turns it on: in **Settings → Apps**, open **Email** and choose **Turn on**.
-Then give addresses from **Inbox → Mailboxes** (the mailbox icon at the top of the Inbox), or from a teammate's
-**Access** tab with **Give an address**.
+Then give addresses from **Mail settings** (the gear at the top of the Inbox), tab **Mailboxes**, or from a
+teammate's **Access** tab with **Give an address**.
 
 Every address on Brigade's own domain, `mails.brigade.lol`, sends and receives at once, with nothing to set up.
 
@@ -32,19 +32,26 @@ To add one, choose **Add a mailbox**, pick **An agent** or **A project, shared**
 
 ## Where incoming mail goes
 
+Writing to a teammate's address doesn't put it to work by itself: anyone can write to that address, so a mail only
+reaches a teammate when it comes from a member of your workspace, answers mail a teammate sent, or matches a rule.
+Everything else waits in the Inbox until you hand it over or add a rule.
+
 Each mail goes to one place, in this order:
 
 1. **A thread waiting for it**: a reply in a conversation the thread started, or mail to its sign-up address.
 2. **Its conversation's thread**, if one already has it.
-3. **A member's request**: mail from a member of your workspace (checked with DKIM or DMARC) to a teammate's address
-   starts or continues a thread with that teammate, as if you had typed it.
+3. **A member's request**: mail from a member of your workspace to a teammate's address starts or continues a
+   thread with that teammate, as if you had typed it. It must come from the email address of the member's Brigade
+   account (another address of yours counts as anyone's), and the mail server must prove it (DKIM or DMARC), since
+   anyone can write a member's address in From. Automatic mail (newsletters, notifications) doesn't count.
 4. **The mailbox's rules**, in their order. The first that matches starts a thread with its teammate. A rule starts
    up to 50 threads a day; past that, mail waits in the Inbox and you get a ticket.
 5. **The Inbox**, unassigned, for 30 days.
 
-A mailbox's page shows its settings in four lines: **Arrives** (where its mail comes in), **New mail goes to** (its
-rules, reordered there by an owner or admin), **Access** (the teammates who can read and send from it when asked) and
-**Replies**. **Send a test mail** checks that the address receives.
+A mailbox's page, in **Mail settings › Mailboxes**, shows its settings in a few lines: **Arrives** (where its mail
+comes in), **New mail goes to** (its rules, reordered there by an owner or admin), **Access** (the teammates who can
+read and send from it when asked; a shared mailbox or Gmail account only, since a teammate's own address is read by
+that teammate alone) and **Replies**. **Send a test mail** checks that the address receives.
 A conversation that sends mail to threads 8 times within an hour is stopped as a loop.
 
 ## The Inbox
@@ -102,7 +109,7 @@ mailbox itself, the teammate's own reply after it is refused.
 
 ## Your own domain
 
-To send as `support@yourcompany.com`, add your domain in **Inbox → Mailboxes → Domains** with **Add a domain**
+To send as `support@yourcompany.com`, add your domain in **Mail settings › Domains** with **Add a domain**
 (owners and admins). Brigade reads where its mail goes today and asks **How its mail reaches Brigade**:
 
 - **By forwarding**: mail stays with your provider (Google Workspace, Microsoft 365…). You forward each address to
