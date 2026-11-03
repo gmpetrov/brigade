@@ -1635,7 +1635,12 @@ export class Threads {
 
   private emitSide(
     message: Message,
-    side: { status: 'answering' | 'answered' | 'failed'; text?: string; route?: SideRoute; steerAt?: string },
+    side: {
+      status: 'answering' | 'answered' | 'failed'
+      text?: string
+      route?: SideRoute
+      steerAt?: string
+    },
   ) {
     const spec = message.specs[0]!
     this.options.emit(spec.sessionId, {

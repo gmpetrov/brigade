@@ -35,14 +35,20 @@ test('it forks the thread the runner names, when it names one', async () => {
       data: { threadId: 'named-thread' },
     },
   })
-  assert.equal(requests.some((r) => r.method === 'thread/list'), false)
+  assert.equal(
+    requests.some((r) => r.method === 'thread/list'),
+    false,
+  )
   assert.equal(requests.find((r) => r.method === 'thread/fork')?.params.threadId, 'named-thread')
 })
 
 test('with no thread in its folder there is nothing to answer from: the turn fails', async () => {
   const { error, requests } = await codexBridgeTurn({ env: { ...FORK, FAKE_CODEX_EMPTY: '1' } })
   assert.match(error ?? '', /No conversation in this folder/)
-  assert.equal(requests.some((r) => r.method === 'turn/start' || r.method === 'thread/start'), false)
+  assert.equal(
+    requests.some((r) => r.method === 'turn/start' || r.method === 'thread/start'),
+    false,
+  )
 })
 
 test("a thread's own turn starts or resumes its thread as before, and is not made read-only", async () => {

@@ -62,7 +62,9 @@ export function SideReply({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{name}</span>
-          <Hint label={`${name} answers from a copy of its conversation, without stopping its turn`}>
+          <Hint
+            label={`${name} answers from a copy of its conversation, without stopping its turn`}
+          >
             <span className={chip}>Aside</span>
           </Hint>
           {side.status === 'answered' && side.route === 'answer' && onAction && (
