@@ -213,9 +213,9 @@ export default function Privacy() {
       <h2>Keeping and deleting it</h2>
       <p>
         We keep your data while your account exists. You can disconnect an App, delete a secret or a
-        thread at any time from the dashboard: disconnecting a Google App also revokes
-        Brigade&apos;s access in your Google account, and deleting a thread deletes its files. You
-        can also remove Brigade&apos;s access at any time from{' '}
+        thread at any time from the dashboard: disconnecting the last Google App that uses a Google
+        account also revokes Brigade&apos;s access in that account, and deleting a thread deletes
+        its files. You can also remove Brigade&apos;s access at any time from{' '}
         <a href="https://myaccount.google.com/permissions">your Google account</a>.
       </p>
       <p>

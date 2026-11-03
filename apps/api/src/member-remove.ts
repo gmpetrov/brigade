@@ -188,7 +188,7 @@ async function cleanUp(userId: string, membership: Membership, handTo?: string) 
     }
     const own = await db.connection.findMany({
       where: { createdByMemberId: membership.id, reach: 'mine', status: { not: 'removed' } },
-      select: { id: true, kind: true, vaultSecretId: true, appId: true },
+      select: { id: true, kind: true, vaultSecretId: true, appId: true, externalAccount: true },
     })
     for (const connection of own)
       await disconnect(scope, db, connection).catch((error: unknown) =>

@@ -37,6 +37,8 @@ import {
   googleMcpConfigured,
   isGoogleKind,
   revokeGoogle,
+  GOOGLE_KINDS,
+  mayRevokeGoogle,
   type GoogleCredential,
   type GoogleKind,
 } from '../connectors/google-oauth.js'
@@ -869,11 +871,36 @@ export const connections = new Hono<AppEnv>()
     return c.body(null, 204)
   })
 
+/**
+ * Whether no other active connection, in any workspace, signs in to this Google account with
+ * Brigade's client: revoking its token would revoke theirs too (mayRevokeGoogle).
+ */
+async function mayRevokeGoogleAccount(connection: { id: string; externalAccount?: string | null }) {
+  if (!connection.externalAccount) return true
+  const others = await prisma.connection.findMany({
+    where: {
+      id: { not: connection.id },
+      kind: { in: GOOGLE_KINDS },
+      status: { not: 'removed' },
+      externalAccount: { equals: connection.externalAccount, mode: 'insensitive' },
+    },
+    select: { externalAccount: true },
+    take: 1,
+  })
+  return mayRevokeGoogle(connection.externalAccount, others)
+}
+
 /** Revoke at the provider, delete the credential, drop grants and triggers, keep the call log. */
 export async function disconnect(
   scope: WorkspaceScope,
   db: ScopedDb,
-  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null; appId: string },
+  connection: {
+    id: string
+    kind: ConnectorKind
+    vaultSecretId: string | null
+    appId: string
+    externalAccount?: string | null
+  },
 ) {
   // One of Brigade's own addresses: it stops receiving; its name stays reserved for good.
   if (connection.kind === 'email')
@@ -903,7 +930,8 @@ export async function disconnect(
         scope,
         connection.vaultSecretId,
       ).catch(() => null)
-      if (credential && auth === 'google') await revokeGoogle(credential as GoogleCredential)
+      if (credential && auth === 'google' && (await mayRevokeGoogleAccount(connection)))
+        await revokeGoogle(credential as GoogleCredential)
       if (credential && auth === 'mcp') await revokeMcp(credential as McpCredential)
     }
     forgetMcpTools(connection.id)

@@ -143,10 +143,40 @@ export async function googleAccount(kind: GoogleKind, accessToken: string) {
     ).then((r) => r.json())) as { user?: { emailAddress?: string } }
     return about.user?.emailAddress ?? null
   }
-  // The primary calendar's id is the account's address.
+  // The primary calendar's id is the account's address. Google lets the person untick each
+  // Calendar permission on its consent screen: without the calendar list, the primary calendar's
+  // events say it too (their calendar's summary), which calendar.events reads.
   const primary = (await fetch(
     'https://www.googleapis.com/calendar/v3/users/me/calendarList/primary',
     { headers },
-  ).then((r) => r.json())) as { id?: string }
-  return primary.id ?? null
+  )
+    .then((r) => r.json())
+    .catch(() => ({}))) as { id?: string }
+  if (primary.id) return primary.id
+  const events = (await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=1&fields=summary',
+    { headers },
+  )
+    .then((r) => r.json())
+    .catch(() => ({}))) as { summary?: string }
+  return events.summary?.includes('@') ? events.summary : null
+}
+
+/** The Apps that sign in with Brigade's Google client, and so share one grant per account. */
+export const GOOGLE_KINDS = Object.keys(GOOGLE_SCOPES) as GoogleKind[]
+
+/**
+ * Whether disconnecting an account may revoke its token at Google. Revoking any token of a grant
+ * revokes the whole grant: every Brigade App signed in to that Google account, in every
+ * workspace. So it is revoked only when no other active connection (Gmail, Drive, Docs…, here
+ * or in another workspace) uses the same account. An account whose address is unknown is revoked,
+ * as before: nothing says another connection shares it.
+ */
+export function mayRevokeGoogle(
+  account: string | null,
+  others: { externalAccount: string | null }[],
+) {
+  if (!account) return true
+  const same = account.trim().toLowerCase()
+  return !others.some((o) => o.externalAccount?.trim().toLowerCase() === same)
 }

@@ -199,7 +199,7 @@ async function deleteFenced(
     const { disconnect } = await import('./routes/connections.js')
     const connections = await db.connection.findMany({
       where: { status: { not: 'removed' } },
-      select: { id: true, kind: true, vaultSecretId: true, appId: true },
+      select: { id: true, kind: true, vaultSecretId: true, appId: true, externalAccount: true },
     })
     for (const connection of connections)
       await disconnect(scope, db, connection).catch((error: unknown) =>
