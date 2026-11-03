@@ -64,6 +64,20 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
 - **Threads run the Claude Code and Codex each harness bridge installs**, not the `claude` or `codex` on the
   computer (those only sign in and read Codex's usage limits). Each adapter pins them in its bridge's `package.json`
   and lockfile (`dist/bridge/pnpm-lockfile.yaml`), installed per OS user under `~/.ai-sdk-harness/.harness-bootstrap/`.
+  On a cloud computer the runner installs each bridge once, with the adapter's own recipe, into
+  `/opt/brigade/bridges/<harness>-<identity>` (readable by every teammate, writable by none), and each teammate's
+  bootstrap folder becomes a link to it (`apps/runner/src/shared-bridges.ts`): 600 to 900 MB per teammate were copies
+  of the same files, plus the versions each update left. A teammate's own copy is replaced only while none of its
+  bridges or installs runs. Without a shared copy (its install failed, or `BRIGADE_SHARED_BRIDGES=0`), the link is
+  taken away and the adapter installs in the home as before. An older shared copy goes a day after a newer one
+  replaced it, once no teammate's folder points to it and no process runs from it: a bridge started through a link
+  keeps the copy it started from when the link moves on, so the runner notes those processes beside the copy
+  (`.holders`, by pid and start time).
+- **Teammates find the runner's Node first** (`asTeammate` in `apps/runner/src/thread-net.ts`). sudo gives what a
+  teammate runs the computer's `secure_path`, whose `node` is the system's (v20 on Ubuntu 24.04), too old for the
+  workspace's projects: each teammate, and the preview scripts, downloaded a Node of their own. Turns, previews,
+  terminals and file reads now run through a shell that puts the runner's Node (`/opt/brigade/node/bin`, 24) first;
+  a project that needs another one still puts its own first.
   New adapter releases can keep pinning old CLIs, so Brigade's patches of the adapters (`patches/`) set the versions it
   runs; the lockfile covers every platform's binary (Linux and macOS, both CPUs). Upgrading the adapters means
   redoing those patches.
@@ -594,7 +608,11 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   where git ignores them), and its teammate's next turn is told to reinstall: boat snapshots a computer every minute
   or two and goes over every path on its disk each time, and on our first cloud computer `node_modules` were about
   1.6M of its 2.4M paths (about 100,000 per Brigade checkout), while the snapshot agent took close to a core and
-  2–3 GB of memory.
+  2–3 GB of memory. Every 6 hours, however empty the disk, each teammate's home is tidied (`tidyHome` in
+  `apps/runner/src/disk.ts`): the harness's folders of sessions untouched for 3 days (`~/.ai-sdk-harness/.agent-runs`,
+  a few MB per turn that the adapters never remove: 1.8 GB in a week for one teammate), except those of threads in
+  use, and the packages npx installed and has not run for 14 days (`~/.npm/_npx`), except those a process runs from.
+  Playwright's browsers stay: a project pinned to an older Playwright would find its browser gone.
 - **Containers by thread** (`apps/runner/src/containers.ts`, cloud computers). Each teammate's rootless Docker is shared
   by its threads, so each thread gets its own Compose project (`COMPOSE_PROJECT_NAME=t<thread id>`, for the harness,
   previews and takeover terminals): two threads on one repository no longer share containers or a database volume. A

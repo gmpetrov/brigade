@@ -27,7 +27,7 @@ export const CACHES_EVERY_MS = 30 * 60_000
 const PRUNE_TIMEOUT_MS = 15 * 60_000
 /**
  * Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP
- * servers run from it; nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
+ * servers run from it (tidyHome removes the packages no longer run); nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
  * node_modules from its cache like pnpm: they keep their files.
  */
 const TOOL_CACHES = [
@@ -255,6 +255,108 @@ export class Reserve {
     const [a, b] = await Promise.all([stat(dir), stat(this.disk)]).catch(() => [])
     return Boolean(a && b && a.dev === b.dev)
   }
+}
+
+/** A harness's files for a session (its event log, start config): kept this long after its last write. */
+export const RUNS_KEEP_MS = 3 * 24 * 60 * 60_000
+/** A package npx installed: kept this long after it was last run. */
+export const NPX_KEEP_MS = 14 * 24 * 60 * 60_000
+/** How often a teammate's home is tidied (tidyHome), however empty the disk. */
+export const TIDY_EVERY_MS = 6 * 60 * 60_000
+
+/**
+ * Run as the teammate, by the runner's Node: in its home, remove the harness's folders of
+ * sessions untouched for RUNS_KEEP_MS (~/.ai-sdk-harness/.agent-runs: the adapters never
+ * remove them, a few MB per turn), except those of threads in use; and the packages npx
+ * installed and has not run for NPX_KEEP_MS (~/.npm/_npx), except those a process runs
+ * from. npx installs one again when asked. Prints how many of each went.
+ * Arguments: home, the threads in use (JSON), the npx folders processes run from (JSON), now.
+ */
+export const TIDY_SCRIPT = `
+const { readdirSync, rmSync, statSync } = require('node:fs')
+const { join } = require('node:path')
+const [home, inUse, running, now] = process.argv.slice(1)
+const keep = new Set(JSON.parse(inUse))
+const busy = JSON.parse(running)
+const time = (path, key) => { try { return statSync(path)[key] } catch { return 0 } }
+const list = (dir) => { try { return readdirSync(dir) } catch { return [] } }
+// The newest write in a folder, a few levels down.
+const newest = (dir, depth) => {
+  let last = time(dir, 'mtimeMs')
+  if (depth > 0)
+    for (const name of list(dir)) {
+      const path = join(dir, name)
+      last = Math.max(last, time(path, 'mtimeMs'), newest(path, depth - 1))
+    }
+  return last
+}
+let runs = 0
+const runsDir = join(home, '.ai-sdk-harness', '.agent-runs')
+for (const name of list(runsDir)) {
+  if (keep.has(name) || [...keep].some((id) => name.startsWith(id + '-'))) continue
+  const dir = join(runsDir, name)
+  if (Number(now) - newest(dir, 3) < ${RUNS_KEEP_MS}) continue
+  rmSync(dir, { recursive: true, force: true })
+  runs++
+}
+let npx = 0
+const npxDir = join(home, '.npm', '_npx')
+for (const name of list(npxDir)) {
+  const dir = join(npxDir, name)
+  if (busy.some((path) => dir.endsWith(path))) continue
+  // Running a package reads its manifest (atime: once a day at most on a relatime disk).
+  const last = Math.max(
+    time(dir, 'mtimeMs'),
+    time(join(dir, 'package.json'), 'atimeMs'),
+    time(join(dir, 'node_modules', '.package-lock.json'), 'atimeMs'),
+  )
+  if (Number(now) - last < ${NPX_KEEP_MS}) continue
+  rmSync(dir, { recursive: true, force: true })
+  npx++
+}
+process.stdout.write(JSON.stringify({ runs, npx }))
+`
+
+/** The npx folders that processes run from, as /.npm/_npx/<hash>, from `ps -A -o args=`. */
+export const npxInUse = (commands: string) => [
+  ...new Set([...commands.matchAll(/\/\.npm\/_npx\/[0-9a-f]+/g)].map((match) => match[0])),
+]
+
+/**
+ * Tidy a teammate's home (TIDY_SCRIPT), however empty the disk: what the harness and npx
+ * leave there grows by gigabytes a week otherwise. Not while it installs packages.
+ */
+export async function tidyHome(
+  home: string,
+  runAs: string | undefined,
+  inUse: string[],
+  now = Date.now(),
+  /** Every process's command line (`ps -A -o args=`): read now unless given (tests). */
+  processes?: string,
+) {
+  if (runAs && (await installing(runAs))) return null
+  const commands =
+    processes ?? (await run('ps', ['-A', '-o', 'args=']).catch(() => Buffer.alloc(0))).toString()
+  const before = await free(home)
+  const out = await run(
+    process.execPath,
+    [
+      '-e',
+      TIDY_SCRIPT,
+      home,
+      JSON.stringify(inUse),
+      JSON.stringify(npxInUse(commands)),
+      String(now),
+    ],
+    { runAs, timeout: PRUNE_TIMEOUT_MS },
+  )
+  const removed = JSON.parse(out.toString()) as { runs: number; npx: number }
+  const freed = (await free(home)) - before
+  if (removed.runs || removed.npx)
+    console.log(
+      `tidied ${runAs ?? home}'s home: ${removed.runs} old harness sessions, ${removed.npx} unused npx packages, ${gib(Math.max(0, freed))} freed`,
+    )
+  return removed
 }
 
 const remove = (path: string, runAs?: string) =>
