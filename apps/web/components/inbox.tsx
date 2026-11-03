@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  ChevronDown,
   Clock,
   FileText,
   ListFilter,
@@ -984,20 +985,37 @@ function Reader({
   // Once a thread has it, handing it over starts a new thread: worth offering only when the
   // mailbox has another teammate than the one on it.
   const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
+  // The teammate on it: the one whose thread has it (a mailbox's teammate alone is not).
+  const owner = d.thread ? d.teammate : null
   const handButton = (primary: boolean) =>
     oneClick && unowned ? (
       <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
         Hand to {only.name}
       </Button>
+    ) : primary ? (
+      <Button size="sm" aria-expanded={handing} onClick={() => setHanding((h) => !h)}>
+        {only ? `Hand to ${only.name}` : 'Hand to'}
+      </Button>
     ) : (
+      // Who has it, as a picker: opening it hands the mail to another teammate.
       <Button
         size="sm"
-        variant={primary ? 'default' : 'ghost'}
-        className={cn(!primary && 'h-7 px-2 text-muted-foreground')}
+        variant="outline"
+        className="h-7 gap-1.5 bg-card px-2"
         aria-expanded={handing}
+        aria-label={owner ? `${owner.name}, hand to another teammate` : 'Hand to a teammate'}
         onClick={() => setHanding((h) => !h)}
       >
-        {primary && only ? `Hand to ${only.name}` : 'Hand to…'}
+        {owner ? (
+          <TeammateAvatar teammate={owner} className="size-4" />
+        ) : (
+          <span
+            aria-hidden
+            className="size-4 flex-none rounded-full border border-dashed border-muted-foreground"
+          />
+        )}
+        <span className="max-w-40 truncate">{owner?.name ?? 'Unassigned'}</span>
+        <ChevronDown aria-hidden className="size-3.5 text-muted-foreground" />
       </Button>
     )
   const sender = d.fromName || d.from
@@ -1012,7 +1030,7 @@ function Reader({
       <header className="flex flex-col gap-3">
         <div className="flex items-start gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <h2 className="text-2xl font-bold tracking-tight wrap-anywhere">
+            <h2 className="text-lg leading-snug font-semibold tracking-tight wrap-anywhere">
               {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -1057,7 +1075,7 @@ function Reader({
             </div>
           </div>
         ) : outcomeAtEnd ? null : (
-          <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+          <div className="flex min-h-11 flex-wrap items-center gap-x-1.5 gap-y-2 rounded-xl bg-muted/60 px-3.5 py-2 text-sm text-muted-foreground">
             <span
               aria-hidden
               className={cn(
@@ -1074,13 +1092,18 @@ function Reader({
                 <ArrowUpRight aria-hidden className="size-3.5" />
               </Link>
             ) : (
-              <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
+              <Hint label={d.reason ? undefined : (d.routeNote ?? undefined)}>
+                <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
+              </Hint>
             )}
             {about && <span>· {about}</span>}
             {!d.hidden && handOver && <span className="ml-auto">{handButton(false)}</span>}
           </div>
         )}
-        {!d.reason && d.routeNote && <p className="text-xs text-muted-foreground">{d.routeNote}</p>}
+        {/* Once a thread has it, the note stays under the row, which links to the thread. */}
+        {!d.reason && d.routeNote && (unowned || outcomeAtEnd || d.thread) && (
+          <p className="text-xs text-muted-foreground">{d.routeNote}</p>
+        )}
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         {handing && !d.hidden && (
           <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
