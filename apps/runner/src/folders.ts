@@ -28,8 +28,18 @@ import type { BackgroundWork, GitAccess } from '@brigade/contracts'
 import type { FolderBackupInfo } from './backup-store.js'
 import { CLOUD, HOME } from './config.js'
 import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.js'
-import { CACHES_EVERY_MS, CRITICAL, freeCaches, installing, Reserve, STILL_FULL } from './disk.js'
+import {
+  CACHES_EVERY_MS,
+  CRITICAL,
+  freeCaches,
+  installing,
+  Reserve,
+  STILL_FULL,
+  TIDY_EVERY_MS,
+  tidyHome,
+} from './disk.js'
 import { COPIED } from './repo-settings.js'
+import { tidyBridges } from './shared-bridges.js'
 import { owners, repairCaches, run } from './repos.js'
 import { ensureUser, pruneSystemDocker, teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
@@ -244,6 +254,9 @@ export class Folders {
   private reported: { full: boolean; at: number } | undefined
   /** When each teammate's caches were last cleared, by user. */
   private cachesAt = new Map<string, number>()
+  /** When each teammate's home was last tidied (tidyHome), and the bridges (tidyBridges). */
+  private tidiedAt = new Map<string, number>()
+  private bridgesAt = 0
   private reserve: Reserve | undefined
   private saveTimer: NodeJS.Timeout | undefined
 
@@ -604,6 +617,8 @@ export class Folders {
         }
       }
 
+      await this.tidy(candidates)
+
       for (const candidate of candidates) {
         if (now - candidate.active < TRIM_QUIET_MS) break
         if (!quiet(candidate)) continue
@@ -700,6 +715,30 @@ export class Folders {
       console.warn(`the disk is ${next.full ? 'still full' : 'no longer full'}`)
     this.reported = next
     this.options.reportDisk({ full: next.full, used: Math.min(1, Math.max(0, used)) })
+  }
+
+  /**
+   * However empty the disk, every TIDY_EVERY_MS: each teammate's home tidied (disk.ts), and
+   * the teammates' own bridges replaced by the shared ones (shared-bridges.ts).
+   */
+  private async tidy(candidates: Candidate[]) {
+    const now = Date.now()
+    const inUse = candidates
+      .filter((c) => this.options.inUse(c.name.sessionId))
+      .map((c) => c.name.sessionId)
+    const users = (await owners()).filter((runAs): runAs is string => Boolean(runAs))
+    for (const runAs of users) {
+      if (now - (this.tidiedAt.get(runAs) ?? 0) < TIDY_EVERY_MS) continue
+      this.tidiedAt.set(runAs, now)
+      await tidyHome(teammateHome(runAs), runAs, inUse).catch((error) =>
+        console.warn(`could not tidy ${runAs}'s home: ${String(error)}`),
+      )
+    }
+    if (now - this.bridgesAt < TIDY_EVERY_MS) return
+    this.bridgesAt = now
+    await tidyBridges(users).catch((error) =>
+      console.warn(`could not tidy the shared bridges: ${String(error)}`),
+    )
   }
 
   /**

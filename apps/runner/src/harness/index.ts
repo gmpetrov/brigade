@@ -79,6 +79,7 @@ import {
 import { claudeSettingsEnv } from './claude-settings.js'
 import { CODEX_SETTINGS } from './codex-settings.js'
 import { harnessEnv } from './env.js'
+import { useSharedBridge } from '../shared-bridges.js'
 import { reportRunUsage } from '../usage.js'
 import {
   answered,
@@ -2047,6 +2048,8 @@ async function prepare(workDir: string, account: AccountRef, sessionId: string, 
   }
   await ensureUser(runAs)
   await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
+  // Its bridge from the copy all teammates share, else installed in its home as before.
+  await useSharedBridge(runAs, account.provider === 'codex' ? 'codex' : 'claude-code')
   const home = teammateHome(runAs)
   return harnessEnv({
     ...(await linkAccount(runAs, account)),

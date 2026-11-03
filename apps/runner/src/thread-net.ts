@@ -84,13 +84,24 @@ function isolate(sessionId: string) {
 }
 
 /**
- * How to run a command as a teammate: in its thread's namespaces when the
- * thread has them, else as today. All keep the runner's environment (-E).
+ * The directory of the Node the runner runs on (/opt/brigade/node/bin on a cloud computer), put
+ * first on the PATH of what a teammate runs. sudo keeps the runner's environment but PATH, which
+ * becomes the computer's secure_path, where `node` is the system's (v20 on Ubuntu 24.04): too old
+ * for most projects, so each teammate and each preview script downloaded a Node of its own.
  */
-export function asTeammate(runAs: string, net: ThreadNet | null) {
-  if (!net) return { file: 'sudo', args: ['-n', '-E', '-u', runAs, '--'] }
+const NODE_DIR = dirname(process.execPath)
+
+/**
+ * How to run a command as a teammate: in its thread's namespaces when the
+ * thread has them, else as today. All keep the runner's environment (-E), and
+ * find the runner's Node first (NODE_DIR); a project that needs another one
+ * still puts its own first, as before.
+ */
+export function asTeammate(runAs: string, net: ThreadNet | null, nodeDir = NODE_DIR) {
+  const withNode = ['/bin/sh', '-c', 'PATH="$0${PATH:+:$PATH}"; export PATH; exec "$@"', nodeDir]
+  if (!net) return { file: 'sudo', args: ['-n', '-E', '-u', runAs, '--', ...withNode] }
   const how = net.isolated ? 'enter' : 'run'
-  return { file: 'sudo', args: ['-n', '-E', THREAD_HELPER, how, net.thread, runAs] }
+  return { file: 'sudo', args: ['-n', '-E', THREAD_HELPER, how, net.thread, runAs, ...withNode] }
 }
 
 /**
