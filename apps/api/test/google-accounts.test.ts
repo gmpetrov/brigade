@@ -87,3 +87,23 @@ test('the last two connections of an account disconnected at once still revoke i
   assert.ok((await disconnectBoth('marks first')) >= 1)
   assert.equal(await disconnectBoth('one checks first'), 1)
 })
+
+test('a failed sharing check still revokes and lets the cleanup go on', async () => {
+  let revoked = 0
+  const errors = console.error
+  console.error = () => {}
+  try {
+    await removeAndRevokeGoogle({
+      markRemoved: async () => {},
+      usedElsewhere: async () => {
+        throw new Error('database timeout')
+      },
+      revoke: async () => {
+        revoked++
+      },
+    })
+  } finally {
+    console.error = errors
+  }
+  assert.equal(revoked, 1)
+})

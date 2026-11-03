@@ -169,7 +169,7 @@ export const GOOGLE_KINDS = Object.keys(GOOGLE_SCOPES) as GoogleKind[]
  * Disconnect a Google account and revoke its grant unless another connection still uses it.
  * The connection is marked removed before the others are counted, so two last connections
  * removed at once cannot each count the other and both skip the revocation: whichever counts
- * second sees none left.
+ * second sees none left. When the count fails, the grant is revoked, as before this check.
  */
 export async function removeAndRevokeGoogle(steps: {
   markRemoved: () => Promise<unknown>
@@ -177,7 +177,17 @@ export async function removeAndRevokeGoogle(steps: {
   revoke: () => Promise<unknown>
 }) {
   await steps.markRemoved()
-  if (!(await steps.usedElsewhere())) await steps.revoke()
+  // The row is removed already, so a retry would not find it: when the count fails, revoke as
+  // Brigade did before sharing was checked, rather than leave the grant live with nothing to
+  // retry from. revokeGoogle swallows its own errors, so the caller's cleanup always goes on.
+  const shared = await steps.usedElsewhere().catch((error: unknown) => {
+    console.error(
+      'google sharing check failed, revoking:',
+      error instanceof Error ? error.message : error,
+    )
+    return false
+  })
+  if (!shared) await steps.revoke()
 }
 
 /**
