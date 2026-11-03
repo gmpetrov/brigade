@@ -50,3 +50,14 @@ export async function catchUpAfterReconnect(
     followed(),
   )
 }
+
+/**
+ * Where each signed-out account signs in: its latest failed turn's error, by account. An
+ * earlier one (tried again, and failed again) would show the same sign-in a second time.
+ */
+export function signInCards(items: { kind: string; key: string; signedOutAccountId?: string }[]) {
+  const at = new Map<string, string>()
+  for (const it of items)
+    if (it.kind === 'error' && it.signedOutAccountId) at.set(it.signedOutAccountId, it.key)
+  return at
+}

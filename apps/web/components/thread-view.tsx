@@ -93,6 +93,7 @@ import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
 import { SignedOutError } from '@/components/thread-sign-in'
+import { signInCards } from '@/lib/thread-sign-in'
 import {
   BrigadeNoteLine,
   brigadeNote,
@@ -348,6 +349,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     let turnTeammate: string | undefined
     // The account the turn under way runs on (turn.started, or a switch since).
     let turnAccount: string | undefined
+    // The turn under way failed (an error): a turn starting after it is a new one (Try again),
+    // not that turn resumed, though no turn.completed ended it.
+    let turnFailed = false
     let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
     // The running turn's background work, by task id: Claude Code sends every one still running at each change.
@@ -512,7 +516,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           turnTeammate = e.teammateId
           turnAccount = e.accountId
           // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
-          turnStartedAt ??= Date.parse(e.at)
+          if (turnFailed) turnStartedAt = Date.parse(e.at)
+          else turnStartedAt ??= Date.parse(e.at)
+          turnFailed = false
           idle = undefined
           add({ kind: 'start', key: `s${seq}`, at: turnStartedAt, teammateId: e.teammateId })
           break
@@ -651,6 +657,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             message: e.message,
             ...(turnAccount && signedOut(e.message) ? { signedOutAccountId: turnAccount } : {}),
           })
+          turnFailed = true
           break
         case 'raw':
           if (e.source === 'reasoning' && typeof e.value === 'string')
@@ -2340,6 +2347,7 @@ export function ThreadItems({
   // The latest turn failed: nothing came after its error but notes (a try planned on its own, say).
   const retryable = (i: number) =>
     !!onRetry && !working && items.slice(i + 1).every((it) => it.kind === 'note')
+  const signInAt = signInCards(items)
   const skillNames = useSkillCommands().map((s) => s.name)
   // A card closing the running turn waits for it to end: under a reply still being written it reads too early.
   // A teammate's buttons stay until anyone answers, with a click or their own words, or
@@ -2858,7 +2866,7 @@ export function ThreadItems({
           </div>
         ) : null
       case 'error':
-        if (item.signedOutAccountId)
+        if (item.signedOutAccountId && signInAt.get(item.signedOutAccountId) === item.key)
           return (
             <SignedOutError
               key={item.key}
