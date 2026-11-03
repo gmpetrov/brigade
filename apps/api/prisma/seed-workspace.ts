@@ -1541,6 +1541,79 @@ export async function seedWorkspace(users: Users) {
       ),
     ],
   })
+  // Asides (docs/side-replies.md): messages written during the turn, answered on the side.
+  const asides = { question: id(), change: id(), work: id() }
+  const aside = (
+    messageId: string,
+    text: string,
+    reply: string,
+    route: 'answer' | 'steer' | 'queue',
+  ): Draft[] => [
+    { type: 'message.queued', messageId, text, memberId: ada.id, waitingFor: 'turn' },
+    { type: 'message.side', messageId, status: 'answering', teammateId: riley.id },
+    {
+      type: 'message.side',
+      messageId,
+      status: 'answered',
+      teammateId: riley.id,
+      text: reply,
+      route,
+      ...(route === 'steer' ? { steerAt: minutes(30).toISOString() } : {}),
+    },
+    ...(route === 'answer'
+      ? [{ type: 'message.user', text, memberId: ada.id, messageId, side: true } as Draft]
+      : route === 'steer'
+        ? [{ type: 'message.user', text, memberId: ada.id, messageId, steered: true } as Draft]
+        : []),
+  ]
+  await thread({
+    title: 'Fix the CSV export',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'running',
+    startedAt: minutes(40),
+    projectId: website.id,
+    events: [
+      ...turn(riley.id, adaAccount.id, 'Fix the CSV export and open a pull request.', ada.id, [
+        { type: 'message.done', id: id(), text: 'On it: I reproduce it first.' },
+        ...tool(
+          'Bash',
+          { command: 'pnpm test export' },
+          '1 failed: invoices.csv has two date columns',
+        ),
+      ]),
+      ...aside(
+        asides.question,
+        'Did you find where it came from?',
+        'Yes: `exportRows` formats the date twice. I am fixing it, then I run the tests again.',
+        'answer',
+      ),
+      ...tool('Edit', { file_path: 'apps/web/lib/export.ts' }, 'Edited').map((e) => ({
+        ...e,
+        teammateId: riley.id,
+      })),
+      ...aside(
+        asides.change,
+        'Use a semicolon as the separator instead.',
+        'Noted: I pass it on to the work in progress.',
+        'steer',
+      ),
+      ...aside(
+        asides.work,
+        'Then add an Excel export.',
+        'That is new work: I start on it once this fix is done.',
+        'queue',
+      ),
+      {
+        type: 'tool.started',
+        toolCallId: `call_${id()}`,
+        toolName: 'Bash',
+        input: { command: 'pnpm test export' },
+        teammateId: riley.id,
+      },
+    ],
+  })
   await thread({
     title: 'Move the blog to MDX',
     teammateId: riley.id,
