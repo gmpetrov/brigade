@@ -47,10 +47,14 @@ teammate waits on its own ticket (`harness/aside.ts`, `ASIDE_PROTOCOL`).
 - **A turn's asides read as one.** They share one card, in the thread's card style: the person's
   messages in pale bubbles (so they don't read as messages to the turn), the replies as plain
   text, and what became of each as a caption. They never split the turn they were written
-  during. While it runs the card stays open, headed "Aside · while <teammate> works"; once it
-  ends, it folds to one line before the turn's "Worked for", "Aside · 2 messages", which opens it
-  (`layoutThread`, `AsideGroup`). One whose reply is coming or about to go into the turn stays
-  open.
+  during. While it runs, all of its asides share that one card, at the end of the turn above its
+  Working line, even when the turn wrote between them (or a message steered into it folded the
+  work before): what the turn writes goes above the card (`runningAsides`). The card is headed
+  "Aside · while <teammate> works" and shows the latest two exchanges, the earlier ones folded
+  under "1 earlier exchange". Once the turn writes again after the last of them, every reply in,
+  it folds to the line "Aside · 2 messages", which a click or a new aside opens. Once the turn
+  ends, it folds to that line before the turn's "Worked for" (`layoutThread`, `AsideGroup`). One
+  whose reply is coming or about to go into the turn stays open.
 - **Its tokens** count as Asides in Settings › Usage (`UsageRunKind` side).
 - **Runners from protocol 50** (`SIDE_REPLY_PROTOCOL`) send side replies and take `keep` and
   `queue`; the API refuses those actions to older ones, which never send one.
