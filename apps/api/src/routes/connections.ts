@@ -39,6 +39,7 @@ import {
   revokeGoogle,
   GOOGLE_KINDS,
   mayRevokeGoogle,
+  removeAndRevokeGoogle,
   type GoogleCredential,
   type GoogleKind,
 } from '../connectors/google-oauth.js'
@@ -930,8 +931,15 @@ export async function disconnect(
         scope,
         connection.vaultSecretId,
       ).catch(() => null)
-      if (credential && auth === 'google' && (await mayRevokeGoogleAccount(connection)))
-        await revokeGoogle(credential as GoogleCredential)
+      // Marked removed first, so that another account disconnected at the same moment counts
+      // this one as gone (removeAndRevokeGoogle).
+      if (credential && auth === 'google')
+        await removeAndRevokeGoogle({
+          markRemoved: () =>
+            db.connection.updateMany({ where: { id: connection.id }, data: { status: 'removed' } }),
+          usedElsewhere: async () => !(await mayRevokeGoogleAccount(connection)),
+          revoke: () => revokeGoogle(credential as GoogleCredential),
+        })
       if (credential && auth === 'mcp') await revokeMcp(credential as McpCredential)
     }
     forgetMcpTools(connection.id)
