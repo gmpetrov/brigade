@@ -175,6 +175,50 @@ export async function workspaceGitHub(db: ScopedDb, scope: Scope, repo: string) 
 }
 
 /**
+ * A repository Brigade knows by a name it no longer has (renamed or transferred on GitHub): the
+ * connection reaching it under its name now. GitHub still answers the old name, redirecting to
+ * the repository's id; null when no connection's installation reaches what it answers.
+ */
+export async function renamedRepository(db: ScopedDb, scope: Scope, repo: string) {
+  const connections = await db.connection.findMany({
+    where: { kind: 'github', status: 'active', vaultSecretId: { not: null } },
+    orderBy: { createdAt: 'asc' },
+  })
+  for (const connection of connections) {
+    const { installationId } = await openSecret<GitHubCredential>(
+      db,
+      scope,
+      connection.vaultSecretId!,
+    )
+    const answered = await fetch(
+      `${GITHUB_API}/repos/${repo.split('/').map(encodeURIComponent).join('/')}`,
+      {
+        headers: {
+          ...githubHeaders,
+          authorization: `Bearer ${await installationToken(installationId)}`,
+        },
+      },
+    )
+      .then((r) => (r.ok ? (r.json() as Promise<{ id: number; full_name: string }>) : null))
+      .catch(() => null)
+    const now = answered?.full_name?.toLowerCase()
+    if (!now || now === repo) continue
+    // Listed again: the installation's list may still have the old name.
+    forgetInstallation(installationId)
+    const found = (await installationRepos(installationId).catch(() => null))?.get(now)
+    if (found)
+      return {
+        connectionId: connection.id,
+        installationId,
+        fullName: found.fullName,
+        repository: now,
+        repositoryId: String(answered!.id),
+      }
+  }
+  return null
+}
+
+/**
  * The workspace's active GitHub connections whose installation reaches a repository, listed
  * again when older than maxAgeMs. A connection whose installation is gone is marked for reconnecting.
  */

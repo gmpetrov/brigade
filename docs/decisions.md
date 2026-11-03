@@ -560,6 +560,13 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   `/installations/<id>`. It carries a fetch-only token per granted teammate, valid ten minutes and tied to no thread
   (not in any thread's call log); the runner fetches only caches it already has, and the message never wakes a stopped
   computer or postpones its idle stop. Installation events reset the repository lists and the connections' status.
+- **Pull requests follow a renamed repository** (`apps/api/src/pull-requests.ts`). A pull request's row keeps its
+  repository's name as last seen and its GitHub id (`repositoryId`, from `github_create_pull_request` or any read),
+  which a rename or a transfer keeps. A `pull_request` event under the new name finds the row by that id; the app's
+  "Repository" event (`renamed`, `transferred`) moves every row under the old name. A row kept under a name the
+  repository no longer has is still read: GitHub answers the old name with the repository, and Brigade sends its
+  calls to the name it has now, then moves the row. Before refusing `complete_thread` for a pull request still open,
+  Brigade reads the thread's open ones again on GitHub, so a merge or close it missed is known.
 - **Disk sweep** (`sweep` in `apps/runner/src/repos.ts`, every 6 hours). Threads are never archived, so the runner
   removes a checkout when its thread is not in use there, its git files are 14 days old, and it holds nothing GitHub
   lacks: no changes or untracked files (`git --no-optional-locks status`, so looking does not refresh the index), no

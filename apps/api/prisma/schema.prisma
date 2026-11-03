@@ -1057,8 +1057,12 @@ model PullRequest {
   organizationId      String
   workspaceId         String
   workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  /// owner/name on GitHub, lowercase.
+  /// owner/name on GitHub, lowercase: the repository's name as last seen, kept in step when it is
+  /// renamed or transferred (src/pull-requests.ts, renameRepository).
   repository          String
+  /// The repository's GitHub id, which a rename keeps: how an event under its new name finds a
+  /// row kept under the old one. Unset on rows from before it was kept, until GitHub is read.
+  repositoryId        String?
   number              Int
   title               String
   headRef             String
@@ -1100,6 +1104,7 @@ model PullRequest {
   listItems ListItemPull[]
 
   @@unique([workspaceId, repository, number])
+  @@index([workspaceId, repositoryId])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([sessionId])
   @@index([reviewSessionId])

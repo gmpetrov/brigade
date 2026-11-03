@@ -3,7 +3,9 @@
 // so the next checkout is quick. Installation changes reach the repository
 // lists and the connections' status, and events start threads for the
 // connections' triggers (see triggers.ts). A pull request closing or merging
-// updates Brigade's copy of it, which can finish the task that opened it.
+// updates Brigade's copy of it, which can finish the task that opened it. A repository renamed or
+// transferred takes its pull requests' rows with it; they also know it by its id, which a rename
+// keeps (src/pull-requests.ts).
 // Verified by the app's webhook secret, then kept (src/inbound.ts) and answered at once: GitHub
 // does not retry, so each delivery is processed from its row, again until it went through. One
 // GitHub could not deliver at all (the API was down) is asked for again (redeliverFailed).
@@ -16,7 +18,7 @@ import { forgetInstallation, gitUrl, prefetchToken } from '../git.js'
 import { hubs } from '../hub.js'
 import { keepInbound, onInbound } from '../inbound.js'
 import { noteFailure } from '../ops/failures.js'
-import { pullRequestEvent, type GhPull } from '../pull-requests.js'
+import { pullRequestEvent, repositoryRenamed, type GhPull } from '../pull-requests.js'
 import { dispatch } from '../triggers.js'
 
 /** Runners from this protocol on know repos.changed. */
@@ -133,9 +135,41 @@ type Payload = {
   action?: string
   sender?: { type?: string; login?: string }
   installation?: { id?: number }
-  repository?: { full_name?: string }
+  repository?: { id?: number; name?: string; full_name?: string }
   deleted?: boolean
   pull_request?: GhPull
+  /** A repository event's: its name or owner before. */
+  changes?: {
+    repository?: { name?: { from?: string } }
+    owner?: { from?: { user?: { login?: string }; organization?: { login?: string } } }
+  }
+}
+
+/** A repository renamed or transferred: its name before, from the event's changes. */
+export function nameBefore(payload: Payload) {
+  const { repository, changes } = payload
+  if (!repository?.full_name || !repository.name) return null
+  const [owner] = repository.full_name.split('/')
+  if (payload.action === 'renamed' && changes?.repository?.name?.from)
+    return `${owner}/${changes.repository.name.from}`
+  const from = changes?.owner?.from
+  const login = from?.organization?.login ?? from?.user?.login
+  if (payload.action === 'transferred' && login) return `${login}/${repository.name}`
+  return null
+}
+
+async function repositoryMoved(installationId: number, payload: Payload) {
+  // The installation's list has the new name: listed again.
+  forgetInstallation(installationId)
+  const from = nameBefore(payload)
+  const { id, full_name } = payload.repository ?? {}
+  if (!from || id === undefined || !full_name) return
+  for (const connection of await connectionsOf(installationId))
+    await repositoryRenamed(
+      { organizationId: connection.organizationId, workspaceId: connection.workspaceId },
+      from,
+      { id, full_name },
+    )
 }
 
 /** One delivery, from its row: the caches, installations and pull requests, then the triggers. */
@@ -149,6 +183,11 @@ onInbound('github', async ({ externalId, type: event, payload: raw }) => {
     await installationChanged(installationId, 'repositories')
   else if (event === 'installation' && payload.action)
     await installationChanged(installationId, payload.action)
+  else if (
+    event === 'repository' &&
+    (payload.action === 'renamed' || payload.action === 'transferred')
+  )
+    await repositoryMoved(installationId, payload)
   else if (
     event === 'pull_request' &&
     (payload.action === 'closed' || payload.action === 'reopened') &&
