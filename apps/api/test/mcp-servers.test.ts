@@ -20,6 +20,7 @@ const { openrouterAccountName } = await import('../src/connectors/openrouter.js'
 const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
 const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
 const { ahrefs } = await import('../src/connectors/ahrefs.js')
+const { revenuecat, revenuecatAccountName } = await import('../src/connectors/revenuecat.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -295,6 +296,31 @@ test('Ahrefs tools that change something are writes, as its server marks them', 
       /-(create|update|delete|add)$|^management-update-project$/.test(name),
       name,
     )
+})
+
+test("a RevenueCat account shows as its key's project", () => {
+  // API v2's list of projects, as list-projects answers it.
+  const one = {
+    object: 'list',
+    items: [{ object: 'project', id: 'proj1ab2c3d4', name: 'NoCo AI', created_at: 1730000000000 }],
+    next_page: null,
+    url: '/v2/projects',
+  }
+  assert.equal(revenuecatAccountName(one), 'NoCo AI')
+  const two = { ...one, items: [...one.items, { object: 'project', id: 'proj9', name: 'Talkie' }] }
+  assert.equal(revenuecatAccountName(two), 'NoCo AI +1')
+  assert.equal(revenuecatAccountName({ items: [] }), null)
+  assert.equal(revenuecatAccountName('Unauthorized'), null)
+  assert.equal(revenuecatAccountName(null), null)
+})
+
+test('RevenueCat signs in with a key, and its tools that change something are writes', () => {
+  assert.equal(revenuecat.auth, 'api_key')
+  assert.equal(revenuecat.mcp!.auth, 'api_key')
+  const tools = Object.entries(revenuecat.mcp!.tools)
+  assert.equal(tools.length, 129)
+  const reads = /^(get|list|validate|preview|render)-/
+  for (const [name, tool] of tools) assert.equal(tool.write, !reads.test(name), name)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

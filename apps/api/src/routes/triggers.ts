@@ -38,6 +38,7 @@ const KINDS: ConnectorKind[] = [
   'posthog',
   'dataforseo',
   'ahrefs',
+  'revenuecat',
   'email',
   'mcp',
   'webhook',

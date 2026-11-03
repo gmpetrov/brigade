@@ -156,6 +156,13 @@ export const ConnectMcp = z.object({
   /** The account being reconnected: Stripe repairs it when its sign-in alone cannot say which. */
   reconnect: z.string().max(100).optional(),
 })
+/** An App whose account signs in to its MCP server with a key the member pastes (RevenueCat). */
+export const ConnectMcpKey = z.object({
+  kind: z.enum(['revenuecat']),
+  apiKey: z.string().trim().min(1).max(500),
+  /** The account being reconnected: it gets the new key, whichever project the key reaches. */
+  reconnect: z.string().max(100).optional(),
+})
 /** An MCP server's address, to see what it is and how its accounts sign in. */
 export const InspectMcp = z.object({ url: z.string().trim().min(1).max(500) })
 /**

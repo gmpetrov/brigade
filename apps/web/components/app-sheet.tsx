@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
+import { AppKeyForm, KEY_SIGN_IN } from '@/components/app-key-form'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
 import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
 import { RegionMenu } from '@/components/region-menu'
@@ -118,31 +119,35 @@ export function AppSheet({
   const route =
     custom || server || email
       ? null
-      : kind === 'stripe' ||
-          kind === 'cloudflare' ||
-          kind === 'google_cloud' ||
-          kind === 'neon' ||
-          kind === 'supabase' ||
-          kind === 'atlassian' ||
-          kind === 'notion' ||
-          kind === 'linear' ||
-          kind === 'mixpanel' ||
-          kind === 'resend' ||
-          kind === 'replicate' ||
-          kind === 'openrouter' ||
-          kind === 'posthog' ||
-          kind === 'dataforseo' ||
-          kind === 'ahrefs'
-        ? 'mcp'
-        : kind === 'github'
-          ? 'github'
-          : 'google'
+      : KEY_SIGN_IN[kind]
+        ? 'key'
+        : kind === 'stripe' ||
+            kind === 'cloudflare' ||
+            kind === 'google_cloud' ||
+            kind === 'neon' ||
+            kind === 'supabase' ||
+            kind === 'atlassian' ||
+            kind === 'notion' ||
+            kind === 'linear' ||
+            kind === 'mixpanel' ||
+            kind === 'resend' ||
+            kind === 'replicate' ||
+            kind === 'openrouter' ||
+            kind === 'posthog' ||
+            kind === 'dataforseo' ||
+            kind === 'ahrefs'
+          ? 'mcp'
+          : kind === 'github'
+            ? 'github'
+            : 'google'
   // A server per data region (Mixpanel): connecting starts by picking one.
   const regions = entry.regions
   /** Sign in at the provider: a new account, or the one being reconnected. */
   const connect = (region?: string, reconnecting?: string) =>
     run(async () => {
       if (!route) return setAdding(true)
+      // A key pasted here: its form, for a new account or the one reconnected.
+      if (route === 'key') return setKeying({ reconnect: reconnecting })
       const before = accounts.length
       const inWindow = await openSignIn(async (returnTo) => {
         const { url } = await api<{ url: string }>(`/connections/${route}`, {
@@ -157,6 +162,8 @@ export function AppSheet({
       })
       if (inWindow) setWaiting({ before, since: Date.now() })
     })
+  // The key form of an App that signs in with one: open, and the account it reconnects if any.
+  const [keying, setKeying] = useState<{ reconnect?: string }>()
   // While the sign-in tab is open: look for the new account every few seconds, for a while.
   const [waiting, setWaiting] = useState<{ before: number; since: number }>()
   // The sign-in tab says when it is done: an account signed in to again shows no new row, and
@@ -316,7 +323,7 @@ export function AppSheet({
         )}
 
         {/* The Email App lists its addresses above, in place of accounts. */}
-        {(added || adding) && !email && (
+        {(added || adding || keying) && !email && (
           <Section title={custom ? 'App' : 'Accounts'}>
             {accounts.map((c) => (
               <Account
@@ -332,6 +339,20 @@ export function AppSheet({
               />
             ))}
             {adding && custom && <CustomAppForm onSubmit={connectCustomApp} />}
+            {keying && (
+              <div className="px-4 py-4">
+                <AppKeyForm
+                  kind={kind}
+                  name={name}
+                  reconnect={keying.reconnect}
+                  onConnected={() => {
+                    setKeying(undefined)
+                    void reload()
+                  }}
+                  onCancel={() => setKeying(undefined)}
+                />
+              </div>
+            )}
             {adding && server && app && (
               <div className="px-4 py-4">
                 <McpServerCard
@@ -346,7 +367,7 @@ export function AppSheet({
               </div>
             )}
             {/* A server with nothing to sign in to has one account. */}
-            {added && !custom && !adding && mcp?.auth !== 'none' && (
+            {added && !custom && !adding && !keying && mcp?.auth !== 'none' && (
               <RegionMenu regions={regions} onPick={(region) => void connect(region)}>
                 <button
                   type="button"

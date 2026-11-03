@@ -9,6 +9,7 @@ import {
   ConnectGitHub,
   ConnectGoogle,
   ConnectMcp,
+  ConnectMcpKey,
   ConnectMcpServer,
   InspectMcp,
   ConnectWebhookApp,
@@ -276,6 +277,7 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   posthog: true,
   dataforseo: true,
   ahrefs: true,
+  revenuecat: true,
   email: !unavailable('email'),
   mcp: true,
   webhook: true,
@@ -658,6 +660,39 @@ export const connections = new Hono<AppEnv>()
       verifier,
     })
     return c.json({ url, appId: app.id })
+  })
+
+  /**
+   * An account of an App that signs in to its MCP server with a pasted key (RevenueCat): the
+   * key is checked against the server before it is kept, and the row named from it.
+   */
+  .post('/mcp/key', async (c) => {
+    const { scope, db } = c.var
+    const { kind, apiKey, reconnect } = await parseBody(c.req.raw, ConnectMcpKey)
+    const server = connectors[kind]!.mcp!
+    const name = appCatalog[kind].name
+    const keyed = (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
+      })
+    try {
+      await listMcpTools(keyed, server)
+    } catch (error) {
+      throw new HTTPException(400, {
+        message: `${name} did not accept that key (${error instanceof Error ? error.message : 'error'})`,
+      })
+    }
+    const account = await mcpAccount(server, keyed)
+    if (!account) console.warn(`mcp connection of ${kind}: no account name`)
+    const connection = await createConnection(
+      scope,
+      { kind, label: name, externalAccount: account },
+      { apiKey },
+      undefined,
+      reconnect,
+    )
+    return c.json({ id: connection.id }, 201)
   })
 
   /** Start an MCP App's sign-in, on its server's own OAuth. */

@@ -48,6 +48,7 @@ export const BUILT_IN: Kind[] = [
   'posthog',
   'dataforseo',
   'ahrefs',
+  'revenuecat',
   'stripe',
 ]
 

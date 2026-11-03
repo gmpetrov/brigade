@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
+import { AppKeyForm } from '@/components/app-key-form'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
 import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
 import { RegionMenu } from '@/components/region-menu'
@@ -53,10 +54,11 @@ export const APP_NAMES: Record<string, string> = {
   posthog: 'PostHog',
   dataforseo: 'DataForSEO',
   ahrefs: 'Ahrefs',
+  revenuecat: 'RevenueCat',
 }
 
 /** Where each App signs in. */
-const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> = {
+const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 'key'>> = {
   gmail: 'google',
   google_calendar: 'google',
   google_drive: 'google',
@@ -80,6 +82,8 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   posthog: 'mcp',
   dataforseo: 'mcp',
   ahrefs: 'mcp',
+  // A key pasted in the ticket (app-key-form.tsx).
+  revenuecat: 'key',
 }
 
 /**
@@ -198,6 +202,8 @@ export function AppAccessAsk({
       ? (data.data?.members[chosen.createdByMemberId] ?? 'the member who connected it')
       : undefined
   const [error, setError] = useState<string>()
+  // The key form of an App that signs in with one, and the account it reconnects if any.
+  const [keying, setKeying] = useState<{ reconnect?: string }>()
   const access = ask.app.scope === 'read' ? 'read' : 'read and write'
   const give = (connectionId: string | undefined) =>
     onReply({ type: 'access', granted: true, ...(connectionId ? { connectionId } : {}) })
@@ -239,6 +245,8 @@ export function AppAccessAsk({
   async function connect(region?: string, again?: Connection) {
     setError(undefined)
     const route = again && customOAuth ? 'mcp/server' : SIGN_IN[kind]
+    // A key: its form, in the ticket, for a new account or the one given again.
+    if (route === 'key') return setKeying({ reconnect: again?.id })
     if (!route) return
     try {
       const inWindow = await openSignIn(async (returnTo) => {
@@ -422,6 +430,22 @@ export function AppAccessAsk({
           </>
         )}
       </div>
+      {keying && (
+        <div className="w-full max-w-md">
+          <AppKeyForm
+            kind={kind}
+            name={name}
+            reconnect={keying.reconnect}
+            action={`${keying.reconnect ? 'Reconnect' : 'Connect'} and give ${askerName} ${access} access`}
+            onConnected={(id) => {
+              setKeying(undefined)
+              void data.reload()
+              give(id)
+            }}
+            onCancel={() => setKeying(undefined)}
+          />
+        </div>
+      )}
       {permission && (
         <p className="text-sm text-muted-foreground">
           On {name}&apos;s page, also allow{' '}

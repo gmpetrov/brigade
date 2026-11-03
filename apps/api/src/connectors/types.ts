@@ -109,6 +109,7 @@ export type ConnectorKind =
   | 'posthog'
   | 'dataforseo'
   | 'ahrefs'
+  | 'revenuecat'
   | 'email'
   | 'mcp'
 
