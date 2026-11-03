@@ -129,6 +129,26 @@ const send = (sessionId: string, text: string, memberId: string | null = 'm1') =
   return messageId
 }
 
+/** A message sent again by the API, as it does for a settled one its sender wants run after all. */
+const resend = (
+  sessionId: string,
+  messageId: string,
+  text: string,
+  more: { steer?: boolean } = {},
+) =>
+  threads.handle({
+    type: 'thread.prompt',
+    commandId: `r${++n}`,
+    thread: spec(sessionId),
+    text,
+    memberId: 'm1',
+    messageId,
+    then: [],
+    attachments: [],
+    settled: true,
+    ...more,
+  })
+
 const act = (sessionId: string, messageId: string, action: 'keep' | 'queue' | 'steer' | 'cancel') =>
   threads.handle({
     type: 'thread.queued',
@@ -191,7 +211,10 @@ test('a question during the turn is answered on the side, read, and runs no turn
     ],
   )
   assert.match(sideAsked.at(-1)!, /Where was the bug\?/)
-  assert.equal(users('ask', question)[0]!.side, true)
+  assert.deepEqual(users('ask', question)[0]!.side, {
+    text: 'It is in exportRows.',
+    route: 'answer',
+  })
   // The turn ends: no turn comes for the settled question.
   await finish('ask')
   await sleep(50)
@@ -245,20 +268,96 @@ test('new work waits for the turn, as any message would', async () => {
   await finish('queue')
 })
 
-test('a settled message its sender wants run after all gets its turn, even once the turn is over', async () => {
-  send('requeue', 'Fix the CSV export')
-  await started('requeue', 1)
+test('a settled message sent again by its sender gets no side reply, and runs or is steered', async () => {
+  send('again', 'Fix the CSV export')
+  await started('again', 1)
   sideSays = 'Yes.\nROUTE: answer'
-  const message = send('requeue', 'Is it the date format?')
-  await until(() => users('requeue', message).length === 1, 'settled')
-  await finish('requeue')
+  const message = send('again', 'Is it the date format?')
+  await until(() => users('again', message).length === 1, 'settled')
+  const asked = sideAsked.length
+  // Sent again, as the API does for "Queue for after this turn": queued, no second aside.
+  resend('again', message, 'Is it the date format?')
+  // A second click while it waits changes nothing.
+  resend('again', message, 'Is it the date format?')
+  await sleep(60)
+  assert.equal(sideAsked.length, asked)
+  assert.equal(
+    of('again').filter((e) => e.type === 'message.queued' && e.messageId === message).length,
+    2,
+    'its first queue, then once again',
+  )
+  await finish('again')
+  await started('again', 2)
+  assert.equal(users('again', message).filter((e) => !e.side).length, 1)
+  await finish('again')
   await sleep(50)
-  assert.equal(turns('requeue'), 1)
-  act('requeue', message, 'queue')
-  await started('requeue', 2)
-  assert.equal(lastSide('requeue', message)!.route, 'queue')
-  assert.equal(users('requeue', message).filter((e) => !e.side).length, 1)
-  await finish('requeue')
+  assert.equal(turns('again'), 2)
+
+  // Sent again with steer, during a turn: it goes into it.
+  send('again', 'Now the PDF export')
+  await started('again', 3)
+  const other = send('again', 'Which library?')
+  await until(() => users('again', other).length === 1, 'settled')
+  resend('again', other, 'Which library?', { steer: true })
+  await until(() => users('again', other).some((e) => e.steered), 'steered')
+  await finish('again')
+})
+
+test('one side reply at a time, even when one waiting for its turn is cancelled', async () => {
+  send('one', 'Fix the CSV export')
+  await started('one', 1)
+  let release!: () => void
+  hold = new Promise((resolve) => (release = resolve))
+  const asked = sideAsked.length
+  const first = send('one', 'First question')
+  await until(() => lastSide('one', first)?.status === 'answering', 'the first under way')
+  const second = send('one', 'Second question')
+  act('one', second, 'cancel')
+  await sleep(20)
+  send('one', 'Third question')
+  await sleep(100)
+  assert.equal(sideAsked.length - asked, 1, 'only the first reached the harness')
+  release()
+  hold = undefined
+  await until(() => sideAsked.length - asked === 2, 'the third after the first')
+  await finish('one')
+  for (let i = 0; i < 2; i++) {
+    await sleep(30)
+    if (ends.has('one')) await finish('one')
+  }
+})
+
+test('a later aside, and a message passed to the turn, are told what was said on the side before', async () => {
+  send('context', 'Fix the CSV export')
+  await started('context', 1)
+  sideSays = 'A comma, or a semicolon.\nROUTE: answer'
+  const options = send('context', 'Which separators could we use?')
+  await until(() => users('context', options).length === 1, 'settled')
+  sideSays = 'Noted: the semicolon. I pass it on.\nROUTE: steer'
+  const pick = send('context', 'Use the second one')
+  await until(() => users('context', pick).some((e) => e.steered), 'steered')
+  // The aside knew the first exchange…
+  const prompt = sideAsked.at(-1)!
+  assert.match(prompt, /Which separators could we use\?/)
+  assert.match(prompt, /A comma, or a semicolon\./)
+  // …and so does the turn it was passed to, which never heard it.
+  const given = steered.get('context')!.at(-1)!
+  assert.match(given, /A comma, or a semicolon\./)
+  assert.match(given, /Use the second one$/)
+  // The steered message says which side reply it came from.
+  assert.deepEqual(users('context', pick).at(-1)!.side, {
+    text: 'Noted: the semicolon. I pass it on.',
+    route: 'steer',
+  })
+  await finish('context')
+  // Its next turn hears it as notes: the one after starts afresh.
+  send('context', 'Next')
+  await started('context', 2)
+  sideSays = 'ok\nROUTE: answer'
+  const late = send('context', 'Anything else?')
+  await until(() => users('context', late).length === 1, 'settled')
+  assert.doesNotMatch(sideAsked.at(-1)!, /Which separators/)
+  await finish('context')
 })
 
 test('when its turn comes first, the side reply stops and the teammate answers it itself', async () => {

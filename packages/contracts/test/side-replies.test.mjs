@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { AgentEvent, parseSideReply, sideNote, sidePrompt } from '../dist/index.js'
+import { AgentEvent, parseSideReply, sideNote, sidePrompt, withSideContext } from '../dist/index.js'
 
 test('a side reply’s route comes off its last line, and the text keeps the rest', () => {
   const parsed = parseSideReply('Yes: the date is formatted twice.\n\nROUTE: answer')
@@ -70,7 +70,19 @@ test('message.side and a settled message.user parse', () => {
       text: 'x',
       memberId: 'u',
       messageId: 'm1',
-      side: true,
+      side: { text: 'In exportRows.', route: 'answer' },
     }).success,
   )
+})
+
+test('an aside, and a message given to the turn, carry what was said on the side before them', () => {
+  const earlier = [{ text: 'Which separators could we use?', reply: 'A comma, or a semicolon.' }]
+  const prompt = sidePrompt({ name: 'A member', text: 'Use the second one', earlier })
+  assert.match(prompt, /Earlier during this turn, on the side/)
+  assert.match(prompt, /A comma, or a semicolon\./)
+  assert.ok(prompt.indexOf('A comma') < prompt.indexOf('Use the second one'))
+  const steered = withSideContext('A member', earlier, 'Use the second one')
+  assert.match(steered, /Which separators could we use\?/)
+  assert.match(steered, /Use the second one$/)
+  assert.equal(withSideContext('A member', [], 'Use a semicolon'), 'Use a semicolon')
 })

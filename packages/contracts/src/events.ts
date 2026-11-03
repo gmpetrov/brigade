@@ -461,10 +461,11 @@ export const AgentEvent = z.discriminatedUnion('type', [
     /** Noted while the teammate waits on a person's answer: it reads it then, so no turn starts now. */
     waiting: z.boolean().optional(),
     /**
-     * Settled by its side reply (message.side, route answer): no turn of its own comes, and the
-     * thread's state stays as it was. The thread shows it where its side reply started.
+     * The side reply it got (message.side), so a page of the thread that starts here still shows
+     * it. With route answer, that reply settled it: no turn of its own comes, and the thread's
+     * state stays as it was. With route steer, it went into the running turn from there.
      */
-    side: z.boolean().optional(),
+    side: z.object({ text: z.string(), route: z.enum(['answer', 'steer', 'queue']) }).optional(),
     /** The earlier message it replies to. */
     replyTo: ReplyTo.optional(),
   }),

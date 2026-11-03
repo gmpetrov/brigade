@@ -22,18 +22,50 @@ const ROUTE_LINE = /^[ \t>*_`]*ROUTE[ \t]*:[ \t]*\**[ \t]*(answer|steer|queue)\b
  * What the copy of the conversation is told: the person's message, that it can only read, and
  * how to end its reply. Its own instructions (the teammate's, with its memory) still hold.
  */
-export function sidePrompt(input: { name: string; text: string }) {
+export function sidePrompt(input: { name: string; text: string; earlier?: SideExchange[] }) {
   const name = input.name.replace(/["<>\n]/g, '')
-  const text = input.text.replace(/<(\/?message\b)/gi, '‹$1')
   return [
     `${name} wrote to you while your turn is still running. This is a copy of your conversation, made to answer them on the side: your turn goes on without you, and nothing you do here reaches it. The step your turn is on may show as interrupted here: it is not, it still runs.`,
-    `<message from="${name}" kind="person">\n${text}\n</message>`,
+    ...(input.earlier?.length ? [sideExchanges(name, input.earlier)] : []),
+    marked(name, 'person', input.text),
     'Answer them in a few lines, from what you already know. You may read files and nothing else: here you change nothing, run nothing that changes anything, and use none of Brigade’s tools. Do not promise what your turn will do, except as below.',
     'Then decide what happens to their message, and say it on the last line, alone:\n' +
       '- `ROUTE: answer` when your answer settles it: a question, a remark, news. Your turn is told of this exchange when it next starts.\n' +
       '- `ROUTE: steer` when it changes the work your turn is doing now (a correction, an instruction, a detail it needs): it is given to your turn at its next step. Say in a few words that you pass it on.\n' +
       '- `ROUTE: queue` when it asks for new work, separate from what your turn is doing: it waits until your turn ends. Say so in a few words.',
   ].join('\n\n')
+}
+
+/** A message answered on the side during the running turn, and what the side reply said. */
+export type SideExchange = { text: string; reply: string }
+
+/** A message marked with who wrote it; marks inside it are defused, as in the thread's log. */
+const marked = (name: string, kind: 'person' | 'teammate', text: string) =>
+  `<message from="${name}" kind="${kind}">\n${text.replace(/<(\/?message\b)/gi, '‹$1')}\n</message>`
+
+/**
+ * The messages answered on the side earlier in the running turn, which the turn has not
+ * heard: a later message may refer to them ("the second one").
+ */
+export function sideExchanges(name: string, earlier: SideExchange[]) {
+  return (
+    'Earlier during this turn, on the side:\n\n' +
+    earlier
+      .map(
+        (e) =>
+          `${marked(name, 'person', e.text)}\n${marked('You, on the side', 'teammate', e.reply)}`,
+      )
+      .join('\n\n')
+  )
+}
+
+/**
+ * A message given to the running turn, with what was said on the side before it during that
+ * turn: the turn never heard it, and the message may build on it.
+ */
+export function withSideContext(name: string, earlier: SideExchange[], text: string) {
+  if (!earlier.length) return text
+  return `${sideExchanges(name, earlier)}\n\nThen they wrote this, for the work you are doing now:\n\n${text}`
 }
 
 /**

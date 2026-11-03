@@ -728,6 +728,11 @@ export const ThreadPrompt = z.object({
   messageId: z.string().max(64).optional(),
   /** Give it to the first teammate during its running turn, if it is running one; else queue it. */
   steer: z.boolean().optional(),
+  /**
+   * Answered on the side already (message.side), and sent again by a person who wants it run
+   * after all: it gets no side reply again.
+   */
+  settled: z.boolean().optional(),
   /** The earlier message it replies to: quoted to the teammate, shown above it. */
   replyTo: ReplyTo.optional(),
   /**
