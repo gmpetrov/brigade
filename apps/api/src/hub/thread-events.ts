@@ -134,7 +134,7 @@ export function statusAfter(current: SessionStatus, event: AgentEvent): SessionS
     // Noted while the teammate waits on a person (a hand back's note): no turn starts.
     // Settled by its side reply: none either, and the turn it came during says how things are.
     case 'message.user':
-      if (event.side) return current
+      if (event.side?.route === 'answer') return current
       return event.waiting ? 'waiting' : 'running'
     case 'approval.resolved':
       return 'running'

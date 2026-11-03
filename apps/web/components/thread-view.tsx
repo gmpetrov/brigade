@@ -334,6 +334,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     const seen = new Set<string>()
     // Messages answered on the side, by id (message.side), and what each said while queued.
     const sides = new Map<string, SideState>()
+    const sideItems = new Map<string, Item>()
     const asked = new Map<string, Extract<AgentEvent, { type: 'message.queued' }>>()
     let turnTeammate: string | undefined
     let turnStartedAt: number | undefined
@@ -375,6 +376,34 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               side.steered = true
               if (idle) idle = 'steered'
             }
+            // A page that starts between its aside and this: it shows here.
+            const item = sideItems.get(side.messageId)
+            if (item && shown && !items.includes(item)) items.push(item)
+            break
+          }
+          // Its aside began before what was loaded: what its reading carries shows it here.
+          if (!side && e.side && e.messageId) {
+            const made: SideState = {
+              messageId: e.messageId,
+              status: 'answered',
+              text: e.side.text,
+              route: e.side.route,
+              ...(e.steered ? { steered: true } : {}),
+            }
+            sides.set(e.messageId, made)
+            if (e.steered && idle) idle = 'steered'
+            add({
+              kind: 'user',
+              key: `u${seq}`,
+              seq,
+              text: e.text,
+              memberId: e.memberId,
+              attachments: e.attachments ?? [],
+              at: Date.parse(e.at),
+              ...(e.replyTo ? { replyTo: e.replyTo } : {}),
+              ...(turnTeammate ? { steeredTo: turnTeammate } : {}),
+              side: made,
+            })
             break
           }
           // Not steered into a turn: one still open never ended.
@@ -407,9 +436,12 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           handed = undefined
           break
         }
-        case 'message.queued':
+        case 'message.queued': {
           seen.add(e.messageId)
           asked.set(e.messageId, e)
+          // Settled on the side, then sent again by its sender to run after all.
+          const settled = sides.get(e.messageId)
+          if (settled?.route === 'answer') settled.route = 'queue'
           queued.set(e.messageId, {
             messageId: e.messageId,
             text: e.text,
@@ -419,6 +451,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(e.note ? { note: e.note } : {}),
           })
           break
+        }
         case 'message.side': {
           seen.add(e.messageId)
           let side = sides.get(e.messageId)
@@ -429,7 +462,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             sides.set(e.messageId, side)
             // The person's message, where its side reply began: it came during the turn, as a
             // steered message does.
-            add({
+            const item: Item = {
               kind: 'user',
               key: `s${seq}`,
               seq,
@@ -440,7 +473,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               ...(message.replyTo ? { replyTo: message.replyTo } : {}),
               ...(turnTeammate ? { steeredTo: turnTeammate } : {}),
               side,
-            })
+            }
+            sideItems.set(e.messageId, item)
+            add(item)
           }
           side.status = e.status
           side.teammateId = e.teammateId

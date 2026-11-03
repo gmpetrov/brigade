@@ -1561,9 +1561,26 @@ export async function seedWorkspace(users: Users) {
       ...(route === 'steer' ? { steerAt: minutes(30).toISOString() } : {}),
     },
     ...(route === 'answer'
-      ? [{ type: 'message.user', text, memberId: ada.id, messageId, side: true } as Draft]
+      ? [
+          {
+            type: 'message.user',
+            text,
+            memberId: ada.id,
+            messageId,
+            side: { text: reply, route },
+          } as Draft,
+        ]
       : route === 'steer'
-        ? [{ type: 'message.user', text, memberId: ada.id, messageId, steered: true } as Draft]
+        ? [
+            {
+              type: 'message.user',
+              text,
+              memberId: ada.id,
+              messageId,
+              steered: true,
+              side: { text: reply, route },
+            } as Draft,
+          ]
         : []),
   ]
   await thread({

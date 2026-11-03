@@ -96,7 +96,9 @@ async function working(
         const pausedBySwitch =
           e.type === 'account.switched' && !(e.data as { toAccountId?: string | null }).toAccountId
         // A message settled on the side (message.side) starts no work of the teammate's.
-        const settled = e.type === 'message.user' && (e.data as { side?: boolean } | null)?.side
+        const settled =
+          e.type === 'message.user' &&
+          (e.data as { side?: { route?: string } } | null)?.side?.route === 'answer'
         if (STARTS.has(e.type)) {
           if (!settled) startedAt ??= e.at.getTime()
         } else if (ENDS.has(e.type) || pausedBySwitch) {
