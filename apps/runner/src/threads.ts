@@ -70,6 +70,11 @@ import {
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
 
+/** How long a message its side reply passes on waits for its sender to keep it (tests set less). */
+const STEER_DELAY = process.env.BRIGADE_SIDE_STEER_MS
+  ? Number(process.env.BRIGADE_SIDE_STEER_MS)
+  : STEER_DELAY_MS
+
 /** Resolves once the signal aborts. */
 const aborted = (signal: AbortSignal) =>
   new Promise<void>((resolve) =>
@@ -1475,7 +1480,7 @@ export class Threads {
       !thread.takeover &&
       thread.running?.teammateId === spec.teammate.id &&
       thread.slotWait?.teammateId !== spec.teammate.id &&
-      !!thread.harnesses.get(spec.teammate.id)?.harness.forkable
+      this.harness(thread, spec).harness.forkable
     )
   }
 
@@ -1502,14 +1507,15 @@ export class Threads {
       await Promise.race([before, aborted(stop.signal)])
       if (stop.signal.aborted) return
       if (!(await (this.options.memoryRoom?.() ?? Promise.resolve(true)))) return
-      const seat = thread.harnesses.get(spec.teammate.id)
       if (
         stop.signal.aborted ||
         message.state !== 'queued' ||
-        !seat?.harness.forkable ||
         thread.running?.teammateId !== spec.teammate.id
       )
         return
+      // Its teammate's seat: the turn running in it is the one a copy is made of.
+      const seat = this.harness(thread, spec)
+      if (!seat.harness.forkable) return
       this.emitSide(message, { status: 'answering' })
       started = true
       // The files that came with it are in the teammate's folder before the copy reads where they are.
@@ -1571,11 +1577,11 @@ export class Threads {
       return
     }
     if (reply.route === 'steer') {
-      const at = Date.now() + STEER_DELAY_MS
+      const at = Date.now() + STEER_DELAY
       message.steerTimer = setTimeout(() => {
         message.steerTimer = undefined
         if (message.state === 'queued') void this.steer(thread, message)
-      }, STEER_DELAY_MS)
+      }, STEER_DELAY)
       return this.emitSide(message, {
         status: 'answered',
         ...reply,
