@@ -613,3 +613,9 @@ export type AccountLoginBackup = Prisma.AccountLoginBackupModel
  * The old VM stays with the provider, never destroyed by Brigade: its data may still be read.
  */
 export type ComputerReplacement = Prisma.ComputerReplacementModel
+/**
+ * Model FeatureFlag
+ * A feature hidden until it is ready (packages/contracts/src/features.ts, docs/feature-flags.md),
+ * opened to some people. Without a row, a feature is its declared default for everyone.
+ */
+export type FeatureFlag = Prisma.FeatureFlagModel

@@ -118,6 +118,8 @@ const UNSCOPED = new Set([
   'InvitationSend',
   // Webhooks as they came, before anyone knows whose they are: src/inbound.ts's only.
   'InboundEvent',
+  // Features opened to some people: src/features.ts's only.
+  'FeatureFlag',
   // A library file's lock, by workspace and file: src/library.ts's withLibraryLock only.
   'LibraryLock',
 ])

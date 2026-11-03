@@ -65,6 +65,7 @@ import {
   type CustomMcp,
 } from '../mcp-servers.js'
 import { forgetMcpTools } from '../mcp-tools.js'
+import { appOpen, featuresOfUser } from '../features.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
 import {
@@ -485,7 +486,7 @@ export const connections = new Hono<AppEnv>()
       },
       orderBy: { createdAt: 'asc' },
     })
-    const [apps, members, packs] = await Promise.all([
+    const [apps, members, packs, features] = await Promise.all([
       c.var.db.app.findMany({ orderBy: { createdAt: 'asc' } }),
       // Who connected each account.
       c.var.db.member.findMany({ select: { id: true, user: { select: { name: true } } } }),
@@ -497,7 +498,13 @@ export const connections = new Hono<AppEnv>()
           skills: { select: { name: true, description: true }, orderBy: { name: 'asc' } },
         },
       }),
+      featuresOfUser(c.var.userId, c.var.scope.workspaceId),
     ])
+    // Apps behind a feature the member lacks (src/features.ts): not offered, not connectable.
+    const kinds = Object.keys(appCatalog) as ConnectorKind[]
+    const hidden = kinds.filter((kind) => !appOpen(kind, features))
+    const available = availableApps()
+    for (const kind of hidden) available[kind] = false
     return c.json({
       members: Object.fromEntries(members.map((m) => [m.id, m.user.name])),
       apps: apps.map((a) => ({
@@ -527,7 +534,8 @@ export const connections = new Hono<AppEnv>()
           ]
         }),
       ),
-      available: availableApps(),
+      available,
+      hidden,
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
     })
   })
@@ -537,6 +545,10 @@ export const connections = new Hono<AppEnv>()
     if (!googleConfigured())
       throw new HTTPException(409, { message: 'Google is not configured on this Brigade server' })
     const { kind, returnTo } = await parseBody(c.req.raw, ConnectGoogle)
+    if (!appOpen(kind, await featuresOfUser(c.var.userId, c.var.scope.workspaceId)))
+      throw new HTTPException(403, {
+        message: `${appCatalog[kind].name} is not open to your account yet`,
+      })
     const state = randomBytes(24).toString('base64url')
     await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo })
     return c.json({ url: googleAuthUrl(kind, state) })

@@ -16,6 +16,17 @@ if (!/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL ?? '')) {
   throw new Error('Refusing to seed a non-local database')
 }
 
+// Features hidden until ready (docs/feature-flags.md) are open to everyone locally, as before
+// they were hidden. Added only when missing, so a row changed by hand stays: set its everyone to
+// false to see the feature as people without it do.
+await prisma.featureFlag.createMany({
+  data: [
+    { key: 'gmail', everyone: true, note: 'Local development' },
+    { key: 'google_drive', everyone: true, note: 'Local development' },
+  ],
+  skipDuplicates: true,
+})
+
 // Nothing to add: every account is there, and Ada, Bob or Carol has an organization (the
 // sample's, or their own). Said before loading what adding takes, seconds on each preview
 // start (scripts/preview/setup.sh runs this every time).

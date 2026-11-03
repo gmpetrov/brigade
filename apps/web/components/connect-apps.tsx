@@ -219,7 +219,11 @@ function Catalog({
   setCategory: (category?: string) => void
   onConnected: () => void
 }) {
-  const kinds: Kind[] = [...BUILT_IN, 'mcp', 'webhook']
+  // An App behind a feature the member lacks (docs/feature-flags.md) is not offered, unless the
+  // workspace has it already: its accounts stay in reach.
+  const kinds = ([...BUILT_IN, 'mcp', 'webhook'] as Kind[]).filter(
+    (kind) => !data?.hidden?.includes(kind) || added.some((a) => a.kind === kind),
+  )
   const categories = data ? [...new Set(kinds.map((k) => data.catalog[k].category))] : []
   const q = query.trim().toLowerCase()
   const shown = data

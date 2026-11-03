@@ -20,6 +20,9 @@ if (!process.env.DATABASE_URL && existsSync(envFile))
 process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+// Google's Apps are offered only on a server with Google set up.
+process.env.GOOGLE_CLIENT_ID ??= 'test-google-client'
+process.env.GOOGLE_CLIENT_SECRET ??= 'test-google-secret'
 
 const { prisma, scoped } = await import('../src/db.js')
 const database = await Promise.race([
@@ -343,6 +346,30 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
     // A custom app has no tools, and the Email App is not asked for in a ticket.
     assert.doesNotMatch(text, /Typeform|app\.kind webhook|app\.kind email/)
     assert.doesNotMatch(text, /ada-sentry/)
+  })
+
+  test('an App behind a feature is offered only when the person the thread works for has it', async () => {
+    // Drive, with no account here, behind its feature (src/features.ts): this test's row, then
+    // the database's own put back.
+    const saved = await prisma.featureFlag.findUnique({ where: { key: 'google_drive' } })
+    const drive = (lines: string[]) => lines.some((l) => l.includes('(app.kind google_drive)'))
+    try {
+      await prisma.featureFlag.upsert({
+        where: { key: 'google_drive' },
+        create: { key: 'google_drive', emails: [`bob-${suffix}@test.local`] },
+        update: { everyone: false, emails: [`bob-${suffix}@test.local`], workspaceIds: [] },
+      })
+      assert.ok(drive((await listed(await thread(ids.bob, ids.bob))).connectable), 'Bob has it')
+      assert.ok(!drive((await listed(await thread(ids.carol, ids.carol))).connectable), 'Carol not')
+      // Several people ask in Carol's thread: it goes by Carol, who started it.
+      assert.ok(!drive((await listed(await thread(ids.carol, ids.bob))).connectable))
+      assert.ok(drive((await listed(await thread(ids.bob, ids.carol))).connectable))
+    } finally {
+      if (saved) {
+        const { key: _key, updatedAt: _at, ...rest } = saved
+        await prisma.featureFlag.update({ where: { key: 'google_drive' }, data: rest })
+      } else await prisma.featureFlag.deleteMany({ where: { key: 'google_drive' } })
+    }
   })
 
   test("another member's own account never shows, even given to the teammate", async () => {

@@ -146,7 +146,8 @@ export const ModelName = {
   FolderBackup: 'FolderBackup',
   TeammateBackup: 'TeammateBackup',
   AccountLoginBackup: 'AccountLoginBackup',
-  ComputerReplacement: 'ComputerReplacement'
+  ComputerReplacement: 'ComputerReplacement',
+  FeatureFlag: 'FeatureFlag'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1811,6 +1812,18 @@ export const ComputerReplacementScalarFieldEnum = {
 } as const
 
 export type ComputerReplacementScalarFieldEnum = (typeof ComputerReplacementScalarFieldEnum)[keyof typeof ComputerReplacementScalarFieldEnum]
+
+
+export const FeatureFlagScalarFieldEnum = {
+  key: 'key',
+  everyone: 'everyone',
+  emails: 'emails',
+  workspaceIds: 'workspaceIds',
+  note: 'note',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FeatureFlagScalarFieldEnum = (typeof FeatureFlagScalarFieldEnum)[keyof typeof FeatureFlagScalarFieldEnum]
 
 
 export const SortOrder = {
