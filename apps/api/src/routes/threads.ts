@@ -1377,7 +1377,7 @@ export const threads = new Hono<AppEnv>()
           data: { path: ['messageId'], equals: messageId },
         },
         orderBy: { seq: 'desc' },
-        select: { type: true, data: true },
+        select: { seq: true, type: true, data: true },
       })
       const side =
         latest?.type === 'message.user'
@@ -1398,6 +1398,10 @@ export const threads = new Hono<AppEnv>()
           throw new HTTPException(409, { message: 'This message cannot run now. Write it again.' })
         await deliver(thread.computer, {
           ...prompt,
+          // One per reading: a second click, or a second request racing the first before the
+          // runner says it queued it, names the same command, which is kept once (its row's id)
+          // and taken once by the runner.
+          commandId: `side-${thread.id}-${latest!.seq}`,
           settled: true,
           ...(input.action === 'steer' ? { steer: true } : {}),
         })

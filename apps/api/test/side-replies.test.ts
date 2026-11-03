@@ -257,5 +257,80 @@ describe(
         conn.close()
       }
     })
+
+    test('two clicks racing to run a settled message send it once', async () => {
+      const conn = await runner(SIDE_REPLY_PROTOCOL)
+      try {
+        const thread = await threadWith(true)
+        const replies = await Promise.all([
+          post(`/${thread.id}/messages/${thread.messageId}`, { action: 'queue' }),
+          post(`/${thread.id}/messages/${thread.messageId}`, { action: 'steer' }),
+        ])
+        for (const res of replies) assert.equal(res.status, 200, await res.clone().text())
+        await until(
+          () => forThread(conn.sent, 'thread.prompt', thread.id).length >= 1,
+          'the message on its runner',
+        )
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        assert.equal(forThread(conn.sent, 'thread.prompt', thread.id).length, 1)
+        assert.equal(
+          await prisma.runnerCommand.count({
+            where: { sessionId: thread.id, type: 'thread.prompt' },
+          }),
+          1,
+        )
+      } finally {
+        conn.close()
+      }
+    })
+
+    test('a settled message queued again stays queued for a page that starts after it', async () => {
+      const { historyContext } = await import('../src/thread-history.js')
+      const thread = await threadWith(true)
+      await db.sessionEvent.create({
+        data: {
+          sessionId: thread.id,
+          seq: 3,
+          type: 'message.queued',
+          at: new Date(),
+          data: {
+            type: 'message.queued',
+            messageId: thread.messageId,
+            text: thread.text,
+            memberId: ids.member,
+            waitingFor: 'turn',
+            at: new Date().toISOString(),
+          },
+        },
+      } as never)
+      const context = await historyContext(thread.id, 4)
+      const queued = context.filter(
+        (e) => e.event.type === 'message.queued' && e.event.messageId === thread.messageId,
+      )
+      assert.deepEqual(
+        queued.map((e) => e.seq),
+        [3],
+      )
+      // Read since: it is queued no more.
+      await db.sessionEvent.create({
+        data: {
+          sessionId: thread.id,
+          seq: 4,
+          type: 'message.user',
+          at: new Date(),
+          data: {
+            type: 'message.user',
+            messageId: thread.messageId,
+            text: thread.text,
+            memberId: ids.member,
+            at: new Date().toISOString(),
+          },
+        },
+      } as never)
+      assert.equal(
+        (await historyContext(thread.id, 5)).some((e) => e.event.type === 'message.queued'),
+        false,
+      )
+    })
   },
 )
