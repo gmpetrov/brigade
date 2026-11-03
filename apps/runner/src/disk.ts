@@ -198,11 +198,10 @@ export function oldStores(entries: string[], current: string) {
 export async function freeCaches(
   home: string,
   runAs?: string,
-  /** The teammate's command lines: read now unless given (tests). */
-  processes?: string[],
+  /** Reads the teammate's command lines (tests): from ps unless given; null when unknown. */
+  readCommands: () => Promise<string[] | null> = async () => (runAs ? commandsOf(runAs) : []),
 ) {
   const before = await free(home)
-  const commands = processes ?? (runAs ? await commandsOf(runAs) : [])
   // From the home: pnpm writes a probe file where it runs, and the runner runs commands from /.
   const pnpm = (...args: string[]) =>
     run('sh', ['-c', 'cd "$HOME" && exec pnpm "$@"', 'pnpm', ...args], {
@@ -232,7 +231,9 @@ export async function freeCaches(
   }
   for (const cache of TOOL_CACHES) await remove(join(home, cache), runAs)
   await remove(join(home, GO_MODULES), runAs, true)
-  // Unknown: as if one ran.
+  // Read last, just before: a mint command started during the prune (up to PRUNE_TIMEOUT_MS)
+  // keeps its site. Unknown: as if one ran.
+  const commands = await readCommands()
   if (commands && !commands.some(runsMintlify)) await remove(join(home, MINTLIFY_SITES), runAs)
   const freed = (await free(home)) - before
   if (freed > 0) console.log(`cleared ${runAs ?? home}'s caches: ${gib(freed)} freed`)

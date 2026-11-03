@@ -97,7 +97,7 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
   const home = await homeWith(t, [...kept, ...gone])
   await readOnly(join(home, 'go/pkg/mod'))
 
-  await freeCaches(home, undefined, ['node /usr/bin/next dev --port 3000', 'sh -c ls'])
+  await freeCaches(home, undefined, async () => ['node /usr/bin/next dev --port 3000', 'sh -c ls'])
 
   for (const path of kept) assert.ok(existsSync(join(home, path)), `${path} stays`)
   for (const path of gone) assert.ok(!existsSync(join(home, path)), `${path} goes`)
@@ -111,10 +111,25 @@ test("Mintlify's site stays while a mint command runs", async (t) => {
     ['node /home/bt-ada/.cache/pnpm/dlx/e331/1a1a-d25/node_modules/.bin/../mint/index.js dev'],
   ]) {
     const home = await homeWith(t, [MINTLIFY_SITE, GO_MODULE])
-    await freeCaches(home, undefined, processes)
+    await freeCaches(home, undefined, async () => processes)
     assert.ok(existsSync(join(home, MINTLIFY_SITE)), `kept with ${processes[0]}`)
     assert.ok(!existsSync(join(home, GO_MODULE)), 'the other caches go')
   }
+})
+
+test('a mint command started while the store was pruned keeps its site; one unknown too', async (t) => {
+  // It starts once pnpm was asked to prune: the processes read before then had none.
+  const home = await homeWith(t, [MINTLIFY_SITE])
+  const pruned = async () =>
+    (await readFile(join(home, 'pnpm.log'), 'utf8').catch(() => '')).includes('store prune')
+  await freeCaches(home, undefined, async () =>
+    (await pruned()) ? ['node /tmp/mint/index.js dev --port 3333'] : [],
+  )
+  assert.ok(existsSync(join(home, MINTLIFY_SITE)), 'its site stays')
+
+  const unknown = await homeWith(t, [MINTLIFY_SITE])
+  await freeCaches(unknown, undefined, async () => null)
+  assert.ok(existsSync(join(unknown, MINTLIFY_SITE)), 'kept while the processes cannot be read')
 })
 
 test("Mintlify's CLI is told from its command lines", () => {
