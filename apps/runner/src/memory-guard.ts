@@ -152,12 +152,20 @@ export class MemoryGuard {
 }
 
 /**
- * Whether the computer has room for a turn to start: some memory available and hardly any
- * waiting on it. Short of that, a new turn would only push the guard to stop another.
+ * Whether the computer has room for a turn to start: some memory available and not stalled on
+ * it for long. Short of that, a new turn would only push the guard to stop another.
  */
 export function roomFor(reading: Reading) {
-  return reading.available >= 0.15 && reading.full < 10
+  return reading.available >= 0.15 && reading.full < ROOM_FULL
 }
+
+/**
+ * Most of the time (PSI full avg10, in %) a computer may wait on memory for a turn to start: half
+ * the guard's own limit. A computer that swaps a little peaks at 15 to 25 for a few seconds
+ * whenever something reads back from swap, with a fifth of its memory still available (seen on
+ * an 8 GB cloud computer): at 10, turns waited on those peaks and said the computer was short.
+ */
+const ROOM_FULL = 20
 
 /** The most turns a runner runs at once by default where its memory decides (roomFor): a safety cap. */
 export const MOST_TURNS = 32

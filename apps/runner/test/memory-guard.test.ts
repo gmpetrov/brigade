@@ -177,9 +177,11 @@ test('after the kernel killed something for memory, the guard waits instead of a
   )
 })
 
-test('room for a turn: some memory available, hardly any waiting on it', () => {
+test('room for a turn: some memory available, not stalled on it for long', () => {
   assert.equal(roomFor(calm), true)
   assert.equal(roomFor({ ...calm, available: 0.1 }), false)
+  // A computer that swaps a little peaks this high for a few seconds: a turn still starts.
+  assert.equal(roomFor({ ...calm, full: 15 }), true)
   assert.equal(roomFor({ ...calm, full: 25 }), false)
 })
 
