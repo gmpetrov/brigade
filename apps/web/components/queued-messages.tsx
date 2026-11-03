@@ -59,6 +59,13 @@ export type Outgoing = {
    * than in the thread.
    */
   queues: boolean
+  /** When it was sent. */
+  at: number
+  /**
+   * Sent while its teammate's turn ran: it may be answered on the side (docs/side-replies.md),
+   * so it shows in the turn's Aside at once.
+   */
+  aside?: boolean
   /** When the API took it: this attempt's wait for the computer counts from then. */
   sentAt?: number
   /** The computer it goes with the thread to, by name. */

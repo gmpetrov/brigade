@@ -84,7 +84,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
-import { expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
+import { asidesOnTheirWay, expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
 import {
@@ -107,6 +107,7 @@ import {
   ThreadItems,
   useThreadItems,
   type ComputerDown,
+  type Item,
 } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -635,13 +636,27 @@ export function ThreadConversation({
   }, [outgoing, seen, events])
   const inThreadOut = pendingOut.filter(inThread)
   const lastOut = inThreadOut.at(-1)
+  // Sent while its teammate works, it may be answered on the side (docs/side-replies.md): it
+  // shows in the turn's Aside at once, its reply coming, until the thread shows its own. Queued
+  // and not answered on the side soon after (an older runner, no memory to spare), it waits in
+  // the queue as any message does. One waits for the asides before it to be answered first.
+  const [now, setNow] = useState(() => Date.now())
+  const asideOut = useMemo(
+    () => asidesOnTheirWay(outgoing, items, queued, seen, now),
+    [outgoing, items, queued, seen, now],
+  )
+  useEffect(() => {
+    if (asideOut.length === 0) return
+    const timer = setTimeout(() => setNow(Date.now()), 1000)
+    return () => clearTimeout(timer)
+  }, [asideOut.length, now])
   // Once the thread has them, they go, and their files' previews with them.
   useEffect(() => {
-    const gone = outgoing.filter((o) => !pendingOut.includes(o))
+    const gone = outgoing.filter((o) => !pendingOut.includes(o) && !asideOut.includes(o))
     if (gone.length === 0) return
     for (const o of gone) for (const u of o.uploads) if (u.preview) URL.revokeObjectURL(u.preview)
     setOutgoing((list) => list.filter((o) => !gone.some((g) => g.messageId === o.messageId)))
-  }, [outgoing, pendingOut, setOutgoing])
+  }, [outgoing, pendingOut, asideOut, setOutgoing])
 
   // At the end, the thread follows what comes in, streamed words included. Scrolled up to
   // read, nothing moves: a button goes back down. An older page above does not move the view.
@@ -837,6 +852,38 @@ export function ThreadConversation({
       undefined,
     )?.teammate ??
     t.teammate
+  // The asides on their way, in the turn's Aside after what it shows (see asideOut).
+  const shownItems: Item[] = asideOut.length
+    ? [
+        ...items,
+        ...asideOut.map((o): Item => ({
+          kind: 'user',
+          key: `o${o.messageId}`,
+          seq: events.at(-1)?.seq ?? 0,
+          text: o.text,
+          memberId: me.memberId,
+          attachments: o.uploads.flatMap((u) =>
+            u.info
+              ? [
+                  {
+                    id: u.info.id,
+                    path: u.info.path ?? `attachments/${u.info.name}`,
+                    name: u.info.name,
+                    contentType: u.info.contentType,
+                    size: u.info.size,
+                    status: 'ready' as const,
+                    source: u.info.source,
+                  },
+                ]
+              : [],
+          ),
+          at: o.at,
+          ...(o.with.replyTo ? { replyTo: o.with.replyTo } : {}),
+          steeredTo: answering.id,
+          side: { messageId: o.messageId, status: 'answering' },
+        })),
+      ]
+    : items
   // Approvals, questions, the teammate's own tickets and caps on a connector call show in the thread itself; other open tickets above it.
   const notices = t.tickets.filter(
     (ticket) =>
@@ -1084,6 +1131,9 @@ export function ThreadConversation({
       afterSeq: events.at(-1)?.seq ?? 0,
       state: 'sending',
       queues: busy,
+      at: Date.now(),
+      // As the runner answers on the side: a person's message during its teammate's own turn.
+      ...(current === 'running' && !moveTo && !t.controlledByMemberId ? { aside: true } : {}),
       with: {
         attachmentIds,
         ...(pick ? { pick } : {}),
@@ -1517,7 +1567,7 @@ export function ThreadConversation({
                   )}
                   <ThreadItems
                     threadId={t.id}
-                    items={items}
+                    items={shownItems}
                     teammate={t.teammate}
                     teammates={people}
                     drafting={text.trim() !== ''}
@@ -1653,8 +1703,10 @@ export function ThreadConversation({
             <>
               {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
               <QueuedMessages
-                queued={queued.filter((m) => !isQueuedReport(m))}
-                outgoing={pendingOut}
+                queued={queued.filter(
+                  (m) => !isQueuedReport(m) && !asideOut.some((o) => o.messageId === m.messageId),
+                )}
+                outgoing={pendingOut.filter((o) => !asideOut.includes(o))}
                 teammateName={answering.name}
                 canSteer={busy}
                 canParallel={!t.parent}
