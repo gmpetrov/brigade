@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { HarnessAgent } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
+import type { ToolSet } from 'ai'
 import { createLocalSandboxSession, freePort } from '../../src/harness/local-sandbox.js'
 
 // Runs of the Claude Code bridge (patched) with a stand-in for the Claude Agent SDK, whose
@@ -12,8 +13,11 @@ import { createLocalSandboxSession, freePort } from '../../src/harness/local-san
 
 const require = createRequire(import.meta.url)
 const packageDir = (name: string) => dirname(require.resolve(`${name}/package.json`))
+/** The MCP SDK's folder: its exports map `package.json` into its build. */
+const mcpSdkDir = () =>
+  resolve(dirname(require.resolve('@modelcontextprotocol/sdk/server/index.js')), '../../..')
 
-/** What the bootstrap's pnpm install would put there: the bridge's own ws and zod, a fake SDK. */
+/** What the bootstrap's pnpm install would put there: the bridge's own MCP SDK, ws and zod, a fake Agent SDK. */
 async function fakeInstall(dir: string, sdk: string) {
   const modules = join(dir, 'node_modules')
   await mkdir(join(modules, '@anthropic-ai', 'claude-agent-sdk'), { recursive: true })
@@ -26,17 +30,8 @@ async function fakeInstall(dir: string, sdk: string) {
     }),
   )
   await writeFile(join(modules, '@anthropic-ai', 'claude-agent-sdk', 'index.mjs'), sdk)
-  const mcp = join(modules, '@modelcontextprotocol', 'sdk')
-  await mkdir(join(mcp, 'server'), { recursive: true })
-  await writeFile(
-    join(mcp, 'package.json'),
-    JSON.stringify({
-      name: '@modelcontextprotocol/sdk',
-      type: 'module',
-      exports: { './server/mcp.js': './server/mcp.js' },
-    }),
-  )
-  await writeFile(join(mcp, 'server', 'mcp.js'), 'export class McpServer { registerTool() {} }\n')
+  await mkdir(join(modules, '@modelcontextprotocol'), { recursive: true })
+  await symlink(mcpSdkDir(), join(modules, '@modelcontextprotocol', 'sdk'))
   await symlink(packageDir('ws'), join(modules, 'ws'))
   await symlink(packageDir('zod'), join(modules, 'zod'))
 }
@@ -51,6 +46,9 @@ export async function bridgeTurn(
     resumeFrom?: unknown
     /** The built-in tools it may use, by the harness's names (read, glob…). */
     activeTools?: string[]
+    /** The host's own tools (Brigade's), and how Claude Code should treat some of them. */
+    tools?: ToolSet
+    toolHints?: Record<string, { readOnly?: boolean; alwaysLoad?: boolean }>
   },
 ): Promise<{ parts: { type: string; [key: string]: unknown }[]; record: any[] }> {
   const home = await mkdtemp(join(tmpdir(), 'claude-bridge-'))
@@ -82,8 +80,19 @@ export async function bridgeTurn(
   const restricted = { ...sandbox.restricted(), run: bootstrapRun }
   const session = { ...sandbox, run: bootstrapRun, restricted: () => restricted }
   const agent = new HarnessAgent({
-    harness: createClaudeCode({ auth: {} }),
+    harness: createClaudeCode({
+      auth: {},
+      ...(options.toolHints ? { toolHints: options.toolHints } : {}),
+    }),
     permissionMode: options.permissionMode,
+    ...(options.tools
+      ? {
+          tools: options.tools,
+          toolApproval: Object.fromEntries(
+            Object.keys(options.tools).map((name) => [name, 'not-applicable' as const]),
+          ),
+        }
+      : {}),
     sandboxConfig: { workDir: '.' },
     ...(options.activeTools ? { activeTools: options.activeTools as never } : {}),
   })

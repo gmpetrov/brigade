@@ -117,6 +117,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   on with one; fork sub-agents, on by default in SDK sessions since Claude Code 2.1.302, stay off
   (`CLAUDE_CODE_FORK_SUBAGENT=0`) until that is decided on its own. Its bundled skills stay: Claude Code turns a skill
   off by name, whatever it comes from, so it would also turn off a member's or a repository's skill of the same name.
+- **Brigade's tools reach Claude Code as JSON** (the bridge patch). The adapter served them through the MCP SDK's
+  `McpServer`, which keeps a zod schema per tool for the whole turn; zod objects are heavy, and a teammate's App tools
+  (883 tools, 3.8 MB of JSON, on the workspace computer) held about 600 MB in each running turn's bridge. The patch
+  serves them from a small MCP server of its own: each tool's schema is converted once, exactly as `McpServer`'s
+  tools/list did, and only a plain copy of the JSON is kept (the conversion's result holds its zod schema in a hidden
+  `~standard` property); a tool's zod schema is built again when it is first called, to check the call's input as
+  before. Tested in `apps/runner/test/claude-bridge-tools.test.ts`.
 - **Background work holds the turn; sub-agents work for the thread.** A Claude Code teammate's background work
   (sub-agents started with the Agent tool, shells and Monitors run in the background) reports back in a turn Claude
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process

@@ -1,8 +1,19 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f240ec44f0 100644
+index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f706868e5fbd7f3acbe49fa530fde650c2ba3baf 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
-@@ -1127,6 +1127,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -5,6 +5,10 @@ import { argv, env, pid, stdout } from "node:process";
+ import { WebSocketServer } from "ws";
+ import * as claudeAgentSdk from "@anthropic-ai/claude-agent-sdk";
+ import * as mcpServerModule from "@modelcontextprotocol/sdk/server/mcp.js";
++import { Server as McpLowLevelServer } from "@modelcontextprotocol/sdk/server/index.js";
++import { CallToolRequestSchema, ErrorCode as McpErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
++import { getParseErrorMessage, safeParseAsync } from "@modelcontextprotocol/sdk/server/zod-compat.js";
++import { toJsonSchemaCompat } from "@modelcontextprotocol/sdk/server/zod-json-schema-compat.js";
+ import { isDeepStrictEqual } from "node:util";
+ import { z } from "zod/v4";
+ //#region ../harness/dist/bridge/index.js
+@@ -1127,6 +1131,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			id: block.id,
  			delta: event.delta.partial_json
  		});
@@ -11,7 +22,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  		return;
  	}
  	if (event.type === "content_block_stop") {
-@@ -1137,9 +1139,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -1137,9 +1143,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			type: "text-end",
  			id: block.id
  		});
@@ -25,7 +36,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  		});
  		else send({
  			type: "tool-input-end",
-@@ -1604,6 +1609,21 @@ function createPermissionSettings(input) {
+@@ -1604,6 +1613,21 @@ function createPermissionSettings(input) {
  	};
  }
  /**
@@ -47,7 +58,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  * Claude Code picks a model's output limit, system prompt and default effort
  * from its own reading of the model id, and misreads AI Gateway ids with a
  * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
-@@ -1650,6 +1670,36 @@ function createApprovalPreToolUseHook(input) {
+@@ -1650,12 +1674,98 @@ function createApprovalPreToolUseHook(input) {
  		} };
  	};
  }
@@ -84,7 +95,214 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-all") return false;
  	const kind = NATIVE_TOOL_KINDS[input.nativeName] ?? "edit";
-@@ -1796,11 +1846,25 @@ async function runTurn(start, turn) {
+ 	if (input.permissionMode === "allow-edits") return kind === "bash";
+ 	return kind === "edit" || kind === "bash";
+ }
++/**
++* Brigade: a tool as McpServer's tools/list gave it (registerTool's fields, the same JSON Schema
++* conversion), computed once so that no zod schema stays behind. The conversion's result holds
++* its zod schema (a hidden `~standard` property): only a plain copy of it lets that go.
++*/
++function hostToolDefinition(tool, hints) {
++	return {
++		name: tool.name,
++		description: tool.description ?? "",
++		inputSchema: JSON.parse(JSON.stringify(toJsonSchemaCompat(jsonSchemaToZodObject(tool.inputSchema), {
++			strictUnions: true,
++			pipeStrategy: "input"
++		}))),
++		...hints?.readOnly == null ? {} : { annotations: { readOnlyHint: hints.readOnly } },
++		execution: { taskSupport: "forbidden" },
++		...hints?.alwaysLoad == null ? {} : { _meta: { "anthropic/alwaysLoad": hints.alwaysLoad } }
++	};
++}
++/**
++* Brigade: the host's tools served as McpServer served them (tools/list; tools/call with the
++* input checked against the tool's schema, and a failure as the tool's error result), from their
++* JSON. A tool's zod schema is built when it is first called, and kept for the turn's later calls.
++*/
++function createHostToolsServer(hostTools) {
++	const server = new McpLowLevelServer({
++		name: "harness-tools",
++		version: "1.0.0"
++	}, { capabilities: { tools: { listChanged: true } } });
++	const schemas = /* @__PURE__ */ new Map();
++	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: [...hostTools.values()].map((tool) => tool.definition) }));
++	server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
++		try {
++			const toolName = request.params.name;
++			const tool = hostTools.get(toolName);
++			if (!tool) throw new McpError(McpErrorCode.InvalidParams, `Tool ${toolName} not found`);
++			let schema = schemas.get(toolName);
++			if (!schema) {
++				schema = jsonSchemaToZodObject(tool.inputSchema);
++				schemas.set(toolName, schema);
++			}
++			const parsed = await safeParseAsync(schema, request.params.arguments ?? {});
++			if (!parsed.success) throw new McpError(McpErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${getParseErrorMessage(parsed.error)}`);
++			return await tool.run(parsed.data, extra);
++		} catch (error) {
++			if (error instanceof McpError && error.code === McpErrorCode.UrlElicitationRequired) throw error;
++			return {
++				content: [{
++					type: "text",
++					text: error instanceof Error ? error.message : String(error)
++				}],
++				isError: true
++			};
++		}
++	});
++	return server;
++}
+ async function runTurn(start, turn) {
+ 	const emit = (msg) => turn.emit(msg);
+ 	const abortCtl = new AbortController();
+@@ -1670,79 +1780,82 @@ async function runTurn(start, turn) {
+ 	const streamEventState = createClaudeStreamEventState();
+ 	const mcpServers = { ...start.mcpServers };
+ 	if (start.tools && start.tools.length > 0) {
+-		const server = new mcpModule.McpServer({
+-			name: "harness-tools",
+-			version: "1.0.0"
+-		});
++		// Brigade: the host's tools as JSON, not as zod. McpServer keeps a zod schema per tool for the
++		// whole turn, and zod v4 objects are heavy: a thread's 883 App tools (3.8 MB of JSON) held
++		// about 600 MB in each turn's bridge. Each tool's schema is converted once, as McpServer's
++		// tools/list did (the same JSON), then let go; a tool's zod is built again only when it is
++		// called, to check its input as McpServer did.
++		const hostTools = /* @__PURE__ */ new Map();
+ 		for (const tool of start.tools) {
++			if (hostTools.has(tool.name)) throw new Error(`Tool ${tool.name} is already registered`);
+ 			const hints = start.toolHints?.[tool.name];
+-			server.registerTool(tool.name, {
+-				description: tool.description ?? "",
+-				inputSchema: jsonSchemaToZodObject(tool.inputSchema),
+-				...hints?.readOnly == null ? {} : { annotations: { readOnlyHint: hints.readOnly } },
+-				...hints?.alwaysLoad == null ? {} : { _meta: { "anthropic/alwaysLoad": hints.alwaysLoad } }
+-			}, async (...handlerArgs) => {
+-				const [input, extra] = handlerArgs;
+-				const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
+-				const toolCallId = resolveMcpHandlerToolUseId({
+-					state: streamEventState,
+-					metadataToolUseId: typeof metadataToolCallId === "string" ? metadataToolCallId : void 0,
+-					toolName: tool.name,
+-					input
+-				}) ?? randomUUID();
+-				streamEventState.mcpHandlerCalls.set(toolCallId, {
+-					toolName: tool.name,
+-					input
+-				});
+-				if (!streamEventState.emittedToolCallIds.has(toolCallId)) {
+-					streamEventState.emittedToolCallIds.add(toolCallId);
+-					emit({
+-						type: "tool-call",
+-						toolCallId,
++			hostTools.set(tool.name, {
++				definition: hostToolDefinition(tool, hints),
++				inputSchema: tool.inputSchema,
++				run: async (...handlerArgs) => {
++					const [input, extra] = handlerArgs;
++					const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
++					const toolCallId = resolveMcpHandlerToolUseId({
++						state: streamEventState,
++						metadataToolUseId: typeof metadataToolCallId === "string" ? metadataToolCallId : void 0,
++						toolName: tool.name,
++						input
++					}) ?? randomUUID();
++					streamEventState.mcpHandlerCalls.set(toolCallId, {
+ 						toolName: tool.name,
+-						input: JSON.stringify(input),
+-						providerExecuted: false
++						input
+ 					});
+-					markWaitingOnHostInput({
+-						state: streamEventState,
+-						emit,
+-						toolUseId: toolCallId
++					if (!streamEventState.emittedToolCallIds.has(toolCallId)) {
++						streamEventState.emittedToolCallIds.add(toolCallId);
++						emit({
++							type: "tool-call",
++							toolCallId,
++							toolName: tool.name,
++							input: JSON.stringify(input),
++							providerExecuted: false
++						});
++						markWaitingOnHostInput({
++							state: streamEventState,
++							emit,
++							toolUseId: toolCallId
++						});
++					}
++					const { output, isError, toolResult } = await turn.requestToolResult(toolCallId).finally(() => {
++						clearWaitingOnHostInput({
++							state: streamEventState,
++							toolUseId: toolCallId
++						});
++						if (!streamEventState.mcpToolCalls.has(toolCallId)) streamEventState.pendingStepToolUseIds.delete(toolCallId);
+ 					});
+-				}
+-				const { output, isError, toolResult } = await turn.requestToolResult(toolCallId).finally(() => {
+-					clearWaitingOnHostInput({
+-						state: streamEventState,
+-						toolUseId: toolCallId
++					emit({
++						type: "tool-result",
++						toolCallId,
++						toolName: tool.name,
++						result: output ?? null,
++						isError: !!isError
+ 					});
+-					if (!streamEventState.mcpToolCalls.has(toolCallId)) streamEventState.pendingStepToolUseIds.delete(toolCallId);
+-				});
+-				emit({
+-					type: "tool-result",
+-					toolCallId,
+-					toolName: tool.name,
+-					result: output ?? null,
+-					isError: !!isError
+-				});
+-				if (toolResult != null) {
+-					const converted = convertHarnessToolModelOutput({ output: toolResult.output });
++					if (toolResult != null) {
++						const converted = convertHarnessToolModelOutput({ output: toolResult.output });
++						return {
++							content: converted.content.map((part) => part.type === "text" ? part : {
++								type: "image",
++								data: part.data,
++								mimeType: part.mediaType
++							}),
++							isError: isError === true || converted.isError
++						};
++					}
+ 					return {
+-						content: converted.content.map((part) => part.type === "text" ? part : {
+-							type: "image",
+-							data: part.data,
+-							mimeType: part.mediaType
+-						}),
+-						isError: isError === true || converted.isError
++						content: [{
++							type: "text",
++							text: JSON.stringify(output ?? null)
++						}],
++						isError
+ 					};
+ 				}
+-				return {
+-					content: [{
+-						type: "text",
+-						text: JSON.stringify(output ?? null)
+-					}],
+-					isError
+-				};
+ 			});
+ 		}
++		const server = createHostToolsServer(hostTools);
+ 		mcpServers["harness-tools"] = {
+ 			type: "sdk",
+ 			name: "harness-tools",
+@@ -1796,11 +1909,25 @@ async function runTurn(start, turn) {
  		deferredToolUseIds,
  		nativeToolCallNames: streamEventState.nativeToolCallNames
  	});
@@ -112,7 +330,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  	const questionPreToolUseHook = createQuestionPreToolUseHook({
  		turn,
  		emit,
-@@ -1818,6 +1882,7 @@ async function runTurn(start, turn) {
+@@ -1818,6 +1945,7 @@ async function runTurn(start, turn) {
  	const queryArgs = {
  		prompt: queryInput.input,
  		options: {
@@ -120,7 +338,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
-@@ -1840,7 +1905,10 @@ async function runTurn(start, turn) {
+@@ -1840,7 +1968,10 @@ async function runTurn(start, turn) {
  			} } : {},
  			includePartialMessages: true,
  			hooks: {
@@ -132,7 +350,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  					matcher: "AskUserQuestion",
  					hooks: [questionPreToolUseHook],
  					...start.questionTimeoutMs !== void 0 ? { timeout: Math.ceil(start.questionTimeoutMs / 1e3) } : {}
-@@ -1851,6 +1919,10 @@ async function runTurn(start, turn) {
+@@ -1851,6 +1982,10 @@ async function runTurn(start, turn) {
  				}] }]
  			},
  			...start.resumeSessionId ?? lastClaudeSessionId ? { resume: start.resumeSessionId ?? lastClaudeSessionId } : start.continue === true || !turn.firstTurn ? { continue: true } : {},
@@ -143,7 +361,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  			...permissionOptions,
  			...Object.keys(settings).length > 0 ? { settings } : {},
  			mcpServers,
-@@ -1916,6 +1988,11 @@ async function runTurn(start, turn) {
+@@ -1916,6 +2051,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -155,7 +373,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -1935,6 +2012,74 @@ async function runTurn(start, turn) {
+@@ -1935,6 +2075,74 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -230,7 +448,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -1975,6 +2120,19 @@ async function runTurn(start, turn) {
+@@ -1975,6 +2183,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -250,7 +468,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -1986,8 +2144,43 @@ async function runTurn(start, turn) {
+@@ -1986,8 +2207,43 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -294,7 +512,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..fa432737b008e5eaf985bb1ea628b5f2
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2023,34 +2216,54 @@ async function runTurn(start, turn) {
+@@ -2023,34 +2279,54 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
