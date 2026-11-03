@@ -31,6 +31,17 @@ test("an earlier turn's asides stay where they are", () => {
   assert.deepEqual(runningAsides<Plain>(nodes, kinds, 2), nodes)
 })
 
+// The thread lays out its running turn by replacing what it had with this list: given back
+// as the same array, emptying it to refill it lost every message while the teammate worked.
+test('a running turn without asides comes back as a new list, its nodes all there', () => {
+  const kinds = ['user', 'turn', 'start', 'assistant'].map((kind) => ({ kind }))
+  const nodes = [item(0), item(1), item(2), item(3)]
+  const laid = runningAsides<Plain>(nodes, kinds, 2)
+  assert.notEqual(laid, nodes)
+  nodes.length = 0
+  assert.deepEqual(laid, [item(0), item(1), item(2), item(3)])
+})
+
 test('an aside folded with the work before a steered message still joins the card', () => {
   type Worked = { type: 'worked'; inner: (Plain | AsidesNode)[] }
   const kinds = ['start', 'user', 'assistant', 'user', 'assistant'].map((kind) => ({ kind }))
