@@ -112,10 +112,10 @@ const memoryStopped = (why: string) => `Stopped to give the computer memory back
  */
 const MEMORY_WAIT_MS = 5 * 60_000
 /**
- * A turn kept waiting for memory says so only past this: most waits end within seconds, and a
- * note for each would worry people for nothing.
+ * A turn kept waiting for memory says so only past this: most waits end within a minute (a peak
+ * of swapping passes), and a note for each would worry people for nothing.
  */
-const MEMORY_NOTICE_MS = Number(process.env.BRIGADE_MEMORY_NOTICE_MS) || 20_000
+const MEMORY_NOTICE_MS = Number(process.env.BRIGADE_MEMORY_NOTICE_MS) || 60_000
 /**
  * Turns that start without waiting on one another, and the fewest a computer runs at once
  * after the memory guard stopped one (stoppedForMemory).
