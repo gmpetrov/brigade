@@ -1020,14 +1020,17 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /**
    * A queued message: cancel it, change its text, or steer it into the
-   * teammate's running turn (it stays queued if that cannot be done).
+   * teammate's running turn (it stays queued if that cannot be done). From
+   * SIDE_REPLY_PROTOCOL, for a message answered on the side: keep, to leave it for after
+   * the turn rather than have it given to it; queue, to have one its side reply settled
+   * run after all (steer gives it to the running turn).
    */
   z.object({
     type: z.literal('thread.queued'),
     commandId: z.string(),
     sessionId: z.string(),
     messageId: z.string(),
-    action: z.enum(['cancel', 'edit', 'steer']),
+    action: z.enum(['cancel', 'edit', 'steer', 'keep', 'queue']),
     /** The new text, for edit. */
     text: z.string().max(100_000).optional(),
     memberId: z.string(),

@@ -460,6 +460,11 @@ export const AgentEvent = z.discriminatedUnion('type', [
     steered: z.boolean().optional(),
     /** Noted while the teammate waits on a person's answer: it reads it then, so no turn starts now. */
     waiting: z.boolean().optional(),
+    /**
+     * Settled by its side reply (message.side, route answer): no turn of its own comes, and the
+     * thread's state stays as it was. The thread shows it where its side reply started.
+     */
+    side: z.boolean().optional(),
     /** The earlier message it replies to. */
     replyTo: ReplyTo.optional(),
   }),
@@ -488,6 +493,23 @@ export const AgentEvent = z.discriminatedUnion('type', [
     memberId: z.string().nullable(),
     /** Set when nobody cancelled it, e.g. a person took over or the computer restarted. */
     reason: z.string().optional(),
+  }),
+  /**
+   * A side reply (side-replies.ts): a person's message sent during its teammate's turn, answered
+   * now by a copy of the teammate's conversation, which says what becomes of it. Sent again as
+   * it moves on; the latest one for a message is its state. answering: under way. answered: the
+   * reply, and its route. failed: no reply came, and the message waits its turn as before.
+   */
+  z.object({
+    ...base,
+    type: z.literal('message.side'),
+    messageId: z.string(),
+    status: z.enum(['answering', 'answered', 'failed']),
+    text: z.string().optional(),
+    /** What becomes of the message (SideRoute); a person can change it once answered. */
+    route: z.enum(['answer', 'steer', 'queue']).optional(),
+    /** With route steer: when it is given to the running turn, unless its sender keeps it. */
+    steerAt: z.string().optional(),
   }),
   z.object({ ...base, type: z.literal('message.delta'), id: z.string(), text: z.string() }),
   z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),
