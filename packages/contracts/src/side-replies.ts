@@ -28,7 +28,7 @@ export function sidePrompt(input: { name: string; text: string }) {
   return [
     `${name} wrote to you while your turn is still running. This is a copy of your conversation, made to answer them on the side: your turn goes on without you, and nothing you do here reaches it. The step your turn is on may show as interrupted here: it is not, it still runs.`,
     `<message from="${name}" kind="person">\n${text}\n</message>`,
-    'Answer them in a few lines, from what you already know. You may read files (Read, Glob, Grep) and nothing else: here you change nothing, run nothing and use none of Brigade’s tools. Do not promise what your turn will do, except as below.',
+    'Answer them in a few lines, from what you already know. You may read files and nothing else: here you change nothing, run nothing that changes anything, and use none of Brigade’s tools. Do not promise what your turn will do, except as below.',
     'Then decide what happens to their message, and say it on the last line, alone:\n' +
       '- `ROUTE: answer` when your answer settles it: a question, a remark, news. Your turn is told of this exchange when it next starts.\n' +
       '- `ROUTE: steer` when it changes the work your turn is doing now (a correction, an instruction, a detail it needs): it is given to your turn at its next step. Say in a few words that you pass it on.\n' +
