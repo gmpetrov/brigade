@@ -242,6 +242,9 @@ has to keep its messages there.
 - **Nobody on it** (a callout above the conversation): the item says why nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
   not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox
   (its project's variant, its agent first picked) for the mail that comes next.
+- **Who has it**: once something took the mail, its state row ends on a picker naming the teammate on it
+  (their thread's), or Unassigned; opening it hands the mail over. The route's note (`routeNote`) shows
+  as the state's tooltip when no thread links from the row, else under it.
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
   with their note, the latest mail and the conversation's earlier ones. The mail then belongs to that thread (`route: handed`): Brigade's
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
