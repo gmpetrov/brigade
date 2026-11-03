@@ -27,7 +27,7 @@ export const CACHES_EVERY_MS = 30 * 60_000
 const PRUNE_TIMEOUT_MS = 15 * 60_000
 /**
  * Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP
- * servers run from it; nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
+ * servers run from it (tidyHome removes the packages no longer run); nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
  * node_modules from its cache like pnpm: they keep their files.
  */
 const TOOL_CACHES = [
@@ -336,12 +336,18 @@ export async function tidyHome(
 ) {
   if (runAs && (await installing(runAs))) return null
   const commands =
-    processes ??
-    (await run('ps', ['-A', '-o', 'args=']).catch(() => Buffer.alloc(0))).toString()
+    processes ?? (await run('ps', ['-A', '-o', 'args=']).catch(() => Buffer.alloc(0))).toString()
   const before = await free(home)
   const out = await run(
     process.execPath,
-    ['-e', TIDY_SCRIPT, home, JSON.stringify(inUse), JSON.stringify(npxInUse(commands)), String(now)],
+    [
+      '-e',
+      TIDY_SCRIPT,
+      home,
+      JSON.stringify(inUse),
+      JSON.stringify(npxInUse(commands)),
+      String(now),
+    ],
     { runAs, timeout: PRUNE_TIMEOUT_MS },
   )
   const removed = JSON.parse(out.toString()) as { runs: number; npx: number }

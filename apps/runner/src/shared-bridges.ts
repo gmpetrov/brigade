@@ -81,7 +81,7 @@ export const UNLINK_SCRIPT = `[ -L "$1" ] && rm -f -- "$1"; exit 0`
 
 type Shared = { identity: string; dir: string }
 
-type Adapter = Parameters<typeof createHarnessSandboxTemplate>[0]['harnesses'][number]
+export type Adapter = Parameters<typeof createHarnessSandboxTemplate>[0]['harnesses'][number]
 /** The adapters as turns make them: their recipe does not depend on the settings. */
 const adapters: Record<BridgeHarness, () => Adapter> = {
   'claude-code': () => createClaudeCode({ auth: {} }),
@@ -91,7 +91,7 @@ const adapters: Record<BridgeHarness, () => Adapter> = {
 /** The adapter's recipe identity: what names the shared copy. Null without a recipe. */
 async function identityOf(harness: BridgeHarness) {
   const template = await createHarnessSandboxTemplate({ harnesses: [adapters[harness]()] })
-  return template ? { identity: template.identity, prepare: template.prepare } : null
+  return template ? { identity: template.identity } : null
 }
 
 const installs = new Map<string, Promise<Shared | null>>()
@@ -119,25 +119,37 @@ export function sharedBridge(harness: BridgeHarness, now = Date.now()): Promise<
   return install
 }
 
-async function installShared(harness: BridgeHarness): Promise<Shared | null> {
-  const template = await identityOf(harness)
+const installShared = (harness: BridgeHarness) => installInto(ROOT, harness, adapters[harness]())
+
+/**
+ * The runner's children keep its low OOM score (cgroups.conf in the API's setup): an install
+ * that grows would have other processes killed first. Its commands give it up, so that when
+ * memory runs out the install goes first, and turns install in their homes meanwhile.
+ */
+const OOM_FIRST = '{ echo 1000 >/proc/self/oom_score_adj; } 2>/dev/null; '
+
+/** Install an adapter's bridge under root, as this user, with the adapter's own recipe. */
+export async function installInto(root: string, harness: BridgeHarness, adapter: Adapter) {
+  const template = await createHarnessSandboxTemplate({ harnesses: [adapter] })
   if (!template) return null
-  const home = join(ROOT, sharedName(harness, template.identity))
+  const home = join(root, sharedName(harness, template.identity))
   await mkdir(home, { recursive: true, mode: 0o755 })
-  // The adapter's own install, as the runner, into that home: it writes the recipe's files,
-  // runs its pnpm install, and its marker last. Again on each start, it only reads the marker.
+  // The adapter's own install into that home: it writes the recipe's files, runs its pnpm
+  // install, and writes its marker last. Again on each start, it only reads the marker.
   const sandbox = createLocalSandboxSession({
     id: `shared-${harness}`,
     workingDirectory: home,
     port: 0,
     env: harnessEnv({ HOME: home }),
   })
-  const abort = AbortSignal.timeout(INSTALL_TIMEOUT_MS)
-  await template.prepare({ session: sandbox, abortSignal: abort })
-  const dir = bridgeLink(home, harness)
+  const session: typeof sandbox = {
+    ...sandbox,
+    run: (options) => sandbox.run({ ...options, command: `${OOM_FIRST}${options.command}` }),
+  }
+  await template.prepare({ session, abortSignal: AbortSignal.timeout(INSTALL_TIMEOUT_MS) })
   // Readable by every teammate, whatever umask the runner had.
   await run('chmod', ['-R', 'a+rX', home])
-  return { identity: template.identity, dir }
+  return { identity: template.identity, dir: bridgeLink(home, harness) }
 }
 
 /** Serialized per teammate and harness: two turns starting together link once. */
@@ -172,9 +184,13 @@ export function useSharedBridge(
         await run('sh', ['-c', UNLINK_SCRIPT, 'sh', link], { runAs })
         return 'own' as const
       }
-      await run('sh', ['-c', LINK_SCRIPT, 'sh', link, shared.dir, options.convert ? 'convert' : ''], {
-        runAs,
-      })
+      await run(
+        'sh',
+        ['-c', LINK_SCRIPT, 'sh', link, shared.dir, options.convert ? 'convert' : ''],
+        {
+          runAs,
+        },
+      )
       return 'linked' as const
     } catch (error) {
       const code = (error as { code?: number }).code

@@ -18,9 +18,8 @@ exit 0
 `,
   { mode: 0o755 },
 )
-const { freeCaches, installs, npxInUse, oldStores, reserveSize, tidyHome } = await import(
-  '../src/disk.js'
-)
+const { freeCaches, installs, npxInUse, oldStores, reserveSize, tidyHome } =
+  await import('../src/disk.js')
 const { diskReport } = await import('../src/folders.js')
 
 test('the reserve is 2 GiB, or 3% of a small disk', () => {
@@ -159,7 +158,11 @@ test("a teammate's old harness sessions and unused npx packages go, the rest sta
   await file('.npm/_npx/cccc/package.json', 30)
   // Installed a month ago, run yesterday: running it read its manifest.
   await file('.npm/_npx/dddd/package.json', 30)
-  await utimes(join(home, '.npm/_npx/dddd/package.json'), new Date(now - day), new Date(now - 30 * day))
+  await utimes(
+    join(home, '.npm/_npx/dddd/package.json'),
+    new Date(now - day),
+    new Date(now - 30 * day),
+  )
   // Run from now, though not read for a month.
   const ps = `node ${home}/.npm/_npx/cccc/node_modules/.bin/mcp-server --stdio\nsh -c ls`
   await file('.npm/_cacache/index-v5/x', 40)
