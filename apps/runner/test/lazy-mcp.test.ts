@@ -37,6 +37,8 @@ process.stdin.on('data', (chunk) => {
       send({ id: 'roots-1', method: 'roots/list' })
     } else if (m.id === 'roots-1')
       send({ id: call.id, result: { content: [{ type: 'text', text: call.params.name + ' in ' + m.result.roots[0].uri }] } })
+    else if (m.method === 'server/discover' && process.env.FAKE_DISCOVER)
+      send({ id: m.id, result: { supportedVersions: ['2026-07-28'], serverInfo: { name: 'fake-browser', version: '1' } } })
     else if (m.id !== undefined && m.method) send({ id: m.id, error: { code: -32601, message: 'Method not found' } })
   }
 })
@@ -163,6 +165,22 @@ async function handshake(t: ReturnType<typeof turn>, params: unknown = HANDSHAKE
   return { initialize, list }
 }
 
+/** Claude Code's probe of a later protocol, before its handshake (2.1.316). */
+const PROBE_ID = 'server-discover-probe-1'
+const PROBE = {
+  _meta: {
+    'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+    'io.modelcontextprotocol/clientInfo': { name: 'claude-code', version: '2.1.316' },
+  },
+}
+
+/** Claude Code's opening: the probe, then (refused) its handshake. */
+async function claudeOpening(t: ReturnType<typeof turn>, params: unknown = HANDSHAKE) {
+  t.send({ id: PROBE_ID, method: 'server/discover', params: PROBE })
+  const probe = await t.next((m) => m.id === PROBE_ID && !m.method)
+  return { probe, ...(await handshake(t, params)) }
+}
+
 function waitFor<T>(check: () => Promise<T | undefined>): Promise<T> {
   let stop = false
   const poll = async () => {
@@ -193,7 +211,7 @@ test(
       assert.equal(first.serving(), true)
       const file = await waitFor(() => keptFile(setup.kept))
       assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
-        initialize: initialize.result,
+        initialize: { params: HANDSHAKE, result: initialize.result },
         tools: list.result,
       })
       assert.equal(await first.end(), 0)
@@ -371,6 +389,95 @@ test(
       }
       assert.equal(await started(), 4)
       assert.equal((await readdir(setup.kept)).filter((name) => name.endsWith('.json')).length, 2)
+    } finally {
+      await setup.cleanUp()
+    }
+  },
+)
+
+test(
+  "Claude Code's probe is kept with its handshake, answered by the relay, and not given to a server started late",
+  { timeout: 30_000 },
+  async () => {
+    const setup = await setUp()
+    try {
+      const first = turn(setup)
+      const before = await claudeOpening(first)
+      assert.equal(before.probe.error?.message, 'Method not found')
+      assert.equal(first.serving(), true)
+      const file = await waitFor(() => keptFile(setup.kept))
+      assert.deepEqual(JSON.parse(await readFile(file, 'utf8')).probe.params, PROBE)
+      await first.end()
+
+      const later = turn(setup)
+      const opened = await claudeOpening(later)
+      assert.deepEqual(opened.probe.error, before.probe.error)
+      assert.deepEqual(opened.initialize.result, before.initialize.result)
+      assert.deepEqual(opened.list.result, before.list.result)
+      assert.equal(later.serving(), false)
+
+      later.send({
+        id: 4,
+        method: 'tools/call',
+        params: { name: 'browser_navigate', arguments: {} },
+      })
+      const roots = await later.next((m) => m.method === 'roots/list')
+      later.send({ id: roots.id, result: { roots: [{ uri: 'file:///work' }] } })
+      await later.next((m) => m.id === 4)
+      const entries = await setup.entries()
+      const second = entries.slice(entries.findLastIndex((entry) => entry.started))
+      assert.deepEqual(
+        second.slice(1, 4).map((entry) => [entry.got?.id, entry.got?.method]),
+        [
+          ['brigade-relay-initialize', 'initialize'],
+          [undefined, 'notifications/initialized'],
+          [4, 'tools/call'],
+        ],
+      )
+      assert.deepEqual(second[1]!.got!.params, HANDSHAKE)
+      await later.end()
+    } finally {
+      await setup.cleanUp()
+    }
+  },
+)
+
+test(
+  'after a kept probe, another handshake, or a server that takes the probe, the server answers',
+  { timeout: 30_000 },
+  async () => {
+    const setup = await setUp()
+    const started = async () => (await setup.entries()).filter((entry) => entry.started).length
+    try {
+      const first = turn(setup)
+      await claudeOpening(first)
+      const file = await waitFor(() => keptFile(setup.kept))
+      await first.end()
+
+      // The same probe, then another handshake: the probe was answered here, the handshake by
+      // the server, started then; and what it answered replaces what was kept.
+      const other = { ...HANDSHAKE, protocolVersion: '2025-03-26' }
+      const changed = turn(setup)
+      const opened = await claudeOpening(changed, other)
+      assert.equal(opened.initialize.result.protocolVersion, '2025-03-26')
+      assert.equal(changed.serving(), true)
+      await changed.end()
+      assert.equal(await started(), 2)
+      const kept = JSON.parse(await readFile(file, 'utf8'))
+      assert.deepEqual(kept.initialize.params, other)
+      assert.deepEqual(kept.probe.params, PROBE)
+
+      // A server that takes the probe may skip the handshake: nothing is kept for it.
+      const elsewhere = await setUp()
+      try {
+        const taking = turn(elsewhere, { FAKE_DISCOVER: '1' })
+        const { probe } = await claudeOpening(taking)
+        assert.equal(probe.result?.serverInfo.name, 'fake-browser')
+        await taking.end()
+        assert.equal(await keptFile(elsewhere.kept), undefined)
+      } finally {
+        await elsewhere.cleanUp()
+      }
     } finally {
       await setup.cleanUp()
     }

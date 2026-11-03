@@ -356,7 +356,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   other request it starts the server, gives it the harness's handshake again and passes everything through. A
   handshake with no answers kept goes to the server, started at once, and its answers are kept if no tool was called
   before its tool list (a call can add a page's own tools). The first browser call of a turn waits for the server to
-  start (about 0.3 s). Tested in `apps/runner/test/lazy-mcp.test.ts`.
+  start (about 0.3 s). Claude Code (2.1.316) opens with a probe of a later protocol, `server/discover`, before
+  its handshake: Playwright refuses it, so the refusal is kept with the handshake and answered by the relay, and a
+  server started late gets only the handshake; a server that takes the probe may skip the handshake, so then
+  nothing is kept. Tested in `apps/runner/test/lazy-mcp.test.ts`.
 - **Sign-in through the dashboard.** "Open <teammate>'s browser" (teammate page, and the takeover panel) opens a
   window of that teammate's Chrome on the desktop, optionally at a URL, and shows the desktop. Whatever a person
   signs in to stays in that teammate's profile only.

@@ -4,7 +4,10 @@
 // harness's handshake and tool list itself, as the server answered that same handshake last
 // time (kept in a file), then starts the server, gives it the harness's handshake and passes
 // everything through. A handshake it has no answers for goes to the server, started at once,
-// and the server's answers are kept for the next turns.
+// and the server's answers are kept for the next turns. Claude Code opens with a probe of a
+// later protocol (server/discover) before its handshake: a server that refuses it gets the
+// handshake next, so the refusal is kept with it and the probe is not given to a server
+// started late.
 //
 // Only for a server whose handshake and tool list depend on nothing but its program, its
 // arguments and the harness's handshake, and that lists the same tools until a tool is called
@@ -22,6 +25,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 
 type Rpc = {
   id?: string | number | null
@@ -31,7 +35,18 @@ type Rpc = {
   error?: { message?: string }
 }
 
-type Handshake = { initialize: Record<string, unknown>; tools: { tools: unknown[] } }
+/**
+ * The server's answers to a harness's opening, and what the harness sent: its probe (refused),
+ * its handshake, the tool list before any call.
+ */
+type Handshake = {
+  probe?: { params: unknown; error: Record<string, unknown> }
+  initialize: { params: unknown; result: Record<string, unknown> }
+  tools: { tools: unknown[] }
+}
+
+/** Claude Code's probe of a later protocol, before its handshake. */
+const PROBE = 'server/discover'
 
 /** Kept answers no turn used for this long are removed. */
 export const HANDSHAKE_KEEP_MS = 30 * 24 * 60 * 60_000
@@ -76,7 +91,10 @@ function readHandshake(file: string): Handshake | undefined {
   try {
     const kept = JSON.parse(readFileSync(file, 'utf8')) as unknown
     if (!isObject(kept) || !isObject(kept.initialize) || !isObject(kept.tools)) return undefined
+    if (!('params' in kept.initialize) || !isObject(kept.initialize.result)) return undefined
     if (!Array.isArray(kept.tools.tools)) return undefined
+    if (kept.probe !== undefined && (!isObject(kept.probe) || !isObject(kept.probe.error)))
+      return undefined
     return kept as Handshake
   } catch {
     return undefined
@@ -121,15 +139,26 @@ export function serveMcpLazily(options: {
   let ready = false
   /** The harness's messages for the server, while it starts. */
   const waiting: string[] = []
+  /** The harness's probe, answered here from what was kept. */
+  let probe: Rpc | undefined
   let initialize: Rpc | undefined
   let initialized: string | undefined
   let known: Handshake | undefined
   let file: string | undefined
   let ended = false
-  /** The server's answers to the harness's handshake, being kept (a handshake not seen before). */
+  /** The server's answers to the harness's opening, being kept (an opening not seen before). */
   let keeping:
-    | { initialize?: Record<string, unknown>; tools?: Handshake['tools']; listId?: Rpc['id'] }
+    | {
+        probeId?: Rpc['id']
+        probe?: Handshake['probe']
+        initializeId?: Rpc['id']
+        initialize?: Handshake['initialize']
+        listId?: Rpc['id']
+        tools?: Handshake['tools']
+      }
     | undefined
+  /** What the harness opened with, as the server will be asked it. */
+  const asked = (message: Rpc) => message.params ?? null
 
   const toServer = (line: string) => {
     if (!ended) server!.stdin!.write(line + '\n')
@@ -174,12 +203,32 @@ export function serveMcpLazily(options: {
     }
     if (keeping) {
       const message = parse(line)
-      if (message?.id != null && message.id === initialize?.id && isObject(message.result))
-        keeping.initialize = message.result
-      if (message?.id != null && message.id === keeping.listId && isObject(message.result))
+      if (message?.id != null && message.id === keeping.probeId) {
+        // A server that takes the probe may skip the handshake: its opening is not kept.
+        if (isObject(message.error) && keeping.probe) {
+          keeping.probe = { params: keeping.probe.params, error: message.error }
+          keeping.probeId = undefined
+        } else keeping = undefined
+      } else if (message?.id != null && message.id === keeping.initializeId) {
+        if (isObject(message.result) && keeping.initialize) {
+          keeping.initialize = { params: keeping.initialize.params, result: message.result }
+          keeping.initializeId = undefined
+        } else keeping = undefined
+      } else if (message?.id != null && message.id === keeping.listId && isObject(message.result))
         keeping.tools = message.result as Handshake['tools']
-      if (keeping.initialize && keeping.tools && Array.isArray(keeping.tools.tools)) {
-        keepHandshake(options.dir!, file!, { initialize: keeping.initialize, tools: keeping.tools })
+      const answered =
+        keeping &&
+        keeping.probeId === undefined &&
+        keeping.initializeId === undefined &&
+        keeping.initialize &&
+        keeping.tools &&
+        Array.isArray(keeping.tools.tools)
+      if (keeping && answered) {
+        keepHandshake(options.dir!, file!, {
+          ...(keeping.probe ? { probe: keeping.probe } : {}),
+          initialize: keeping.initialize!,
+          tools: keeping.tools!,
+        })
         keeping = undefined
       }
     }
@@ -192,7 +241,10 @@ export function serveMcpLazily(options: {
         const message = parse(line)
         // The tools listed before any call: a call can add a page's own tools to the list.
         if (message?.method === 'tools/call') keeping = undefined
-        else if (message?.method === 'tools/list' && message.id != null && keeping.listId == null)
+        else if (message?.method === 'initialize' && message.id != null && !keeping.initialize) {
+          keeping.initializeId = message.id
+          keeping.initialize = { params: asked(message), result: {} }
+        } else if (message?.method === 'tools/list' && message.id != null && keeping.listId == null)
           keeping.listId = message.params?.cursor === undefined ? message.id : undefined
       }
       return toServer(line)
@@ -200,29 +252,55 @@ export function serveMcpLazily(options: {
     if (server) return void waiting.push(line)
     const message = parse(line)
     if (!initialize) {
-      if (options.dir && message?.method === 'initialize' && message.id != null) {
-        initialize = message
-        file = join(
-          options.dir,
-          `${createHash('sha256')
-            .update(JSON.stringify([options.identity, message.params ?? null]))
-            .digest('hex')
-            .slice(0, 32)}.json`,
-        )
-        known = readHandshake(file)
-        if (known) {
-          try {
-            utimesSync(file, new Date(), new Date())
-          } catch {}
-          return toHarness({ id: message.id, result: known.initialize })
+      const opening =
+        options.dir !== undefined &&
+        message?.id != null &&
+        (message.method === 'initialize' || (message.method === PROBE && !probe))
+      if (opening) {
+        // The opening's first request names its file.
+        if (!file) {
+          file = join(
+            options.dir!,
+            `${createHash('sha256')
+              .update(JSON.stringify([options.identity, message.method, asked(message)]))
+              .digest('hex')
+              .slice(0, 32)}.json`,
+          )
+          known = readHandshake(file)
         }
-        keeping = {}
+        if (message.method === PROBE) {
+          probe = message
+          if (known?.probe && isDeepStrictEqual(known.probe.params, asked(message)))
+            return toHarness({ id: message.id, error: known.probe.error })
+          // Not the probe kept: the server answers it, and what follows.
+          keeping = { probeId: message.id, probe: { params: asked(message), error: {} } }
+        } else {
+          initialize = message
+          const same =
+            known !== undefined &&
+            isDeepStrictEqual(known.initialize.params, asked(message)) &&
+            (probe
+              ? known.probe !== undefined && isDeepStrictEqual(known.probe.params, asked(probe))
+              : known.probe === undefined)
+          if (same) {
+            try {
+              utimesSync(file, new Date(), new Date())
+            } catch {}
+            return toHarness({ id: message.id, result: known!.initialize.result })
+          }
+          // A probe answered from the file stays as it was; the handshake is the server's.
+          keeping = {
+            ...(probe && known?.probe ? { probe: known.probe } : {}),
+            initializeId: message.id,
+            initialize: { params: asked(message), result: {} },
+          }
+        }
       }
-      // A handshake with no answers kept: the server answers it, started now.
+      // An opening with no answers kept: the server answers it, started now.
       start(false)
       return toServer(line)
     }
-    // A known handshake: answered here until the server is needed.
+    // A known opening: answered here until the server is needed.
     if (message?.method === 'notifications/initialized') return void (initialized = line)
     if (message?.id != null && message.method === 'ping')
       return toHarness({ id: message.id, result: {} })
