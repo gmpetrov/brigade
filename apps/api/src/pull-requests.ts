@@ -107,6 +107,19 @@ export async function github(db: ScopedDb, scope: Scope, repo: string): Promise<
   }
 }
 
+/**
+ * The name Brigade keeps a repository's pull requests under, for a name someone gives (a card
+ * or a teammate's call written before a rename): that name while rows are kept under it or the
+ * workspace reaches it; else the name GitHub answers for it now.
+ */
+export async function canonicalRepository(db: ScopedDb, scope: Scope, repo: string) {
+  repo = repo.toLowerCase()
+  if (await db.pullRequest.findFirst({ where: { repository: repo }, select: { id: true } }))
+    return repo
+  if (await workspaceGitHub(db, scope, repo)) return repo
+  return (await renamedRepository(db, scope, repo).catch(() => null))?.repository ?? repo
+}
+
 async function call<T>(gh: GitHub, path: string, init?: RequestInit) {
   try {
     return await json<T>(await gh.fetch(path, init))
@@ -239,6 +252,8 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
   if (!row) return
   // Its repository renamed or transferred: what Brigade kept under the old name follows it.
   const repo = p.base.repo
+  // Another repository has its name now (a new one where it was renamed from): not this one.
+  if (repo && row.repositoryId && row.repositoryId !== String(repo.id)) return
   if (
     repo &&
     (row.repository !== repo.full_name.toLowerCase() || row.repositoryId !== String(repo.id))
@@ -297,9 +312,15 @@ export async function renameRepository(
 ) {
   const repository = to.full_name.toLowerCase()
   const repositoryId = String(to.id)
-  // Kept under the old name, or by the id under another: this row among them.
+  // Kept under the old name (but none with another repository's id, made there since), or by
+  // the id under another name: the row among them, unless it is another repository's.
   const kept = await db.pullRequest.findMany({
-    where: { OR: [{ id: row.id }, { repository: row.repository }, { repositoryId }] },
+    where: {
+      OR: [
+        { repository: row.repository, OR: [{ repositoryId: null }, { repositoryId }] },
+        { repositoryId },
+      ],
+    },
     select: { id: true, repository: true },
   })
   let now = row.repository
@@ -329,8 +350,14 @@ export async function repositoryRenamed(
   to: { id: number; full_name: string },
 ) {
   const db = scoped(scope)
+  const repositoryId = String(to.id)
   const row = await db.pullRequest.findFirst({
-    where: { OR: [{ repository: from.toLowerCase() }, { repositoryId: String(to.id) }] },
+    where: {
+      OR: [
+        { repository: from.toLowerCase(), OR: [{ repositoryId: null }, { repositoryId }] },
+        { repositoryId },
+      ],
+    },
     select: { id: true, repository: true },
   })
   if (row) await renameRepository(db, row, to)
@@ -756,7 +783,7 @@ export async function notePullRequestCall(
     output: unknown
   },
 ) {
-  const repo = String(call.input.repository).toLowerCase()
+  const repo = await canonicalRepository(db, scope, String(call.input.repository))
   if (call.operation === 'github_create_pull_request') {
     const out = call.output as {
       number: number

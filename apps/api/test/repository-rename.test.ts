@@ -335,4 +335,92 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
       { repository: `acme/after-${suffix}`, repositoryId: String(id), number: 9, state: 'merged' },
     ])
   })
+
+  test('a card under the old name keeps its tracking once its row moved', async () => {
+    const { auth } = await import('../src/auth.js')
+    const { pulls } = await import('../src/routes/pulls.js')
+    const { Hono } = await import('hono')
+    const getSession = auth.api.getSession
+    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+      user: { id: `u-${owner}` },
+      session: {
+        id: `s-${owner}`,
+        activeOrganizationId: org,
+        activeWorkspaceId: scope.workspaceId,
+      },
+    })
+    try {
+      const app = new Hono().route('/api/pulls', pulls)
+      const id = repository(`acme/card-old-${suffix}`)
+      const session = await thread()
+      await opened(session.id, id, 31)
+      rename(id, `acme/card-new-${suffix}`)
+      // The card, as stored in the thread's messages, reads it twice under the old name.
+      for (const read of ['first', 'second']) {
+        const response = await app.request(`/api/pulls/acme/card-old-${suffix}/31/state`)
+        assert.equal(response.status, 200, read)
+        const state = (await response.json()) as { tracking: { sessionId: string } | null }
+        assert.equal(state.tracking?.sessionId, session.id, `${read} read: still tracked`)
+      }
+      assert.deepEqual(await rows(session.id), [
+        {
+          repository: `acme/card-new-${suffix}`,
+          repositoryId: String(id),
+          number: 31,
+          state: 'open',
+        },
+      ])
+      // Riley, still writing the old name, reviews it: no second row.
+      const { notePullRequestCall } = await import('../src/pull-requests.js')
+      await notePullRequestCall(db, scope, {
+        sessionId: session.id,
+        teammateId: riley,
+        operation: 'github_review_pull_request',
+        input: { repository: `acme/card-old-${suffix}`, number: 31, verdict: 'approve' },
+        output: { url: 'https://github.com/x', sha: 'sha31' },
+      })
+      assert.equal(
+        await db.pullRequest.count({ where: { repositoryId: String(id) } }),
+        1,
+        'one row for it',
+      )
+      assert.equal(
+        await db.pullRequest.count({ where: { repository: `acme/card-old-${suffix}` } }),
+        0,
+      )
+    } finally {
+      ;(auth.api as { getSession: unknown }).getSession = getSession
+    }
+  })
+
+  test('a late rename event leaves a new repository under the old name alone', async () => {
+    const oldName = `acme/reused-${suffix}`
+    const idA = repository(oldName)
+    const a = await thread()
+    await opened(a.id, idA, 41)
+    rename(idA, `acme/moved-${suffix}`)
+    // A new repository takes the old name, and a pull request is opened in it.
+    const idB = repository(oldName)
+    const b = await thread()
+    await opened(b.id, idB, 42)
+    await deliver('repository', {
+      action: 'renamed',
+      changes: { repository: { name: { from: `reused-${suffix}` } } },
+      repository: { id: idA, name: `moved-${suffix}`, full_name: `acme/moved-${suffix}` },
+    })
+    assert.deepEqual(await rows(b.id), [
+      { repository: oldName, repositoryId: String(idB), number: 42, state: 'open' },
+    ])
+    assert.equal((await rows(a.id))[0]!.repository, `acme/moved-${suffix}`)
+    // A's row still under the old name (its rename never heard): read again there, GitHub
+    // answers B's repository, which is not A's, so A's row keeps its identity.
+    const { refreshOpenPulls } = await import('../src/pull-requests.js')
+    await db.pullRequest.updateMany({ where: { sessionId: a.id }, data: { repository: oldName } })
+    await refreshOpenPulls(db, scope, a.id)
+    assert.deepEqual(await rows(a.id), [
+      { repository: oldName, repositoryId: String(idA), number: 41, state: 'open' },
+    ])
+    await mergedEvent(idB, 42)
+    assert.equal((await rows(b.id))[0]!.state, 'merged', "B's merge is still heard")
+  })
 })
