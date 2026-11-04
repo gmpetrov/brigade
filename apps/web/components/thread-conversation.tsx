@@ -1483,7 +1483,8 @@ export function ThreadConversation({
                 reportDueAt={t.mayPrompt ? t.reportDueAt : null}
               />
             )}
-            {t.doneAt && (
+            {/* Done, unless someone just wrote again: their message reopens it. */}
+            {t.doneAt && !busy && pendingOut.length === 0 && (
               <DoneLine at={t.doneAt} summary={t.doneSummary ?? null} by={t.doneBy ?? null} />
             )}
             <ThreadItemsCard threadId={t.id} />

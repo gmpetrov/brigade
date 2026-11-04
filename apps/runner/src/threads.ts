@@ -92,6 +92,17 @@ const aborted = (signal: AbortSignal) =>
  * replies, which answered such a message on the side instead, only with BRIGADE_SIDE_REPLIES=1.
  */
 const SIDE_REPLIES = process.env.BRIGADE_SIDE_REPLIES === '1'
+/**
+ * A message as its teammate's running turn reads it: a person's says it came during the work, and
+ * that a question it can answer for sure now gets its answer at once, in a line, as in a chat,
+ * rather than once the work is done (Nov 4: "what's my name?" waited 36 s for research to end).
+ */
+export const steeredText = (text: string, fromPerson: boolean) =>
+  fromPerson
+    ? `${text}\n\n(Written while you work. If it asks what you can answer for sure now, answer it ` +
+      "in a line at once, then go on with the work; don't repeat that answer at the end.)"
+    : text
+
 /** How long a message waits for its teammate's turn to take it, the turn's session starting. */
 const AUTO_STEER_WAIT_MS = Number(process.env.BRIGADE_AUTO_STEER_WAIT_MS) || 60_000
 /** Park an idle harness session after this long; the next message resumes it. */
@@ -1870,7 +1881,13 @@ export class Threads {
       const earlier = (thread.sideLog.get(spec.teammate.id) ?? []).filter(
         (e) => e.messageId !== message.id,
       )
-      await seat.harness.steer(withSideContext('A member', earlier, this.promptText(message, spec)))
+      await seat.harness.steer(
+        steeredText(
+          withSideContext('A member', earlier, this.promptText(message, spec)),
+          // With side replies on, its aside answered it already.
+          message.memberId !== null && !SIDE_REPLIES,
+        ),
+      )
       const end = await this.show(thread, message, true)
       // It read the message in this turn: its next turn does not tell it again.
       const log = await thread.log

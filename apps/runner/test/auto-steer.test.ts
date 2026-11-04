@@ -146,6 +146,8 @@ test("a person's messages during a turn go into it, in order, and get no turn of
   assert.match(steered.get('a')![0]!, /test2/)
   assert.match(steered.get('a')![1]!, /test3/)
   assert.deepEqual(shownSteered('a'), ['test2', 'test3'])
+  // A question it can answer now gets its answer at once, as in a chat.
+  assert.match(steered.get('a')![0]!, /answer it in a line at once/)
   await finish('a')
   await sleep(150)
   assert.equal(turns('a'), 1, 'no turn after it for them')

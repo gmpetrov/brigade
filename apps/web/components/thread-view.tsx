@@ -8,6 +8,7 @@ import {
   pickedChoice,
   pickedDesignPath,
   bareToolName,
+  COMPLETE_THREAD_TOOL,
   asksParallel,
   childNote,
   fromParent,
@@ -160,6 +161,8 @@ import {
 } from '@/components/thread-children'
 import { AsideGroup } from '@/components/aside-group'
 import { runningAsides } from '@/lib/aside-layout'
+import { answeredSinceStep, quickReplies, type ChatEntry } from '@/lib/chat-turn'
+import { commandSummary } from '@/lib/command-summary'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
@@ -579,6 +582,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           break
         }
         case 'tool.started':
+          // Declaring the thread done shows as its Done line, not as a step after the reply.
+          if (bareToolName(e.toolName) === COMPLETE_THREAD_TOOL) break
           // The same call started twice (repeated by the harness): one card.
           if (byKey.has(`t${e.teammateId ?? ''}:${e.toolCallId}`)) break
           add({
@@ -1334,6 +1339,19 @@ const QUICK_TURN_MS = 30_000
 /** A person's message answered on the side during a turn: it shows in its turn's Aside. */
 const isSide = (item: Item) => item.kind === 'user' && !!item.side
 
+/** A message given to the running turn (steered in), not answered on the side. */
+const isSteered = (item: Item) => item.kind === 'user' && !!item.steeredTo && !item.side
+
+/** What an item is in a turn a person wrote into (lib/chat-turn.ts). */
+const chatEntry = (item: Item): ChatEntry =>
+  isSteered(item)
+    ? 'steered'
+    : item.kind === 'assistant'
+      ? 'message'
+      : isActivity(item) && !isAside(item)
+        ? 'step'
+        : 'other'
+
 type Node =
   | { type: 'item'; i: number }
   /**
@@ -1389,7 +1407,9 @@ function layoutThread(items: Item[], working: boolean) {
     const sides = all.filter((i) => isSide(items[i]!))
     const head = group(sides)
     let turn = all.filter((i) => !isSide(items[i]!))
-    if (ms < QUICK_TURN_MS) return [...head, ...group(turn)]
+    // Written into while it ran (messages steered in): its steps fold together however quick.
+    const chat = turn.some((i) => isSteered(items[i]!))
+    if (ms < QUICK_TURN_MS && !chat) return [...head, ...group(turn)]
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, and a long one before that step when only a line follows.
     const { first: final, messages } = turnAnswer(
@@ -1401,10 +1421,13 @@ function layoutThread(items: Item[], working: boolean) {
       steered,
     )
     const answer = new Set(messages)
+    // A reply right after a message steered in answers it: it stays, as the answer does.
+    const quick = quickReplies(turn.map((i) => chatEntry(items[i]!)))
     const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
         !answer.has(at) &&
+        !quick.has(at) &&
         (final < 0 || at < final || isAside(item)) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
@@ -1416,6 +1439,18 @@ function layoutThread(items: Item[], working: boolean) {
     const first = turn.indexOf(folded[0]!)
     const kept = (from: number, to: number) =>
       turn.slice(from, to).filter((i) => !folded.includes(i))
+    // As a chat reads: the person's messages and what answers them in order, then the turn's one
+    // line of work, then its answer.
+    if (chat) {
+      const shown = turn.filter((i) => !folded.includes(i))
+      const at = shown.findIndex((i) => answer.has(turn.indexOf(i)))
+      return [
+        ...head,
+        ...group(at < 0 ? shown : shown.slice(0, at)),
+        { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
+        ...group(at < 0 ? [] : shown.slice(at)),
+      ]
+    }
     return [
       ...head,
       ...group(kept(0, first)),
@@ -1464,9 +1499,14 @@ function layoutThread(items: Item[], working: boolean) {
     // Steered into the turn, such as one that only waited on a server it left running, or woken
     // there by a report from that work: what came before answers the message before, and keeps
     // its answer out of the fold.
+    // A message steered in while the turn works goes on with it, as in a chat: one line of work,
+    // not a fold at each message. Only a turn that answered since its last step (one that just
+    // waited on its background work), or one a report woke, starts afresh there.
     if ((item.kind === 'user' && item.steeredTo) || item.kind === 'woke') {
-      nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
-      since = []
+      if (item.kind === 'woke' || answeredSinceStep(since.map((j) => chatEntry(items[j]!)))) {
+        nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
+        since = []
+      }
       steered = item.at
     }
     since.push(i)
@@ -1545,13 +1585,22 @@ function activityLabel(group: ActivityItem[]) {
   return text[0]!.toUpperCase() + text.slice(1)
 }
 
+/**
+ * What a step's line says it did: a shell command by what it does (commandSummary), not with
+ * every path and fallback; an approval card still shows the whole of it (toolSummary).
+ */
+function stepSummary(toolName: string, input: unknown) {
+  const command = (input as { command?: unknown } | null)?.command
+  return typeof command === 'string' ? commandSummary(command) : toolSummary(toolName, input)
+}
+
 /** The step happening now, under a live group's line. */
 function stepText(item: ActivityItem) {
   if (item.kind === 'thinking') return 'Thinking'
   if (item.kind === 'file') return `Changed ${item.path}`
   const mail = mailStep(item.toolName, item.input)
   if (mail) return mail.label
-  return `${item.toolName} ${toolSummary(item.toolName, item.input)}`.trim()
+  return `${item.toolName} ${stepSummary(item.toolName, item.input)}`.trim()
 }
 
 const VERBS: Partial<Record<ReturnType<typeof toolKind>, string>> = {
@@ -1592,7 +1641,7 @@ function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
       </>
     )
   const verb = VERBS[toolKind(toolName)]
-  const summary = toolSummary(toolName, input)
+  const summary = stepSummary(toolName, input)
   return (
     <>
       {verb ? (
@@ -2583,16 +2632,9 @@ export function ThreadItems({
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
             {/* Answered on the side: its aside says what became of it. */}
-            {item.side ? null : item.steeredTo && asksParallel(item.text) ? (
+            {/* Steered into the running turn, as in a chat: nothing says so. */}
+            {!item.side && item.steeredTo && asksParallel(item.text) ? (
               <span className="text-xs text-muted-foreground">Sent to a sub-thread</span>
-            ) : item.steeredTo ? (
-              <span className="text-xs text-muted-foreground">
-                Steered into{' '}
-                {(byId.get(item.steeredTo) ?? teammate)?.name
-                  ? `${(byId.get(item.steeredTo) ?? teammate)!.name}’s`
-                  : 'the'}{' '}
-                running turn
-              </span>
             ) : null}
           </div>
         )
