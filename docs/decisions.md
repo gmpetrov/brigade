@@ -168,12 +168,21 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     server's summary of it (narration). That rule stays for text from a runner without the tool.
   - A shell command's step reads what it does (`commandSummary`): `cat …/threads/x.md 2>/dev/null || find …` reads
     `cat x.md`; the step's details and an approval card keep the whole command.
-  - A call to `complete_thread` shows as the thread's Done line, not as a step, unless Brigade refused it (something
-    still open, a summary too long): then it stays a step, with its reason (`closingStep`). The Done line hides while
-    the teammate works again or a message is on its way. The reply still comes after the call, not before it to save
-    the round trip (about 4 s): text written before a tool call may reach the person only as the server's summary of it
-    (narration), and a draft or a table written there would be lost, as with the team card (`UNDER_REPLY` in
-    `apps/runner/src/harness/tools.ts`).
+  - A thread declared done shows as its Done line, not as a step, unless Brigade refused it (something still open):
+    then a step says "Not marked done" and what is open (`closingStep`, `closeLine`). The Done line hides while the
+    teammate works again or a message is on its way.
+- **A teammate declares its thread done in its reply, not with a call** (`replyCard`'s `done`,
+  `apps/runner/src/harness/outbox.ts`; docs/board.md, Done). Calling `complete_thread`, then writing the reply, cost a
+  model round trip just to close: from Nov 2 to 4, 7.1 s median from the call to the reply's first words, 0.5 s of it
+  the call itself, the rest the model starting again. Writing the reply first, then the call, was tried and dropped in
+  review: text written before a tool
+  call may reach the person only as the server's summary of it (narration, 80 of 656 texts in Riley's threads from Nov
+  1 to 4), so a draft written there could be lost. Now the reply ends with a `done` block, one line on what was
+  delivered; the runner sends it as `complete_thread` as the reply ends, and the turn's end waits for Brigade's answer
+  (15 s at most), so the thread reads as before. The cost: a refusal (23 of 169 calls from Nov 2 to 4: something still
+  open, a line too long) comes after the reply, so the teammate cannot deal with it in that turn. The person sees why,
+  and the thread stays open until what blocked it wakes the teammate again (a merge, a report, an answer). A line too
+  long is cut to fit instead (`doneLine`). The tool stays, no longer loaded up front, for a teammate used to it.
 - **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
   ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
   the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages

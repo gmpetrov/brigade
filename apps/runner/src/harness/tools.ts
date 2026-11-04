@@ -2380,7 +2380,9 @@ const COMPLETE_THREAD_UNKNOWN =
 /**
  * Done (docs/board.md): the teammate declares the work asked in its thread delivered, with a line
  * on what was. Only in a thread a person talks to: a child reports, and a playbook's run ends with
- * its report (the API refuses them too, and a schedule's run, which the spec does not tell).
+ * its report (the API refuses them too, and a schedule's run, which the spec does not tell). A
+ * done block at the end of the reply is the way its instructions give (declaredDone); the call
+ * stays for a teammate used to it, never loaded up front.
  */
 export function doneTools(
   call: ScheduleCaller,
@@ -2391,8 +2393,9 @@ export function doneTools(
     [COMPLETE_THREAD_TOOL]: tool({
       description:
         'Declare this thread done, when the Done section of your instructions says: the work asked here is ' +
-        'delivered and nothing is pending. Call it in the turn that delivers it, with one line on what was ' +
-        'delivered. Brigade refuses it while something is still open here, and lists what.',
+        'delivered and nothing is pending. A `done` block at the end of your reply does the same as your turn ' +
+        'ends, with no call to wait on: prefer it. Brigade refuses it while something is still open here, and ' +
+        'lists what.',
       inputSchema: jsonSchema<{ summary: string }>({
         type: 'object',
         properties: {

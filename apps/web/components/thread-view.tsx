@@ -163,6 +163,7 @@ import { AsideGroup } from '@/components/aside-group'
 import { runningAsides } from '@/lib/aside-layout'
 import {
   answeredSinceStep,
+  closeLine,
   closingStep,
   quickReplies,
   type ChatEntry,
@@ -1654,8 +1655,18 @@ function mailStep(toolName: string, input: unknown) {
 }
 
 /** A tool call's line: "Ran npm test", "Read src/app.ts", else its name and what it was given. */
-function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
-  const mail = mailStep(toolName, input)
+function ToolLine({
+  toolName,
+  input,
+  output,
+}: {
+  toolName: string
+  input: unknown
+  output?: unknown
+}) {
+  // A thread declared done shows as its Done line: a step says only it was not (closingStep).
+  const mail =
+    bareToolName(toolName) === COMPLETE_THREAD_TOOL ? closeLine(output) : mailStep(toolName, input)
   if (mail)
     return (
       <>
@@ -1973,7 +1984,7 @@ const ToolStep = memo(
     return (
       <Collapsible className="min-w-0 text-sm">
         <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground hover:text-foreground">
-          <ToolLine toolName={item.toolName} input={item.input} />
+          <ToolLine toolName={item.toolName} input={item.input} output={item.output} />
           <ChevronRight
             className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
             aria-hidden

@@ -490,18 +490,23 @@ const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
 
 /**
  * Done (docs/board.md): the teammate declares the work asked in its thread delivered, and Brigade
- * checks nothing is still open. A thread nobody declared done stays open, however quiet.
+ * checks nothing is still open. A thread nobody declared done stays open, however quiet. Declared
+ * with a block at the end of the reply (replyCard), not a call: the reply stays the turn's last
+ * text, never summarized, and nobody waits on a round trip just to close.
  */
 const DONE =
   '## Done\n\n' +
   'When the work asked in this thread is delivered (merged, sent, saved, answered with a result) and nothing is ' +
-  'pending, call `complete_thread` in the same turn, with a line on what was delivered. A question is delivered ' +
+  'pending, end the reply that delivers it with a `done` block, after any buttons, holding one line on what was ' +
+  'delivered:\n\n' +
+  '```done\nCSV export merged (#412) and live\n```\n\n' +
+  'Brigade declares the thread done as your turn ends; the person never sees the block. A question is delivered ' +
   'by your answer: close it even when your reply ends on suggested replies, which are not pending, since any ' +
   'message reopens it. A change that was asked and you only proposed is not delivered, nor is a reply that ends ' +
   'on choices you need picked: leave those open. Brigade refuses it while ' +
   'something is still open here (a ticket or question, a pull request not yet merged or closed, a child thread ' +
-  'you wait for that has not reported, a review included, a wake-up you set, a list item not ticked) and says ' +
-  'what: deal with each, or say in your reply what remains. A ' +
+  'you wait for that has not reported, a review included, a wake-up you set, a list item not ticked) and shows ' +
+  'the person what: deal with each first, or leave the block out and say in your reply what remains. A ' +
   "new message from a person reopens the thread. A merge of this thread's pull request wakes you here to do " +
   'this. Not in a scheduled run (a thread that starts with "Scheduled run of"): it ends with its turn.'
 
@@ -621,8 +626,11 @@ const replies = (spec: ThreadSpec) =>
   '"description": "Large type, one accent"}, {"id": "b", "label": "B · Calm", "description": "Muted, more air"}]}\n```\n\n' +
   'Their pick arrives as their next message ("Go with A · Bold"), or they write their own; your reply describes the ' +
   'options. Until someone picks or writes, the thread waits on them (Needs you), so end on choices only when your ' +
-  'next step depends on the pick. One block per reply, at its very end: ' +
-  'the person never sees the block itself, only the buttons or cards.'
+  'next step depends on the pick. One block per reply, at its very end' +
+  (!spec.parent && !spec.playbook && !scheduledRun(spec)
+    ? ' (a `done` block, if any, after it)'
+    : '') +
+  ': the person never sees the block itself, only the buttons or cards.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

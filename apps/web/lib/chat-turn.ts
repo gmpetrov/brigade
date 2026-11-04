@@ -59,3 +59,22 @@ export function closingStep(
   if (closed) return undefined
   return { ...call, output, ...(isError ? { isError } : {}), finished: true }
 }
+
+/**
+ * A `complete_thread` step's line, which shows only when it did not close the thread
+ * (closingStep): "Not marked done", and what Brigade said is still open, each by its first
+ * clause ("Pull request #682 in acme/web (“…”) is still open"), else its error's first line.
+ */
+export function closeLine(output: unknown): { label: string; detail: string } {
+  const error = (output as { error?: unknown } | null)?.error
+  const reason = typeof error === 'string' ? error : typeof output === 'string' ? output : ''
+  const listed = reason
+    .split('\n')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2).split(': ')[0]!.trim())
+  const first = reason
+    .split('\n')[0]!
+    .replace(/^Not done yet:\s*/, '')
+    .trim()
+  return { label: 'Not marked done', detail: listed.length ? listed.join('; ') : first }
+}

@@ -745,8 +745,8 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
               m.type === 'thread.prompt' &&
               m.text ===
                 'Pull request #301 in acme/web was merged. If nothing else remains of what was asked ' +
-                  'here, declare this thread done with complete_thread (a line on what was delivered); ' +
-                  'else say in a line what remains.',
+                  'here, declare this thread done (a line on what was delivered); else say in a line ' +
+                  'what remains.',
           ),
         'the merge on the runner, as its own prompt',
       )
