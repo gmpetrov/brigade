@@ -73,37 +73,137 @@ const slug = (text: string) =>
  */
 const NAMESPACE = 'x-codex-namespace'
 
+/** The parameter naming the account, on an App tool shared by its accounts (connectorTools). */
+const ACCOUNT_PARAM = 'account'
+
+const isObjectSchema = (schema: unknown): schema is JSONSchema7 =>
+  typeof schema === 'object' &&
+  schema !== null &&
+  (schema as JSONSchema7).type === 'object' &&
+  !('oneOf' in schema || 'anyOf' in schema || 'allOf' in schema || '$ref' in schema)
+
+/**
+ * The tools of the Apps granted to a thread. An App with one account: one tool per operation.
+ * With several, one tool per operation all the same, whose `account` parameter picks the account
+ * among those whose grant has the operation (a read-only grant has no writes): its schema, often
+ * the biggest part of a thread's tools (PostHog's run to 100 KB), is sent once rather than once
+ * per account. An operation whose schemas differ between accounts, or that takes an `account` of
+ * its own, keeps a tool per account, its name suffixed with the account's.
+ */
 export function connectorTools(
   grants: ConnectorGrant[],
   call: ConnectorCaller,
   options: { defer?: boolean } = {},
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {}
-  for (const grant of grants) {
-    // Several connections of one kind get distinct tool names.
-    const several = grants.filter((g) => g.kind === grant.kind).length > 1
-    const account = grant.externalAccount ?? grant.label
-    const namespace = {
-      name: several ? `${grant.kind}_${slug(account)}` : grant.kind,
-      description: `${grant.label}: ${account}`,
+  const write = ' makes a change, a person may need to approve it'
+  const accountOf = (grant: ConnectorGrant) => grant.externalAccount ?? grant.label
+  const make = (
+    name: string,
+    description: string,
+    schema: JSONSchema7,
+    namespace: { name: string; description: string },
+    route: (input: unknown) => { grant: ConnectorGrant; input: unknown },
+    operation: string,
+  ) =>
+    (tools[name] = tool({
+      description,
+      inputSchema: jsonSchema({
+        ...schema,
+        ...(options.defer ? { [NAMESPACE]: namespace } : {}),
+      } as JSONSchema7),
+      execute: async (input, { toolCallId }) => {
+        const to = route(input)
+        return call({
+          connectionId: to.grant.connectionId,
+          operation,
+          input: to.input,
+          toolCallId,
+          toolName: name,
+        })
+      },
+    }))
+  const kinds = [...new Set(grants.map((g) => g.kind))]
+  for (const kind of kinds) {
+    const ofKind = grants.filter((g) => g.kind === kind)
+    if (ofKind.length === 1) {
+      const grant = ofKind[0]!
+      const account = accountOf(grant)
+      const namespace = { name: kind, description: `${grant.label}: ${account}` }
+      for (const operation of grant.operations)
+        make(
+          operation.name,
+          `${operation.description} [${grant.label}: ${account}${operation.write ? `;${write}` : ''}]`,
+          operation.inputSchema as JSONSchema7,
+          namespace,
+          (input) => ({ grant, input }),
+          operation.name,
+        )
+      continue
     }
-    for (const operation of grant.operations) {
-      const name = several ? `${operation.name}_${slug(account)}`.slice(0, 64) : operation.name
-      tools[name] = tool({
-        description: `${operation.description} [${grant.label}: ${account}${operation.write ? '; makes a change, a person may need to approve it' : ''}]`,
-        inputSchema: jsonSchema({
-          ...(operation.inputSchema as JSONSchema7),
-          ...(options.defer ? { [NAMESPACE]: namespace } : {}),
-        } as JSONSchema7),
-        execute: (input, { toolCallId }) =>
-          call({
-            connectionId: grant.connectionId,
-            operation: operation.name,
-            input,
-            toolCallId,
-            toolName: name,
-          }),
+    const label = ofKind[0]!.label
+    const names = [...new Set(ofKind.flatMap((g) => g.operations.map((o) => o.name)))]
+    for (const operationName of names) {
+      const having = ofKind.flatMap((grant) => {
+        const operation = grant.operations.find((o) => o.name === operationName)
+        return operation ? [{ grant, operation }] : []
       })
+      const first = having[0]!.operation
+      const same = having.every(
+        ({ operation }) =>
+          operation.write === first.write &&
+          operation.description === first.description &&
+          JSON.stringify(operation.inputSchema) === JSON.stringify(first.inputSchema),
+      )
+      const schema = first.inputSchema as JSONSchema7
+      const accounts = having.map(({ grant }) => accountOf(grant))
+      const shared =
+        same &&
+        new Set(accounts).size === accounts.length &&
+        isObjectSchema(schema) &&
+        !(schema.properties && ACCOUNT_PARAM in schema.properties)
+      if (!shared) {
+        // A tool per account, as before.
+        for (const { grant, operation } of having) {
+          const account = accountOf(grant)
+          make(
+            `${operation.name}_${slug(account)}`.slice(0, 64),
+            `${operation.description} [${grant.label}: ${account}${operation.write ? `;${write}` : ''}]`,
+            operation.inputSchema as JSONSchema7,
+            { name: `${kind}_${slug(account)}`, description: `${grant.label}: ${account}` },
+            (input) => ({ grant, input }),
+            operation.name,
+          )
+        }
+        continue
+      }
+      make(
+        operationName,
+        `${first.description} [${label}, the account in \`${ACCOUNT_PARAM}\`: ${accounts.join(', ')}${first.write ? `;${write}` : ''}]`,
+        {
+          ...schema,
+          properties: {
+            [ACCOUNT_PARAM]: {
+              type: 'string',
+              enum: accounts,
+              description: `The ${label} account to use`,
+            },
+            ...schema.properties,
+          },
+          required: [ACCOUNT_PARAM, ...(schema.required ?? [])],
+        },
+        { name: kind, description: `${label}: ${accounts.join(', ')}` },
+        (input) => {
+          const { [ACCOUNT_PARAM]: account, ...rest } = (input ?? {}) as Record<string, unknown>
+          const to = having.find(({ grant }) => accountOf(grant) === account)
+          if (!to)
+            throw new Error(
+              `${operationName} has no ${label} account "${String(account)}": use one of ${accounts.join(', ')}`,
+            )
+          return { grant: to.grant, input: rest }
+        },
+        operationName,
+      )
     }
   }
   return tools

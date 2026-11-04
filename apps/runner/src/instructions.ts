@@ -867,7 +867,8 @@ export type Browser = { ready: true } | { ready: false; error?: string }
  */
 const APP_ACCOUNTS =
   '## App accounts\n\n' +
-  "Each App tool's description ends with the account it reaches, in brackets. You have the tools of the accounts " +
+  "Each App tool's description ends with the account it reaches, in brackets; an App you have several accounts of " +
+  'has one tool per operation, whose `account` parameter picks among those listed there. You have the tools of the accounts ' +
   'granted to you, and `list_apps` shows every App: those accounts, the accounts of the workspace not granted to ' +
   'you, and the Apps nobody has connected for you yet, each with its kind. When a person wants to use a service you ' +
   'have no account for ("track my Google rankings", "connect my Gmail"), call `list_apps` and propose the App that ' +
