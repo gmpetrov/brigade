@@ -552,23 +552,65 @@ const components: Components = {
 }
 
 // Only fenced blocks that name their language: guessing is slow and often wrong.
+type HastNode = {
+  type: string
+  tagName?: string
+  value?: string
+  children?: HastNode[]
+  properties?: Record<string, unknown>
+}
+
+/**
+ * Each word of a reply streaming in, in a span that fades in as it mounts (.stream-word): the
+ * words already shown keep theirs, so only the new ones fade. Not inside code, which shows as
+ * it comes.
+ */
+function rehypeStreamWords() {
+  const wrap = (node: HastNode) => {
+    if (!node.children || node.tagName === 'code' || node.tagName === 'pre') return
+    node.children = node.children.flatMap((child): HastNode[] => {
+      if (child.type !== 'text') {
+        wrap(child)
+        return [child]
+      }
+      return (child.value?.match(/\s+|\S+\s*/g) ?? []).map((word) =>
+        /^\s+$/.test(word)
+          ? { type: 'text', value: word }
+          : {
+              type: 'element',
+              tagName: 'span',
+              properties: { className: ['stream-word'] },
+              children: [{ type: 'text', value: word }],
+            },
+      )
+    })
+  }
+  return (tree: HastNode) => wrap(tree)
+}
+
 const rehypePlugins = [
   [rehypeHighlight, { plainText: ['text', 'txt', 'plain'] }],
 ] satisfies ComponentProps<typeof ReactMarkdown>['rehypePlugins']
+const streamingPlugins = [...rehypePlugins, rehypeStreamWords] satisfies ComponentProps<
+  typeof ReactMarkdown
+>['rehypePlugins']
 
 /** Markdown text, styled with the theme. Memoised: streaming re-renders only the message that grows. */
 export const Markdown = memo(function Markdown({
   text,
   className,
+  streaming = false,
 }: {
   text: string
   className?: string
+  /** Still coming in: its new words fade in as they show. */
+  streaming?: boolean
 }) {
   return (
     <div className={cn('min-w-0 leading-relaxed wrap-anywhere', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={rehypePlugins}
+        rehypePlugins={streaming ? streamingPlugins : rehypePlugins}
         components={components}
         urlTransform={urlTransform}
       >

@@ -697,6 +697,17 @@ export function ThreadConversation({
   useEffect(() => {
     if (following.current) toEnd()
   }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded])
+  // A reply revealed word by word grows between events (lib/stream-text.ts): followed as it grows.
+  useEffect(() => {
+    const content = scroller.current?.firstElementChild
+    if (!content) return
+    const grown = new ResizeObserver(() => {
+      const view = scroller.current
+      if (following.current && view) view.scrollTop = view.scrollHeight
+    })
+    grown.observe(content)
+    return () => grown.disconnect()
+  }, [loaded])
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
   const loadEarlier = () =>
