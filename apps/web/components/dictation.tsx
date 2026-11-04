@@ -85,6 +85,8 @@ export function useDictation(onText: (text: string, send: boolean) => void) {
     heard: boolean
   } | null>(null)
   const request = useRef<AbortController | null>(null)
+  /** Counts cancels: a start still waiting for the microphone when one comes gives up. */
+  const session = useRef(0)
   const latest = useRef(onText)
   latest.current = onText
 
@@ -99,6 +101,7 @@ export function useDictation(onText: (text: string, send: boolean) => void) {
   }, [])
 
   const cancel = useCallback(() => {
+    session.current++
     request.current?.abort()
     request.current = null
     const now = live.current
@@ -161,6 +164,7 @@ export function useDictation(onText: (text: string, send: boolean) => void) {
 
   const start = useCallback(async () => {
     if (live.current || request.current) return
+    const mine = ++session.current
     setError(undefined)
     setPhase('starting')
     levels.current = []
@@ -170,8 +174,14 @@ export function useDictation(onText: (text: string, send: boolean) => void) {
         audio: { echoCancellation: true, noiseSuppression: true },
       })
     } catch (e) {
+      if (mine !== session.current) return
       setPhase('idle')
       setError(problem(e))
+      return
+    }
+    // Cancelled (✕, or the box gone) while the browser asked for the microphone: let it go.
+    if (mine !== session.current) {
+      stream.getTracks().forEach((t) => t.stop())
       return
     }
     try {
