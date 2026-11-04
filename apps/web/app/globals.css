@@ -306,6 +306,22 @@
     }
   }
 
+  /* A teammate's reply as it streams in (components/markdown.tsx, lib/stream-text.ts): each
+   * word fades in as it shows. Only opacity: the line never moves. */
+  .stream-word {
+    animation: stream-word 0.3s ease-out both;
+  }
+  @keyframes stream-word {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stream-word {
+      animation: none;
+    }
+  }
+
   /* A status line a light passes over, while a teammate gets to a message
    * (components/thread-view.tsx). Still for those who ask for less motion. */
   .text-shimmer {

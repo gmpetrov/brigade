@@ -184,6 +184,7 @@ import { turnWait } from '@/lib/turn-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
 import { revealSeq } from '@/lib/reveal'
+import { closeOpenMarkdown, useSmoothText } from '@/lib/stream-text'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
@@ -1547,7 +1548,32 @@ function layoutThread(items: Item[], working: boolean) {
   if (working && last?.type === 'activity') last.live = true
   // The running turn's asides read as one card, at its end, above its Working line.
   const laid = working && running !== undefined ? runningAsides(nodes, items, runningFrom) : nodes
-  return Object.assign(laid, { running: steered ?? running, live })
+  return Object.assign(laid, { running: steered ?? running, live, runningFrom })
+}
+
+/** The first item a node shows, by its index; -1 for an empty fold. */
+function nodeStart(node: Node): number {
+  if (node.type === 'item') return node.i
+  if (node.type === 'worked') return node.inner[0] ? nodeStart(node.inner[0]) : -1
+  return node.is[0] ?? -1
+}
+
+/**
+ * Where the running turn's Working line goes among the nodes: at the top of the turn, under the
+ * person's latest message in it (or what woke it). What the teammate writes then streams in
+ * under the line, which stays where it is as the reply grows, and where its turn's line ("Worked
+ * for", or its steps) shows once it ends: nothing above the reply moves.
+ */
+function workingLineAt(nodes: Node[], items: Item[], runningFrom: number) {
+  let at = nodes.findIndex((node) => nodeStart(node) >= runningFrom)
+  if (at < 0) return nodes.length
+  nodes.forEach((node, k) => {
+    if (k < at || node.type !== 'item') return
+    const item = items[node.i]!
+    if ((item.kind === 'user' && !item.side) || item.kind === 'woke') at = k + 1
+  })
+  // Past what shows nothing (the turn's start), so the line sits right on what it follows.
+  return at
 }
 
 /** "45s", "1m 52s", "2h 5m". */
@@ -2017,6 +2043,16 @@ const ToolStep = memo(
 )
 
 /** What a teammate thought on its way, folded. */
+/**
+ * A teammate's reply, revealed word by word as it streams in rather than in the bursts it comes
+ * in, its open Markdown closed meanwhile (lib/stream-text.ts). One done when it shows, shows whole.
+ */
+function StreamedReply({ text, done }: { text: string; done: boolean }) {
+  const shown = useSmoothText(text, !done)
+  const revealing = !done || shown.length < text.length
+  return <Markdown text={revealing ? closeOpenMarkdown(shown) : text} streaming={revealing} />
+}
+
 const ThinkingStep = memo(function ThinkingStep({ text }: { text: string }) {
   return (
     <Collapsible className="self-start">
@@ -2753,7 +2789,10 @@ export function ThreadItems({
                   }}
                 >
                   {/* A card it ends with shows once the reply is done, without its markup. */}
-                  <Markdown text={item.done ? item.text : withoutCard(item.text)} />
+                  <StreamedReply
+                    text={item.done ? item.text : withoutCard(item.text)}
+                    done={item.done}
+                  />
                 </FileLinksProvider>
                 {/* With its next message close under it, they float beside its first line, where a pointer shows them. */}
                 {item.done && (
@@ -3243,22 +3282,32 @@ export function ThreadItems({
       ),
     )
   }
+  const workingLineNode = workingLine && (
+    <WorkingLine
+      key="working"
+      {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
+      steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
+      background={background}
+      {...(teammate ? { teammate } : {})}
+      subThreads={childThreads}
+    >
+      {nodes.live.map((i) => render(items[i]!, i))}
+    </WorkingLine>
+  )
+  // The running turn's line, at the top of the turn (workingLineAt); background work alone keeps
+  // its line at the end.
+  const workingAbove = workingLine && nodes.running !== undefined
+  const lineAt = workingAbove ? workingLineAt(nodes, items, nodes.runningFrom) : nodes.length
   return (
     <div className="flex flex-col gap-4">
-      {show(nodes)}
+      {/* One list, by key: what moves past the line as the turn goes on or ends is not remounted. */}
+      {[
+        ...show(nodes.slice(0, lineAt)),
+        ...(workingAbove ? [workingLineNode] : []),
+        ...show(nodes.slice(lineAt)),
+      ]}
       {pending}
-      {workingLine && (
-        <WorkingLine
-          key="working"
-          {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
-          steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
-          background={background}
-          {...(teammate ? { teammate } : {})}
-          subThreads={childThreads}
-        >
-          {nodes.live.map((i) => render(items[i]!, i))}
-        </WorkingLine>
-      )}
+      {!workingAbove && workingLineNode}
       {eventsWaitingSince ? (
         <EventsWaiting since={eventsWaitingSince} />
       ) : working && computerDown ? (
