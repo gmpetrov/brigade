@@ -8,7 +8,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { test } from 'node:test'
-import { TURN_WAITING_SOURCE, type AgentEvent, type ThreadSpec } from '@brigade/contracts'
+import {
+  TURN_MEMORY_SOURCE,
+  TURN_WAITING_SOURCE,
+  type AgentEvent,
+  type ThreadSpec,
+} from '@brigade/contracts'
 
 const home = await mkdtemp(join(tmpdir(), 'brigade-turn-limit-'))
 process.env.BRIGADE_HOME = home
@@ -120,13 +125,24 @@ test('past the first few, turns start one at a time, a moment apart', async () =
 
 test('short of memory past the first few, a turn waits until there is room', async () => {
   let room = true
-  const { message, startedAt, end } = setup(32, () => room)
+  const { events, message, startedAt, end } = setup(32, () => room)
   for (const id of ['a', 'b', 'c', 'd']) message(id)
   await sleep(60)
   room = false
   message('e')
   await sleep(300)
   assert.equal(startedAt('e'), undefined)
+  // The thread says at once that it waits for memory, once; those that had room say nothing.
+  const waits = (id: string) =>
+    events.filter(
+      (e) => e.sessionId === id && e.event.type === 'raw' && e.event.source === TURN_MEMORY_SOURCE,
+    )
+  assert.equal(waits('e').length, 1, 'e says it waits for memory')
+  assert.deepEqual(
+    waits('e').map((e) => e.event.type === 'raw' && e.event.value),
+    [{ teammateId: 'mark' }],
+  )
+  for (const id of ['a', 'b', 'c', 'd']) assert.equal(waits(id).length, 0)
   room = true
   // Memory is checked again every 5 s.
   await sleep(5_200)

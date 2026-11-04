@@ -754,6 +754,14 @@ export const TURN_WAITING_SOURCE = 'turn.waiting'
 export type TurnWaiting = { teammateId: string; running: number }
 
 /**
+ * A raw event's source for a turn that waits for its computer to have memory for it (the
+ * runner's memoryRoom), said as soon as it waits: its value is a TurnWaitingMemory. Its
+ * turn.started ends the wait. A dashboard that does not know it shows nothing of it.
+ */
+export const TURN_MEMORY_SOURCE = 'turn.memory'
+export type TurnWaitingMemory = { teammateId: string }
+
+/**
  * A raw event's source for a turn that gets its thread's files ready before it starts: the
  * folder it brings from the computer the thread left, the files attached to the thread. Its
  * value is a TurnPreparing; its turn.started ends it, or, when no turn follows (a thread taken

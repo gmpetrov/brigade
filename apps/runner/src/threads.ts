@@ -32,6 +32,7 @@ import {
   type SideExchange,
   type SideRoute,
   THREAD_NOTE_SOURCE,
+  TURN_MEMORY_SOURCE,
   TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
   turnAnswer,
@@ -41,6 +42,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ThreadAttachmentRef,
+  type TurnWaitingMemory,
   type ReplyTo,
   type ThreadPrompt,
   type ThreadSpec,
@@ -2272,11 +2274,23 @@ export class Threads {
       const waiting = Date.now()
       const until = waiting + MEMORY_WAIT_MS
       let told = false
+      let shown = false
       while (!this.stopping && !controller.signal.aborted) {
         // Fits again after reading memory: the guard may lower the cap meanwhile.
         if (fits() && (await room()) && fits()) break
         // Long enough, with few turns running: none may end soon to give memory back.
         if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
+        // The thread shows it waits for memory at once, where it would show it reads the
+        // message: a wait of 24 s read as a slow teammate (Nov 4). Its note comes later.
+        if (fits() && !shown) {
+          shown = true
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: TURN_MEMORY_SOURCE,
+            value: { teammateId: spec.teammate.id } satisfies TurnWaitingMemory,
+          })
+        }
         if (fits() && !told && Date.now() - waiting >= MEMORY_NOTICE_MS) {
           told = true
           this.options.emit(spec.sessionId, {

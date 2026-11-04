@@ -26,9 +26,11 @@ import {
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
   TURN_PREPARING_SOURCE,
+  TURN_MEMORY_SOURCE,
   TURN_WAITING_SOURCE,
   type TurnPreparing,
   type TurnWaiting,
+  type TurnWaitingMemory,
   hasVisibleText,
   SuggestedReplies,
   safeChoices,
@@ -269,8 +271,18 @@ export type Item =
    * set the teammate going again, no message steered in: what came before answered.
    */
   | { kind: 'woke'; key: string; at: number }
-  /** A turn waits for a free slot on its computer, all of them taken by other turns. */
-  | { kind: 'slot'; key: string; at: number; teammateId: string; running: number }
+  /**
+   * A turn waits for a free slot on its computer, all of them taken by other turns; or, with
+   * `memory`, for its computer to have memory for it.
+   */
+  | {
+      kind: 'slot'
+      key: string
+      at: number
+      teammateId: string
+      running: number
+      memory?: true
+    }
   /** Its turn gets the thread's files ready on its computer (after a move, say) before it starts. */
   | { kind: 'preparing'; key: string; at: number; teammateId: string }
   /** Its files are ready and no turn followed (a thread taken back that waits on a person). */
@@ -677,6 +689,16 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           else if (e.source === TURN_WAITING_SOURCE) {
             const { teammateId, running } = e.value as TurnWaiting
             add({ kind: 'slot', key: `q${seq}`, at: Date.parse(e.at), teammateId, running })
+          } else if (e.source === TURN_MEMORY_SOURCE) {
+            const { teammateId } = e.value as TurnWaitingMemory
+            add({
+              kind: 'slot',
+              key: `q${seq}`,
+              at: Date.parse(e.at),
+              teammateId,
+              running: 0,
+              memory: true,
+            })
           } else if (e.source === TURN_PREPARING_SOURCE) {
             const { teammateId, done } = e.value as TurnPreparing
             // Ready, and no turn followed: the wait is over all the same.
@@ -2258,7 +2280,8 @@ export function Answering({
   teammate: { name: string }
   /** slot: its turn waits for one of that many turns running on its computer to end. */
   /** preparing: its turn gets the thread's files ready on its computer before it starts. */
-  phase: 'starting' | 'reading' | 'thinking' | 'preparing' | { slot: number }
+  /** memory: its turn waits for its computer to have memory for it. */
+  phase: 'starting' | 'reading' | 'thinking' | 'preparing' | 'memory' | { slot: number }
   since?: number
 }) {
   const [now, setNow] = useState(() => Date.now())
@@ -2276,6 +2299,7 @@ export function Answering({
           reading: 'is reading your message',
           thinking: 'is thinking',
           preparing: "is getting this thread's files ready on this computer",
+          memory: 'is waiting for this computer to have memory free',
         }[phase]
   return (
     // Fading in is an animation too: on the line itself it would replace the shimmer.
@@ -3140,7 +3164,9 @@ export function ThreadItems({
       ) : slot && slotTeammate ? (
         <Answering
           teammate={slotTeammate}
-          phase={slot.kind === 'slot' ? { slot: slot.running } : 'preparing'}
+          phase={
+            slot.kind !== 'slot' ? 'preparing' : slot.memory ? 'memory' : { slot: slot.running }
+          }
           since={slot.at}
         />
       ) : waitingFor ? (
