@@ -270,25 +270,24 @@ const isPlain = (value: unknown): value is Record<string, unknown> =>
  * a delta ends with is held until a space or a line break says it is a whole word, and a
  * private key's block from its BEGIN line until its END line, so no stored delta holds the
  * start of a secret whose end has not come yet; the message.done that follows holds the whole
- * reply, masked. A reply cut short loses what was held from its deltas. One per message, kept
- * by the hub (deltaStreams); one the hub lost (it slept, restarted, or had too many) starts
- * again from the stored deltas, and drops the word it resumes in: its start was held, and lost.
+ * reply, masked. A reply cut short loses what was held from its deltas. Its state is kept with
+ * the hub (DeltaStreams), so that a hub that sleeps between two deltas goes on where it was.
  */
 export class MaskedStream {
-  /** The end of the reply's text so far: CONTEXT before what is held, and what is held. */
-  private raw: string
-  /** Where in raw what is held starts. */
-  private held: number
-  private lastSeq: number
-  /** Resumed without what was held: the word under way is dropped. */
-  private resuming: boolean
+  constructor(
+    /** The end of the reply's text so far: CONTEXT before what is held, and what is held. */
+    private raw = '',
+    /** Where in raw what is held starts. */
+    private held = 0,
+    private lastSeq = 0,
+  ) {}
 
-  /** `before`: the reply's stored deltas, when the stream resumes after `seq`. */
-  constructor(resumed?: { before: string; seq: number }) {
-    this.raw = resumed?.before.slice(-PEM_MAX) ?? ''
-    this.held = this.raw.length
-    this.lastSeq = resumed?.seq ?? 0
-    this.resuming = !!resumed
+  static from(state: StreamState) {
+    return new MaskedStream(state.raw, state.held, state.lastSeq)
+  }
+
+  get state(): StreamState {
+    return { raw: this.raw, held: this.held, lastSeq: this.lastSeq }
   }
 
   /** The text to store for this delta: '' while it is held, or sent already (a delta sent again). */
@@ -296,15 +295,6 @@ export class MaskedStream {
     if (seq <= this.lastSeq) return ''
     this.lastSeq = seq
     this.raw += text
-    if (this.resuming) {
-      const space = this.raw.slice(this.held).search(/\s/)
-      if (space < 0) {
-        this.held = this.raw.length
-        return ''
-      }
-      this.held += space
-      this.resuming = false
-    }
     const space = Math.max(
       this.raw.lastIndexOf(' '),
       this.raw.lastIndexOf('\n'),
@@ -349,6 +339,8 @@ export class MaskedStream {
   }
 }
 
+type StreamState = { raw: string; held: number; lastSeq: number }
+
 /** How much text before a delta it is masked with: a URL, a header and its token. */
 const CONTEXT = 512
 
@@ -358,48 +350,125 @@ const PEM_MAX = 8192
 /** The longest text held back: a "word" longer than this goes out masked as it is. */
 const HOLD_MAX = 8192
 
-/** Streams of the replies under way, by thread and message; the oldest dropped past this many. */
-const STREAMS_MAX = 500
+/** Most replies under way at once in a workspace: past this many, the oldest is given up. */
+const STREAMS_MAX = 200
 
-/** A reply's deltas as stored before `seq`, joined: a lost stream resumes from them. */
-export type StoredDeltas = (
-  message: { id: string; teammateId?: string },
-  seq: number,
-) => Promise<string | undefined>
+/** A reply that streamed for this long is given up: its turn ended without its message.done. */
+const STREAM_MAX_MS = 60 * 60_000
+
+/** How long a reply given up is remembered: its later deltas, if any, are not stored. */
+const GIVEN_UP_MS = 24 * 60 * 60_000
+
+/** Where the hub keeps small state that outlives its memory (HubHost.load and save). */
+export type StreamStore = {
+  load<T>(key: string): T | undefined
+  save(key: string, value: unknown): void
+}
+
+/** State kept in memory only: a test's, or a hub's that keeps none. */
+export const memoryStore = (): StreamStore => {
+  const kept = new Map<string, unknown>()
+  return {
+    load: <T>(key: string) => structuredClone(kept.get(key)) as T | undefined,
+    save: (key, value) =>
+      value === undefined ? kept.delete(key) : kept.set(key, structuredClone(value)),
+  }
+}
 
 /**
- * Each message.delta's text masked as its stream reads it (MaskedStream), in seq order; a
- * message.done ends its stream. Other events as they are. A stream the hub does not have
- * resumes from what `stored` finds of its reply, if anything.
+ * The replies under way of a hub, each one's state saved as it changes: a hub that sleeps (a
+ * Durable Object's memory goes, its storage stays) goes on with them where it was. Replies under
+ * way, and those given up (too old, or too many at once), are listed by when they started; a
+ * reply given up has its later deltas stored empty, never in clear without what came before.
  */
-export async function maskDeltas<E extends { seq: number; event: { type: string } }>(
-  streams: Map<string, MaskedStream>,
+export class DeltaStreams {
+  private readonly started: Map<string, number>
+  private readonly givenUp: Map<string, number>
+  /** Those this hub's memory holds. */
+  private readonly live = new Map<string, MaskedStream>()
+
+  constructor(
+    private readonly store: StreamStore,
+    private readonly now = Date.now,
+  ) {
+    this.started = new Map(store.load<[string, number][]>('delta-streams') ?? [])
+    this.givenUp = new Map(store.load<[string, number][]>('delta-streams-given-up') ?? [])
+  }
+
+  /** The text to store for this delta of the reply `key`. */
+  next(key: string, seq: number, text: string): string {
+    if (this.givenUp.has(key)) return ''
+    let stream = this.live.get(key)
+    if (!stream && this.started.has(key)) {
+      // Started before the hub slept: its state is saved, or it is given up.
+      const state = this.store.load<StreamState>(`delta-stream:${key}`)
+      if (!state) {
+        this.giveUp(key, this.now())
+        this.saveLists()
+        return ''
+      }
+      stream = MaskedStream.from(state)
+    }
+    if (!stream) {
+      this.start(key)
+      stream = new MaskedStream()
+    }
+    this.live.set(key, stream)
+    const out = stream.next(seq, text)
+    this.store.save(`delta-stream:${key}`, stream.state)
+    return out
+  }
+
+  /** Its message.done came: the reply is whole. */
+  end(key: string) {
+    this.live.delete(key)
+    if (this.started.delete(key)) {
+      this.store.save(`delta-stream:${key}`, undefined)
+      this.saveLists()
+    }
+  }
+
+  private start(key: string) {
+    const now = this.now()
+    for (const [id, at] of this.givenUp) if (now - at > GIVEN_UP_MS) this.givenUp.delete(id)
+    for (const [id, at] of this.started)
+      if (now - at > STREAM_MAX_MS || this.started.size >= STREAMS_MAX) this.giveUp(id, now)
+      else break
+    this.started.set(key, now)
+    this.saveLists()
+  }
+
+  private giveUp(key: string, now: number) {
+    this.started.delete(key)
+    this.live.delete(key)
+    this.store.save(`delta-stream:${key}`, undefined)
+    this.givenUp.set(key, now)
+  }
+
+  private saveLists() {
+    this.store.save('delta-streams', this.started.size ? [...this.started] : undefined)
+    this.store.save('delta-streams-given-up', this.givenUp.size ? [...this.givenUp] : undefined)
+  }
+}
+
+/**
+ * Each message.delta's text masked as its reply's stream reads it (DeltaStreams), in seq order;
+ * a message.done ends its stream. Other events as they are.
+ */
+export function maskDeltas<E extends { seq: number; event: { type: string } }>(
+  streams: DeltaStreams,
   sessionId: string,
   events: E[],
-  stored: StoredDeltas = async () => undefined,
-): Promise<E[]> {
-  const out: E[] = []
-  for (const e of events) {
+): E[] {
+  return events.map((e) => {
     const event = e.event as { type: string; id?: string; text?: string; teammateId?: string }
-    if (event.type !== 'message.delta' && event.type !== 'message.done') {
-      out.push(e)
-      continue
-    }
+    if (event.type !== 'message.delta' && event.type !== 'message.done') return e
     const key = `${sessionId}:${event.teammateId ?? ''}:${event.id}`
     if (event.type === 'message.done') {
-      streams.delete(key)
-      out.push(e)
-      continue
+      streams.end(key)
+      return e
     }
-    let stream = streams.get(key)
-    if (!stream) {
-      const before = await stored({ id: event.id ?? '', teammateId: event.teammateId }, e.seq)
-      stream = new MaskedStream(before === undefined ? undefined : { before, seq: e.seq - 1 })
-      if (streams.size >= STREAMS_MAX) streams.delete(streams.keys().next().value!)
-      streams.set(key, stream)
-    }
-    const text = stream.next(e.seq, event.text ?? '')
-    out.push(text === event.text ? e : { ...e, event: { ...event, text } })
-  }
-  return out
+    const text = streams.next(key, e.seq, event.text ?? '')
+    return text === event.text ? e : { ...e, event: { ...event, text } }
+  })
 }
