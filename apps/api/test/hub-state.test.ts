@@ -22,6 +22,8 @@ const ALLOWED: Record<string, string> = {
     'reads of websites for the HTTP routes that ask, deduped: never reached from a hub',
   'src/cloud.ts:desktopRequests':
     'desktop sign-ins asked for by the HTTP routes, deduped: never reached from a hub',
+  'src/cloud.ts:desktopsPreparing':
+    'desktops the HTTP routes found still being set up, to report a stuck one once: never reached from a hub',
   'src/desktop-proxy.ts:views': 'desktop relays the HTTP routes open: never reached from a hub',
   'src/designs.ts:editing': 'design edits the HTTP routes make, one at a time: never in a hub',
   'src/teaching.ts:recordings': 'who records on a computer, held by HTTP routes alone',
@@ -49,6 +51,8 @@ const ALLOWED: Record<string, string> = {
   'src/analytics.ts:harnesses': "teammates' harnesses, for turn_completed: a cache of data",
   'src/error-tracking.ts:recent':
     "errors sent in the last minute, so one that repeats cannot spend PostHog's quota: a limit per process",
+  'src/error-tracking.ts:tracked':
+    'errors already sent, so one thrown to several requests is sent once: weak, no workspace state',
   'src/routes/errors.ts:counts':
     "the dashboard's error reports per person in the last minute: a limit per process",
 }

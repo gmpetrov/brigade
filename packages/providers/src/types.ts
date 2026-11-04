@@ -27,6 +27,17 @@ export type HostedPort = {
   url: string
 }
 
+/**
+ * The computer's desktop is still being set up after the provider's wait (desktopUrl): not a
+ * failure, the caller asks again in a moment.
+ */
+export class DesktopNotReady extends Error {
+  constructor(message = 'The desktop is still being prepared') {
+    super(message)
+    this.name = 'DesktopNotReady'
+  }
+}
+
 export interface ComputerProvider {
   create(spec: ComputerSpec): Promise<ComputerRef>
   start(ref: ComputerRef): Promise<void> // resume with its disk
@@ -34,7 +45,8 @@ export interface ComputerProvider {
   keepAlive(ref: ComputerRef): Promise<void> // push back the provider's own auto-stop while in use
   destroy(ref: ComputerRef): Promise<void>
   exec(ref: ComputerRef, command: string): Promise<ExecResult> // install and start the runner
-  desktopUrl(ref: ComputerRef): Promise<string | null> // live desktop for takeover
+  /** The live desktop for takeover. Throws DesktopNotReady while it is still being set up. */
+  desktopUrl(ref: ComputerRef): Promise<string | null>
   hostPort(ref: ComputerRef, port: number): Promise<HostedPort> // a stable public address for a port (previews)
   status(ref: ComputerRef): Promise<ComputerStatus>
   /**
