@@ -3,13 +3,14 @@
 // computer (its making, its start, its idle stop) runs in its workspace's hub (src/hub/), which
 // keeps that state: functions marked "In the hub" are reached through hubs.get(workspaceId).
 import { randomUUID } from 'node:crypto'
-import { providerFromEnv, type ComputerRef } from '@brigade/providers'
+import { DesktopNotReady, providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { billingEnabled, cloudEntitled, requireCloudPlan } from './billing.js'
 import { defaults, env } from './config.js'
 import { Prisma, prisma } from './db.js'
 import { BEING_DELETED, beingDeleted, refuseWhileDeleting } from './deletion-fence.js'
+import { captureError, markTracked } from './error-tracking.js'
 import type { Computer } from './generated/prisma/client.js'
 import { hubs } from './hub.js'
 import { currentHub } from './hub/context.js'
@@ -317,8 +318,7 @@ async function bringUp(computerId: string) {
   if (!computer || computer.kind !== 'cloud' || !ref || computer.status === 'creating') return
   if (
     computer.status === 'starting' &&
-    (state().starting.has(computer.id) ||
-      Date.now() - computer.updatedAt.getTime() < START_LOST_MS)
+    (state().starting.has(computer.id) || Date.now() - computer.updatedAt.getTime() < START_LOST_MS)
   )
     return
   if (computer.status === 'starting') console.warn(`start of ${computer.id} lost: started again`)
@@ -474,26 +474,64 @@ export async function providerReason(error: unknown) {
 /**
  * Desktop requests in flight, per computer. A provider sets the desktop up on
  * the first request after a boot, and two at once can each write a VNC
- * password, leaving the server with one and the URL with the other.
+ * password, leaving the server with one and the URL with the other. Every
+ * request for the desktop meanwhile (each thread's panel, each retry) waits on
+ * that one, and gets its answer or its error: the same error, sent once.
  */
 const desktopRequests = new Map<string, Promise<string | null>>()
 
-/** The desktop's URL. A provider that does not answer is a 503, which the dashboard retries. */
+/** Desktops still being set up, by computer: since when, and whether that was reported. */
+const desktopsPreparing = new Map<string, { since: number; reported: boolean }>()
+
+/** A desktop still being set up after this long is reported, once (desktopUrl). */
+export const DESKTOP_PREPARING_REPORT_MS = 10 * 60_000
+
+export const DESKTOP_PREPARING = 'Preparing the desktop…'
+
+/**
+ * The desktop's URL. One the provider is still setting up, or a provider that does not
+ * answer, is a 503, which the dashboard asks again for until it opens.
+ */
 export async function desktopUrl(computer: { providerRef: unknown }) {
   const ref = refOf(computer)
   if (!provider || !ref) return null
   const key = `${ref.provider}:${ref.id}`
   let request = desktopRequests.get(key)
   if (!request) {
-    request = provider.desktopUrl(ref).finally(() => desktopRequests.delete(key))
+    request = askDesktop(ref, key).finally(() => desktopRequests.delete(key))
     desktopRequests.set(key, request)
   }
+  return request
+}
+
+/** One request to the provider for the desktop, and what it means for every request waiting. */
+async function askDesktop(ref: ComputerRef, key: string) {
   try {
-    return await request
+    const url = await provider!.desktopUrl(ref)
+    desktopsPreparing.delete(key)
+    return url
   } catch (error) {
-    throw new HTTPException(503, {
+    if (error instanceof DesktopNotReady) {
+      // Still being set up (a computer just started or resumed, a slow provider): not a failure.
+      const preparing = desktopsPreparing.get(key) ?? { since: Date.now(), reported: false }
+      desktopsPreparing.set(key, preparing)
+      if (!preparing.reported && Date.now() - preparing.since >= DESKTOP_PREPARING_REPORT_MS) {
+        preparing.reported = true
+        captureError(
+          new Error(
+            `The cloud computer's desktop is still being prepared after ${DESKTOP_PREPARING_REPORT_MS / 60_000} minutes`,
+          ),
+          { kind: 'cloud:desktop', handled: true },
+        )
+      }
+      throw markTracked(new HTTPException(503, { message: DESKTOP_PREPARING }))
+    }
+    desktopsPreparing.delete(key)
+    const failure = new HTTPException(503, {
       message: `The cloud computer's provider did not answer: ${await providerReason(error)}`,
     })
+    captureError(failure, { kind: 'cloud:desktop', handled: true })
+    throw markTracked(failure)
   }
 }
 
