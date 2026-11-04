@@ -730,22 +730,20 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   run, so a person's turns go first; titles, memory and tidy runs, each a harness process of its own, wait for
   memory too. In Claude Code, the thread's browser relay (about 60 MB) starts at the first browser tool call: the
   bridge lists its tools as the relay listed them last time (`lazy` in the MCP server's config, the list kept under
-  that key) and hands everything to the relay once it runs. The host's tools are kept by their hash and not converted again, and the
-  bridge's `start-config.json` no longer holds them. Codex's app-server already stays across turns. Brigade's tools
+  that key) and hands everything to the relay once it runs. A turn that goes to the kept process with the same tools converts none again.
+  Codex's app-server already stays across turns. Brigade's tools
   that end most turns (`complete_thread`, `open_ticket`, `show_widget`, `widget_guide`, a child's `report`,
   `complete_task`, `search_workspace`) are always loaded in Claude Code (`alwaysLoad`), never behind a tool search,
   which cost a model round trip of its own. And a turn waits for memory only past the first `TURNS_ALWAYS` turns, or
   after the memory guard stopped one lately: the cloud computer's own services hold most of its memory, so it read
   short of it most of the time, and turns waited 6 to 46 s with few others running.
-- **A thread's App tools, light enough for every thread to keep every App.** By the member's choice there is no
-  per-project limit on Apps, so the tools themselves got lighter (`connectorTools`). An App granted with several
-  accounts has one tool per operation, its `account` parameter listing the accounts whose grant has it (a read-only
-  grant has no writes); an operation whose schemas differ between accounts keeps a tool per account. An App whose
-  operations' schemas weigh more than 300 KB (PostHog, Resend, RevenueCat) goes behind a catalog of three small
-  tools, always loaded in Claude Code: `<app>_find` returns the operations for a task with their schemas while they
-  fit (40 KB), `<app>_describe` gives one's schema, `<app>_run` calls one; the API checks each call by its operation
-  as before (scope, approvals). Apps the dashboard shows cards for by tool name (GitHub, Gmail, email) keep their
-  tools. The bridge keeps the tools it was sent, and a turn whose finish said so (`toolsKept`) is followed by turns
-  that send only their hash (`toolsHash`), until they change or a turn fails. On a thread with 1,247 tools (6.7 MB),
-  this left 504 (0.6 MB): the tool names in each request went from 68k to 26k characters, Claude Code's process from
-  about 380 to 260 MB, its bridge from about 230 to 150-180 MB.
+- **A big App's tools behind a catalog.** By the member's choice there is no per-project limit on Apps, so every
+  thread keeps every App. An App whose operations' schemas weigh more than 300 KB (PostHog, Resend, RevenueCat on the
+  workspace computer) goes behind a catalog of three small tools, always loaded in Claude Code (`catalogTools`):
+  `<app>_find` returns the operations for a task with their schemas while they fit (40 KB) and the accounts that have
+  each, `<app>_describe` gives one's schema (as the account given has it, when its accounts have it differently),
+  `<app>_run` calls one on the account asked. The API checks each call by its operation as before (scope,
+  approvals). Apps the dashboard shows cards for by tool name (GitHub, Gmail, email) keep their tools. Measured with
+  Claude Code against a stand-in API on a thread with 1,247 tools (6.7 MB), with PostHog's two accounts also sharing
+  one tool per operation: 504 tools (0.6 MB) were left, the tool names in each request went from 68k to 26k
+  characters, and Claude Code's process from about 380 to 260 MB.

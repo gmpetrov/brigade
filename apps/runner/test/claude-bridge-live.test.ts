@@ -1,7 +1,4 @@
 import assert from 'node:assert/strict'
-import { readdir, readFile, mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { test } from 'node:test'
 import { claudeSettingsEnv } from '../src/harness/claude-settings.js'
 import { connectorTools } from '../src/harness/tools.js'
@@ -184,57 +181,5 @@ test("Claude Code's guess at the next message ends an answered turn, and the pro
       [`After ${word}`],
     )
     assert.equal(turns[i]!.filter((p) => p.type === 'finish').length, 1)
-  }
-})
-
-test("the host's tools cross once: a later turn sends only their hash, and a new process still has them", async () => {
-  const calls: string[] = []
-  const tools = connectorTools(
-    [
-      {
-        connectionId: 'c1',
-        kind: 'linear',
-        label: 'Linear',
-        scope: 'read',
-        operations: [
-          {
-            name: 'linear_whoami',
-            description: 'Who am I',
-            write: false,
-            inputSchema: { type: 'object', properties: {} },
-          },
-        ],
-      } as never,
-    ],
-    async (call) => {
-      calls.push(call.toolCallId)
-      return `answer ${calls.length}`
-    },
-  )
-  const home = await mkdtemp(join(tmpdir(), 'tools-once-'))
-  try {
-    // A process per turn: the second's MCP server is served from the tools the bridge kept.
-    const { record } = await bridgeTurn(LIVE_SDK, {
-      permissionMode: 'allow-all',
-      env: { ...claudeSettingsEnv(), BRIGADE_CLAUDE_KEEP_MS: '0' },
-      tools,
-      home,
-      prompts: ['call linear_whoami', 'call linear_whoami'],
-    })
-    assert.equal(record.filter((r) => r.what === 'query').length, 2)
-    assert.deepEqual(
-      record.filter((r) => r.what === 'tool').map((r) => JSON.parse(r.result)),
-      ['answer 1', 'answer 2'],
-    )
-    // The last start message the bridge got had the hash, and no tools.
-    const runs = join(home, '.ai-sdk-harness', '.agent-runs')
-    const [run] = await readdir(runs)
-    const start = JSON.parse(
-      await readFile(join(runs, run!, 'bridge', 'start-config.json'), 'utf8'),
-    )
-    assert.equal(typeof start.toolsHash, 'string')
-    assert.equal(start.tools, undefined, 'the second turn sent no tools')
-  } finally {
-    await rm(home, { recursive: true, force: true })
   }
 })
