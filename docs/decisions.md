@@ -146,6 +146,24 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   meanwhile) waits quietly and is read with the others in the next turn. The dashboard shows a person's messages not
   read yet as they look once read, at the end of the thread above its Working line, where the turn will read them, with
   the status under them; their actions sit in a menu shown while the pointer is over one (always on phones).
+- **A turn a person writes into reads as a chat** (`layoutThread` in `apps/web/components/thread-view.tsx`,
+  `lib/chat-turn.ts`). Seen on Nov 4 at 13:45, once messages went into the running turn: every one carried "Steered
+  into Riley's running turn", and each cut the turn's steps into pieces between them ("Searched once", "Ran cat …",
+  "Searched 3 times"). Now:
+  - A message steered in says nothing under it, and does not cut the turn: its steps stay in its one Working line, then
+    one "Worked for" over the whole turn, under the person's messages and above the answer. A turn that answered since
+    its last step (one that only waited on its background work) or a report woke still starts afresh there.
+  - A question the turn can answer at once gets its answer at once: a person's message steered in tells the teammate
+    to answer it in a line, then go on (`steeredText`); that reply, right after the message and before the next step,
+    stays in sight once the turn ends (`quickReplies`). On Nov 4, "what's my name?" waited 36 s for research to end.
+  - A shell command's step reads what it does (`commandSummary`): `cat …/threads/x.md 2>/dev/null || find …` reads
+    `cat x.md`; the step's details and an approval card keep the whole command.
+  - A call to `complete_thread` shows as the thread's Done line, not as a step, unless Brigade refused it (something
+    still open, a summary too long): then it stays a step, with its reason (`closingStep`). The Done line hides while
+    the teammate works again or a message is on its way. The reply still comes after the call, not before it to save
+    the round trip (about 4 s): text written before a tool call may reach the person only as the server's summary of it
+    (narration), and a draft or a table written there would be lost, as with the team card (`UNDER_REPLY` in
+    `apps/runner/src/harness/tools.ts`).
 - **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
   ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
   the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages
