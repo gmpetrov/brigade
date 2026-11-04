@@ -448,8 +448,9 @@ export class EventMapper {
     switch (part.type) {
       case 'text-delta': {
         this.texts.set(part.id, (this.texts.get(part.id) ?? '') + part.text)
-        if (this.pending?.id === part.id) {
-          this.pending.text += part.text
+        const pending = this.pending
+        if (pending && pending.id === part.id) {
+          pending.text += part.text
           return
         }
         // Another block's text (two replies in a row): the first one's goes first.

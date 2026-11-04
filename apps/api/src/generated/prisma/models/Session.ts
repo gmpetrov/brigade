@@ -29,12 +29,16 @@ export type AggregateSession = {
 export type SessionAvgAggregateOutputType = {
   choicesDismissedSeq: number | null
   lastSeq: number | null
+  coldSeq: number | null
+  eventBytes: number | null
   movedSeq: number | null
 }
 
 export type SessionSumAggregateOutputType = {
   choicesDismissedSeq: number | null
   lastSeq: number | null
+  coldSeq: number | null
+  eventBytes: bigint | null
   movedSeq: number | null
 }
 
@@ -69,6 +73,8 @@ export type SessionMinAggregateOutputType = {
   doneById: string | null
   choicesDismissedSeq: number | null
   lastSeq: number | null
+  coldSeq: number | null
+  eventBytes: bigint | null
   movedAt: Date | null
   movedFrom: string | null
   movedSeq: number | null
@@ -114,6 +120,8 @@ export type SessionMaxAggregateOutputType = {
   doneById: string | null
   choicesDismissedSeq: number | null
   lastSeq: number | null
+  coldSeq: number | null
+  eventBytes: bigint | null
   movedAt: Date | null
   movedFrom: string | null
   movedSeq: number | null
@@ -160,6 +168,8 @@ export type SessionCountAggregateOutputType = {
   doneById: number
   choicesDismissedSeq: number
   lastSeq: number
+  coldSeq: number
+  eventBytes: number
   move: number
   movedAt: number
   movedFrom: number
@@ -180,12 +190,16 @@ export type SessionCountAggregateOutputType = {
 export type SessionAvgAggregateInputType = {
   choicesDismissedSeq?: true
   lastSeq?: true
+  coldSeq?: true
+  eventBytes?: true
   movedSeq?: true
 }
 
 export type SessionSumAggregateInputType = {
   choicesDismissedSeq?: true
   lastSeq?: true
+  coldSeq?: true
+  eventBytes?: true
   movedSeq?: true
 }
 
@@ -220,6 +234,8 @@ export type SessionMinAggregateInputType = {
   doneById?: true
   choicesDismissedSeq?: true
   lastSeq?: true
+  coldSeq?: true
+  eventBytes?: true
   movedAt?: true
   movedFrom?: true
   movedSeq?: true
@@ -265,6 +281,8 @@ export type SessionMaxAggregateInputType = {
   doneById?: true
   choicesDismissedSeq?: true
   lastSeq?: true
+  coldSeq?: true
+  eventBytes?: true
   movedAt?: true
   movedFrom?: true
   movedSeq?: true
@@ -311,6 +329,8 @@ export type SessionCountAggregateInputType = {
   doneById?: true
   choicesDismissedSeq?: true
   lastSeq?: true
+  coldSeq?: true
+  eventBytes?: true
   move?: true
   movedAt?: true
   movedFrom?: true
@@ -445,6 +465,8 @@ export type SessionGroupByOutputType = {
   doneById: string | null
   choicesDismissedSeq: number | null
   lastSeq: number
+  coldSeq: number
+  eventBytes: bigint
   move: runtime.JsonValue | null
   movedAt: Date | null
   movedFrom: string | null
@@ -515,6 +537,8 @@ export type SessionWhereInput = {
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
   choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  coldSeq?: Prisma.IntFilter<"Session"> | number
+  eventBytes?: Prisma.BigIntFilter<"Session"> | bigint | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -566,6 +590,7 @@ export type SessionWhereInput = {
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
   folderBackups?: Prisma.FolderBackupListRelationFilter
+  coldChunks?: Prisma.ColdEventChunkListRelationFilter
   listItems?: Prisma.ListItemThreadListRelationFilter
 }
 
@@ -601,6 +626,8 @@ export type SessionOrderByWithRelationInput = {
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
   choicesDismissedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   move?: Prisma.SortOrderInput | Prisma.SortOrder
   movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   movedFrom?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -652,6 +679,7 @@ export type SessionOrderByWithRelationInput = {
   following?: Prisma.ThreadFollowOrderByRelationAggregateInput
   followers?: Prisma.ThreadFollowOrderByRelationAggregateInput
   folderBackups?: Prisma.FolderBackupOrderByRelationAggregateInput
+  coldChunks?: Prisma.ColdEventChunkOrderByRelationAggregateInput
   listItems?: Prisma.ListItemThreadOrderByRelationAggregateInput
 }
 
@@ -691,6 +719,8 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
   choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  coldSeq?: Prisma.IntFilter<"Session"> | number
+  eventBytes?: Prisma.BigIntFilter<"Session"> | bigint | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -741,6 +771,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
   folderBackups?: Prisma.FolderBackupListRelationFilter
+  coldChunks?: Prisma.ColdEventChunkListRelationFilter
   listItems?: Prisma.ListItemThreadListRelationFilter
 }, "id" | "taskId">
 
@@ -776,6 +807,8 @@ export type SessionOrderByWithAggregationInput = {
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
   choicesDismissedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   move?: Prisma.SortOrderInput | Prisma.SortOrder
   movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   movedFrom?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -831,6 +864,8 @@ export type SessionScalarWhereWithAggregatesInput = {
   doneById?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   choicesDismissedSeq?: Prisma.IntNullableWithAggregatesFilter<"Session"> | number | null
   lastSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
+  coldSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
+  eventBytes?: Prisma.BigIntWithAggregatesFilter<"Session"> | bigint | number
   move?: Prisma.JsonNullableWithAggregatesFilter<"Session">
   movedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   movedFrom?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
@@ -870,6 +905,8 @@ export type SessionCreateInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -918,6 +955,7 @@ export type SessionCreateInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -953,6 +991,8 @@ export type SessionUncheckedCreateInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -993,6 +1033,7 @@ export type SessionUncheckedCreateInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -1020,6 +1061,8 @@ export type SessionUpdateInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1068,6 +1111,7 @@ export type SessionUpdateInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -1103,6 +1147,8 @@ export type SessionUncheckedUpdateInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1143,6 +1189,7 @@ export type SessionUncheckedUpdateInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -1178,6 +1225,8 @@ export type SessionCreateManyInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -1217,6 +1266,8 @@ export type SessionUpdateManyMutationInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1261,6 +1312,8 @@ export type SessionUncheckedUpdateManyInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1328,6 +1381,8 @@ export type SessionCountOrderByAggregateInput = {
   doneById?: Prisma.SortOrder
   choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   move?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
   movedFrom?: Prisma.SortOrder
@@ -1346,6 +1401,8 @@ export type SessionCountOrderByAggregateInput = {
 export type SessionAvgOrderByAggregateInput = {
   choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
 }
 
@@ -1380,6 +1437,8 @@ export type SessionMaxOrderByAggregateInput = {
   doneById?: Prisma.SortOrder
   choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
   movedFrom?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
@@ -1425,6 +1484,8 @@ export type SessionMinOrderByAggregateInput = {
   doneById?: Prisma.SortOrder
   choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
   movedFrom?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
@@ -1442,6 +1503,8 @@ export type SessionMinOrderByAggregateInput = {
 export type SessionSumOrderByAggregateInput = {
   choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  coldSeq?: Prisma.SortOrder
+  eventBytes?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
 }
 
@@ -1869,6 +1932,20 @@ export type SessionUpdateOneRequiredWithoutEventsNestedInput = {
   upsert?: Prisma.SessionUpsertWithoutEventsInput
   connect?: Prisma.SessionWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutEventsInput, Prisma.SessionUpdateWithoutEventsInput>, Prisma.SessionUncheckedUpdateWithoutEventsInput>
+}
+
+export type SessionCreateNestedOneWithoutColdChunksInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutColdChunksInput, Prisma.SessionUncheckedCreateWithoutColdChunksInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutColdChunksInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutColdChunksNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutColdChunksInput, Prisma.SessionUncheckedCreateWithoutColdChunksInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutColdChunksInput
+  upsert?: Prisma.SessionUpsertWithoutColdChunksInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutColdChunksInput, Prisma.SessionUpdateWithoutColdChunksInput>, Prisma.SessionUncheckedUpdateWithoutColdChunksInput>
 }
 
 export type SessionCreateNestedOneWithoutTokenUsageInput = {
@@ -2351,6 +2428,8 @@ export type SessionCreateWithoutStartedByInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2398,6 +2477,7 @@ export type SessionCreateWithoutStartedByInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -2432,6 +2512,8 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2472,6 +2554,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -2536,6 +2619,8 @@ export type SessionScalarWhereInput = {
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
   choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  coldSeq?: Prisma.IntFilter<"Session"> | number
+  eventBytes?: Prisma.BigIntFilter<"Session"> | bigint | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -2575,6 +2660,8 @@ export type SessionCreateWithoutWorkspaceInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2622,6 +2709,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -2656,6 +2744,8 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2696,6 +2786,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -2749,6 +2840,8 @@ export type SessionCreateWithoutComputerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2796,6 +2889,7 @@ export type SessionCreateWithoutComputerInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -2830,6 +2924,8 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2870,6 +2966,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -2923,6 +3020,8 @@ export type SessionCreateWithoutTeammateInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -2970,6 +3069,7 @@ export type SessionCreateWithoutTeammateInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -3004,6 +3104,8 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3044,6 +3146,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -3097,6 +3200,8 @@ export type SessionCreateWithoutReadsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3144,6 +3249,7 @@ export type SessionCreateWithoutReadsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -3179,6 +3285,8 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3218,6 +3326,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -3261,6 +3370,8 @@ export type SessionUpdateWithoutReadsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3308,6 +3419,7 @@ export type SessionUpdateWithoutReadsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -3343,6 +3455,8 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3382,6 +3496,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -3409,6 +3524,8 @@ export type SessionCreateWithoutPinsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3456,6 +3573,7 @@ export type SessionCreateWithoutPinsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -3491,6 +3609,8 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3530,6 +3650,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -3573,6 +3694,8 @@ export type SessionUpdateWithoutPinsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3620,6 +3743,7 @@ export type SessionUpdateWithoutPinsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -3655,6 +3779,8 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3694,6 +3820,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -3721,6 +3848,8 @@ export type SessionCreateWithoutLatersInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3768,6 +3897,7 @@ export type SessionCreateWithoutLatersInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -3803,6 +3933,8 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -3842,6 +3974,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -3885,6 +4018,8 @@ export type SessionUpdateWithoutLatersInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3932,6 +4067,7 @@ export type SessionUpdateWithoutLatersInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -3967,6 +4103,8 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4006,6 +4144,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -4033,6 +4172,8 @@ export type SessionCreateWithoutChildrenInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4080,6 +4221,7 @@ export type SessionCreateWithoutChildrenInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -4115,6 +4257,8 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4154,6 +4298,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -4186,6 +4331,8 @@ export type SessionCreateWithoutParentInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4233,6 +4380,7 @@ export type SessionCreateWithoutParentInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -4267,6 +4415,8 @@ export type SessionUncheckedCreateWithoutParentInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4307,6 +4457,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -4355,6 +4506,8 @@ export type SessionUpdateWithoutChildrenInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4402,6 +4555,7 @@ export type SessionUpdateWithoutChildrenInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -4437,6 +4591,8 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4476,6 +4632,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -4519,6 +4676,8 @@ export type SessionCreateWithoutTaskInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4566,6 +4725,7 @@ export type SessionCreateWithoutTaskInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -4601,6 +4761,8 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4640,6 +4802,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -4683,6 +4846,8 @@ export type SessionUpdateWithoutTaskInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4730,6 +4895,7 @@ export type SessionUpdateWithoutTaskInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -4765,6 +4931,8 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4804,6 +4972,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -4831,6 +5000,8 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4878,6 +5049,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -4913,6 +5085,8 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -4952,6 +5126,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -4984,6 +5159,8 @@ export type SessionCreateWithoutScheduleInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5031,6 +5208,7 @@ export type SessionCreateWithoutScheduleInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -5065,6 +5243,8 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5105,6 +5285,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -5153,6 +5334,8 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5200,6 +5383,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -5235,6 +5419,8 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5274,6 +5460,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -5317,6 +5504,8 @@ export type SessionCreateWithoutWakeupsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5364,6 +5553,7 @@ export type SessionCreateWithoutWakeupsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -5399,6 +5589,8 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5438,6 +5630,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -5481,6 +5674,8 @@ export type SessionUpdateWithoutWakeupsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5528,6 +5723,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -5563,6 +5759,8 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5602,6 +5800,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -5629,6 +5828,8 @@ export type SessionCreateWithoutReplyWatchesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5676,6 +5877,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -5711,6 +5913,8 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5750,6 +5954,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -5793,6 +5998,8 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5840,6 +6047,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -5875,6 +6083,8 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5914,6 +6124,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -5941,6 +6152,8 @@ export type SessionCreateWithoutTeammatesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -5988,6 +6201,7 @@ export type SessionCreateWithoutTeammatesInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -6023,6 +6237,8 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6062,6 +6278,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -6105,6 +6322,8 @@ export type SessionUpdateWithoutTeammatesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6152,6 +6371,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -6187,6 +6407,8 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6226,6 +6448,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -6253,6 +6476,8 @@ export type SessionCreateWithoutEventsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6300,6 +6525,7 @@ export type SessionCreateWithoutEventsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -6335,6 +6561,8 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6374,6 +6602,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -6417,6 +6646,8 @@ export type SessionUpdateWithoutEventsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6464,6 +6695,7 @@ export type SessionUpdateWithoutEventsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -6499,6 +6731,8 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6513,6 +6747,331 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutSessionNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
+  listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionCreateWithoutColdChunksInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  askedByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  conversationKey?: string | null
+  archivedAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneSummary?: string | null
+  doneByType?: $Enums.ActorType | null
+  doneById?: string | null
+  choicesDismissedSeq?: number | null
+  lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  parent?: Prisma.SessionCreateNestedOneWithoutChildrenInput
+  children?: Prisma.SessionCreateNestedManyWithoutParentInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
+  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterCreateNestedManyWithoutSessionInput
+  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleCreateNestedManyWithoutParentSessionInput
+  playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
+}
+
+export type SessionUncheckedCreateWithoutColdChunksInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  askedByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentId?: string | null
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  triggerId?: string | null
+  conversationKey?: string | null
+  scheduleId?: string | null
+  archivedAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneSummary?: string | null
+  doneByType?: $Enums.ActorType | null
+  doneById?: string | null
+  choicesDismissedSeq?: number | null
+  lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  taskId?: string | null
+  projectId?: string | null
+  playbookRunId?: string | null
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutSessionInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutColdChunksInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutColdChunksInput, Prisma.SessionUncheckedCreateWithoutColdChunksInput>
+}
+
+export type SessionUpsertWithoutColdChunksInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutColdChunksInput, Prisma.SessionUncheckedUpdateWithoutColdChunksInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutColdChunksInput, Prisma.SessionUncheckedCreateWithoutColdChunksInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutColdChunksInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutColdChunksInput, Prisma.SessionUncheckedUpdateWithoutColdChunksInput>
+}
+
+export type SessionUpdateWithoutColdChunksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  parent?: Prisma.SessionUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.SessionUpdateManyWithoutParentNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
+  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUpdateManyWithoutSessionNestedInput
+  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUpdateManyWithoutParentSessionNestedInput
+  playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutColdChunksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
@@ -6565,6 +7124,8 @@ export type SessionCreateWithoutTokenUsageInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6612,6 +7173,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -6647,6 +7209,8 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6686,6 +7250,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -6729,6 +7294,8 @@ export type SessionUpdateWithoutTokenUsageInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6776,6 +7343,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -6811,6 +7379,8 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6850,6 +7420,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -6877,6 +7448,8 @@ export type SessionCreateWithoutAccountInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6924,6 +7497,7 @@ export type SessionCreateWithoutAccountInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -6958,6 +7532,8 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -6998,6 +7574,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -7051,6 +7628,8 @@ export type SessionCreateWithoutPullRequestsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7098,6 +7677,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -7133,6 +7713,8 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7172,6 +7754,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -7204,6 +7787,8 @@ export type SessionCreateWithoutReviewsOfInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7251,6 +7836,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -7286,6 +7872,8 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7325,6 +7913,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -7368,6 +7957,8 @@ export type SessionUpdateWithoutPullRequestsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7415,6 +8006,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -7450,6 +8042,8 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7489,6 +8083,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -7527,6 +8122,8 @@ export type SessionUpdateWithoutReviewsOfInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7574,6 +8171,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -7609,6 +8207,8 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7648,6 +8248,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -7675,6 +8276,8 @@ export type SessionCreateWithoutCommentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7722,6 +8325,7 @@ export type SessionCreateWithoutCommentsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -7757,6 +8361,8 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -7796,6 +8402,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -7839,6 +8446,8 @@ export type SessionUpdateWithoutCommentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7886,6 +8495,7 @@ export type SessionUpdateWithoutCommentsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -7921,6 +8531,8 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7960,6 +8572,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -7987,6 +8600,8 @@ export type SessionCreateWithoutConnectionCallsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8034,6 +8649,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -8069,6 +8685,8 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8108,6 +8726,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -8151,6 +8770,8 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8198,6 +8819,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -8233,6 +8855,8 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8272,6 +8896,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -8299,6 +8924,8 @@ export type SessionCreateWithoutTriggerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8346,6 +8973,7 @@ export type SessionCreateWithoutTriggerInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -8380,6 +9008,8 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8420,6 +9050,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -8473,6 +9104,8 @@ export type SessionCreateWithoutTicketsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8520,6 +9153,7 @@ export type SessionCreateWithoutTicketsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -8555,6 +9189,8 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8594,6 +9230,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -8637,6 +9274,8 @@ export type SessionUpdateWithoutTicketsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8684,6 +9323,7 @@ export type SessionUpdateWithoutTicketsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -8719,6 +9359,8 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8758,6 +9400,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -8785,6 +9428,8 @@ export type SessionCreateWithoutDocumentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8832,6 +9477,7 @@ export type SessionCreateWithoutDocumentsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -8867,6 +9513,8 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -8906,6 +9554,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -8949,6 +9598,8 @@ export type SessionUpdateWithoutDocumentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8996,6 +9647,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -9031,6 +9683,8 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9070,6 +9724,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -9097,6 +9752,8 @@ export type SessionCreateWithoutListItemsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9145,6 +9802,7 @@ export type SessionCreateWithoutListItemsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutListItemsInput = {
@@ -9179,6 +9837,8 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9219,6 +9879,7 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutListItemsInput = {
@@ -9261,6 +9922,8 @@ export type SessionUpdateWithoutListItemsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9309,6 +9972,7 @@ export type SessionUpdateWithoutListItemsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutListItemsInput = {
@@ -9343,6 +10007,8 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9383,6 +10049,7 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutSentAttachmentsInput = {
@@ -9409,6 +10076,8 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9456,6 +10125,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -9491,6 +10161,8 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9530,6 +10202,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -9573,6 +10246,8 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9620,6 +10295,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -9655,6 +10331,8 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9694,6 +10372,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -9721,6 +10400,8 @@ export type SessionCreateWithoutAttachmentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9768,6 +10449,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -9803,6 +10485,8 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -9842,6 +10526,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -9885,6 +10570,8 @@ export type SessionUpdateWithoutAttachmentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9932,6 +10619,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -9967,6 +10655,8 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10006,6 +10696,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -10033,6 +10724,8 @@ export type SessionCreateWithoutProjectInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10080,6 +10773,7 @@ export type SessionCreateWithoutProjectInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -10115,6 +10809,8 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10154,6 +10850,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -10207,6 +10904,8 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10254,6 +10953,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -10289,6 +10989,8 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10328,6 +11030,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -10360,6 +11063,8 @@ export type SessionCreateWithoutPlaybookRunInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10407,6 +11112,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -10442,6 +11148,8 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10481,6 +11189,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -10529,6 +11238,8 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10576,6 +11287,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -10611,6 +11323,8 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10650,6 +11364,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -10693,6 +11408,8 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10740,6 +11457,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -10775,6 +11493,8 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -10814,6 +11534,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -10857,6 +11578,8 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10904,6 +11627,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -10939,6 +11663,8 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10978,6 +11704,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -11005,6 +11732,8 @@ export type SessionCreateWithoutFollowersInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11052,6 +11781,7 @@ export type SessionCreateWithoutFollowersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -11087,6 +11817,8 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11126,6 +11858,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -11158,6 +11891,8 @@ export type SessionCreateWithoutFollowingInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11205,6 +11940,7 @@ export type SessionCreateWithoutFollowingInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -11240,6 +11976,8 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11279,6 +12017,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -11322,6 +12061,8 @@ export type SessionUpdateWithoutFollowersInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11369,6 +12110,7 @@ export type SessionUpdateWithoutFollowersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -11404,6 +12146,8 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11443,6 +12187,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -11481,6 +12226,8 @@ export type SessionUpdateWithoutFollowingInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11528,6 +12275,7 @@ export type SessionUpdateWithoutFollowingInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -11563,6 +12311,8 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11602,6 +12352,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -11629,6 +12380,8 @@ export type SessionCreateWithoutMailAliasesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11676,6 +12429,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -11711,6 +12465,8 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11750,6 +12506,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -11793,6 +12550,8 @@ export type SessionUpdateWithoutMailAliasesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11840,6 +12599,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -11875,6 +12635,8 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11914,6 +12676,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -11941,6 +12704,8 @@ export type SessionCreateWithoutMailMessagesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -11988,6 +12753,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -12023,6 +12789,8 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12062,6 +12830,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -12105,6 +12874,8 @@ export type SessionUpdateWithoutMailMessagesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12152,6 +12923,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -12187,6 +12959,8 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12226,6 +13000,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -12253,6 +13028,8 @@ export type SessionCreateWithoutHeldCallsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12300,6 +13077,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -12335,6 +13113,8 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12374,6 +13154,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -12417,6 +13198,8 @@ export type SessionUpdateWithoutHeldCallsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12464,6 +13247,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -12499,6 +13283,8 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12538,6 +13324,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -12565,6 +13352,8 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12612,6 +13401,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -12647,6 +13437,8 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12686,6 +13478,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
   folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -12729,6 +13522,8 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12776,6 +13571,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -12811,6 +13607,8 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12850,6 +13648,7 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -12877,6 +13676,8 @@ export type SessionCreateWithoutFolderBackupsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12924,6 +13725,7 @@ export type SessionCreateWithoutFolderBackupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
 }
 
@@ -12959,6 +13761,8 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -12998,6 +13802,7 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
 }
 
@@ -13041,6 +13846,8 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13088,6 +13895,7 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -13123,6 +13931,8 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13162,6 +13972,7 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -13196,6 +14007,8 @@ export type SessionCreateManyStartedByInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -13235,6 +14048,8 @@ export type SessionUpdateWithoutStartedByInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13282,6 +14097,7 @@ export type SessionUpdateWithoutStartedByInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -13316,6 +14132,8 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13356,6 +14174,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -13390,6 +14209,8 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13436,6 +14257,8 @@ export type SessionCreateManyWorkspaceInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -13475,6 +14298,8 @@ export type SessionUpdateWithoutWorkspaceInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13522,6 +14347,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -13556,6 +14382,8 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13596,6 +14424,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -13630,6 +14459,8 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13676,6 +14507,8 @@ export type SessionCreateManyComputerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -13715,6 +14548,8 @@ export type SessionUpdateWithoutComputerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13762,6 +14597,7 @@ export type SessionUpdateWithoutComputerInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -13796,6 +14632,8 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13836,6 +14674,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -13870,6 +14709,8 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13916,6 +14757,8 @@ export type SessionCreateManyTeammateInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -13955,6 +14798,8 @@ export type SessionUpdateWithoutTeammateInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14002,6 +14847,7 @@ export type SessionUpdateWithoutTeammateInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -14036,6 +14882,8 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14076,6 +14924,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -14110,6 +14959,8 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14156,6 +15007,8 @@ export type SessionCreateManyParentInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -14195,6 +15048,8 @@ export type SessionUpdateWithoutParentInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14242,6 +15097,7 @@ export type SessionUpdateWithoutParentInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -14276,6 +15132,8 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14316,6 +15174,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -14350,6 +15209,8 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14396,6 +15257,8 @@ export type SessionCreateManyScheduleInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -14435,6 +15298,8 @@ export type SessionUpdateWithoutScheduleInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14482,6 +15347,7 @@ export type SessionUpdateWithoutScheduleInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -14516,6 +15382,8 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14556,6 +15424,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -14590,6 +15459,8 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14636,6 +15507,8 @@ export type SessionCreateManyAccountInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -14675,6 +15548,8 @@ export type SessionUpdateWithoutAccountInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14722,6 +15597,7 @@ export type SessionUpdateWithoutAccountInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -14756,6 +15632,8 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14796,6 +15674,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -14830,6 +15709,8 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14876,6 +15757,8 @@ export type SessionCreateManyTriggerInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -14915,6 +15798,8 @@ export type SessionUpdateWithoutTriggerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14962,6 +15847,7 @@ export type SessionUpdateWithoutTriggerInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -14996,6 +15882,8 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15036,6 +15924,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -15070,6 +15959,8 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15117,6 +16008,8 @@ export type SessionCreateManyProjectInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -15155,6 +16048,8 @@ export type SessionUpdateWithoutProjectInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15202,6 +16097,7 @@ export type SessionUpdateWithoutProjectInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -15237,6 +16133,8 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15276,6 +16174,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -15311,6 +16210,8 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15357,6 +16258,8 @@ export type SessionCreateManyPlaybookRunInput = {
   doneById?: string | null
   choicesDismissedSeq?: number | null
   lastSeq?: number
+  coldSeq?: number
+  eventBytes?: bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
   movedFrom?: string | null
@@ -15395,6 +16298,8 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15442,6 +16347,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
 }
 
@@ -15477,6 +16383,8 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15516,6 +16424,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
   folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
@@ -15551,6 +16460,8 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  eventBytes?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -15597,6 +16508,7 @@ export type SessionCountOutputType = {
   following: number
   followers: number
   folderBackups: number
+  coldChunks: number
   listItems: number
 }
 
@@ -15627,6 +16539,7 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   following?: boolean | SessionCountOutputTypeCountFollowingArgs
   followers?: boolean | SessionCountOutputTypeCountFollowersArgs
   folderBackups?: boolean | SessionCountOutputTypeCountFolderBackupsArgs
+  coldChunks?: boolean | SessionCountOutputTypeCountColdChunksArgs
   listItems?: boolean | SessionCountOutputTypeCountListItemsArgs
 }
 
@@ -15825,6 +16738,13 @@ export type SessionCountOutputTypeCountFolderBackupsArgs<ExtArgs extends runtime
 /**
  * SessionCountOutputType without action
  */
+export type SessionCountOutputTypeCountColdChunksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ColdEventChunkWhereInput
+}
+
+/**
+ * SessionCountOutputType without action
+ */
 export type SessionCountOutputTypeCountListItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ListItemThreadWhereInput
 }
@@ -15862,6 +16782,8 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   doneById?: boolean
   choicesDismissedSeq?: boolean
   lastSeq?: boolean
+  coldSeq?: boolean
+  eventBytes?: boolean
   move?: boolean
   movedAt?: boolean
   movedFrom?: boolean
@@ -15913,6 +16835,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
   folderBackups?: boolean | Prisma.Session$folderBackupsArgs<ExtArgs>
+  coldChunks?: boolean | Prisma.Session$coldChunksArgs<ExtArgs>
   listItems?: boolean | Prisma.Session$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["session"]>
@@ -15949,6 +16872,8 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   doneById?: boolean
   choicesDismissedSeq?: boolean
   lastSeq?: boolean
+  coldSeq?: boolean
+  eventBytes?: boolean
   move?: boolean
   movedAt?: boolean
   movedFrom?: boolean
@@ -16007,6 +16932,8 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   doneById?: boolean
   choicesDismissedSeq?: boolean
   lastSeq?: boolean
+  coldSeq?: boolean
+  eventBytes?: boolean
   move?: boolean
   movedAt?: boolean
   movedFrom?: boolean
@@ -16065,6 +16992,8 @@ export type SessionSelectScalar = {
   doneById?: boolean
   choicesDismissedSeq?: boolean
   lastSeq?: boolean
+  coldSeq?: boolean
+  eventBytes?: boolean
   move?: boolean
   movedAt?: boolean
   movedFrom?: boolean
@@ -16080,7 +17009,7 @@ export type SessionSelectScalar = {
   quiet?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "choicesDismissedSeq" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "choicesDismissedSeq" | "lastSeq" | "coldSeq" | "eventBytes" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -16120,6 +17049,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
   folderBackups?: boolean | Prisma.Session$folderBackupsArgs<ExtArgs>
+  coldChunks?: boolean | Prisma.Session$coldChunksArgs<ExtArgs>
   listItems?: boolean | Prisma.Session$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -16239,6 +17169,7 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     followers: Prisma.$ThreadFollowPayload<ExtArgs>[]
     folderBackups: Prisma.$FolderBackupPayload<ExtArgs>[]
+    coldChunks: Prisma.$ColdEventChunkPayload<ExtArgs>[]
     /**
      * The list items it works on (docs/lists.md).
      */
@@ -16339,6 +17270,16 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Highest contiguous event sequence number stored.
      */
     lastSeq: number
+    /**
+     * Its events up to this one are kept cold, in the bucket (src/cold-events.ts): the heavy ones
+     * among them (streamed text, tool calls, the harness's copies) are no longer in SessionEvent.
+     */
+    coldSeq: number
+    /**
+     * What its events weigh as stored (their data's pg_column_size), counted as they come
+     * (src/event-volume.ts): the largest threads without reading their events.
+     */
+    eventBytes: bigint
     /**
      * While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
      */
@@ -16814,6 +17755,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   following<T extends Prisma.Session$followingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followingArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   followers<T extends Prisma.Session$followersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   folderBackups<T extends Prisma.Session$folderBackupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$folderBackupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FolderBackupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  coldChunks<T extends Prisma.Session$coldChunksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$coldChunksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ColdEventChunkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listItems<T extends Prisma.Session$listItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$listItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemThreadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -16875,6 +17817,8 @@ export interface SessionFieldRefs {
   readonly doneById: Prisma.FieldRef<"Session", 'String'>
   readonly choicesDismissedSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly lastSeq: Prisma.FieldRef<"Session", 'Int'>
+  readonly coldSeq: Prisma.FieldRef<"Session", 'Int'>
+  readonly eventBytes: Prisma.FieldRef<"Session", 'BigInt'>
   readonly move: Prisma.FieldRef<"Session", 'Json'>
   readonly movedAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly movedFrom: Prisma.FieldRef<"Session", 'String'>
@@ -18062,6 +19006,30 @@ export type Session$folderBackupsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.FolderBackupScalarFieldEnum | Prisma.FolderBackupScalarFieldEnum[]
+}
+
+/**
+ * Session.coldChunks
+ */
+export type Session$coldChunksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ColdEventChunk
+   */
+  select?: Prisma.ColdEventChunkSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ColdEventChunk
+   */
+  omit?: Prisma.ColdEventChunkOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ColdEventChunkInclude<ExtArgs> | null
+  where?: Prisma.ColdEventChunkWhereInput
+  orderBy?: Prisma.ColdEventChunkOrderByWithRelationInput | Prisma.ColdEventChunkOrderByWithRelationInput[]
+  cursor?: Prisma.ColdEventChunkWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ColdEventChunkScalarFieldEnum | Prisma.ColdEventChunkScalarFieldEnum[]
 }
 
 /**

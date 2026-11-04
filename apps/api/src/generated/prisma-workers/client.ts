@@ -196,6 +196,19 @@ export type ThreadTeammate = Prisma.ThreadTeammateModel
  */
 export type SessionEvent = Prisma.SessionEventModel
 /**
+ * Model ColdEventChunk
+ * A run of a quiet thread's events kept in the bucket (src/cold-events.ts): every event from
+ * firstSeq to lastSeq, as JSON lines, gzipped, at coldEventsKey. The heavy ones went from
+ * SessionEvent in the transaction that recorded it; the others stay there too.
+ */
+export type ColdEventChunk = Prisma.ColdEventChunkModel
+/**
+ * Model WorkspaceEventDay
+ * What a workspace's threads wrote to SessionEvent in a day (UTC), counted as events are
+ * stored (src/event-volume.ts): its growth, without reading the events again.
+ */
+export type WorkspaceEventDay = Prisma.WorkspaceEventDayModel
+/**
  * Model TokenUsage
  * What a harness spent for the workspace, in tokens: one row per stream of a teammate's turn
  * (its usage.updated event, by seq) and per run outside a turn (memory, title, a project's

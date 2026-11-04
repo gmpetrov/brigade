@@ -23,6 +23,7 @@ import { prisma, type Prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
 import { noteDisk } from '../disk-tickets.js'
 import { keepFilesApart } from '../event-files.js'
+import { countEvents } from '../event-volume.js'
 import { dropDeadWaiters, type Live } from '../held-calls.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
@@ -516,7 +517,10 @@ async function storeEvents(
     const last = Math.max(...events.map((e) => e.seq))
     return hub.send(conn, { type: 'ack', sessionId, seq: last })
   }
-  await insertEvents(conn, session, await withTeammateIds(session, events))
+  // Kept cold already (cold-events.ts): sent again long after an ack was lost, they would be
+  // stored a second time, the bucket holding them.
+  const fresh = events.filter((e) => e.seq > session.coldSeq)
+  if (fresh.length) await insertEvents(conn, session, await withTeammateIds(session, fresh))
   await advance(hub, conn, session)
 }
 
@@ -617,6 +621,11 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       session.status,
     )
     await prisma.session.update({ where: { id: session.id }, data: { lastSeq, status } })
+    // What they weigh, by workspace and day and by thread (src/event-volume.ts). Not awaited,
+    // nor tried again: counting never holds a thread back.
+    void countEvents(session, session.lastSeq, lastSeq).catch((error) =>
+      console.warn(`thread ${session.id}: events not counted: ${String(error)}`),
+    )
     if (status === 'failed' && session.status !== 'failed') {
       const error = fresh.findLast((e) => e.event.type === 'error')?.event
       noteFailure('turn', error && 'message' in error ? error.message : 'failed', {

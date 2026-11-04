@@ -13,6 +13,7 @@
 import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { cloudMinute, dueCloud } from './cloud.js'
+import { dueColdEvents, keepEventsCold } from './cold-events.js'
 import { driveReplacements, dueReplacements } from './cloud-replace.js'
 import { dueHeldCalls, settleHeldCalls } from './held-calls.js'
 import { processDueInbound, processInbound, sweepInbound } from './inbound.js'
@@ -87,6 +88,13 @@ export const JOBS = {
     every: 60,
     due: dueWorkspaceCleanups,
     run: (key) => sweepDeletedWorkspaces(ws(key)),
+  },
+  // Hourly: the events of its threads quiet for a month go to the bucket, a run's worth at a
+  // time (src/cold-events.ts); what one run leaves waits for the next.
+  'cold-events': {
+    every: 3600,
+    due: dueColdEvents,
+    run: (key, now) => keepEventsCold(ws(key), now).then(() => {}),
   },
 
   // No workspace's.

@@ -13,6 +13,7 @@ import {
   type SequencedEvent,
   type TimelineMessage,
 } from '@brigade/contracts'
+import { threadEvents } from './cold-events.js'
 import { prisma, type Prisma } from './db.js'
 
 type Row = { sessionId: string; seq: number; data: Prisma.JsonValue }
@@ -113,14 +114,12 @@ export async function threadPrompts(sessionId: string): Promise<TimelineMessage[
   }))
 }
 
-/** The events from `from` up to, not including, `before`. */
+/** The events from `from` up to, not including, `before`: from the bucket, those kept cold. */
 export async function pageEvents(sessionId: string, from: number, before: number) {
-  const rows = await prisma.sessionEvent.findMany({
-    where: { sessionId, seq: { gte: from, lt: before } },
-    orderBy: { seq: 'asc' },
-    select: { sessionId: true, seq: true, data: true },
-  })
-  return rows.map(sequenced)
+  const events: SequencedEvent[] = []
+  for await (const rows of threadEvents(sessionId, from, before))
+    events.push(...rows.map(sequenced))
+  return events
 }
 
 /** A message that may name a file made to hand over. */
