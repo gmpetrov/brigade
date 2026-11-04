@@ -19,6 +19,7 @@ import {
   setupScript,
   TEAMMATE_HELPER,
   THREAD_HELPER,
+  WALLPAPER_SCRIPT,
 } from '../src/cloud-bootstrap.js'
 
 /** sh -n: the script parses, with the template's escapes resolved as the computer gets them. */
@@ -487,37 +488,77 @@ test("a teammate's Chrome starts dark, unless its profile chose its colors alrea
   }
 })
 
-test("Brigade's wallpaper goes on the desktop, unless someone put another there", () => {
+test("Brigade's wallpaper goes on the desktop, is tried again after a failed download, and leaves someone else's", () => {
   const setup = setupScript()
-  assert.ok(setup.includes(`${DESKTOP_WALLPAPER.url} -o`))
-  assert.equal(setup.split(DESKTOP_WALLPAPER.sha256).length - 1, 3)
-  const copy = /sudo -H -u user sh -c '([\s\S]*?)' sh "\$WALL" "\$PUT"/.exec(setup)?.[1]
-  assert.ok(copy)
+  assert.ok(setup.includes(WALLPAPER_SCRIPT))
+  assert.match(setup, /systemctl enable brigade-wallpaper\.service/)
+  assert.ok(WALLPAPER_SCRIPT.includes(`${DESKTOP_WALLPAPER.url} -o`))
   const dir = mkdtempSync(join(tmpdir(), 'wallpaper-'))
-  const ours = join(dir, 'ours.png')
-  writeFileSync(ours, 'brigade v2')
-  const target = join(dir, 'home', '.config', 'boat', 'wallpaper.png')
-  const sha = (text: string) =>
-    spawnSync('sh', ['-c', 'printf %s "$1" | sha256sum | cut -d" " -f1', 'sh', text], {
+  const state = join(dir, 'state')
+  const bin = join(dir, 'bin')
+  const home = join(dir, 'home')
+  mkdirSync(state)
+  mkdirSync(bin)
+  const script = join(dir, 'brigade-wallpaper')
+  writeFileSync(script, WALLPAPER_SCRIPT, { mode: 0o755 })
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  stub('id', 'exit 0')
+  stub('ascii-desktop', 'exit 0')
+  // sudo -H -u user <command>: the command, as this user.
+  stub('sudo', 'shift 3; exec "$@"')
+  // The download: the file at $SERVED, or a failure without one.
+  stub(
+    'curl',
+    '[ -n "${SERVED:-}" ] || exit 22\nwhile [ "$1" != -o ]; do shift; done\ncp "$SERVED" "$2"',
+  )
+  const served = join(dir, 'served.png')
+  const sha = (file: string) =>
+    spawnSync('sh', ['-c', 'sha256sum "$1" | cut -d" " -f1', 'sh', file], {
       encoding: 'utf8',
     }).stdout.trim()
-  const put = (lastPut: string) =>
-    spawnSync('sh', ['-c', copy!, 'sh', ours, lastPut], {
+  const run = (serve: boolean) =>
+    spawnSync(script, [state], {
       encoding: 'utf8',
-      env: { ...process.env, HOME: join(dir, 'home') },
+      env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, ...(serve ? { SERVED: served } : {}) },
     })
+  const target = join(home, '.config', 'boat', 'wallpaper.png')
+  const put = join(state, 'wallpaper.put')
+  // The wallpaper this script wants: its SHA-256 replaced by the served file's.
+  writeFileSync(served, 'brigade wallpaper')
+  writeFileSync(script, WALLPAPER_SCRIPT.replaceAll(DESKTOP_WALLPAPER.sha256, sha(served)), {
+    mode: 0o755,
+  })
   try {
-    // None yet: Brigade's.
-    assert.equal(put('').status, 0)
-    assert.equal(readFileSync(target, 'utf8'), 'brigade v2')
-    // The one Brigade put last time: replaced by the new one.
-    writeFileSync(target, 'brigade v1')
-    assert.equal(put(sha('brigade v1')).status, 0)
-    assert.equal(readFileSync(target, 'utf8'), 'brigade v2')
-    // Someone else's: kept.
+    // The download fails: nothing put, nothing recorded, and a failure for the boot's run to retry.
+    assert.equal(run(false).status, 1)
+    assert.equal(existsSync(target), false)
+    assert.equal(existsSync(put), false)
+    // It works the next time: Brigade's wallpaper, and its hash recorded.
+    assert.equal(run(true).status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade wallpaper')
+    assert.equal(readFileSync(put, 'utf8').trim(), sha(served))
+    // Run again (each boot): nothing downloaded, nothing changed.
+    assert.equal(run(false).status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade wallpaper')
+    // A new wallpaper whose download fails: the one in place stays, and so does its hash.
+    const v1 = sha(served)
+    writeFileSync(served, 'brigade wallpaper v2')
+    writeFileSync(script, WALLPAPER_SCRIPT.replaceAll(DESKTOP_WALLPAPER.sha256, sha(served)), {
+      mode: 0o755,
+    })
+    assert.equal(run(false).status, 1)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade wallpaper')
+    assert.equal(readFileSync(put, 'utf8').trim(), v1)
+    // Then it downloads: Brigade's last one is replaced by the new one.
+    assert.equal(run(true).status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade wallpaper v2')
+    assert.equal(readFileSync(put, 'utf8').trim(), sha(served))
+    // Someone else's: kept, and Brigade's hash stays as it was.
     writeFileSync(target, 'their own')
-    assert.equal(put(sha('brigade v1')).status, 0)
+    assert.equal(run(true).status, 0)
     assert.equal(readFileSync(target, 'utf8'), 'their own')
+    assert.equal(readFileSync(put, 'utf8').trim(), sha(served))
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

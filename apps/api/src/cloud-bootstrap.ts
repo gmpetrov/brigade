@@ -595,17 +595,57 @@ export const DESKTOP_WALLPAPER = {
 }
 
 /**
+ * Brigade's wallpaper on the provider's desktop (boat's ascii-desktop, run as `user`), as root:
+ * downloaded to /var/lib/brigade and checked against its SHA-256, then put in ascii-desktop's own
+ * place for it (~/.config/boat/wallpaper.png, which wins over its default), written as that user,
+ * never as root in a folder it owns. ascii-desktop reads it when it starts, and again when it
+ * changes. A wallpaper someone put there stays: it is replaced only while it is the one Brigade
+ * put last (its hash, in wallpaper.put, recorded only once that one is in place). Exits 1 when
+ * the wallpaper could not be put, so the boot's run tries again. Its folder: the first argument
+ * (tests), else /var/lib/brigade.
+ */
+export const WALLPAPER_SCRIPT = `#!/bin/sh
+set -u
+D="\${1:-/var/lib/brigade}"
+WANT=${DESKTOP_WALLPAPER.sha256}
+WALL="$D/wallpaper.png"
+# Only the provider's desktop has a place for it.
+id user >/dev/null 2>&1 && command -v ascii-desktop >/dev/null || exit 0
+hash() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
+if [ "$(hash "$WALL")" != "$WANT" ]; then
+  curl -fsSL --retry 3 --max-time 60 ${DESKTOP_WALLPAPER.url} -o "$WALL.new" || true
+  if [ "$(hash "$WALL.new")" != "$WANT" ]; then
+    rm -f "$WALL.new"
+    echo "brigade-wallpaper: the wallpaper could not be downloaded" >&2
+    exit 1
+  fi
+  chmod 644 "$WALL.new"
+  mv -f "$WALL.new" "$WALL"
+fi
+PUT=$(cat "$D/wallpaper.put" 2>/dev/null || true)
+# As the desktop's user: 0 once it is there, 3 when someone else's stays.
+sudo -H -u user sh -c '
+  F="$HOME/.config/boat/wallpaper.png"
+  HAD=$(sha256sum "$F" 2>/dev/null | cut -d" " -f1)
+  [ "$HAD" = "$3" ] && exit 0
+  [ -z "$HAD" ] || [ "$HAD" = "$2" ] || exit 3
+  mkdir -p "$HOME/.config/boat" && cp "$1" "$F.new" && mv -f "$F.new" "$F"' sh "$WALL" "$PUT" "$WANT"
+case $? in
+  0) echo "$WANT" >"$D/wallpaper.put" ;;
+  3) ;;
+  *) exit 1 ;;
+esac
+`
+
+/**
  * The desktop's look, for everyone on the computer: GTK apps (Chrome, Files) dark, as the
  * provider's own bar and dock are, and Brigade's wallpaper on the provider's desktop (boat's
  * ascii-desktop, run as `user`). Teammates' Chromes start with no session bus (the helper's
  * `browser`), so they follow GTK's settings files rather than the desktop's settings service:
  * both are set. /etc/xdg comes after /etc/gtk-*: these files win over the image's own, which
  * stay as they are. Each user's own settings still win over these.
- * The wallpaper goes in ascii-desktop's own place for it (~/.config/boat/wallpaper.png, which
- * wins over its default), written as that user, never as root in a folder it owns; it is read
- * when the desktop starts, and again when it changes. A wallpaper someone put there stays: it is
- * replaced only while it is the one Brigade put (its hash, kept in /var/lib/brigade). Failing to
- * download it leaves the desktop as it is and the rest of the setup goes on.
+ * The wallpaper: brigade-wallpaper (WALLPAPER_SCRIPT), run by the setup and again at each boot
+ * until it is in place.
  */
 const DESKTOP_LOOK = `# The desktop's look: dark apps, Brigade's wallpaper.
 for V in 3.0 4.0; do
@@ -626,29 +666,26 @@ gtk-theme='Yaru-dark'
 DCONF
   ! command -v dconf >/dev/null || sudo dconf update
 fi
-WALL=/var/lib/brigade/wallpaper.png
-if id user >/dev/null 2>&1 && [ -x /usr/local/bin/ascii-desktop ]; then
-  if [ "$(sha256sum "$WALL" 2>/dev/null | cut -d' ' -f1)" != ${DESKTOP_WALLPAPER.sha256} ]; then
-    sudo curl -fsSL --max-time 60 ${DESKTOP_WALLPAPER.url} -o "$WALL.new" || true
-    if [ "$(sha256sum "$WALL.new" 2>/dev/null | cut -d' ' -f1)" = ${DESKTOP_WALLPAPER.sha256} ]; then
-      sudo chmod 644 "$WALL.new"
-      sudo mv -f "$WALL.new" "$WALL"
-    else
-      sudo rm -f "$WALL.new"
-      echo "the wallpaper could not be downloaded"
-    fi
-  fi
-  if [ -f "$WALL" ]; then
-    PUT=$(cat /var/lib/brigade/wallpaper.put 2>/dev/null || true)
-    sudo -H -u user sh -c '
-      F="$HOME/.config/boat/wallpaper.png"
-      HAD=$(sha256sum "$F" 2>/dev/null | cut -d" " -f1)
-      [ -z "$HAD" ] || [ "$HAD" = "$2" ] || exit 0
-      mkdir -p "$HOME/.config/boat"
-      cp "$1" "$F.new" && mv -f "$F.new" "$F"' sh "$WALL" "$PUT" &&
-      echo ${DESKTOP_WALLPAPER.sha256} | sudo tee /var/lib/brigade/wallpaper.put >/dev/null
-  fi
-fi
+# Brigade's wallpaper, at each boot until it is in place (a download that failed is tried again).
+sudo tee /usr/local/sbin/brigade-wallpaper >/dev/null <<'WALLPAPER'
+${WALLPAPER_SCRIPT}WALLPAPER
+sudo chmod 755 /usr/local/sbin/brigade-wallpaper
+sudo tee /etc/systemd/system/brigade-wallpaper.service >/dev/null <<'UNIT'
+[Unit]
+Description=Brigade's wallpaper on the desktop
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/brigade-wallpaper
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable brigade-wallpaper.service 2>/dev/null
+sudo /usr/local/sbin/brigade-wallpaper || true
 `
 
 /**
