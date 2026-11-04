@@ -122,3 +122,55 @@ test('the message it answers is kept through a restart before the answer', async
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+// Re-review of #687: an account that runs out mid-turn moves the thread to the next one
+// (switchTo), whose session goes on with the same turn: the message it answers goes with it.
+test('the message it answers is kept when the turn goes on on another account', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'brigade-answer-switch-'))
+  const spec = {
+    sessionId: 'answer-switch',
+    starter: true,
+    teammate: { id: 'riley', name: 'Riley', harness: 'claude-code', kind: 'teammate' },
+    account: { id: 'acct' },
+    connectors: [],
+    fallbacks: [{ id: 'acct2' }],
+  } as unknown as ThreadSpec
+  const thread = new HarnessThread(
+    spec,
+    dir,
+    dir,
+    () => {},
+    async () => ({ output: null, attachments: [] }),
+    async () => null,
+    {} as never,
+  )
+  const answered: (string | undefined)[] = []
+  let turns = 0
+  // The provider's side, played: the first account runs out once the question went in; the
+  // turn goes on on the next one, where the teammate answers it.
+  Object.assign(thread, {
+    drop: async function (this: { live?: unknown }) {
+      this.live = undefined
+    },
+    turn: async function (this: HarnessThread & { live?: unknown }) {
+      if (++turns === 1) {
+        this.live = { session: {}, agent: { experimental_steer: async () => {} } }
+        await this.steer('What is my name?', 'question-1')
+        answered.push(this.answering())
+        return { kind: 'exhausted', resetsAt: null }
+      }
+      answered.push(this.answering())
+      return { kind: 'done', result: { status: 'idle' } }
+    },
+  })
+  try {
+    await thread.run({ kind: 'prompt', text: 'Fix the export' }, spec, new AbortController().signal)
+    assert.equal(turns, 2, 'the turn went on on the next account')
+    assert.deepEqual(answered, ['question-1', 'question-1'])
+    // The next turn answers no message given to the one before.
+    await thread.run({ kind: 'prompt', text: 'Thanks' }, spec, new AbortController().signal)
+    assert.deepEqual(answered, ['question-1', 'question-1', undefined])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

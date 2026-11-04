@@ -1778,6 +1778,8 @@ export class HarnessThread {
       ...(this.saved?.recoveries ? { recoveries: this.saved.recoveries } : {}),
       // Still open for the person: their answer comes to the new session as a message.
       ...(this.saved?.later?.length ? { later: this.saved.later } : {}),
+      // The turn goes on there: its answer to the message steered in last still answers it.
+      ...(this.saved?.steered ? { steered: this.saved.steered } : {}),
       accountId: account.id,
       transcript: this.saved?.transcript ?? [],
     }
