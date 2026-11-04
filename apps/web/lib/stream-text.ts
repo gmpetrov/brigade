@@ -20,8 +20,24 @@ export function wordCut(text: string, chars: number) {
   if (chars <= 0) return 0
   // Up to the last space within reach, with that space: the next word shows whole, later.
   const space = text.slice(0, chars + 1).search(/\s\S*$/)
+  // Text without spaces (Chinese, Japanese, a long address) goes character by character: a
+  // word that never ends would never show.
+  if (
+    WRITTEN_WITHOUT_SPACES.test(text[chars - 1]!) ||
+    (space < 0 ? chars : chars - space) > LONGEST_WORD
+  ) {
+    // Never between the two halves of a character outside the BMP (an emoji).
+    const code = text.charCodeAt(chars - 1)
+    return code >= 0xd800 && code <= 0xdbff ? chars - 1 : chars
+  }
   return space < 0 ? 0 : space + 1
 }
+
+/** Scripts written without spaces between words: they can be cut after any character. */
+const WRITTEN_WITHOUT_SPACES = /[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Thai}]/u
+
+/** Past this many characters without a space, the text shows as it comes, not by words. */
+const LONGEST_WORD = 16
 
 /** How many characters to reveal in `dt` seconds while `waiting` of them wait. */
 export function revealStep(waiting: number, dt: number, done: boolean) {

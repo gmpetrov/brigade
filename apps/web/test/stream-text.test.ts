@@ -10,6 +10,29 @@ test('a cut ends with a word, never inside one', () => {
   assert.equal(wordCut(text, 99), text.length)
 })
 
+test('text without spaces still shows as it grows', () => {
+  const text = '我建议使用一个地址作为苹果账号并且邀请到两个服务里面'
+  assert.equal(wordCut(text, 10), 10)
+  assert.equal(wordCut('apple@brigade.lol/abcdefghijklmnop', 30), 30)
+  // A word within reach still shows whole, later.
+  assert.equal(wordCut('Je te conseille', 8), 6)
+  // Not between an emoji's halves.
+  assert.equal(wordCut('🙂'.repeat(12), 19), 18)
+})
+
+test('a reply without spaces reveals while it is still coming', () => {
+  // As useSmoothText does at 60 frames a second, 35 characters coming every 200 ms.
+  let text = ''
+  let at = 0
+  let shown = 0
+  for (let frame = 0; frame < 120; frame++) {
+    if (frame % 12 === 0) text += '我建议使用一个地址作为苹果账号'.repeat(3).slice(0, 35)
+    at = Math.min(text.length, at + revealStep(text.length - at, 1 / 60, false))
+    shown = wordCut(text, Math.floor(at))
+  }
+  assert.ok(shown > text.length / 2, `${shown} of ${text.length}`)
+})
+
 test('what waits is caught up in about a third of a second, done in less', () => {
   assert.equal(revealStep(0, 1, false), 60)
   assert.ok(Math.abs(revealStep(70, 0.35, false) - 70) < 1e-9)
