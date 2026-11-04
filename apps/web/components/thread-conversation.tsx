@@ -57,6 +57,13 @@ import {
 } from '@/components/attachments'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { Composer } from '@/components/composer'
+import {
+  DictationBar,
+  DictationButton,
+  useDictation,
+  useDictationStatus,
+  withDictated,
+} from '@/components/dictation'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { useTouchScreen } from '@/components/desktop-touch'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
@@ -327,6 +334,21 @@ export function ThreadConversation({
   const [stopping, setStopping] = useState<string>()
   // Text added from elsewhere (a document's Ask) lands here with the cursor after it.
   const [text, setText] = useReplyDraft(id, () => focusComposer())
+  // Dictation: its words go in the box; with send pressed while recording, they go at once.
+  const dictationStatus = useDictationStatus()
+  const sendDictated = useRef(false)
+  const dictation = useDictation((words, sendNow) => {
+    sendDictated.current = sendNow
+    setText(withDictated(text, words))
+    if (!sendNow) focusComposer()
+  })
+  useEffect(() => {
+    dictation.clearError()
+    if (!sendDictated.current || !text.trim()) return
+    sendDictated.current = false
+    void send().catch(() => undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sends once, as the words land
+  }, [text])
   // The teammate's guess at this member's next message, while it stands (suggestionFor).
   const guess = useMemo(
     () =>
@@ -1784,7 +1806,8 @@ export function ThreadConversation({
                     uploads={files.uploads.filter((u) => !pictureKeys.has(u.key))}
                     onRemove={files.remove}
                   />
-                  <div className="flex items-end gap-1">
+                  {dictation.active && <DictationBar dictation={dictation} />}
+                  <div className={cn('flex items-end gap-1', dictation.active && 'hidden')}>
                     <div className="mb-1">
                       {/* The + on phones too: teaching needs a desktop, so not there. */}
                       <ComposerMenu
@@ -1830,6 +1853,11 @@ export function ThreadConversation({
                       />
                     </div>
                     <EffortButton effort={effort} later={effortLater} className="mb-1" />
+                    <DictationButton
+                      status={dictationStatus}
+                      dictation={dictation}
+                      className="mb-1"
+                    />
                     {busy && (
                       <Button
                         type="button"
@@ -1907,6 +1935,9 @@ export function ThreadConversation({
                     )}
                   </div>
                   {error && <p className="px-2 pb-1 text-sm text-destructive-text">{error}</p>}
+                  {dictation.error && !dictation.active && (
+                    <p className="px-2 pb-1 text-sm text-destructive-text">{dictation.error}</p>
+                  )}
                 </Card>
               </form>
             </>
