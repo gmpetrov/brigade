@@ -1336,10 +1336,15 @@ export class HarnessThread {
             ? this.approvals.get(input.approvalId)
             : undefined
       const consume = async (stream: TurnStream) => {
-        for await (const part of stream) {
-          mapper.map(part)
-          const image = generatedImage(part)
-          if (image) await this.keepImage(image)
+        try {
+          for await (const part of stream) {
+            mapper.map(part)
+            const image = generatedImage(part)
+            if (image) await this.keepImage(image)
+          }
+        } finally {
+          // A reply's last streamed text, before what ends the turn: a stream may end mid-reply.
+          mapper.flush()
         }
       }
       // A stream that may be the turn's last: answered there, the turn completes for everyone
