@@ -166,8 +166,14 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     one "Worked for" over the whole turn, under the person's messages and above the answer. A turn that answered since
     its last step (one that only waited on its background work) or a report woke still starts afresh there.
   - A question the turn can answer at once gets its answer at once: a person's message steered in tells the teammate
-    to answer it in a line, then go on (`steeredText`); that reply, right after the message and before the next step,
-    stays in sight once the turn ends (`quickReplies`). On Nov 4, "what's my name?" waited 36 s for research to end.
+    to answer it in a line with `answer_message`, then go on (`steeredText`). On Nov 4, "what's my name?" waited 36 s
+    for research to end. The runner records the call as the teammate's message, word for word, which answers the
+    message given to the turn last (`message.done`'s `answers`, `EventMapper`), kept in the thread's saved state so a
+    restart or a hand-over before the answer keeps it (`SavedState.steered`); the call shows no step. That answer
+    stays in sight once the turn ends (`quickReplies`), wherever it falls among the steps. At first it was the text
+    right after the message, before the next step: the teammate reads a message only at its next step, so a step it
+    had already started came between the two ("Searched once" between "comment je m'appelle ?" and its answer, on Nov 4) and the answer folded away with the work; text written between steps can also reach the person only as the
+    server's summary of it (narration). That rule stays for text from a runner without the tool.
   - A shell command's step reads what it does (`commandSummary`): `cat …/threads/x.md 2>/dev/null || find …` reads
     `cat x.md`; the step's details and an approval card keep the whole command.
   - A call to `complete_thread` shows as the thread's Done line, not as a step, unless Brigade refused it (something

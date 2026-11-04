@@ -376,6 +376,9 @@ const PickedLines = z
   .min(1)
   .max(50)
 
+/** Lines of a list a new thread starts on, attached before its first turn (StartThread). */
+export const StartOnLines = z.object({ documentId: z.string(), items: PickedLines })
+
 /** Hand lines to a teammate: in one thread together, or a thread each. */
 export const HandOffItems = z.object({
   teammateId: z.string(),
@@ -476,3 +479,45 @@ export const ListOperations = [
 ] as const
 
 export const LIST_OPERATIONS = ['list_items', 'link_items', 'complete_item', 'add_item'] as const
+
+/**
+ * The list every new workspace starts with, at the library's root: first steps a teammate can
+ * take on, so Lists shows how lines are handed over and ticked from day one. Its first line is
+ * the one the setup thread with the chief starts on (`setupLine`).
+ */
+export const GETTING_STARTED = {
+  path: 'getting-started.md',
+  setupLine: 'Set up your team with Chief',
+  text: [
+    '# Getting started',
+    '',
+    'Hand any line to a teammate: the list shows who is on it, and the line is ticked once it is done.',
+    '',
+    '- [ ] Set up your team with Chief',
+    '- [ ] Connect the Apps your work lives in, such as GitHub or Gmail',
+    '- [ ] Create a project for what you are building',
+    '- [ ] Hand this line to a teammate and watch it get ticked',
+    '- [ ] Invite a colleague from Members',
+    '',
+  ].join('\n'),
+} as const
+
+/**
+ * Where a new list named `name` goes: a Markdown file named after it, in `folder` (a project's)
+ * or at the library's root. "Launch plan!" -> `launch-plan.md`.
+ */
+export function newListPath(name: string, folder?: string | null) {
+  const slug =
+    name
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80)
+      .replace(/-+$/, '') || 'list'
+  return `${folder ? `${folder.replace(/\/+$/, '')}/` : ''}${slug}.md`
+}
+
+/** A new list's text: its name as its title, and a first empty line to write in. */
+export const newListText = (name: string) => `# ${name.trim()}\n\n- [ ] \n`

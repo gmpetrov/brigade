@@ -1,4 +1,5 @@
 'use client'
+import { GETTING_STARTED, newListItemId, type ListSummary } from '@brigade/contracts'
 import {
   Check,
   Clock,
@@ -81,6 +82,22 @@ function Shell({
 
 /** The first message of a new workspace's setup thread with the chief. */
 const SETUP_MESSAGE = 'Hi Chief, I just started on Brigade. Help me set up my team.'
+
+/**
+ * The line of the workspace's Getting started list the setup thread works on, so the list shows
+ * it in progress with the chief. None without the list: the thread starts alone (and so it does
+ * when the line is gone from it, which the API leaves out).
+ */
+async function setupLine() {
+  const lists = await api<ListSummary[]>('/lists').catch(() => [])
+  const list = lists.find((l) => l.path === GETTING_STARTED.path)
+  return list
+    ? {
+        documentId: list.documentId,
+        items: [{ id: newListItemId(), text: GETTING_STARTED.setupLine }],
+      }
+    : undefined
+}
 
 /**
  * First run: name the project (its organization and first workspace), connect
@@ -419,12 +436,14 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
         if (chief && account) {
           const started = await api<ThreadSummary[]>(`/threads?teammateId=${chief.id}`)
           if (started.length === 0) {
+            const listLines = await setupLine()
             const thread = await api<{ id: string }>('/threads', {
               body: {
                 teammateId: chief.id,
                 computerId: account.computer.id,
                 accountId: account.id,
                 text: SETUP_MESSAGE,
+                ...(listLines ? { listLines } : {}),
               },
             })
             return router.replace(`/app/threads/${thread.id}`)

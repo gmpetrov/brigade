@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Merged into Brigade.app's own by Tauri. -->
+  <!-- A menu-bar app: macOS launches it with no Dock icon. set_activation_policy(Accessory) in
+       lib.rs alone did not hold: on a member's Mac, Brigade 0.3.9 ran as a regular app with its
+       icon back in the Dock. -->
+  <key>LSUIElement</key>
+  <true/>
+  <!-- Dictation in the composers records the microphone. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Brigade uses the microphone when you dictate a message.</string>
+</dict>
+</plist>

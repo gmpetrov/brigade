@@ -1,11 +1,12 @@
 'use client'
-import type { ListSummary, PlaybookInstallationView } from '@brigade/contracts'
+import { projectFolder, type ListSummary, type PlaybookInstallationView } from '@brigade/contracts'
 import { ArrowRight, Inbox } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { timeAgo, useDashboard } from '@/components/dashboard'
 import { LIST_LIVE } from '@/components/list-items'
 import { ListRow } from '@/components/list-row'
+import { NewList } from '@/components/new-list'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { useProject } from '@/components/project-shell'
 import { describeCron } from '@/components/schedules'
@@ -18,20 +19,34 @@ const LISTS_SHOWN = 4
 /** Routines shown before "+N more". */
 const ROUTINES_SHOWN = 5
 
-function Section({ title, href, children }: { title: string; href?: string; children: ReactNode }) {
+function Section({
+  title,
+  href,
+  action,
+  children,
+}: {
+  title: string
+  href?: string
+  /** A button at its right, before All. */
+  action?: ReactNode
+  children: ReactNode
+}) {
   return (
     <section aria-label={title} className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex min-h-8 items-center gap-2 px-1">
         <h2 className="text-[13.5px] font-bold">{title}</h2>
-        {href && (
-          <Link
-            href={href}
-            className="ml-auto flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            All
-            <ArrowRight className="size-3" aria-hidden />
-          </Link>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {action}
+          {href && (
+            <Link
+              href={href}
+              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              All
+              <ArrowRight className="size-3" aria-hidden />
+            </Link>
+          )}
+        </div>
       </div>
       {children}
     </section>
@@ -113,7 +128,20 @@ export default function ProjectOverview() {
       : null
 
   const listsSection = all.data && (
-    <Section key="lists" title="Lists" href={lists.length ? '/app/lists' : undefined}>
+    <Section
+      key="lists"
+      title="Lists"
+      href={lists.length ? '/app/lists' : undefined}
+      action={
+        !project.archivedAt && (
+          <NewList
+            folder={project.folder ?? projectFolder(project.name)}
+            variant="ghost"
+            size="sm"
+          />
+        )
+      }
+    >
       {lists.length === 0 ? (
         <Quiet>
           No lists yet. A Markdown file with checkboxes

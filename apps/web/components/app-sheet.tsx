@@ -119,36 +119,33 @@ export function AppSheet({
   const route =
     custom || server || email
       ? null
-      : KEY_SIGN_IN[kind]
-        ? 'key'
-        : kind === 'stripe' ||
-            kind === 'cloudflare' ||
-            kind === 'google_cloud' ||
-            kind === 'neon' ||
-            kind === 'supabase' ||
-            kind === 'atlassian' ||
-            kind === 'notion' ||
-            kind === 'linear' ||
-            kind === 'mixpanel' ||
-            kind === 'resend' ||
-            kind === 'replicate' ||
-            kind === 'openrouter' ||
-            kind === 'posthog' ||
-            kind === 'dataforseo' ||
-            kind === 'ahrefs' ||
-            kind === 'expo'
-          ? 'mcp'
-          : kind === 'github'
-            ? 'github'
-            : 'google'
+      : kind === 'stripe' ||
+          kind === 'cloudflare' ||
+          kind === 'google_cloud' ||
+          kind === 'neon' ||
+          kind === 'supabase' ||
+          kind === 'atlassian' ||
+          kind === 'notion' ||
+          kind === 'linear' ||
+          kind === 'mixpanel' ||
+          kind === 'resend' ||
+          kind === 'replicate' ||
+          kind === 'openrouter' ||
+          kind === 'posthog' ||
+          kind === 'dataforseo' ||
+          kind === 'ahrefs' ||
+          kind === 'expo' ||
+          kind === 'revenuecat'
+        ? 'mcp'
+        : kind === 'github'
+          ? 'github'
+          : 'google'
   // A server per data region (Mixpanel): connecting starts by picking one.
   const regions = entry.regions
   /** Sign in at the provider: a new account, or the one being reconnected. */
   const connect = (region?: string, reconnecting?: string) =>
     run(async () => {
       if (!route) return setAdding(true)
-      // A key pasted here: its form, for a new account or the one reconnected.
-      if (route === 'key') return setKeying({ reconnect: reconnecting })
       const before = accounts.length
       const inWindow = await openSignIn(async (returnTo) => {
         const { url } = await api<{ url: string }>(`/connections/${route}`, {
@@ -282,6 +279,16 @@ export function AppSheet({
           {mcp ? (mcp.description ?? `The MCP server at ${host}.`) : entry.description}
         </DialogDescription>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
+        {/* An App that also takes a pasted key (RevenueCat): its form, beside the sign-in. */}
+        {KEY_SIGN_IN[kind] && !keying && data.available[kind] && (
+          <button
+            type="button"
+            onClick={() => setKeying({})}
+            className="self-start text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Connect with {KEY_SIGN_IN[kind]!.article} {KEY_SIGN_IN[kind]!.key} instead
+          </button>
+        )}
         {waiting && (
           <p className="text-sm text-muted-foreground">
             Finish signing in in the tab that opened. The account shows here once it is connected.
