@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   MemoryGuard,
   MOST_TURNS,
+  ownShare,
   parseMemory,
   roomFor,
   turnsAtOnce,
@@ -27,6 +28,7 @@ test('memory and pressure read from /proc', () => {
     available: 0.05,
     swapUsed: 0.75,
     swapTotal: 4000000 * 1024,
+    total: 8000000 * 1024,
   })
   // Not Linux, or no PSI: nothing to go on.
   assert.equal(parseMemory('', 'MemTotal: 8000000 kB\n'), null)
@@ -174,6 +176,58 @@ test('after the kernel killed something for memory, the guard waits instead of a
       'pgfault 9\noom_kill 7\n',
     )?.oomKills,
     7,
+  )
+})
+
+test('stuck on memory the rest of the computer holds, it stops nothing that loses work', async () => {
+  const GB = 1024 * MB
+  // 8 GB, 15% of it available: 6.8 GB in use, the provider's services holding most of it.
+  const busy: Reading = { ...stuck, total: 8 * GB, available: 0.15 }
+  const stopped: string[] = []
+  const turns = [candidate('turn', 500), candidate('turn', 400)].map((c, i) => ({
+    ...c,
+    stop: async () => void stopped.push(`turn${i}`),
+  }))
+  const run = async (list: Candidate[], reading: Reading) => {
+    const g = new MemoryGuard({
+      candidates: async () => list,
+      read: async () => reading,
+      limit: 40,
+      duration: 10_000,
+      cooldown: 20_000,
+    })
+    // Well after any browser was last used.
+    const t = 10 * 60_000
+    await g.tick(t)
+    await g.tick(t + 10_000)
+  }
+  // 0.9 GB of 6.8: a turn lost would not end the stall.
+  assert.ok(ownShare(turns, busy)! < 0.3)
+  await run(turns, busy)
+  assert.deepEqual(stopped, [])
+  // An idle browser costs nothing to stop: it still goes.
+  const idle = { ...candidate('browser', 300, 0), stop: async () => void stopped.push('browser') }
+  await run([...turns, idle], busy)
+  assert.deepEqual(stopped, ['browser'])
+  // The runner's own work holding much of it: its biggest turn goes, as before.
+  stopped.length = 0
+  const big = [{ ...candidate('turn', 2500), stop: async () => void stopped.push('big') }]
+  await run([...big, ...turns], busy)
+  assert.deepEqual(stopped, ['big'])
+  // Nearly out of memory and swap: anything that frees some, whoever holds the rest.
+  stopped.length = 0
+  await run(turns, { ...busy, full: 5, available: 0.01, swapUsed: 0.95 })
+  assert.deepEqual(stopped, ['turn0'])
+  // A reading that does not say how much memory there is: as before.
+  stopped.length = 0
+  await run(turns, stuck)
+  assert.deepEqual(stopped, ['turn0'])
+  assert.equal(
+    parseMemory(
+      'full avg10=1.00 avg60=0 avg300=0 total=0\n',
+      'MemTotal: 100 kB\nMemAvailable: 50 kB\n',
+    )?.total,
+    100 * 1024,
   )
 })
 

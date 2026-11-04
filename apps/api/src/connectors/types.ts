@@ -289,7 +289,15 @@ export type McpAuth = 'oauth' | 'api_key' | 'none'
 
 export const op = <I extends z.ZodType>(o: Operation<I>) => o as unknown as Operation
 
-export class ConnectorError extends Error {}
+export class ConnectorError extends Error {
+  /** The vendor's HTTP status, when it answered one (json). */
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message)
+  }
+}
 
 /**
  * Vendors may echo part of a credential in errors (Stripe shows a masked key).
@@ -318,7 +326,7 @@ export async function json<T>(response: Response): Promise<T> {
     } catch {
       // not JSON
     }
-    throw new ConnectorError(redact(`${response.status}: ${message}`))
+    throw new ConnectorError(redact(`${response.status}: ${message}`), response.status)
   }
   return (body ? JSON.parse(body) : {}) as T
 }

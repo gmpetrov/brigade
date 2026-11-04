@@ -32,6 +32,7 @@ import {
   type SideExchange,
   type SideRoute,
   THREAD_NOTE_SOURCE,
+  TURN_MEMORY_SOURCE,
   TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
   turnAnswer,
@@ -41,6 +42,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ThreadAttachmentRef,
+  type TurnWaitingMemory,
   type ReplyTo,
   type ThreadPrompt,
   type ThreadSpec,
@@ -400,7 +402,7 @@ type Thread = {
 export class Threads {
   private threads = new Map<string, Thread>()
   /** Threads whose memory run waits for the computer to have memory (memorize). */
-  private readonly memoryWaits = new Set<string>()
+  private readonly memoryRunWaits = new Set<string>()
   /** Slots taken, by turns (waiting for memory or running) and memory runs. */
   private running = 0
   /** Turns started, past waitForMemory; and turns in it. */
@@ -411,6 +413,9 @@ export class Threads {
   private raiseTimer: NodeJS.Timeout | undefined
   /** Resolves when the turn let in last has settled (SETTLE_MS): the next may check memory. */
   private admission = Promise.resolve()
+  /** Turns waiting for memory now, and how each behind them in admission says it waits too. */
+  private memoryWaits = 0
+  private behindAdmission = new Set<() => void>()
   /** Turns queued or running, across threads. */
   private pending = 0
   /** Memory files a tidy run is laying out now, by path; when one last failed, and when one was last sent. */
@@ -1899,11 +1904,11 @@ export class Threads {
   private memorize(sessionId: string) {
     // Its run waits for memory first, outside the thread's queue: a person's next message there
     // must not wait behind it (backgroundRoom). One wait per thread at a time.
-    if (this.memoryWaits.has(sessionId)) return
-    this.memoryWaits.add(sessionId)
+    if (this.memoryRunWaits.has(sessionId)) return
+    this.memoryRunWaits.add(sessionId)
     void this.backgroundRoom()
       .then((room) => room && this.memorizeNow(sessionId))
-      .finally(() => this.memoryWaits.delete(sessionId))
+      .finally(() => this.memoryRunWaits.delete(sessionId))
   }
 
   private memorizeNow(sessionId: string) {
@@ -2426,8 +2431,32 @@ export class Threads {
     let pass!: () => void
     this.admission = new Promise<void>((resolve) => (pass = resolve))
     let admitted = false
+    // The thread shows it waits for memory at once, where it would show it reads the message:
+    // a wait of 24 s read as a slow teammate (Nov 4). Its note comes later (MEMORY_NOTICE_MS).
+    let shown = false
+    const showWait = () => {
+      if (shown) return
+      shown = true
+      this.options.emit(spec.sessionId, {
+        at: new Date().toISOString(),
+        type: 'raw',
+        source: TURN_MEMORY_SOURCE,
+        value: { teammateId: spec.teammate.id } satisfies TurnWaitingMemory,
+      })
+    }
+    let short = false
     try {
-      if (queue) await Promise.race([before, aborted])
+      if (queue) {
+        // Behind a turn that waits for memory, it waits for that memory too: said now, or as
+        // soon as the one ahead finds there is none.
+        if (this.memoryWaits > 0) showWait()
+        this.behindAdmission.add(showWait)
+        try {
+          await Promise.race([before, aborted])
+        } finally {
+          this.behindAdmission.delete(showWait)
+        }
+      }
       if (controller.signal.aborted) return false
       // Slots are taken before this wait: a cap lowered meanwhile (stoppedForMemory) is checked here.
       const fits = () => this.started < this.limit
@@ -2439,6 +2468,12 @@ export class Threads {
         if (fits() && (await room()) && fits()) break
         // Long enough, with few turns running: none may end soon to give memory back.
         if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
+        if (fits() && !short) {
+          short = true
+          this.memoryWaits++
+          showWait()
+          for (const behind of this.behindAdmission) behind()
+        }
         if (fits() && !told && Date.now() - waiting >= MEMORY_NOTICE_MS) {
           told = true
           this.options.emit(spec.sessionId, {
@@ -2457,6 +2492,7 @@ export class Threads {
       if (admitted) this.started++
       return admitted
     } finally {
+      if (short) this.memoryWaits--
       this.entering--
       if (thread.controller === controller) thread.controller = undefined
       // Not let in: the next waits for those before this one still.

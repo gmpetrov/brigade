@@ -8,7 +8,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { test } from 'node:test'
-import { TURN_WAITING_SOURCE, type AgentEvent, type ThreadSpec } from '@brigade/contracts'
+import {
+  TURN_MEMORY_SOURCE,
+  TURN_WAITING_SOURCE,
+  type AgentEvent,
+  type ThreadSpec,
+} from '@brigade/contracts'
 
 const home = await mkdtemp(join(tmpdir(), 'brigade-turn-limit-'))
 process.env.BRIGADE_HOME = home
@@ -127,13 +132,24 @@ test('past the first few, turns start one at a time, a moment apart', async () =
 
 test('short of memory past the first few, a turn waits until there is room', async () => {
   let room = true
-  const { message, startedAt, end } = setup(32, () => room)
+  const { events, message, startedAt, end } = setup(32, () => room)
   for (const id of ['a', 'b', 'c', 'd']) message(id)
   await sleep(60)
   room = false
   message('e')
   await sleep(300)
   assert.equal(startedAt('e'), undefined)
+  // The thread says at once that it waits for memory, once; those that had room say nothing.
+  const waits = (id: string) =>
+    events.filter(
+      (e) => e.sessionId === id && e.event.type === 'raw' && e.event.source === TURN_MEMORY_SOURCE,
+    )
+  assert.equal(waits('e').length, 1, 'e says it waits for memory')
+  assert.deepEqual(
+    waits('e').map((e) => e.event.type === 'raw' && e.event.value),
+    [{ teammateId: 'mark' }],
+  )
+  for (const id of ['a', 'b', 'c', 'd']) assert.equal(waits(id).length, 0)
   room = true
   // Memory is checked again every 5 s.
   await sleep(5_200)
@@ -157,6 +173,35 @@ test('with few turns running, a turn waits for memory only after the guard stopp
   await sleep(5_200)
   assert.ok(startedAt('b'), 'it starts once there is room')
   end('b')
+})
+
+test('every turn kept waiting for memory says so, those behind the first too', async () => {
+  let room = true
+  const { events, message, startedAt, end } = setup(32, () => room)
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f']
+  try {
+    for (const id of ids.slice(0, 4)) message(id)
+    await sleep(60)
+    room = false
+    message('e')
+    message('f')
+    const waits = (id: string) =>
+      events.filter(
+        (e) =>
+          e.sessionId === id && e.event.type === 'raw' && e.event.source === TURN_MEMORY_SOURCE,
+      ).length
+    for (let i = 0; i < 100 && waits('f') === 0; i++) await sleep(20)
+    assert.equal(waits('e'), 1, 'e says it waits for memory')
+    assert.equal(waits('f'), 1, 'f, behind e, says so too')
+    assert.equal(startedAt('f'), undefined)
+    room = true
+    for (let i = 0; i < 600 && !startedAt('f'); i++) await sleep(20)
+    assert.ok(startedAt('e') && startedAt('f'), 'both start once there is room')
+    assert.equal(waits('f'), 1, 'said once')
+  } finally {
+    room = true
+    for (const id of ids) end(id)
+  }
 })
 
 test('after the memory guard stopped a turn, one fewer at once, then more again', async () => {

@@ -10,7 +10,9 @@
 //      again at the next browser tool call, its sign-ins kept in its profile;
 //   3. the running preview, browser or turn holding the most memory, a preview
 //      or browser counting double (it starts again at the next visit or call;
-//      a turn loses its work in progress), said in its thread.
+//      a turn loses its work in progress), said in its thread. Only while the
+//      runner's own work holds a fair share of the memory in use (OWN_SHARE):
+//      a stall the rest of the computer causes does not end by losing a turn.
 // One at a time, then a pause to see what it changed. Where the runner has no
 // cgroups of its own (preview-cgroup.ts), there is nothing it could stop.
 import { readFile } from 'node:fs/promises'
@@ -24,6 +26,8 @@ export type Reading = {
   /** Swap used, as a share of all of it; 0 without swap. */
   swapUsed: number
   swapTotal: number
+  /** All of the computer's memory, in bytes; unknown in readings made by hand (tests). */
+  total?: number
   /** Processes the kernel has killed for memory since it started (/proc/vmstat oom_kill). */
   oomKills?: number
 }
@@ -43,6 +47,33 @@ const GB = 1024 ** 3
 const SMALL = 64 * 1024 ** 2
 /** A browser no turn used for this long is stopped before anything that runs. */
 const BROWSER_IDLE = 2 * 60_000
+/**
+ * The least share of the memory in use the runner's own work (its turns, previews and
+ * browsers) must hold for stopping some of it to end a stall. Below it, the stall comes from
+ * the rest of the computer: on Nov 4 the provider's own services held about 6 of 8 GB, and
+ * the guard stopped seven turns of 0.3 to 0.9 GB in an hour, some 20 s apart, each losing its
+ * work without the stall ending. Then the runner only stops what costs nothing (a frozen
+ * preview, an idle browser), and turns waiting to start wait for memory (memoryRoom).
+ */
+const OWN_SHARE = 0.3
+
+const NEARLY_OUT = 'the computer is nearly out of memory'
+
+/**
+ * The share of the memory in use that the runner's running work holds (frozen previews hold
+ * swap, hardly any memory); unknown when the reading does not say how much memory there is.
+ */
+export function ownShare(candidates: Candidate[], reading: Reading) {
+  if (!reading.total) return undefined
+  const used = reading.total * (1 - reading.available)
+  if (used <= 0) return undefined
+  const own = candidates.filter((c) => c.kind !== 'frozen').reduce((n, c) => n + c.memory, 0)
+  return own / used
+}
+
+/** Stopped, it loses nothing: a frozen preview, or a browser no turn used for a while. */
+const costsNothing = (c: Candidate, now: number) =>
+  c.kind === 'frozen' || (c.kind === 'browser' && now - (c.lastUsed ?? 0) >= BROWSER_IDLE)
 
 export class MemoryGuard {
   private since: number | undefined
@@ -88,7 +119,7 @@ export class MemoryGuard {
     if (this.killedByKernel(reading)) this.pause(now)
     if (now < this.quietUntil) return undefined
     if (reading.available < 0.03 && (reading.swapTotal === 0 || reading.swapUsed > 0.9))
-      return 'the computer is nearly out of memory'
+      return NEARLY_OUT
     if (this.since !== undefined && now - this.since >= this.duration)
       return `the computer was stuck waiting for memory for ${Math.round((now - this.since) / 1000)} s`
     return undefined
@@ -135,9 +166,24 @@ export class MemoryGuard {
       const why = this.check(reading, now)
       if (!why) return
       this.pause(now)
-      const victim = this.pick(await this.options.candidates(), reading, now)
+      const candidates = await this.options.candidates()
+      const victim = this.pick(candidates, reading, now)
       if (!victim) {
         console.warn(`${why}, and no preview, browser or turn of the runner's holds much of it`)
+        return
+      }
+      // Stuck on memory the rest of the computer holds: stopping running work of ours would
+      // lose it and not end the stall. Nearly out of memory, anything that frees some helps.
+      const own = ownShare(candidates, reading)
+      if (
+        !why.startsWith(NEARLY_OUT) &&
+        own !== undefined &&
+        own < OWN_SHARE &&
+        !costsNothing(victim, now)
+      ) {
+        console.warn(
+          `${why}, but the runner's own work holds only ${Math.round(own * 100)}% of the memory in use: nothing of it stopped`,
+        )
         return
       }
       // Stuck, the kernel may have killed something meanwhile: then that was enough for now.
@@ -205,6 +251,7 @@ export function parseMemory(pressure: string, meminfo: string, vmstat = ''): Rea
   return {
     full: Number(/^full avg10=([\d.]+)/m.exec(pressure)?.[1] ?? 0),
     available: (kB('MemAvailable') || 0) / total,
+    total: total * 1024,
     swapUsed: swapTotal > 0 ? 1 - (kB('SwapFree') || 0) / swapTotal : 0,
     swapTotal: swapTotal * 1024,
     ...(/^oom_kill (\d+)$/m.test(vmstat)
