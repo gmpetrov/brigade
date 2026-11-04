@@ -4,8 +4,9 @@ import type { AgentEvent } from '@brigade/contracts'
 import { DELTA_EVERY_MS, EventMapper, withoutSignatures } from '../src/harness/events.js'
 
 // A reply's streamed text goes out grouped (DELTA_EVERY_MS): one delta for what came meanwhile,
-// never after an event that came after it. And the harness's copies of a sub-agent's messages
-// go out without their thinking blocks' signatures.
+// never after an event that came after it, masked as each piece of it was (MaskedStream: what
+// may start a secret, a word not ended yet, is held until it is). And the harness's copies of a
+// sub-agent's messages go out without their thinking blocks' signatures.
 
 const timeless = (events: AgentEvent[]) => events.map(({ at: _, ...event }) => event)
 
@@ -21,15 +22,16 @@ const echo = { type: 'raw', rawValue: { type: 'stream_event', event: { type: 'pi
 test('a reply streamed in many pieces goes out as one delta, before the message it makes', () => {
   const { events, mapper } = mapped()
   mapper.map({ type: 'text-start', id: 't1' })
-  for (const text of ['Je ', 'regarde ', 'la base', '.']) {
+  for (const text of ['Je ', 'regarde ', 'la ', 'base, ', 'puis']) {
     mapper.map(piece(text))
     mapper.map(echo)
   }
   assert.deepEqual(events, [], 'nothing before DELTA_EVERY_MS: the echoes send nothing')
   mapper.map({ type: 'text-end', id: 't1' })
+  // The word not ended when the reply ended was held: its message holds it.
   assert.deepEqual(timeless(events), [
-    { type: 'message.delta', id: 't1', text: 'Je regarde la base.' },
-    { type: 'message.done', id: 't1', text: 'Je regarde la base.' },
+    { type: 'message.delta', id: 't1', text: 'Je regarde la base, ', masked: true },
+    { type: 'message.done', id: 't1', text: 'Je regarde la base, puis' },
   ])
   // The delta's time is its first piece's.
   assert.ok(Date.parse(events[0]!.at) <= Date.parse(events[1]!.at))
@@ -38,40 +40,41 @@ test('a reply streamed in many pieces goes out as one delta, before the message 
 test('text streamed for longer goes out each DELTA_EVERY_MS, nothing lost or sent twice', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] })
   const { events, mapper } = mapped()
-  mapper.map(piece('a'))
+  mapper.map(piece('a '))
   t.mock.timers.tick(DELTA_EVERY_MS - 1)
-  mapper.map(piece('b'))
+  mapper.map(piece('b '))
   assert.deepEqual(events, [])
   t.mock.timers.tick(1)
-  assert.deepEqual(timeless(events), [{ type: 'message.delta', id: 't1', text: 'ab' }])
-  mapper.map(piece('c'))
-  mapper.map(piece('d'))
+  const delta = (text: string) => ({ type: 'message.delta', id: 't1', text, masked: true })
+  assert.deepEqual(timeless(events), [delta('a b ')])
+  mapper.map(piece('c '))
+  mapper.map(piece('d '))
   t.mock.timers.tick(DELTA_EVERY_MS)
-  mapper.map(piece('e'))
+  mapper.map(piece('e '))
   mapper.map({ type: 'text-end', id: 't1' })
   // Its timer went with it: nothing more comes later.
   t.mock.timers.tick(DELTA_EVERY_MS * 3)
   assert.deepEqual(timeless(events), [
-    { type: 'message.delta', id: 't1', text: 'ab' },
-    { type: 'message.delta', id: 't1', text: 'cd' },
-    { type: 'message.delta', id: 't1', text: 'e' },
-    { type: 'message.done', id: 't1', text: 'abcde' },
+    delta('a b '),
+    delta('c d '),
+    delta('e '),
+    { type: 'message.done', id: 't1', text: 'a b c d e ' },
   ])
 })
 
 test('streamed text goes out before any event that came after it', () => {
   const { events, mapper } = mapped()
-  mapper.map(piece('Let me check.'))
+  mapper.map(piece('Let me check. '))
   mapper.map({ type: 'tool-call', toolCallId: 'c1', toolName: 'bash', input: { command: 'ls' } })
   mapper.map(piece('Two blocks: ', 'a'))
   mapper.map(piece('this one, then ', 'b'))
-  mapper.map(piece('that one.', 'b'))
+  mapper.map(piece('that one. ', 'b'))
   mapper.map({ type: 'error', error: new Error('The stream broke') })
   assert.deepEqual(timeless(events), [
-    { type: 'message.delta', id: 't1', text: 'Let me check.' },
+    { type: 'message.delta', id: 't1', text: 'Let me check. ', masked: true },
     { type: 'tool.started', toolCallId: 'c1', toolName: 'bash', input: { command: 'ls' } },
-    { type: 'message.delta', id: 'a', text: 'Two blocks: ' },
-    { type: 'message.delta', id: 'b', text: 'this one, then that one.' },
+    { type: 'message.delta', id: 'a', text: 'Two blocks: ', masked: true },
+    { type: 'message.delta', id: 'b', text: 'this one, then that one. ', masked: true },
     { type: 'error', message: 'The stream broke' },
   ])
 })
@@ -79,12 +82,14 @@ test('streamed text goes out before any event that came after it', () => {
 test('a stream that ends mid-reply sends its last text once it is flushed, and only once', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { events, mapper } = mapped()
-  mapper.map(piece('Cut sh'))
-  mapper.map(piece('ort'))
+  mapper.map(piece('Cut '))
+  mapper.map(piece('short '))
   mapper.flush()
   mapper.flush()
   t.mock.timers.tick(DELTA_EVERY_MS * 2)
-  assert.deepEqual(timeless(events), [{ type: 'message.delta', id: 't1', text: 'Cut short' }])
+  assert.deepEqual(timeless(events), [
+    { type: 'message.delta', id: 't1', text: 'Cut short ', masked: true },
+  ])
 })
 
 test("a sub-agent's message goes out without its thinking's signature, the rest as it was", () => {

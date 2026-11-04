@@ -137,24 +137,5 @@ export function bounceOf(from: string, headers: Record<string, string>) {
   )
 }
 
-/** Patterns of secrets nobody should mail: keys, tokens, private keys, passwords in clear. */
-const SECRETS: [RegExp, string][] = [
-  [/\b(sk|rk)_(live|test)_[A-Za-z0-9]{10,}/, 'a Stripe secret key'],
-  [/\bwhsec_[A-Za-z0-9+/=]{10,}/, 'a webhook signing secret'],
-  [/\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{8,}/, 'a Resend API key'],
-  [/\b(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,})/, 'a GitHub token'],
-  [/\bAKIA[0-9A-Z]{16}\b/, 'an AWS access key'],
-  [/\bxox[abposr]-[A-Za-z0-9-]{10,}/, 'a Slack token'],
-  [/\bAIza[0-9A-Za-z_-]{35}\b/, 'a Google API key'],
-  [/\bya29\.[\w-]{20,}/, 'a Google access token'],
-  [/\b(napi|sbp)_[A-Za-z0-9]{20,}/, 'a database API key'],
-  [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'a private key'],
-  [/\bsk-(ant-|proj-)?[A-Za-z0-9_-]{20,}/, 'an AI provider key'],
-  [/\b(password|passwd|mot de passe)\s*[:=]\s*\S{6,}/i, 'a password'],
-]
-
-/** What secret the text holds, if any (its kind, never the secret). */
-export function secretIn(text: string) {
-  for (const [pattern, kind] of SECRETS) if (pattern.test(text)) return kind
-  return null
-}
+/** What secret the text holds, if any: the same list that masks them in thread events. */
+export { secretIn } from '../secrets.js'

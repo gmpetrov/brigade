@@ -5,6 +5,7 @@ import {
   Ask,
   bareToolName,
   hasVisibleText,
+  MaskedStream,
   OFFER_CHOICES_TOOL,
   Question,
   replyCard,
@@ -388,6 +389,8 @@ export class EventMapper {
   rejected: { toolCallId: string; toolName: string; error: string }[] = []
   /** Calls already shown as started: one repeated after its result must not show twice. */
   private started = new Set<string>()
+  /** Text blocks streaming in this turn, each one's deltas masked as they go out (MaskedStream). */
+  private readonly streams = new Map<string, MaskedStream>()
   /** answer_message calls recorded as the teammate's message: their result shows nothing. */
   private answers = new Set<string>()
   /** Streamed text not sent yet (DELTA_EVERY_MS), with when its first piece came. */
@@ -432,9 +435,9 @@ export class EventMapper {
   ) {}
 
   /**
-   * Send the streamed text not sent yet, as one message.delta. Done before any other event
-   * (emit), once DELTA_EVERY_MS passed, and by whoever reads the stream when it ends, whatever
-   * way it ended.
+   * Send the streamed text not sent yet, as one message.delta, masked (MaskedStream) as each of
+   * its pieces was. Done before any other event (emit), once DELTA_EVERY_MS passed, and by
+   * whoever reads the stream when it ends, whatever way it ended.
    */
   flush() {
     clearTimeout(this.pendingTimer)
@@ -442,7 +445,13 @@ export class EventMapper {
     const pending = this.pending
     this.pending = undefined
     if (pending?.text)
-      this.send({ at: pending.at, type: 'message.delta', id: pending.id, text: pending.text })
+      this.send({
+        at: pending.at,
+        type: 'message.delta',
+        id: pending.id,
+        text: pending.text,
+        masked: true,
+      })
   }
 
   /**
@@ -459,19 +468,29 @@ export class EventMapper {
     const at = new Date().toISOString()
     switch (part.type) {
       case 'text-delta': {
-        this.texts.set(part.id, (this.texts.get(part.id) ?? '') + part.text)
+        const before = this.texts.get(part.id) ?? ''
+        this.texts.set(part.id, before + part.text)
+        // Masked with the text before it, a secret over several deltas whole (MaskedStream). A
+        // block this mapper did not start (a new turn, a turn handed over) goes on from its text
+        // so far, as if it had all gone out: what was held of it shows with its message.done.
+        let stream = this.streams.get(part.id)
+        if (!stream) this.streams.set(part.id, (stream = new MaskedStream(before)))
+        const text = stream.next(part.text)
+        if (!text) return
+        // Then grouped (DELTA_EVERY_MS): what goes out of it meanwhile, as one delta.
         const pending = this.pending
         if (pending && pending.id === part.id) {
-          pending.text += part.text
+          pending.text += text
           return
         }
         // Another block's text (two replies in a row): the first one's goes first.
         this.flush()
-        this.pending = { id: part.id, text: part.text, at }
+        this.pending = { id: part.id, text, at }
         this.pendingTimer = setTimeout(() => this.flush(), DELTA_EVERY_MS)
         return
       }
       case 'text-end': {
+        this.streams.delete(part.id)
         const { text, replies, choices } = replyCard(this.texts.get(part.id) ?? '')
         this.texts.delete(part.id)
         this.emit({ at, type: 'message.done', id: part.id, text })
