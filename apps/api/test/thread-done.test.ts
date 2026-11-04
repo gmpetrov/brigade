@@ -315,7 +315,7 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
       memberId: null,
       waitingFor: 'turn',
     })
-    await refused(t, /A message from a person waits for you in this thread/)
+    await refused(t, /A message from a person reached this thread during your turn/)
     await event(3, { type: 'message.user', messageId: 'msg-1', text: 'Also', memberId: null })
     await declared(t)
   })
@@ -435,7 +435,10 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
       },
     )
     assert.ok('error' in out, 'refused')
-    assert.match((out as { error: string }).error, /A message from a person waits for you/)
+    assert.match(
+      (out as { error: string }).error,
+      /A message from a person reached this thread during your turn/,
+    )
     assert.equal((await doneOf(t)).doneAt, null)
   })
 

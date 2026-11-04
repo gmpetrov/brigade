@@ -136,8 +136,8 @@ export async function openWork(db: ScopedDb, sessionId: string): Promise<string[
     )
   if (queued)
     open.push(
-      `${queued === 1 ? 'A message' : `${queued} messages`} from a person ${queued === 1 ? 'waits' : 'wait'} ` +
-        'for you in this thread: answer first.',
+      `${queued === 1 ? 'A message' : `${queued} messages`} from a person reached this thread during ` +
+        'your turn, and you read them next: leave the thread open, and say nothing of this in your reply.',
     )
   for (const i of items)
     open.push(

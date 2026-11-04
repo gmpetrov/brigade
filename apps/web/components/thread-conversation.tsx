@@ -1518,6 +1518,40 @@ export function ThreadConversation({
                     </div>
                   )}
                   <ThreadItems
+                    pending={
+                      <>
+                        {/* Not read yet: as sent, where the turn reads them, its status under them. */}
+                        {t.mayPrompt && !t.controlledByMemberId && (
+                          <QueuedMessages
+                            queued={queued.filter((m) => !isQueuedReport(m))}
+                            teammateName={answering.name}
+                            canSteer={busy}
+                            canParallel={!t.parent}
+                            onAction={queueAction}
+                          />
+                        )}
+                        {/* Sent from here: in the thread at once, until the thread has them. */}
+                        {inThreadOut.map((m) => (
+                          <OutgoingMessage
+                            key={m.messageId}
+                            message={m}
+                            teammates={people}
+                            onRetry={() => retryOutgoing(m)}
+                            onEdit={() => editOutgoing(m)}
+                            onDiscard={() => discardOutgoing(m)}
+                          />
+                        ))}
+                        {/* Sent to a quiet thread: how it goes, until the turn says it itself. */}
+                        {(lastOut?.state === 'sent' || lastOut?.state === 'starting') &&
+                          !lastOut.queues && (
+                            <Answering
+                              teammate={answering}
+                              phase={lastOut.state === 'starting' ? 'starting' : 'reading'}
+                              {...(lastOut.sentAt !== undefined ? { since: lastOut.sentAt } : {})}
+                            />
+                          )}
+                      </>
+                    }
                     threadId={t.id}
                     items={items}
                     teammate={t.teammate}
@@ -1601,40 +1635,6 @@ export function ThreadConversation({
                         : undefined
                     }
                   />
-                  {/* Waiting for the turn to end, under it: read together once it does. */}
-                  {t.mayPrompt && !t.controlledByMemberId && (
-                    <QueuedMessages
-                      queued={queued.filter((m) => !isQueuedReport(m))}
-                      teammateName={answering.name}
-                      canSteer={busy}
-                      canParallel={!t.parent}
-                      onAction={queueAction}
-                    />
-                  )}
-                  {/* Sent from here: in the thread at once, until the thread has them. */}
-                  {inThreadOut.length > 0 && (
-                    <div className="mt-4 flex flex-col gap-4">
-                      {inThreadOut.map((m) => (
-                        <OutgoingMessage
-                          key={m.messageId}
-                          message={m}
-                          teammates={people}
-                          onRetry={() => retryOutgoing(m)}
-                          onEdit={() => editOutgoing(m)}
-                          onDiscard={() => discardOutgoing(m)}
-                        />
-                      ))}
-                      {/* Queued behind a turn, the turn's own Working line says what goes on. */}
-                      {(lastOut?.state === 'sent' || lastOut?.state === 'starting') &&
-                        !lastOut.queues && (
-                          <Answering
-                            teammate={answering}
-                            phase={lastOut.state === 'starting' ? 'starting' : 'reading'}
-                            {...(lastOut.sentAt !== undefined ? { since: lastOut.sentAt } : {})}
-                          />
-                        )}
-                    </div>
-                  )}
                   {t.mayPrompt && !t.controlledByMemberId && (
                     <QueuedReports
                       queued={queued}

@@ -1,5 +1,12 @@
 # Side replies (Asides)
 
+**Off by default since Nov 4** (`BRIGADE_SIDE_REPLIES=1` turns them on): a person's message
+written during their teammate's turn now goes into that turn at its next step (`autoSteer` in
+`apps/runner/src/threads.ts`), as in a chat, so the turn's reply covers it. The member compared
+the thread with a chat bot that answers every message sent while it works, together; asides and
+the queue made the same messages show three ways and get answered piecemeal. What follows is how
+they work when turned on.
+
 A person who writes while their teammate's turn runs gets an answer at once, without the turn
 being interrupted: a copy of the teammate's conversation answers on the side, and says what
 becomes of the message. People see it as an **Aside** under their message. Code says "side

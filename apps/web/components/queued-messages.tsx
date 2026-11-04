@@ -82,12 +82,13 @@ export const notThroughText = (m: Outgoing) =>
     : 'Not delivered: the computer did not confirm it got this message.'
 
 /**
- * Messages waiting to be read, at the end of the thread under the running turn: queued behind
- * it or held until a person answers. A person's shows as their message will once read, marked
- * Queued, so it does not move when it is; Brigade's own (a wake-up, a note) as a quiet line.
- * Its teammate reads all those queued for it together, once the turn ends. Each can be steered
- * into the running turn until then, and edited, removed or sent to run in parallel (handed to a
- * child thread) when a person wrote it: Brigade's own goes as it is.
+ * Messages waiting to be read, as the person's own messages look once read: at the end of the
+ * thread, where its turn reads them, above its Working line. Nothing marks them, as in a chat:
+ * a person's message written during a turn goes into it on its own (the runner steers it in),
+ * and otherwise its teammate reads it next, with the others. Its menu, shown while the pointer is
+ * over it (always on phones), gives it to the turn now, edits or removes it, or sends it to run
+ * in parallel (handed to a child thread) when a person wrote it: Brigade's own (a wake-up, a
+ * note), a quiet line, goes as it is.
  */
 export function QueuedMessages({
   queued,
@@ -135,11 +136,12 @@ export function QueuedMessages({
     if (note) return notePreview(note)
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
-  const cancellable = queued.filter((m) => mayChange(m, 'cancel'))
-  const together = queued.filter((m) => m.waitingFor === 'turn').length > 1
+  // As a person's message's own actions are (MessageActions): there while the pointer is over it.
+  const hover =
+    '[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100 data-[state=open]:opacity-100'
 
   return (
-    <section aria-label="Queued messages" className="mt-4 flex flex-col items-end gap-4">
+    <section aria-label="Queued messages" className="flex flex-col items-end gap-4">
       {queued.map((m) => {
         const files = m.attachments.length
         const fromBrigade = m.memberId === null
@@ -152,6 +154,8 @@ export function QueuedMessages({
                 : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
                   ? 'From the parent thread'
                   : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
+        // Anyone who may write gives a message to the turn, whoever wrote it.
+        const steer = canSteer && m.waitingFor === 'turn'
         const parallel =
           canSteer &&
           canParallel &&
@@ -160,11 +164,16 @@ export function QueuedMessages({
           !asksParallel(m.text)
         const editable = mayChange(m, 'edit')
         const removable = mayChange(m, 'cancel')
+        const caption = [
+          !fromBrigade && from,
+          m.waitingFor === 'person' && 'Runs once the pending request is answered',
+          files > 0 && m.text && `${files} file${files === 1 ? '' : 's'}`,
+        ].filter(Boolean)
         return (
           <div
             key={m.messageId}
             data-queued={m.messageId}
-            className="flex max-w-[85%] animate-in flex-col items-end gap-1.5 self-end duration-150 ease-out fade-in motion-reduce:animate-none"
+            className="flex max-w-[85%] flex-col items-end gap-1.5 self-end"
           >
             {editing?.messageId === m.messageId ? (
               <form
@@ -201,121 +210,97 @@ export function QueuedMessages({
                   </Button>
                 </div>
               </form>
-            ) : fromBrigade ? (
-              <p className="rounded-xl border border-dashed px-3.5 py-2 text-sm text-muted-foreground">
-                <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">{preview(m)}</span>
-              </p>
             ) : (
-              <div className="min-w-0 rounded-2xl rounded-br-md bg-primary/70 px-4 py-2.5 leading-relaxed text-primary-foreground">
-                <span className="line-clamp-6 wrap-anywhere whitespace-pre-wrap">{preview(m)}</span>
+              <div className="group/message flex items-center gap-1">
+                {(steer || parallel || editable || removable) && (
+                  <DropdownMenu>
+                    <Hint label="More">
+                      <DropdownMenuTrigger
+                        aria-label="More actions"
+                        disabled={busy === m.messageId}
+                        className={cn(
+                          'flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 [&>svg]:size-3.5',
+                          hover,
+                        )}
+                      >
+                        <Ellipsis aria-hidden />
+                      </DropdownMenuTrigger>
+                    </Hint>
+                    <DropdownMenuContent
+                      align="end"
+                      className="min-w-44"
+                      // Edit replaces the bubble: focus stays in its text box.
+                      onCloseAutoFocus={(e) => e.preventDefault()}
+                    >
+                      {steer && (
+                        <DropdownMenuItem
+                          onSelect={() => void act(m.messageId, { action: 'steer' })}
+                        >
+                          <CornerDownRight aria-hidden />
+                          Give it to {teammateName} now
+                        </DropdownMenuItem>
+                      )}
+                      {parallel && (
+                        <Hint
+                          side="left"
+                          label={`${teammateName} starts a sub-thread for it now and carries on with this turn. Its report comes back here.`}
+                        >
+                          <DropdownMenuItem
+                            onSelect={() => void act(m.messageId, { action: 'parallel' })}
+                          >
+                            <Split aria-hidden />
+                            Send to a sub-thread
+                          </DropdownMenuItem>
+                        </Hint>
+                      )}
+                      {editable && (
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            setEditing({ messageId: m.messageId, text: forPeople(m.text) })
+                          }
+                        >
+                          <Pencil aria-hidden />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {removable && (
+                        <Hint side="left" label="It will not be sent">
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() => void act(m.messageId, { action: 'cancel' })}
+                          >
+                            <X aria-hidden />
+                            Remove
+                          </DropdownMenuItem>
+                        </Hint>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {fromBrigade ? (
+                  <p className="rounded-xl border border-dashed px-3.5 py-2 text-sm text-muted-foreground">
+                    <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
+                      {from ? `${from}: ` : ''}
+                      {preview(m)}
+                    </span>
+                  </p>
+                ) : (
+                  // The look of a person's message once read (MessageBubble): it does not change.
+                  <div className="min-w-0 rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
+                    {preview(m)}
+                  </div>
+                )}
               </div>
             )}
-            <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs text-muted-foreground">
-              <Hint
-                label={
-                  m.waitingFor === 'person'
-                    ? 'Runs once the pending request is answered'
-                    : together
-                      ? `${teammateName} reads the queued messages together, after the current turn`
-                      : `${teammateName} reads it after the current turn`
-                }
-              >
-                <span className="rounded-md border px-1.5 leading-[18px]">Queued</span>
-              </Hint>
-              {[
-                from,
-                m.waitingFor === 'person' && 'Runs once the pending request is answered',
-                files > 0 && m.text && `${files} file${files === 1 ? '' : 's'}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-              {canSteer && m.waitingFor === 'turn' && editing?.messageId !== m.messageId && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="text-muted-foreground"
-                  disabled={busy === m.messageId}
-                  onClick={() => void act(m.messageId, { action: 'steer' })}
-                  tooltip={`Give it to ${teammateName} now, during this turn`}
-                >
-                  <CornerDownRight aria-hidden />
-                  Steer
-                </Button>
-              )}
-              {(parallel || editable || removable) && editing?.messageId !== m.messageId && (
-                <DropdownMenu>
-                  <Hint label="More">
-                    <DropdownMenuTrigger
-                      aria-label="More actions"
-                      disabled={busy === m.messageId}
-                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
-                    >
-                      <Ellipsis aria-hidden />
-                    </DropdownMenuTrigger>
-                  </Hint>
-                  <DropdownMenuContent
-                    align="end"
-                    className="min-w-44"
-                    // Edit replaces the bubble: focus stays in its text box.
-                    onCloseAutoFocus={(e) => e.preventDefault()}
-                  >
-                    {parallel && (
-                      <Hint
-                        side="left"
-                        label={`${teammateName} starts a sub-thread for it now and carries on with this turn. Its report comes back here.`}
-                      >
-                        <DropdownMenuItem
-                          onSelect={() => void act(m.messageId, { action: 'parallel' })}
-                        >
-                          <Split aria-hidden />
-                          Send to a sub-thread
-                        </DropdownMenuItem>
-                      </Hint>
-                    )}
-                    {editable && (
-                      <DropdownMenuItem
-                        onSelect={() =>
-                          setEditing({ messageId: m.messageId, text: forPeople(m.text) })
-                        }
-                      >
-                        <Pencil aria-hidden />
-                        Edit
-                      </DropdownMenuItem>
-                    )}
-                    {removable && (
-                      <Hint side="left" label="It will not be sent">
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onSelect={() => void act(m.messageId, { action: 'cancel' })}
-                        >
-                          <X aria-hidden />
-                          Remove
-                        </DropdownMenuItem>
-                      </Hint>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+            {caption.length > 0 && (
+              <span className="text-right text-xs text-muted-foreground">
+                {caption.join(' · ')}
+              </span>
+            )}
             {m.note && <span className="text-right text-xs text-warning">{m.note}</span>}
           </div>
         )
       })}
-      {cancellable.length > 1 && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="-mt-2 text-destructive-text"
-          disabled={busy !== undefined}
-          onClick={() =>
-            void Promise.all(cancellable.map((m) => onAction(m.messageId, { action: 'cancel' })))
-          }
-        >
-          Remove all queued
-        </Button>
-      )}
     </section>
   )
 }

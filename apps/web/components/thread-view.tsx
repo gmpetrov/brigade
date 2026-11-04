@@ -2348,9 +2348,16 @@ export function ThreadItems({
   admin = false,
   gapLine,
   onSideAction,
+  pending,
 }: {
   threadId: string
   items: Item[]
+  /**
+   * The person's messages not read yet (queued, or on their way from here): where its turn will
+   * read them, at the end of the thread and above its Working line, as a chat shows what was
+   * just sent, its status under it.
+   */
+  pending?: React.ReactNode
   /** edited: an email's draft as the person changed it before allowing it. */
   onApproval: (
     approvalId: string,
@@ -3154,6 +3161,7 @@ export function ThreadItems({
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
+      {pending}
       {workingLine && (
         <WorkingLine
           key="working"
