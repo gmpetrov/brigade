@@ -671,43 +671,65 @@ export function ThreadConversation({
   const following = useRef(true)
   const [atEnd, setAtEnd] = useState(true)
   const loaded = !!thread.data
+  // Once the thread is in, what comes at its end glides into view rather than jumping there.
+  const gliding = useRef(false)
+  const glideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const followedIn = useRef(false)
   useEffect(() => {
     const view = scroller.current
     if (!view) return
     const measure = () => {
+      // Gliding to the end on its own (toEnd): where it is on the way says nothing of the person.
+      if (gliding.current) return
       const end = view.scrollHeight - view.clientHeight - view.scrollTop < END_SLACK
       following.current = end
       setAtEnd(end)
     }
     // Opening or closing a fold moves the end too, without a scroll.
     const afterClick = () => requestAnimationFrame(measure)
+    // The person scrolls: from now on where it is says where they want to read, glide or not.
+    const theirs = () => {
+      gliding.current = false
+    }
     view.addEventListener('scroll', measure, { passive: true })
     view.addEventListener('click', afterClick)
+    for (const type of ['wheel', 'touchstart', 'keydown'] as const)
+      view.addEventListener(type, theirs, { passive: true })
     return () => {
       view.removeEventListener('scroll', measure)
       view.removeEventListener('click', afterClick)
+      for (const type of ['wheel', 'touchstart', 'keydown'] as const)
+        view.removeEventListener(type, theirs)
     }
   }, [loaded])
   const toEnd = (behavior: ScrollBehavior = 'instant') => {
     following.current = true
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior })
+    const view = scroller.current
+    if (!view) return
+    if (behavior === 'smooth') {
+      gliding.current = true
+      clearTimeout(glideTimer.current)
+      glideTimer.current = setTimeout(() => (gliding.current = false), GLIDE_MS)
+    }
+    view.scrollTo({ top: view.scrollHeight, behavior })
   }
+  const followEnd = () => toEnd(followedIn.current ? 'smooth' : 'instant')
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
   useEffect(() => {
-    if (following.current) toEnd()
-  }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded])
+    if (following.current) followEnd()
+    followedIn.current = loaded
+  }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded]) // eslint-disable-line react-hooks/exhaustive-deps
   // A reply revealed word by word grows between events (lib/stream-text.ts): followed as it grows.
   useEffect(() => {
     const content = scroller.current?.firstElementChild
     if (!content) return
     const grown = new ResizeObserver(() => {
-      const view = scroller.current
-      if (following.current && view) view.scrollTop = view.scrollHeight
+      if (following.current) followEnd()
     })
     grown.observe(content)
     return () => grown.disconnect()
-  }, [loaded])
+  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps -- followEnd reads refs only
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
   const loadEarlier = () =>
@@ -1971,6 +1993,8 @@ export function ThreadConversation({
  */
 /** How near the end still counts as there: a reader this close keeps following. */
 const END_SLACK = 48
+/** How long a glide to the end lasts at most: the browser's own smooth scroll, a few hundred ms. */
+const GLIDE_MS = 600
 
 /** Back down to the latest, while reading higher up. */
 /** Over the whole conversation while files are dragged on it: dropping attaches them. */

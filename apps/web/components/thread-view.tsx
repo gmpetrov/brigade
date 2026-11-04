@@ -229,6 +229,8 @@ export type Item =
       kind: 'assistant'
       key: string
       seq: number
+      /** When its first piece came: one that came in moments ago is revealed as it is written. */
+      at: number
       text: string
       done: boolean
       teammateId?: string
@@ -585,6 +587,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               kind: 'assistant',
               key,
               seq,
+              at: Date.parse(e.at),
               text: e.text,
               done: false,
               teammateId: e.teammateId,
@@ -602,6 +605,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               kind: 'assistant',
               key,
               seq,
+              at: Date.parse(e.at),
               text: e.text,
               done: true,
               teammateId: e.teammateId,
@@ -1467,6 +1471,8 @@ function layoutThread(items: Item[], working: boolean) {
       return (
         !answer.has(at) &&
         !quick.has(at) &&
+        // An answer to a person's message (answer_message) stays in sight, under what it answers.
+        !(item.kind === 'assistant' && item.answers) &&
         (final < 0 || at < final || isAside(item)) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
@@ -2094,12 +2100,17 @@ const ToolStep = memo(
 )
 
 /** What a teammate thought on its way, folded. */
+/** A reply whose first piece came this recently when it first shows is revealed as it is written. */
+const FRESH_MS = 15_000
+
 /**
  * A teammate's reply, revealed word by word as it streams in rather than in the bursts it comes
  * in, its open Markdown closed meanwhile (lib/stream-text.ts). One done when it shows, shows whole.
  */
-function StreamedReply({ text, done }: { text: string; done: boolean }) {
-  const shown = useSmoothText(text, !done)
+function StreamedReply({ text, done, at }: { text: string; done: boolean; at: number }) {
+  // Came in while the thread was open: written out from its start, even when it came whole.
+  const [fresh] = useState(() => !done || Date.now() - at < FRESH_MS)
+  const shown = useSmoothText(text, fresh)
   const revealing = !done || shown.length < text.length
   return <Markdown text={revealing ? closeOpenMarkdown(shown) : text} streaming={revealing} />
 }
@@ -2870,6 +2881,7 @@ export function ThreadItems({
                   <StreamedReply
                     text={item.done ? item.text : withoutCard(item.text)}
                     done={item.done}
+                    at={item.at}
                   />
                 </FileLinksProvider>
                 {/* With its next message close under it, they float beside its first line, where a pointer shows them. */}
@@ -3384,30 +3396,34 @@ export function ThreadItems({
     <div className="flex flex-col gap-4">
       {show(nodes)}
       {pending}
-      {workingLineNode}
-      {eventsWaitingSince ? (
-        <EventsWaiting since={eventsWaitingSince} />
-      ) : working && computerDown ? (
-        <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
-      ) : slot && slotTeammate ? (
-        <Answering
-          teammate={slotTeammate}
-          phase={
-            slot.kind !== 'slot' ? 'preparing' : slot.memory ? 'memory' : { slot: slot.running }
-          }
-          since={slot.at}
-        />
-      ) : waitingFor ? (
-        <Answering
-          teammate={waitingFor}
-          phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
-          {...(from !== undefined ? { since: from } : {})}
-        />
-      ) : null}
-      {/* Its turn runs without its Working line: its sub-threads at work hang from a line of their own. */}
-      {working && !workingLine && teammate && (
-        <ChildrenWorking children={childThreads} teammate={teammate} />
-      )}
+      {/* Where the turn says how it goes: as tall as its Working line even when empty, so a line
+          showing up there ("Riley is reading your message", then Working) pushes nothing up. */}
+      <div className="flex min-h-9 flex-col gap-4">
+        {workingLineNode}
+        {eventsWaitingSince ? (
+          <EventsWaiting since={eventsWaitingSince} />
+        ) : working && computerDown ? (
+          <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
+        ) : slot && slotTeammate ? (
+          <Answering
+            teammate={slotTeammate}
+            phase={
+              slot.kind !== 'slot' ? 'preparing' : slot.memory ? 'memory' : { slot: slot.running }
+            }
+            since={slot.at}
+          />
+        ) : waitingFor ? (
+          <Answering
+            teammate={waitingFor}
+            phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
+            {...(from !== undefined ? { since: from } : {})}
+          />
+        ) : null}
+        {/* Its turn runs without its Working line: its sub-threads at work hang from a line of their own. */}
+        {working && !workingLine && teammate && (
+          <ChildrenWorking children={childThreads} teammate={teammate} />
+        )}
+      </div>
     </div>
   )
 }
