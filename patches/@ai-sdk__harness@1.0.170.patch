@@ -1,8 +1,8 @@
 diff --git a/dist/agent/index.js b/dist/agent/index.js
-index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..8ac8d9b94f4b90b002400c262a6b0ac72c34c270 100644
+index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..48812f3278afc471e809e3dbe1a4e47edf0daca6 100644
 --- a/dist/agent/index.js
 +++ b/dist/agent/index.js
-@@ -1745,6 +1745,11 @@ function runPrompt(input) {
+@@ -1745,6 +1745,21 @@ function runPrompt(input) {
  		let ignoredFinishStep;
  		const hostToolCallIdsAwaitingEcho = /* @__PURE__ */ new Set();
  		const submittedHostToolResults = /* @__PURE__ */ new Map();
@@ -11,10 +11,20 @@ index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..8ac8d9b94f4b90b002400c262a6b0ac7
 +		// which then would wait for an echo that never comes, and keep every later pause from
 +		// happening; nor is that result one to hand over at the next pause, to go in again.
 +		const echoedHostToolCallIds = /* @__PURE__ */ new Set();
++		// Brigade: a pause for host input (a ticket, a question) waits for the echo of the host
++		// results already given to the harness, but not for ever. Claude Code runs a step's MCP calls
++		// one after the other, so a result given for a call after the one that waits on a person
++		// echoes only once that person answered, which only the pause lets them do: waited for, it
++		// kept the turn running with its ticket answered and never given. Past this, the pause goes
++		// ahead, and those results go in again with the answer (pauseForHostInput keeps them).
++		const HOST_INPUT_ECHO_WAIT_MS = 3e3;
++		const heldEcho = Symbol("held echo");
++		let deferredPauseDeadline;
++		let pendingRead;
  		const buildModelCallContent = () => {
  			const parts = [];
  			if (stepText) parts.push({
-@@ -1947,8 +1952,10 @@ function runPrompt(input) {
+@@ -1947,8 +1962,10 @@ function runPrompt(input) {
  				});
  			}
  			if (!input.isTurnSuspending?.()) {
@@ -27,7 +37,29 @@ index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..8ac8d9b94f4b90b002400c262a6b0ac7
  				return control.submitToolResult(submission);
  			}
  			const toolCall = rawToolCallsByToolCallId.get(submission.toolCallId) ?? pendingResultsByToolCallId.get(submission.toolCallId) ?? pendingToolApprovals.find((approval) => approval.toolCallId === submission.toolCallId);
-@@ -2154,6 +2161,7 @@ function runPrompt(input) {
+@@ -2140,7 +2157,20 @@ function runPrompt(input) {
+ 					await pauseForHostInput(deferredPauseFinishStep);
+ 					return;
+ 				}
+-				const { value, done } = await reader.read();
++				pendingRead ??= reader.read();
++				let read;
++				if (deferredPauseFinishStep != null) {
++					let timer;
++					read = await Promise.race([pendingRead, new Promise((resolve) => {
++						timer = setTimeout(() => resolve(heldEcho), Math.max(0, deferredPauseDeadline - Date.now()));
++					})]).finally(() => clearTimeout(timer));
++					if (read === heldEcho) {
++						await pauseForHostInput(deferredPauseFinishStep);
++						return;
++					}
++				} else read = await pendingRead;
++				pendingRead = void 0;
++				const { value, done } = read;
+ 				if (done) {
+ 					releasePendingStopBoundary();
+ 					break;
+@@ -2154,6 +2184,7 @@ function runPrompt(input) {
  					hostToolCallIdsAwaitingEcho.delete(value.toolCallId);
  					submittedHostToolResults.delete(value.toolCallId);
  					pendingResultsByToolCallId.delete(value.toolCallId);
@@ -35,3 +67,11 @@ index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..8ac8d9b94f4b90b002400c262a6b0ac7
  				}
  				if (pendingStopBoundary != null) {
  					if (value.type === "finish") releasePendingStopBoundary();
+@@ -2191,6 +2222,7 @@ function runPrompt(input) {
+ 							await pauseForHostInput(value);
+ 							return;
+ 						}
++						if (deferredPauseFinishStep == null) deferredPauseDeadline = Date.now() + HOST_INPUT_ECHO_WAIT_MS;
+ 						deferredPauseFinishStep = value;
+ 						continue;
+ 					}
