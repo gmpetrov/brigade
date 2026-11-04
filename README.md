@@ -79,6 +79,7 @@ with a new hire.
 <picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/logos/github-dark.svg" /><img src=".github/assets/logos/github.svg" width="28" height="28" alt="GitHub" title="GitHub" /></picture>&nbsp;
 <img src=".github/assets/logos/stripe.svg" width="28" height="28" alt="Stripe" title="Stripe" />&nbsp;
 <img src=".github/assets/logos/revenuecat.svg" width="28" height="28" alt="RevenueCat" title="RevenueCat" />&nbsp;
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/logos/expo-dark.svg" /><img src=".github/assets/logos/expo.svg" width="28" height="28" alt="Expo" title="Expo" /></picture>&nbsp;
 <img src=".github/assets/logos/notion.svg" width="28" height="28" alt="Notion" title="Notion" />&nbsp;
 <img src=".github/assets/logos/linear.svg" width="28" height="28" alt="Linear" title="Linear" />&nbsp;
 <img src=".github/assets/logos/atlassian.svg" width="28" height="28" alt="Atlassian" title="Atlassian" />&nbsp;

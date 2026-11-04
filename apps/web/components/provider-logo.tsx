@@ -12,7 +12,8 @@ export type ProviderKind = Connection['kind']
  * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
  * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
  * bars on black, OpenRouter's arrows on white, PostHog's ramps and hog, DataForSEO's Q on blue
- * and yellow, Ahrefs' a on blue, RevenueCat's R and C on coral, GitHub's
+ * and yellow, Ahrefs' a on blue, RevenueCat's R and C on coral, Expo's chevron (in the text
+ * color), GitHub's
  * Invertocat (in the text color, so it reads in both themes), Brigade's own Email App as an
  * envelope on a violet tile, and a generic webhook mark for custom apps.
  */
@@ -398,6 +399,13 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#fdfeff"
           d="M26.7831 20.5777C26.7831 22.8454 25.6341 23.4684 24.7691 23.8872C22.5608 24.9575 19.023 23.7125 15.2629 23.3336C11.8583 22.8884 8.48163 22.5951 7.95681 23.3586C7.7595 23.552 7.71756 24.1749 7.95681 24.4289C8.66275 25.1781 10.5038 24.6558 11.8074 24.4196C12.2119 24.3559 12.6208 24.5062 12.8799 24.8138C13.1391 25.1215 13.2093 25.5398 13.064 25.9112C12.9187 26.2826 12.58 26.5507 12.1756 26.6144C11.5862 26.704 10.9906 26.7493 10.3941 26.75C9.12425 26.75 7.52763 26.5309 6.62144 25.567C6.1702 25.0875 5.70791 24.2362 6.06419 22.9041C6.74219 20.3796 10.8004 21.0032 15.5021 21.4771C18.7756 21.8067 22.3269 22.9041 23.7459 21.8964C24.1076 21.6396 24.7823 21.0639 24.4186 20.5777C24.0549 20.0917 23.4596 20.3552 22.6774 20.3552C18.7595 20.3552 16.4524 17.8314 16.4524 13.6198C16.4529 10.4557 17.761 8.24325 19.8929 7.19312C20.8193 6.73681 21.9013 6.5 23.0992 6.5C24.1433 6.5 25.2044 6.68319 25.8819 7.08537C26.3029 7.6895 26.4861 8.76906 26.3941 9.57506C25.5154 9.15413 24.71 8.93431 23.6668 8.93431C21.0853 8.93431 19.3092 10.2524 19.3092 13.4366C19.3092 16.6207 21.0666 17.8843 23.5382 17.8843C24.2418 17.8772 25.1938 17.7919 26.3941 17.6283C26.6534 18.5936 26.7831 19.5767 26.7831 20.5777Z"
         />
+      </svg>
+    )
+  if (kind === 'expo')
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" {...common}>
+        {/* Expo's mark, black on Expo's own pages: in the text color, so it reads in both themes. */}
+        <path d="M0 20.084c.043.53.23 1.063.718 1.778.58.849 1.576 1.315 2.303.567.49-.505 5.794-9.776 8.35-13.29a.761.761 0 011.248 0c2.556 3.514 7.86 12.785 8.35 13.29.727.748 1.723.282 2.303-.567.57-.835.728-1.42.728-2.046 0-.426-8.26-15.798-9.092-17.078-.8-1.23-1.044-1.498-2.397-1.542h-1.032c-1.353.044-1.597.311-2.398 1.542C8.267 3.991.33 18.758 0 19.77Z" />
       </svg>
     )
   if (kind === 'stripe')

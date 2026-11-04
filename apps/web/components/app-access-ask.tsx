@@ -55,6 +55,7 @@ export const APP_NAMES: Record<string, string> = {
   dataforseo: 'DataForSEO',
   ahrefs: 'Ahrefs',
   revenuecat: 'RevenueCat',
+  expo: 'Expo',
 }
 
 /** Where each App signs in. */
@@ -82,6 +83,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 
   posthog: 'mcp',
   dataforseo: 'mcp',
   ahrefs: 'mcp',
+  expo: 'mcp',
   // A key pasted in the ticket (app-key-form.tsx).
   revenuecat: 'key',
 }

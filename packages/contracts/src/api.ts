@@ -148,6 +148,7 @@ export const ConnectMcp = z.object({
     'posthog',
     'dataforseo',
     'ahrefs',
+    'expo',
     'stripe',
   ]),
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */

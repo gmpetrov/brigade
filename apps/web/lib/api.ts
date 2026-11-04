@@ -832,6 +832,7 @@ export type Connection = {
     | 'dataforseo'
     | 'ahrefs'
     | 'revenuecat'
+    | 'expo'
     | 'email'
     | 'mcp'
   label: string

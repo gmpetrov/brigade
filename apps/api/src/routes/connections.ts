@@ -109,6 +109,7 @@ type OAuthState = {
     | 'posthog'
     | 'dataforseo'
     | 'ahrefs'
+    | 'expo'
     | 'stripe'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
@@ -283,6 +284,7 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   dataforseo: true,
   ahrefs: true,
   revenuecat: true,
+  expo: true,
   email: !unavailable('email'),
   mcp: true,
   webhook: true,
