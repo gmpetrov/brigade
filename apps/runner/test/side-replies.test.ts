@@ -12,6 +12,8 @@ import type { AgentEvent, ThreadSpec } from '@brigade/contracts'
 const home = await mkdtemp(join(tmpdir(), 'brigade-side-'))
 process.env.BRIGADE_HOME = home
 process.env.BRIGADE_SIDE_STEER_MS = '150'
+// Side replies answer on the side only when turned on; otherwise the turn takes the message.
+process.env.BRIGADE_SIDE_REPLIES = '1'
 await mkdir(join(home, 'state'), { recursive: true })
 const { Threads } = await import('../src/threads.js')
 

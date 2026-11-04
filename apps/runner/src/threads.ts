@@ -84,6 +84,16 @@ const aborted = (signal: AbortSignal) =>
   new Promise<void>((resolve) =>
     signal.aborted ? resolve() : signal.addEventListener('abort', () => resolve(), { once: true }),
   )
+/**
+ * A person's message to the teammate whose turn runs goes into that turn at its next step, as in
+ * a chat, and as Claude Code does in a terminal: the turn's reply covers every message written
+ * during it, rather than the turn answering only the first while the others wait for turns of
+ * their own (Nov 4: the member compared it with a chat bot, which answers them together). Side
+ * replies, which answered such a message on the side instead, only with BRIGADE_SIDE_REPLIES=1.
+ */
+const SIDE_REPLIES = process.env.BRIGADE_SIDE_REPLIES === '1'
+/** How long a message waits for its teammate's turn to take it, the turn's session starting. */
+const AUTO_STEER_WAIT_MS = Number(process.env.BRIGADE_AUTO_STEER_WAIT_MS) || 60_000
 /** Park an idle harness session after this long; the next message resumes it. */
 const PARK_AFTER_MS = 5 * 60_000
 /**
@@ -351,6 +361,8 @@ type Thread = {
   messages: Map<string, Message>
   /** Side replies, one after another: each forks the conversation as the turn left it. */
   sides: Promise<void>
+  /** Messages going into the running turn on their own (autoSteer), one after the other, in order. */
+  steers: Promise<void>
   /**
    * Per teammate, what its side replies said during its running turn, which that turn has not
    * heard: the next side reply, and a message passed to the turn, are told it. Its next turn
@@ -560,10 +572,13 @@ export class Threads {
       if (message.state === 'queued') {
         if (command.steer) void this.steer(thread, message)
         else if (this.waiting(thread, message)) this.steerQueued(thread, spec.teammate.id)
-        // Its teammate is busy with its turn: a copy of its conversation answers now, unless
-        // one did already and its sender wants it run after all.
-        else if (!command.settled && this.sides(thread, message))
+        // Its teammate is busy with its turn: the turn takes it at its next step (AUTO_STEER),
+        // or with side replies on, a copy of its conversation answers now, unless one did
+        // already and its sender wants it run after all.
+        else if (!command.settled && SIDE_REPLIES && this.sides(thread, message))
           void this.sideReply(thread, message)
+        else if (!command.settled && !SIDE_REPLIES && this.autoSteers(thread, message))
+          thread.steers = thread.steers.then(() => this.autoSteer(thread, message))
       }
       if (command.nameThread !== undefined) void this.name(spec, command.text, command.nameThread)
       return
@@ -1414,7 +1429,12 @@ export class Threads {
         const joined = await this.joinQueued(thread, message)
         return joined ?? upTo
       },
-      () => message.joined === true,
+      () =>
+        // Read already: in an earlier turn, steered into one, answered on the side or cancelled.
+        message.joined === true ||
+        message.state === 'steered' ||
+        message.state === 'answered' ||
+        message.state === 'cancelled',
     )
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
@@ -1740,15 +1760,57 @@ export class Threads {
   }
 
   /**
-   * Give a queued message to its teammate's running turn, which reads it at its
-   * next step. When that cannot be done it stays queued, with why.
+   * Whether a message goes into its teammate's running turn on its own (SIDE_REPLIES off): a
+   * person's, to one teammate, whose turn runs on this computer now (not waiting for a slot),
+   * nobody else having control of the thread.
    */
-  private async steer(thread: Thread, message: Message) {
+  private autoSteers(thread: Thread, message: Message) {
+    const spec = message.specs[0]!
+    return (
+      message.memberId !== null &&
+      message.specs.length === 1 &&
+      !thread.takeover &&
+      thread.running?.teammateId === spec.teammate.id &&
+      thread.slotWait?.teammateId !== spec.teammate.id
+    )
+  }
+
+  /**
+   * A person's message goes into the running turn as soon as it can take one: its session may
+   * still be starting, or its prompt on its way. Until AUTO_STEER_WAIT_MS has gone by, the turn
+   * ended, or the message was read, cancelled or steered meanwhile; then it simply waits for the
+   * next turn, which reads it with the others queued (joinQueued). Nothing is said of it.
+   */
+  private async autoSteer(thread: Thread, message: Message) {
+    const spec = message.specs[0]!
+    const turnId = thread.running?.turnId
+    const seat = this.harness(thread, spec)
+    const until = Date.now() + AUTO_STEER_WAIT_MS
+    // A session that can take messages but refuses this one a few times won't take it.
+    let refused = 0
+    for (;;) {
+      if (message.state !== 'queued' || thread.running?.turnId !== turnId || Date.now() >= until)
+        return
+      if (seat.harness.forkable) {
+        if (await this.steer(thread, message, true)) return
+        if (++refused >= 5) return
+      }
+      await sleep(refused ? 1_000 : 250)
+    }
+  }
+
+  /**
+   * Give a queued message to its teammate's running turn, which reads it at its
+   * next step. When that cannot be done it stays queued, with why; `quietly`
+   * (autoSteer), without a word, to be tried again. Resolves to whether it went in.
+   */
+  private async steer(thread: Thread, message: Message, quietly = false): Promise<boolean> {
     const spec = message.specs[0]!
     const name = spec.teammate.name
     // Given to the turn now: a side reply still under way has nothing left to answer.
     if (message.side || message.steerTimer) await this.endSide(thread, message)
     if (message.state !== 'queued') {
+      if (quietly) return false
       if (message.state === 'held' && !message.upTo)
         this.emitQueued(
           spec.sessionId,
@@ -1757,20 +1819,26 @@ export class Threads {
             ? HELD_FOR_HANDBACK
             : `${name} is waiting for an answer. It runs once someone answers.`,
         )
-      return
+      return false
     }
-    if (thread.slotWait?.teammateId === spec.teammate.id)
-      return this.emitQueued(
-        spec.sessionId,
-        message,
-        `${name} is waiting for ${turnsRunning(thread.slotWait.running)} to end, so it runs when its turn comes.`,
-      )
-    if (thread.running?.teammateId !== spec.teammate.id)
-      return this.emitQueued(
-        spec.sessionId,
-        message,
-        `${name} is not working on a turn right now, so it runs when its turn comes.`,
-      )
+    if (thread.slotWait?.teammateId === spec.teammate.id) {
+      if (!quietly)
+        this.emitQueued(
+          spec.sessionId,
+          message,
+          `${name} is waiting for ${turnsRunning(thread.slotWait.running)} to end, so it runs when its turn comes.`,
+        )
+      return false
+    }
+    if (thread.running?.teammateId !== spec.teammate.id) {
+      if (!quietly)
+        this.emitQueued(
+          spec.sessionId,
+          message,
+          `${name} is not working on a turn right now, so it runs when its turn comes.`,
+        )
+      return false
+    }
     const seat = this.harness(thread, spec)
     message.state = 'steering'
     let done!: () => void
@@ -1788,14 +1856,17 @@ export class Threads {
       const log = await thread.log
       log.seen[spec.teammate.id] = Math.max(log.seen[spec.teammate.id] ?? 0, end)
       void this.saveLog(spec.sessionId)
+      return true
     } catch (error) {
       message.state = 'queued'
+      if (quietly) return false
       console.warn(`thread ${spec.sessionId}: could not steer: ${String(error)}`)
       this.emitQueued(
         spec.sessionId,
         message,
         `${name} could not take it during this turn, so it runs after it.`,
       )
+      return false
     } finally {
       message.steering = undefined
       done()
@@ -2181,6 +2252,7 @@ export class Threads {
         controller: undefined,
         messages: new Map(),
         sides: Promise.resolve(),
+        steers: Promise.resolve(),
         sideLog: new Map(),
         memorizing: false,
         waiting: new Map(),
