@@ -116,3 +116,9 @@ the plan, while billing is on:
   costs nothing and stays open.
 
 Addresses already on keep receiving: their mail waits in the Inbox until the plan comes back.
+
+## Dictation
+
+Dictation in the composers (docs/dictation.md) comes with Brigade Cloud too, as the provider charges
+for each second heard: without the plan, while billing is on, the microphone opens Settings ›
+Billing and `POST /api/dictation` answers 402 (`requireDictation` in `src/dictation.ts`).
