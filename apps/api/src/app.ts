@@ -24,6 +24,7 @@ import { connections } from './routes/connections.js'
 import { email } from './routes/email.js'
 import { errors } from './routes/errors.js'
 import { inbox } from './routes/inbox.js'
+import { dictation } from './routes/dictation.js'
 import { credentials } from './routes/credentials.js'
 import { designs, designSystems } from './routes/designs.js'
 import { security } from './routes/security.js'
@@ -169,6 +170,7 @@ app.route('/api/usage', usage)
 app.route('/api/connections', connections)
 app.route('/api/email', email)
 app.route('/api/inbox', inbox)
+app.route('/api/dictation', dictation)
 app.route('/api/credentials', credentials)
 app.route('/api/security', security)
 app.route('/api/tickets', tickets)

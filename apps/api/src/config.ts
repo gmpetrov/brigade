@@ -150,6 +150,11 @@ const Env = z.object({
    * events email.received, email.sent, email.delivered, email.bounced and email.failed.
    */
   RESEND_WEBHOOK_SECRET: z.string().optional(),
+  /**
+   * Dictation in the composers (src/dictation.ts): a Groq API key, for Whisper Large v3 Turbo.
+   * It comes with Brigade Cloud while billing is on. Without it, no microphone button.
+   */
+  GROQ_API_KEY: z.string().optional(),
   /** The domain agents' addresses are on. */
   MAIL_DOMAIN: z.string().default('mails.brigade.lol'),
   /**
