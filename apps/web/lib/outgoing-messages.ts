@@ -4,41 +4,13 @@
 // and this one opens again, as a reply being written does (lib/reply-drafts.ts).
 import { useCallback, useSyncExternalStore } from 'react'
 import type { Outgoing } from '@/components/queued-messages'
-import type { Item, QueuedMessage } from '@/components/thread-view'
-
-/** How long a message sent during a turn waits in its Aside for its side reply to start. */
-export const ASIDE_GRACE_MS = 6_000
 
 /**
- * The messages sent during their teammate's turn that show in its Aside, their reply coming,
- * until the thread shows their own (message.side): not yet queued, or queued since a moment
- * (or behind an aside still answered, which each waits for). One queued past that without a
- * side reply (an older runner, no memory to spare) waits in the queue, as any message does.
+ * Shown in the thread, where it goes, as the person's message: on its way, queued behind the
+ * running turn, or not through. Only one going with its thread to another computer shows above
+ * the composer instead, until the thread is there.
  */
-export function asidesOnTheirWay(
-  outgoing: Outgoing[],
-  items: Item[],
-  queued: QueuedMessage[],
-  seen: Set<string>,
-  now: number,
-) {
-  const sided = new Set<string>()
-  let answering = false
-  for (const i of items)
-    if (i.kind === 'user' && i.side) {
-      sided.add(i.side.messageId)
-      if (i.side.status === 'answering') answering = true
-    }
-  const waiting = new Set(queued.map((q) => q.messageId))
-  return outgoing.filter(
-    (o) =>
-      o.aside &&
-      (o.state === 'sending' || o.state === 'sent') &&
-      !sided.has(o.messageId) &&
-      (!seen.has(o.messageId) ||
-        (waiting.has(o.messageId) && (answering || now - o.at < ASIDE_GRACE_MS))),
-  )
-}
+export const inThread = (m: Outgoing) => !m.movingTo && m.state !== 'moving'
 
 const NONE: Outgoing[] = []
 const lists = new Map<string, Outgoing[]>()
