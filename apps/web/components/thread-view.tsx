@@ -1709,16 +1709,18 @@ function StepTicker({ label }: { label: string }) {
   }, [label, shown.label])
   return (
     <span className="relative block min-w-0 overflow-hidden" title={shown.label}>
-      <span key={shown.n} className={cn('text-shimmer block truncate', shown.n > 0 && 'step-in')}>
-        {shown.label}
+      {/* Moving, cut and shimmering on three nested spans: `truncate` fades a cut end with an
+          animation of its own (globals.css), which would replace any other on the same span. */}
+      <span key={shown.n} className={cn('block', shown.n > 0 && 'step-in')}>
+        <span className="block truncate">
+          <span className="text-shimmer">{shown.label}</span>
+        </span>
       </span>
       {shown.previous !== undefined && (
-        <span
-          key={`out${shown.n}`}
-          className="step-out text-shimmer absolute inset-x-0 top-0 block truncate"
-          aria-hidden
-        >
-          {shown.previous}
+        <span key={`out${shown.n}`} className="step-out absolute inset-x-0 top-0 block" aria-hidden>
+          <span className="block truncate">
+            <span className="text-shimmer">{shown.previous}</span>
+          </span>
         </span>
       )}
     </span>
