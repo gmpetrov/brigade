@@ -35,7 +35,7 @@ Object.assign(BoatApi.prototype, {
 const { env } = await import('../src/config.js')
 const { app } = await import('../src/app.js')
 const { flushAnalytics } = await import('../src/analytics.js')
-const { desktopUrl, DESKTOP_PREPARING, DESKTOP_PREPARING_REPORT_MS } =
+const { desktopUrl, DESKTOP_PREPARING, DESKTOP_PREPARING_GAP_MS, DESKTOP_PREPARING_REPORT_MS } =
   await import('../src/cloud.js')
 
 const sent: Record<string, any>[] = []
@@ -71,7 +71,7 @@ function route() {
   return () => app.request(path, { method: 'POST' })
 }
 // Each test's own computer; routes are added before the first request.
-const computers = [route(), route(), route()]
+const computers = [route(), route(), route(), route()]
 
 test('a desktop still being set up is a 503 to ask again for, and opens once it is up', async () => {
   env.POSTHOG_KEY = 'phc_test_key'
@@ -118,7 +118,12 @@ test('a desktop still not set up after 10 minutes is sent once', async () => {
   mock.timers.enable({ apis: ['Date'], now: 1_000_000 })
   const open = computers[2]!
   assert.equal((await open()).status, 503)
-  mock.timers.tick(DESKTOP_PREPARING_REPORT_MS - 1)
+  // The dashboard asks every few seconds meanwhile.
+  for (let waited = 0; waited < DESKTOP_PREPARING_REPORT_MS - 30_000; waited += 30_000) {
+    mock.timers.tick(30_000)
+    assert.equal((await open()).status, 503)
+  }
+  mock.timers.tick(29_999)
   assert.equal((await open()).status, 503)
   assert.deepEqual(await exceptions(), [])
   mock.timers.tick(1)
@@ -128,4 +133,18 @@ test('a desktop still not set up after 10 minutes is sent once', async () => {
   const sentNow = await exceptions()
   assert.equal(sentNow.length, 1)
   assert.match(sentNow[0]!.properties.$exception_list[0].value, /still being prepared after 10/)
+})
+
+test('a desktop asked for again after a long gap starts a new wait, not a stuck one', async () => {
+  env.POSTHOG_KEY = 'phc_test_key'
+  boat.answer = async () => ({ provisioning: true })
+  mock.timers.enable({ apis: ['Date'], now: 1_000_000 })
+  const open = computers[3]!
+  assert.equal((await open()).status, 503)
+  // The panel was closed for hours; the computer stopped and resumed meanwhile.
+  mock.timers.tick(DESKTOP_PREPARING_REPORT_MS + DESKTOP_PREPARING_GAP_MS + 1)
+  assert.equal((await open()).status, 503)
+  mock.timers.tick(DESKTOP_PREPARING_GAP_MS)
+  assert.equal((await open()).status, 503)
+  assert.deepEqual(await exceptions(), [])
 })

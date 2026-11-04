@@ -480,11 +480,20 @@ export async function providerReason(error: unknown) {
  */
 const desktopRequests = new Map<string, Promise<string | null>>()
 
-/** Desktops still being set up, by computer: since when, and whether that was reported. */
-const desktopsPreparing = new Map<string, { since: number; reported: boolean }>()
+/**
+ * Desktops still being set up, by computer: since when, when last found so, and whether that
+ * was reported.
+ */
+const desktopsPreparing = new Map<string, { since: number; last: number; reported: boolean }>()
 
 /** A desktop still being set up after this long is reported, once (desktopUrl). */
 export const DESKTOP_PREPARING_REPORT_MS = 10 * 60_000
+
+/**
+ * Asked for again within this, a desktop still being set up is the same wait (the dashboard asks
+ * every few seconds); after a longer gap (the panel was closed), its wait starts over.
+ */
+export const DESKTOP_PREPARING_GAP_MS = 2 * 60_000
 
 export const DESKTOP_PREPARING = 'Preparing the desktop…'
 
@@ -513,9 +522,12 @@ async function askDesktop(ref: ComputerRef, key: string) {
   } catch (error) {
     if (error instanceof DesktopNotReady) {
       // Still being set up (a computer just started or resumed, a slow provider): not a failure.
-      const preparing = desktopsPreparing.get(key) ?? { since: Date.now(), reported: false }
-      desktopsPreparing.set(key, preparing)
-      if (!preparing.reported && Date.now() - preparing.since >= DESKTOP_PREPARING_REPORT_MS) {
+      const now = Date.now()
+      let preparing = desktopsPreparing.get(key)
+      if (!preparing || now - preparing.last > DESKTOP_PREPARING_GAP_MS)
+        desktopsPreparing.set(key, (preparing = { since: now, last: now, reported: false }))
+      preparing.last = now
+      if (!preparing.reported && now - preparing.since >= DESKTOP_PREPARING_REPORT_MS) {
         preparing.reported = true
         captureError(
           new Error(
