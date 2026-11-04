@@ -130,6 +130,14 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   days goes, and so does another bridge version's file left 3 days. In the home, not a shared folder: the schemas
   become tool descriptions, so another user must not be able to plant them. Tested in
   `apps/runner/test/claude-bridge-tools.test.ts`.
+- **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
+  ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
+  the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages
+  take seven turns one after the other (3 min 42 s in a test on Nov 4), each answering messages already outdated. It
+  stops at the first message that cannot go with them (another teammate's, one held for a person, one being steered),
+  so the thread keeps the order they were written in. The dashboard shows queued messages at the end of the thread,
+  under the running turn, as the person's messages marked Queued: a message no longer moves between an Aside it was
+  guessed to get, a card above the composer and the thread.
 - **Background work holds the turn; sub-agents work for the thread.** A Claude Code teammate's background work
   (sub-agents started with the Agent tool, shells and Monitors run in the background) reports back in a turn Claude
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process

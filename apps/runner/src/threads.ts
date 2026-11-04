@@ -86,6 +86,16 @@ const aborted = (signal: AbortSignal) =>
 const PARK_AFTER_MS = 5 * 60_000
 /** How much of what others said a teammate is told at the start of its turn. */
 const CATCH_UP_CHARS = 100_000
+/**
+ * The most text queued messages read together in one turn have (joinQueued): half of what a
+ * turn is told, so what others said since its last turn still fits beside them.
+ */
+const JOIN_CHARS = CATCH_UP_CHARS / 2
+/**
+ * The most queued messages read together in one turn: well under LOG_ENTRIES, which the log
+ * keeps, so showing them all never drops the first before its turn is told it.
+ */
+const JOIN_MESSAGES = 20
 const LOG_ENTRIES = 200
 /** Teammates handing the thread to one another stop after this many handoffs without a member. */
 const MAX_HANDOFFS = 40
@@ -269,6 +279,8 @@ type Message = {
   upTo?: Promise<number>
   /** Held while a person had control: only the hand back releases it (releaseAllHeld). */
   takenOver?: boolean
+  /** Read in the turn of a message queued before it (joinQueued): no turn of its own. */
+  joined?: boolean
 }
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -964,12 +976,15 @@ export class Threads {
    * worked out when its turn comes, so it sees the replies of those before it.
    * Lost: a thread the API had in progress when this runner connected (see pickUp).
    * `prepare` runs when the turn is about to start: it gives the log's end to
-   * tell up to, or null when the turn no longer happens.
+   * tell up to, or null when the turn no longer happens; with the spec to run on
+   * when messages queued after this one go into its turn (joinQueued). `moot`
+   * says, before the turn waits for a slot or memory, that it no longer happens.
    */
   private enqueue(
     spec: ThreadSpec,
     input: ThreadInput | 'prompt' | Lost | Retry,
-    prepare?: () => Promise<number | undefined | null>,
+    prepare?: () => Promise<number | undefined | null | { upTo: number; spec: ThreadSpec }>,
+    moot?: () => boolean,
   ) {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
@@ -994,6 +1009,8 @@ export class Threads {
       try {
         // Taken over while waiting in the queue: the turn does not happen.
         if (thread.takeover) return
+        // Its message was read in an earlier turn: nothing to wait for.
+        if (moot?.()) return
         // Every slot taken: the thread shows its teammate waiting, with how many turns run.
         await this.acquire((running) => {
           thread.slotWait = { teammateId: me, running }
@@ -1011,9 +1028,13 @@ export class Threads {
         if (!counted || thread.takeover) return
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
-        const upTo = prepare ? await prepare() : undefined
+        const prepared = prepare ? await prepare() : undefined
         started()
-        if (upTo === null) return
+        if (prepared === null) return
+        // Messages queued after its own go in too: it runs on the spec of the last of them,
+        // which has the thread as it is now, every file sent with them included.
+        const upTo = typeof prepared === 'object' ? prepared.upTo : prepared
+        if (typeof prepared === 'object') spec = prepared.spec
         // Set when the turn before it ended, after this one was queued: it would park this one.
         clearTimeout(seat.parkTimer)
         seat.parkTimer = undefined
@@ -1326,38 +1347,82 @@ export class Threads {
   private enqueueMessage(thread: Thread, message: Message) {
     const [first, ...then] = message.specs
     const sessionId = first!.sessionId
-    this.enqueue(first!, 'prompt', async () => {
-      await message.steering
-      // Its turn came: the teammate answers it itself, rather than a copy on the side.
-      await this.endSide(thread, message)
-      // Settled on the side: no turn of its own.
-      if (message.state !== 'queued' && message.state !== 'shown') return null
-      // Its teammate waits on a person's approval: the message runs once they decide
-      // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
-      if (await this.harness(thread, first!).harness.holdsMessages()) {
-        const shown = message.state === 'shown'
-        message.state = 'held'
-        thread.messages.set(message.id, message)
-        if (!shown) this.emitQueued(sessionId, message)
-        else
-          this.options.emit(sessionId, {
-            at: new Date().toISOString(),
-            type: 'raw',
-            source: 'runner',
-            value: `${first!.teammate.name} reads this message once the pending request is answered.`,
-          })
-        return null
-      }
-      if (!message.upTo) return this.show(thread, message)
-      message.state = 'shown'
-      thread.messages.delete(message.id)
-      return message.upTo
-    })
+    this.enqueue(
+      first!,
+      'prompt',
+      async () => {
+        await message.steering
+        // Its turn came: the teammate answers it itself, rather than a copy on the side.
+        await this.endSide(thread, message)
+        // Settled on the side: no turn of its own.
+        if (message.state !== 'queued' && message.state !== 'shown') return null
+        // Its teammate waits on a person's approval: the message runs once they decide
+        // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
+        if (await this.harness(thread, first!).harness.holdsMessages()) {
+          const shown = message.state === 'shown'
+          message.state = 'held'
+          thread.messages.set(message.id, message)
+          if (!shown) this.emitQueued(sessionId, message)
+          else
+            this.options.emit(sessionId, {
+              at: new Date().toISOString(),
+              type: 'raw',
+              source: 'runner',
+              value: `${first!.teammate.name} reads this message once the pending request is answered.`,
+            })
+          return null
+        }
+        if (!message.upTo) await this.show(thread, message)
+        else {
+          message.state = 'shown'
+          thread.messages.delete(message.id)
+        }
+        const upTo = await message.upTo!
+        // The messages queued right behind it for the same teammate are read with it.
+        const joined = await this.joinQueued(thread, message)
+        return joined ?? upTo
+      },
+      () => message.joined === true,
+    )
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
       this.enqueue(next, 'prompt', async () =>
         message.state === 'held' || message.state === 'cancelled' ? null : undefined,
       )
+  }
+
+  /**
+   * The messages queued right behind this one, for the same teammate, go into its turn: shown
+   * now, in order, and read together, rather than each in a turn of its own after the other.
+   * Stops at the first that cannot, so the thread keeps the order they were written in:
+   * another teammate's, one held for a person, one being steered or already in the turn. Never
+   * past a message to several teammates: the next ones answer it before this one reads more.
+   * Never past JOIN_CHARS together, nor JOIN_MESSAGES: the turn is told the thread within
+   * CATCH_UP_CHARS, from a log of LOG_ENTRIES, either of which would drop the earliest of them
+   * (one too long goes in a turn of its own, as before).
+   * Gives the log's end after the last, with its spec (the thread as it is now), or nothing.
+   */
+  private async joinQueued(thread: Thread, message: Message) {
+    if (message.specs.length > 1) return undefined
+    const spec = message.specs[0]!
+    const teammateId = spec.teammate.id
+    let chars = this.promptText(message, spec).length
+    let count = 1
+    let last: { upTo: number; spec: ThreadSpec } | undefined
+    for (const next of [...thread.messages.values()]) {
+      if (next === message || next.joined) continue
+      if (next.state !== 'queued' || next.specs[0]!.teammate.id !== teammateId) break
+      chars += this.promptText(next, next.specs[0]!).length
+      if (chars > JOIN_CHARS || ++count > JOIN_MESSAGES) break
+      // A side reply under way, or about to pass it to the turn, ends: the turn reads it.
+      await this.endSide(thread, next)
+      // Cancelled, or settled on the side, meanwhile.
+      if (next.state !== 'queued') continue
+      next.joined = true
+      last = { upTo: await this.show(thread, next), spec: next.specs[0]! }
+      if (next.specs.length > 1) break
+    }
+    return last
   }
 
   /**
