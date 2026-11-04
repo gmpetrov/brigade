@@ -64,7 +64,7 @@ import { members } from './routes/members.js'
 import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope, signInFirst } from './scope.js'
 import { serverTiming } from './timing.js'
-import { captureError } from './error-tracking.js'
+import { captureError, isTracked } from './error-tracking.js'
 import { noteFailure } from './ops/failures.js'
 import { openAlerts } from './ops/alerts.js'
 import { safeEqual } from './ops/send.js'
@@ -288,7 +288,8 @@ app.get(
 app.onError((error, c) => {
   if (error instanceof HTTPException) {
     // A failure said on purpose (a provider that did not answer…): sent too, as handled.
-    if (error.status >= 500)
+    // One shared by several requests (a provider's failed call, src/cloud.ts) was sent once.
+    if (error.status >= 500 && !isTracked(error))
       captureError(error, { kind: `api:${c.req.method} ${c.req.routePath}`, handled: true })
     return c.json({ error: error.message }, error.status)
   }

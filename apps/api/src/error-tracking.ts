@@ -133,6 +133,18 @@ function send(exceptions: Exception[], where: Where) {
   })
 }
 
+/** Errors already sent, or never to be: the API's error handler does not send them (again). */
+const tracked = new WeakSet<object>()
+
+/** Mark `error` as sent already (or not to be sent), for an error thrown to several requests. */
+export function markTracked<T extends object>(error: T) {
+  tracked.add(error)
+  return error
+}
+
+export const isTracked = (error: unknown) =>
+  typeof error === 'object' && error !== null && tracked.has(error)
+
 /** An error the API met, to PostHog. Never throws. */
 export function captureError(
   error: unknown,

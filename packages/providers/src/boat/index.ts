@@ -1,18 +1,12 @@
 // boat (https://boat.dev): persistent Ubuntu VMs with snapshots on stop.
+import { BoatApi, Configuration, execCommand, waitUntilReady, type Middleware } from '@boatdev/sdk'
 import {
-  BoatApi,
-  Configuration,
-  execCommand,
-  waitForDesktop,
-  waitUntilReady,
-  type Middleware,
-} from '@boatdev/sdk'
-import type {
-  ComputerProvider,
-  ComputerRef,
-  ComputerSize,
-  ComputerStatus,
-  RestoreState,
+  DesktopNotReady,
+  type ComputerProvider,
+  type ComputerRef,
+  type ComputerSize,
+  type ComputerStatus,
+  type RestoreState,
 } from '../types.js'
 
 const PROVIDER = 'boat'
@@ -29,6 +23,14 @@ const onWorkers = globalThis.navigator?.userAgent === 'Cloudflare-Workers'
 export const BOAT_REQUEST_MS = 60_000
 /** A command's own time limit (its timeoutSeconds) plus this, for boat to answer once it ends. */
 export const BOAT_COMMAND_GRACE_MS = 60_000
+
+/**
+ * How long desktopUrl waits for boat to set a desktop up, asking every `everyMs`. The SDK's own
+ * waitForDesktop waits 5 minutes: on Nov 4, boat kept a running computer's desktop "provisioning"
+ * for longer, and each request for it held its caller 5 minutes before failing. Past this wait,
+ * DesktopNotReady: the dashboard asks again (each ask is cheap) and opens it once it is up.
+ */
+export const BOAT_DESKTOP_WAIT = { forMs: 25_000, everyMs: 2_000 }
 
 /**
  * How long a request to boat may take, or null for none. Without a limit, a request boat never
@@ -95,8 +97,12 @@ export function createBoatProvider(options: {
    * when the API is gone. null: none. Trial accounts require <= 7200.
    */
   autoStopSeconds?: number | null
+  /** Tests: the fetch to use, and a shorter desktop wait. */
+  send?: typeof fetch
+  desktopWait?: { forMs: number; everyMs: number }
 }): ComputerProvider {
-  const boat = boatClient(options.apiKey, options.basePath)
+  const boat = boatClient(options.apiKey, options.basePath, options.send)
+  const desktopWait = options.desktopWait ?? BOAT_DESKTOP_WAIT
 
   return {
     async create(spec) {
@@ -154,8 +160,16 @@ export function createBoatProvider(options: {
     },
 
     async desktopUrl(ref) {
-      const desktop = await waitForDesktop(boat, idOf(ref))
-      return desktop.desktopUrl ?? null
+      const sandboxId = idOf(ref)
+      // boat sets VNC up on the first request after a boot (`provisioning` until it is ready).
+      const deadline = Date.now() + desktopWait.forMs
+      for (;;) {
+        const desktop = await boat.desktop({ sandboxId, vnc: 1, desktopRequest: {} })
+        if (desktop.desktopUrl && !desktop.provisioning) return desktop.desktopUrl
+        if (Date.now() + desktopWait.everyMs > deadline)
+          throw new DesktopNotReady(desktop.message || undefined)
+        await new Promise((resolve) => setTimeout(resolve, desktopWait.everyMs))
+      }
     },
 
     async hostPort(ref, port) {
