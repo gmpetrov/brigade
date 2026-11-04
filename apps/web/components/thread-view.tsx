@@ -148,7 +148,14 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
-import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
+import {
+  ChildrenWorking,
+  isChildWorking,
+  ReportedThread,
+  reportNote,
+  StartedChild,
+  SubThreadsWorking,
+} from '@/components/thread-children'
 import { AsideGroup } from '@/components/aside-group'
 import { runningAsides } from '@/lib/aside-layout'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
@@ -2096,12 +2103,18 @@ function WorkingLine({
   since,
   steps,
   background,
+  teammate,
+  subThreads = [],
   children,
 }: {
   /** When the turn began; unset when how long it worked is not known or not to be said. */
   since?: number
   steps: ActivityItem[]
   background: BackgroundTask[]
+  /** Who works: named, with its avatar, when sub-threads hang under its line. */
+  teammate?: { id: string; name: string }
+  /** Its sub-threads at work, as branches under its line. */
+  subThreads?: ThreadChild[]
   children: React.ReactNode[]
 }) {
   const [now, setNow] = useState(() => Date.now())
@@ -2111,17 +2124,34 @@ function WorkingLine({
     return () => clearInterval(timer)
   }, [since])
   const ms = since === undefined ? 0 : now - since
-  if (!steps.length && !background.length && ms < 5_000) return null
+  // The parent of its sub-threads' lines shows at once: they would hang from nothing.
+  const tree = !!teammate && subThreads.some(isChildWorking)
+  if (!tree && !steps.length && !background.length && ms < 5_000) return null
   // Thinking is no step of its own: it shows under the line, uncounted.
   const count = steps.filter((item) => item.kind !== 'thinking').length
   return (
     <Collapsible className="flex min-w-0 flex-col text-sm">
-      <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground">
-        <span
-          className="mr-0.5 size-1.5 flex-none animate-pulse rounded-full bg-primary"
-          aria-hidden
-        />
-        <span className="flex-none text-foreground">Working</span>
+      <CollapsibleTrigger
+        className={cn(
+          'group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground',
+          tree && 'h-8 gap-2',
+        )}
+      >
+        {tree ? (
+          <>
+            <TeammateAvatar teammate={teammate!} className="size-5 flex-none" />
+            <span className="flex-none text-foreground">{teammate!.name}</span>
+            <span className="flex-none">Working</span>
+          </>
+        ) : (
+          <>
+            <span
+              className="mr-0.5 size-1.5 flex-none animate-pulse rounded-full bg-primary"
+              aria-hidden
+            />
+            <span className="flex-none text-foreground">Working</span>
+          </>
+        )}
         {count > 0 && <span className="flex-none">· {plural(count, '1 step', 'steps')}</span>}
         {background.length > 0 && (
           <span className="min-w-0 truncate">· {background.length} in background</span>
@@ -2133,6 +2163,7 @@ function WorkingLine({
           aria-hidden
         />
       </CollapsibleTrigger>
+      {tree && <SubThreadsWorking children={subThreads} />}
       <CollapsibleContent className="mt-2 ml-0.5 flex flex-col gap-2 border-l pl-3">
         <RecentSteps>{children}</RecentSteps>
         {background.map((task) => (
@@ -3002,6 +3033,9 @@ export function ThreadItems({
     : lastUser >= 0
       ? (items[lastUser] as Extract<Item, { kind: 'user' }>).at
       : undefined
+  // The running turn's line: its steps, its background work and its sub-threads at work under it.
+  const workingLine =
+    working && ((nodes.running !== undefined && !waitingFor) || background.length > 0)
   /** Who answered an Aside: the teammate of its first reply, else the thread's. */
   const asideTeammate = (is: number[]) => {
     const id = is
@@ -3087,12 +3121,14 @@ export function ThreadItems({
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
-      {working && ((nodes.running !== undefined && !waitingFor) || background.length > 0) && (
+      {workingLine && (
         <WorkingLine
           key="working"
           {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
           steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
           background={background}
+          {...(teammate ? { teammate } : {})}
+          subThreads={childThreads}
         >
           {nodes.live.map((i) => render(items[i]!, i))}
         </WorkingLine>
@@ -3114,6 +3150,10 @@ export function ThreadItems({
           {...(from !== undefined ? { since: from } : {})}
         />
       ) : null}
+      {/* Its turn runs without its Working line: its sub-threads at work hang from a line of their own. */}
+      {working && !workingLine && teammate && (
+        <ChildrenWorking children={childThreads} teammate={teammate} />
+      )}
     </div>
   )
 }
