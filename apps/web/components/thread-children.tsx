@@ -13,6 +13,7 @@ import { ChevronRight, Clock, CornerDownRight, CornerUpLeft, Eye, Send } from 'l
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from '@/components/markdown'
+import { TeammateAvatar } from '@/components/dashboard'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
@@ -352,35 +353,86 @@ export function StartedChild({
 const working = (c: ThreadChild) =>
   (c.status === 'starting' || c.status === 'running') && !c.tickets.length
 
+/** At work, without a ticket: its line hangs under its parent's, at the end of the conversation. */
+export const isChildWorking = working
+
 /** Shown at the end of the conversation, by ChildrenWorking or ChildrenWaiting. */
 export const atEnd = (c: ThreadChild) => working(c) || c.tickets.length > 0
 
 /**
- * The children at work, at the end of the conversation: a review run again, a child told
- * one more thing, a schedule's run. Each line goes once it stops, and its report follows.
+ * A child's branch: a line down from its parent's avatar, which the last one ends in a rounded
+ * elbow at its own row, as the sidebar draws child threads.
  */
-export function ChildrenWorking({ children }: { children: ThreadChild[] }) {
+const BRANCH =
+  'relative pl-3.5 before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:left-0 before:border-l before:border-border last:before:bottom-auto last:before:h-4 last:before:w-2 last:before:rounded-bl-lg last:before:border-b'
+
+/**
+ * The children at work, each a branch under the line above it (its parent's): who, what, a dot
+ * while it works. Each goes once it stops, and its report follows.
+ */
+export function SubThreadsWorking({ children }: { children: ThreadChild[] }) {
   const busy = children.filter(working)
   if (!busy.length) return null
   return (
-    <div className="mt-4 -mx-2 flex flex-col">
+    // The line starts under the centre of the parent's avatar (size-5).
+    <div className="ml-2.5 flex flex-col">
       {busy.map((child) => (
-        <Link
-          key={child.id}
-          href={`/app/threads/${child.id}`}
-          className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
-        >
-          <span className="flex size-4 shrink-0 items-center justify-center">
-            <span aria-hidden className="size-2 animate-pulse rounded-full bg-primary" />
-          </span>
-          <span className="shrink-0 text-muted-foreground">{child.teammate.name}</span>
-          <span className="min-w-0 flex-1 truncate font-medium">{child.title}</span>
-          <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs leading-none font-medium text-primary">
-            working
-          </span>
-          <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        </Link>
+        <div key={child.id} className={BRANCH}>
+          <Link
+            href={`/app/threads/${child.id}`}
+            className="flex h-8 min-w-0 items-center gap-2 rounded-lg px-1.5 text-sm hover:bg-accent"
+          >
+            <TeammateAvatar teammate={child.teammate} className="size-5 flex-none" />
+            <span className="shrink-0 text-foreground">{child.teammate.name}</span>
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">{child.title}</span>
+            <Hint label="Working">
+              <span
+                role="img"
+                aria-label="working"
+                className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary"
+              />
+            </Hint>
+            <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </div>
       ))}
+    </div>
+  )
+}
+
+/**
+ * The children at work while their parent's teammate is not: a line for the teammate, saying
+ * whom it waits for, and theirs as branches under it. While its turn runs, its Working line
+ * is their parent instead.
+ */
+export function ChildrenWorking({
+  children,
+  teammate,
+  className,
+}: {
+  children: ThreadChild[]
+  teammate: { id: string; name: string }
+  className?: string
+}) {
+  const busy = children.filter(working)
+  if (!busy.length) return null
+  const awaited = busy.filter((c) => c.awaited)
+  const status =
+    awaited.length === 1
+      ? `Waiting for ${awaited[0]!.teammate.name}`
+      : awaited.length > 1
+        ? `Waiting for ${awaited.length} sub-threads`
+        : busy.length === 1
+          ? '1 sub-thread working'
+          : `${busy.length} sub-threads working`
+  return (
+    <div className={cn('flex min-w-0 flex-col text-sm', className)}>
+      <div className="flex h-8 min-w-0 items-center gap-2">
+        <TeammateAvatar teammate={teammate} className="size-5 flex-none" />
+        <span className="shrink-0 text-foreground">{teammate.name}</span>
+        <span className="min-w-0 truncate text-muted-foreground">{status}</span>
+      </div>
+      <SubThreadsWorking children={busy} />
     </div>
   )
 }

@@ -1680,7 +1680,10 @@ export function ThreadConversation({
                     />
                   )}
                   {proposals.length > 0 && ticketCard(proposals, 'mt-4')}
-                  <ChildrenWorking children={t.children} />
+                  {/* While its turn runs, they hang under its Working line instead. */}
+                  {!busy && (
+                    <ChildrenWorking className="mt-4" children={t.children} teammate={t.teammate} />
+                  )}
                   <ChildrenWaiting children={t.children} />
                 </FileLinksProvider>
               </div>
