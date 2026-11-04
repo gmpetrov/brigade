@@ -1606,7 +1606,6 @@ export function ThreadConversation({
                         onLoad={(line) => loadGap(gap, line)}
                       />
                     )}
-                    childThreads={t.children}
                     {...(t.mayPrompt
                       ? {
                           onSideAction: (messageId: string, action: SideAction) =>

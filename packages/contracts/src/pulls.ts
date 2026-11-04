@@ -187,3 +187,24 @@ export function resolveConflictsNote(text: string) {
   const m = RESOLVE_MESSAGE.exec(text)
   return m ? { number: Number(m[1]), title: m[2]!, repository: m[3]!, base: m[4]! } : null
 }
+
+/**
+ * What a merge brings to the thread that opened the pull request (apps/api wakeOnMerge). It
+ * names no way to declare the thread done: a teammate's instructions give its own (a done
+ * block, or complete_thread on a runner from before them).
+ */
+export const mergedMessage = (pull: { repository: string; number: number }) =>
+  `Pull request #${pull.number} in ${pull.repository} was merged. If nothing else remains of what ` +
+  'was asked here, declare this thread done (a line on what was delivered); else say in a line ' +
+  'what remains.'
+
+const MERGED = /^Pull request #(\d+) in (\S+) was merged(?: by [^\n]+)?\./
+
+/**
+ * The pull request a merge's line (its thread note, "… was merged by Ada.") or its wake-up
+ * (mergedMessage) tells about; null for any other text.
+ */
+export function mergedPull(text: string): { repository: string; number: number } | null {
+  const m = MERGED.exec(text)
+  return m ? { repository: m[2]!, number: Number(m[1]) } : null
+}

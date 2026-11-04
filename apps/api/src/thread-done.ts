@@ -6,7 +6,7 @@
 // is there again (their message, their mail, a ticket or a pull request opened in it) reopens
 // it; the teammate's own wake-ups, a child's report, a schedule's run and Brigade's notes do not.
 // A merge wakes the teammate, to declare it or say what remains.
-import { parseList, plainItemText, type ScheduleOperation } from '@brigade/contracts'
+import { mergedMessage, parseList, plainItemText, type ScheduleOperation } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { reportOf } from './children.js'
@@ -383,16 +383,6 @@ export async function reopenThread(scope: Scope, sessionId: string) {
   if (count) changed(scope, root)
   return count > 0
 }
-
-/**
- * What a merge brings to the thread that opened the pull request. It names no way to declare the
- * thread done: a teammate's instructions give its own (a done block, or complete_thread on a
- * runner from before them).
- */
-export const mergedMessage = (pull: { repository: string; number: number }) =>
-  `Pull request #${pull.number} in ${pull.repository} was merged. If nothing else remains of what ` +
-  'was asked here, declare this thread done (a line on what was delivered); else say in a line ' +
-  'what remains.'
 
 /**
  * A pull request was merged: the thread that opened it is woken, to declare it done or say what
