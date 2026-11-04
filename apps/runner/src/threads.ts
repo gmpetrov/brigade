@@ -269,6 +269,8 @@ type Message = {
   upTo?: Promise<number>
   /** Held while a person had control: only the hand back releases it (releaseAllHeld). */
   takenOver?: boolean
+  /** Read in the turn of a message queued before it (joinQueued): no turn of its own. */
+  joined?: boolean
 }
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -964,12 +966,15 @@ export class Threads {
    * worked out when its turn comes, so it sees the replies of those before it.
    * Lost: a thread the API had in progress when this runner connected (see pickUp).
    * `prepare` runs when the turn is about to start: it gives the log's end to
-   * tell up to, or null when the turn no longer happens.
+   * tell up to, or null when the turn no longer happens; with the spec to run on
+   * when messages queued after this one go into its turn (joinQueued). `moot`
+   * says, before the turn waits for a slot or memory, that it no longer happens.
    */
   private enqueue(
     spec: ThreadSpec,
     input: ThreadInput | 'prompt' | Lost | Retry,
-    prepare?: () => Promise<number | undefined | null>,
+    prepare?: () => Promise<number | undefined | null | { upTo: number; spec: ThreadSpec }>,
+    moot?: () => boolean,
   ) {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
@@ -994,6 +999,8 @@ export class Threads {
       try {
         // Taken over while waiting in the queue: the turn does not happen.
         if (thread.takeover) return
+        // Its message was read in an earlier turn: nothing to wait for.
+        if (moot?.()) return
         // Every slot taken: the thread shows its teammate waiting, with how many turns run.
         await this.acquire((running) => {
           thread.slotWait = { teammateId: me, running }
@@ -1011,9 +1018,13 @@ export class Threads {
         if (!counted || thread.takeover) return
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
-        const upTo = prepare ? await prepare() : undefined
+        const prepared = prepare ? await prepare() : undefined
         started()
-        if (upTo === null) return
+        if (prepared === null) return
+        // Messages queued after its own go in too: it runs on the spec of the last of them,
+        // which has the thread as it is now, every file sent with them included.
+        const upTo = typeof prepared === 'object' ? prepared.upTo : prepared
+        if (typeof prepared === 'object') spec = prepared.spec
         // Set when the turn before it ended, after this one was queued: it would park this one.
         clearTimeout(seat.parkTimer)
         seat.parkTimer = undefined
@@ -1348,16 +1359,44 @@ export class Threads {
           })
         return null
       }
-      if (!message.upTo) return this.show(thread, message)
-      message.state = 'shown'
-      thread.messages.delete(message.id)
-      return message.upTo
-    })
+      if (!message.upTo) await this.show(thread, message)
+      else {
+        message.state = 'shown'
+        thread.messages.delete(message.id)
+      }
+      const upTo = await message.upTo!
+      // The messages queued right behind it for the same teammate are read with it.
+      const joined = await this.joinQueued(thread, message)
+      return joined ?? upTo
+    }, () => message.joined === true)
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
       this.enqueue(next, 'prompt', async () =>
         message.state === 'held' || message.state === 'cancelled' ? null : undefined,
       )
+  }
+
+  /**
+   * The messages queued right behind this one, for the same teammate, go into its turn: shown
+   * now, in order, and read together, rather than each in a turn of its own after the other.
+   * Stops at the first that cannot, so the thread keeps the order they were written in:
+   * another teammate's, one held for a person, one being steered or already in the turn.
+   * Gives the log's end after the last, with its spec (the thread as it is now), or nothing.
+   */
+  private async joinQueued(thread: Thread, message: Message) {
+    const teammateId = message.specs[0]!.teammate.id
+    let last: { upTo: number; spec: ThreadSpec } | undefined
+    for (const next of [...thread.messages.values()]) {
+      if (next === message || next.joined) continue
+      if (next.state !== 'queued' || next.specs[0]!.teammate.id !== teammateId) break
+      // A side reply under way, or about to pass it to the turn, ends: the turn reads it.
+      await this.endSide(thread, next)
+      // Cancelled, or settled on the side, meanwhile.
+      if (next.state !== 'queued') continue
+      next.joined = true
+      last = { upTo: await this.show(thread, next), spec: next.specs[0]! }
+    }
+    return last
   }
 
   /**
