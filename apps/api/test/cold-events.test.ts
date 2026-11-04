@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
@@ -718,6 +718,120 @@ describe('cold events', { skip }, () => {
     assert.ok(overtaken)
     assert.equal(expected.length, 6)
     assert.deepEqual(read.map(sequenced), expected)
+  })
+
+  test('a run whose COMMIT answer is lost keeps its copy, whatever the COMMIT became', async () => {
+    const sessionId = await newThread('Commit still running')
+    const events = work(1)
+    await store(sessionId, events)
+    await quiet(sessionId)
+    const expected = await pageEvents(sessionId, 1, events.length + 1)
+    // The COMMIT is held on the database (a deferred trigger waits on a lock this test holds),
+    // while the API's connection to it breaks: the run sees an error, the database goes on.
+    const blocker = new pg.Client({ connectionString: process.env.DATABASE_URL })
+    const observer = new pg.Client({ connectionString: process.env.DATABASE_URL })
+    await blocker.connect()
+    await observer.connect()
+    const lock = 6942001
+    const trigger = `cold_commit_${id}`
+    await blocker.query('SELECT pg_advisory_lock($1)', [lock])
+    await observer.query(
+      `CREATE FUNCTION ${trigger}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(${lock}); RETURN NEW; END $$`,
+    )
+    await observer.query(
+      `CREATE CONSTRAINT TRIGGER ${trigger} AFTER INSERT ON "ColdEventChunk" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW."sessionId" = '${sessionId}') EXECUTE FUNCTION ${trigger}()`,
+    )
+    const query = pg.Client.prototype.query
+    let armed = true
+    let commitPid: number | undefined
+    type Pooled = { processID: number; release: (error: Error) => void }
+    pg.Client.prototype.query = function (this: Pooled, ...args: unknown[]) {
+      const first = args[0] as string | { text?: string } | undefined
+      const sql = typeof first === 'string' ? first : first?.text
+      if (armed && /^\s*COMMIT\s*$/i.test(sql ?? '')) {
+        armed = false
+        commitPid = this.processID
+        const sent = (query as (...a: unknown[]) => Promise<unknown>).apply(this, args)
+        sent.catch(() => undefined)
+        return (async () => {
+          for (let i = 0; i < 300; i++) {
+            const state = await observer.query(
+              'SELECT wait_event FROM pg_stat_activity WHERE pid = $1',
+              [commitPid],
+            )
+            if (state.rows[0]?.wait_event === 'advisory') break
+            await new Promise((resolve) => setTimeout(resolve, 10))
+          }
+          const error = Object.assign(new Error('Connection terminated unexpectedly'), {
+            code: 'ECONNRESET',
+          })
+          this.release(error)
+          throw error
+        })()
+      }
+      return (query as (...a: unknown[]) => unknown).apply(this, args)
+    } as typeof query
+    const folder = join(
+      bucket,
+      scope.organizationId,
+      scope.workspaceId,
+      'thread-files',
+      sessionId,
+      'events',
+    )
+    try {
+      await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+      pg.Client.prototype.query = query
+      assert.equal(armed, false, 'its COMMIT was sent')
+      const pending = await observer.query(
+        'SELECT wait_event FROM pg_stat_activity WHERE pid = $1',
+        [commitPid],
+      )
+      assert.equal(pending.rows[0]?.wait_event, 'advisory', 'the COMMIT is still under way')
+      assert.equal((await readdir(folder)).length, 1, 'the copy stays while its COMMIT is unknown')
+      const { failuresOf } = await import('../src/ops/failures.js')
+      assert.ok(failuresOf('job:cold-events', 60_000).some((f) => /terminated/.test(f.message)))
+      // The database commits after all: the thread's events are whole, from the bucket.
+      await blocker.query('SELECT pg_advisory_unlock($1)', [lock])
+      for (let i = 0; i < 300 && (await thread(sessionId)).coldSeq === 0; i++)
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      assert.equal((await thread(sessionId)).coldSeq, events.length)
+      assert.deepEqual(await pageEvents(sessionId, 1, events.length + 1), expected)
+    } finally {
+      pg.Client.prototype.query = query
+      await blocker.query('SELECT pg_advisory_unlock($1)', [lock]).catch(() => undefined)
+      await observer.query(`DROP TRIGGER IF EXISTS ${trigger} ON "ColdEventChunk"`)
+      await observer.query(`DROP FUNCTION IF EXISTS ${trigger}()`)
+      await blocker.end()
+      await observer.end()
+    }
+  })
+
+  test('a thread that fails holds back none of the others', async () => {
+    const failing = await newThread('Failing')
+    await store(failing, work(1))
+    await quiet(failing, 50)
+    const other = await newThread('Next one')
+    await store(other, work(1))
+    await quiet(other, 40)
+    // Its chunks cannot be put in the bucket: a file stands where their folder goes.
+    const files = join(bucket, scope.organizationId, scope.workspaceId, 'thread-files', failing)
+    await mkdir(files, { recursive: true })
+    await writeFile(join(files, 'events'), 'not a folder')
+    try {
+      await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+      assert.equal((await thread(failing)).coldSeq, 0)
+      assert.equal((await thread(other)).coldSeq, (await thread(other)).lastSeq)
+      const { failuresOf } = await import('../src/ops/failures.js')
+      assert.ok(
+        failuresOf('job:cold-events', 60_000).some((f) => f.workspaceId === scope.workspaceId),
+      )
+    } finally {
+      await rm(join(files, 'events'), { force: true })
+    }
+    // Tried again by the next run.
+    await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+    assert.equal((await thread(failing)).coldSeq, (await thread(failing)).lastSeq)
   })
 
   test('what threads write is counted once, by workspace and day, and by thread', async () => {

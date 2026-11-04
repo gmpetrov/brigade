@@ -111,12 +111,19 @@ export async function keepEventsCold(
   let moved = 0
   for (const thread of threads) {
     let current: Thread | undefined = thread
-    while (current && current.coldSeq < current.lastSeq && Date.now() < until) {
-      const chunk = await keepChunkCold(current, limits)
-      if (!chunk) break
-      chunks++
-      moved += chunk.moved
-      current = { ...current, coldSeq: chunk.lastSeq }
+    try {
+      while (current && current.coldSeq < current.lastSeq && Date.now() < until) {
+        const chunk = await keepChunkCold(current, limits)
+        if (!chunk) break
+        chunks++
+        moved += chunk.moved
+        current = { ...current, coldSeq: chunk.lastSeq }
+      }
+    } catch (error) {
+      // One thread that fails holds back none of the others; its operators hear of it, and the
+      // next run tries it again from where the database says it is.
+      noteFailure('job:cold-events', error, { workspaceId: thread.workspaceId })
+      console.warn(`cold events: thread ${thread.id} not kept cold now: ${String(error)}`)
     }
     if (Date.now() >= until) break
   }
@@ -188,6 +195,9 @@ async function keepChunkCold(thread: Thread, limits: ColdLimits) {
   const key = coldEventsKey(thread, thread.id, firstSeq, lastSeq, attempt)
   await putObject(key, body, 'application/gzip')
   const heavy = rows.filter((r) => goesCold(r.type, r.data)).map((r) => r.seq)
+  // Set once everything but the COMMIT is done: from then on, an error may come after the
+  // database committed, or while it still commits.
+  let committing = false
   try {
     // In the bucket whole before anything leaves the database.
     const size = await objectSize(key)
@@ -223,23 +233,15 @@ async function keepChunkCold(thread: Thread, limits: ColdLimits) {
             `cold events: ${removed} of ${heavy.length} events of ${thread.id} removed`,
           )
       }
+      committing = true
     })
   } catch (error) {
-    // Its copy goes: nothing refers to it.
-    if (error instanceof Raced) {
-      await deleteObject(key).catch(() => undefined)
-      return undefined
-    }
-    // Recorded after all (a commit whose answer was lost on its way): the copy is the thread's.
-    const recorded = await prisma.coldEventChunk
-      .findFirst({ where: { sessionId: thread.id, firstSeq, attempt }, select: { attempt: true } })
-      .then(
-        (row) => !!row,
-        () => undefined,
-      )
-    if (recorded) return { lastSeq, moved: heavy.length }
-    // Not recorded, its copy goes. Not known: it stays, which does no harm (it goes with the thread).
-    if (recorded === false) await deleteObject(key).catch(() => undefined)
+    // Before its COMMIT, the transaction surely rolled back: nothing refers to the copy, which
+    // goes. After, its outcome is unknown, even to a read made now (the COMMIT may still be under
+    // way on the database): the copy stays. Committed, it is the thread's; not, it is no one's,
+    // and goes with the thread.
+    if (!committing) await deleteObject(key).catch(() => undefined)
+    if (error instanceof Raced) return undefined
     throw error
   }
   return { lastSeq, moved: heavy.length }

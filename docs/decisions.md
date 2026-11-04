@@ -338,7 +338,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   events, and leaves the thread to another run when they changed in between (another kept them cold). It puts the
   chunk in the bucket under a key of its own (`attempt`), so that a run that lost the race never overwrites the
   winner's copy, and checks its size there. Then one transaction records it, moves `coldSeq` over it (only from the
-  value it read: a run that lost the race stops, and removes its copy) and removes its heavy events. Pages, the replay
+  value it read: a run that lost the race stops, and removes its copy) and removes its heavy events. A copy goes only when
+  its transaction surely rolled back, never once its COMMIT was sent: a lost answer leaves the outcome unknown, even to
+  a read made just after, and a copy nothing refers to does no harm. One thread that fails holds back none of the
+  others in the run. Pages, the replay
   to a dashboard and the run log read events with `threadEvents`: up to `coldSeq` from the chunks, a line at a time,
   in batches of at most 500 events or about 4 MB; after it from the database, read again from the bucket when a chunk
   was recorded while a batch was being read (also one that came back empty). A chunk the bucket no longer has, or
