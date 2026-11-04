@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { CLAUDE_SETTINGS, claudeSettingsEnv } from '../src/harness/claude-settings.js'
+import { SIDE_REPLY_ENV } from '../src/harness/side-reply-env.js'
 import { bridgeTurn } from './fixtures/claude-bridge.js'
 
 // The Claude Code bridge (patched) builds its own settings for Claude Code, which went in
@@ -37,6 +38,8 @@ test("Brigade's settings reach Claude Code in a thread that asks before nothing"
   const options = await queryOptions('allow-all', claudeSettingsEnv())
   assert.equal(options.settings.autoMemoryEnabled, false)
   assert.deepEqual(options.settings.permissions.deny, CLAUDE_SETTINGS.permissions.deny)
+  // Claude Code 2.1.317's privacy mod, which a thread that asks before nothing cannot answer.
+  assert.deepEqual(options.settings.enabledPlugins, { 'cc-plugin-privacy@builtin': false })
   assert.equal(options.permissionMode, 'bypassPermissions')
   assert.equal(options.promptSuggestions, undefined)
 })
@@ -45,6 +48,7 @@ test('they join the rules the bridge sets when its permission mode asks before e
   const options = await queryOptions('allow-reads', claudeSettingsEnv())
   assert.equal(options.settings.autoMemoryEnabled, false)
   assert.deepEqual(options.settings.permissions.deny, CLAUDE_SETTINGS.permissions.deny)
+  assert.deepEqual(options.settings.enabledPlugins, { 'cc-plugin-privacy@builtin': false })
   // The bridge's own: asks before edits and commands, and never runs one as sandboxed on its own.
   assert.ok(options.settings.permissions.ask.includes('Bash(*)'))
   assert.ok(options.settings.permissions.ask.includes('Write(*)'))
@@ -78,7 +82,7 @@ const CONTINUE = {
 test('a side reply forks the conversation it continues, writes none, and only reads', async () => {
   const options = await queryOptions(
     'allow-reads',
-    { ...claudeSettingsEnv(), BRIGADE_FORK_SESSION: '1' },
+    { ...claudeSettingsEnv(), ...SIDE_REPLY_ENV },
     { resumeFrom: CONTINUE, activeTools: ['read', 'glob', 'grep'] },
   )
   assert.equal(options.continue, true)

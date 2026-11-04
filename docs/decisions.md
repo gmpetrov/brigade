@@ -117,6 +117,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   on with one; fork sub-agents, on by default in SDK sessions since Claude Code 2.1.302, stay off
   (`CLAUDE_CODE_FORK_SUBAGENT=0`) until that is decided on its own. Its bundled skills stay: Claude Code turns a skill
   off by name, whatever it comes from, so it would also turn off a member's or a repository's skill of the same name.
+  Its privacy mod (`cc-plugin-privacy@builtin`, since 2.1.317) is off (`enabledPlugins`): it asks before a shell or
+  web call that holds the signed-in account's email and may leave the computer (a curl with the member's address, on
+  a Mac signed in to their own Claude), and a thread asks before nothing, so the call failed with "canUseTool callback
+  is not provided" where it had run. `enabledPlugins` joins a member's own, so their plugins stay as they set them.
 - **Brigade's tools reach Claude Code as JSON** (the bridge patch). The adapter served them through the MCP SDK's
   `McpServer`, which keeps a zod schema per tool for the whole turn; zod objects are heavy, and a teammate's App tools
   (883 tools, 3.8 MB of JSON, on the workspace computer) held about 600 MB in each running turn's bridge. The patch

@@ -31,11 +31,18 @@ test('what Brigade relies on in Claude Code stays on, skills included', () => {
 
 test('the settings reach the bridge as one JSON value', () => {
   const env = claudeSettingsEnv()
+  // With the thread's own tools, which its sub-agents may not call (thread-tools.ts).
   assert.deepEqual(Object.keys(env).sort(), [
     'BRIGADE_CLAUDE_SETTINGS',
+    'BRIGADE_THREAD_TOOLS',
     'CLAUDE_CODE_FORK_SUBAGENT',
   ])
   assert.deepEqual(JSON.parse(env.BRIGADE_CLAUDE_SETTINGS!), CLAUDE_SETTINGS)
+})
+
+test("Claude Code's privacy mod is off, which nobody could answer, and no other plugin is named", () => {
+  // Turned off by name, the only one: the setting joins a member's own enabledPlugins.
+  assert.deepEqual(CLAUDE_SETTINGS.enabledPlugins, { 'cc-plugin-privacy@builtin': false })
 })
 
 test('fork sub-agents stay off, as before Claude Code turned them on in SDK sessions', () => {

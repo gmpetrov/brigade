@@ -96,6 +96,7 @@ import {
   ticketResult,
 } from './events.js'
 import { createLocalSandboxSession, freePort, stopGroup } from './local-sandbox.js'
+import { SIDE_REPLY_ENV } from './side-reply-env.js'
 import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
@@ -1030,8 +1031,8 @@ export class HarnessThread {
       ...(await prepare(this.workDir, live.account, spec.sessionId, this.runAs)),
       // Its prompt is read once, and its tools differ from the turn's: no cache to share.
       CLAUDE_CODE_PROMPT_CACHE_TTL: '5m',
-      // The bridges' patches: fork, write nothing, only read.
-      BRIGADE_FORK_SESSION: '1',
+      // The bridges' patches: fork, write nothing, only read, wherever the turn can.
+      ...SIDE_REPLY_ENV,
       ...(codex ? {} : claudeSettingsEnv()),
     }
     const agent = new HarnessAgent({

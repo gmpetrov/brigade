@@ -91,7 +91,7 @@ export async function bridgeTurn(
       return { exitCode: 0, stdout: '', stderr: '' }
     }
     if (input.command.includes('claude --version'))
-      return { exitCode: 0, stdout: '2.1.316 (Claude Code)', stderr: '' }
+      return { exitCode: 0, stdout: '2.1.318 (Claude Code)', stderr: '' }
     return run(input)
   }
   const restricted = { ...sandbox.restricted(), run: bootstrapRun }
