@@ -1291,13 +1291,13 @@ function ThreadImage({
   const src = threadImageUrl(threadId, item.path, item.teammateId)
   if (failed)
     return (
-      <div className="pl-11 text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         Made <code className="font-mono text-xs text-foreground">{item.path}</code>, which can't be
         shown while the computer is offline.
       </div>
     )
   return (
-    <div className="pl-11">
+    <div>
       <Hint label={item.prompt ?? name}>
         <button
           type="button"
@@ -1447,8 +1447,6 @@ function layoutThread(items: Item[], working: boolean) {
     const sides = all.filter((i) => isSide(items[i]!))
     const head = group(sides)
     let turn = all.filter((i) => !isSide(items[i]!))
-    // Written into while it ran (messages steered in): its steps fold together however quick.
-    const chat = turn.some((i) => isSteered(items[i]!))
     // However quick, a turn that worked ends on its line, where its Working line was: nothing
     // above its answer moves as it ends.
     turn = actionsLast(items, turn)
@@ -1481,27 +1479,13 @@ function layoutThread(items: Item[], working: boolean) {
       const item = items[i]!
       return isActivity(item) && !isAside(item) && item.kind !== 'thinking'
     }).length
-    const first = turn.indexOf(folded[0]!)
-    const kept = (from: number, to: number) =>
-      turn.slice(from, to).filter((i) => !folded.includes(i))
-    // As a chat reads: the person's messages and what answers them in order, then the turn's one
-    // line of work, then its answer.
-    if (chat) {
-      const shown = turn.filter((i) => !folded.includes(i))
-      const at = shown.findIndex((i) => answer.has(turn.indexOf(i)))
-      return [
-        ...head,
-        ...group(at < 0 ? shown : shown.slice(0, at)),
-        { type: 'worked', key: `w${end}`, ms, steps, inner: group(folded) },
-        ...group(at < 0 ? [] : shown.slice(at)),
-      ]
-    }
+    // Its line goes after all it shows, under its answer: where its Working line was, so nothing
+    // moves as the turn ends. It opens there, to the steps and the messages it folds.
+    // Keyed by its end: an older page loading above does not close it.
     return [
       ...head,
-      ...group(kept(0, first)),
-      // Keyed by its end: an older page loading above does not close it.
+      ...group(turn.filter((i) => !folded.includes(i))),
       { type: 'worked', key: `w${end}`, ms, steps, inner: group(folded) },
-      ...group(kept(first, turn.length)),
     ]
   }
   const nodes: Node[] = []
@@ -1569,32 +1553,7 @@ function layoutThread(items: Item[], working: boolean) {
   if (working && last?.type === 'activity') last.live = true
   // The running turn's asides read as one card, at its end, above its Working line.
   const laid = working && running !== undefined ? runningAsides(nodes, items, runningFrom) : nodes
-  return Object.assign(laid, { running: steered ?? running, live, runningFrom })
-}
-
-/** The first item a node shows, by its index; -1 for an empty fold. */
-function nodeStart(node: Node): number {
-  if (node.type === 'item') return node.i
-  if (node.type === 'worked') return node.inner[0] ? nodeStart(node.inner[0]) : -1
-  return node.is[0] ?? -1
-}
-
-/**
- * Where the running turn's Working line goes among the nodes: at the top of the turn, under the
- * person's latest message in it (or what woke it). What the teammate writes then streams in
- * under the line, which stays where it is as the reply grows, and where its turn's line ("Worked
- * for", or its steps) shows once it ends: nothing above the reply moves.
- */
-function workingLineAt(nodes: Node[], items: Item[], runningFrom: number) {
-  let at = nodes.findIndex((node) => nodeStart(node) >= runningFrom)
-  if (at < 0) return nodes.length
-  nodes.forEach((node, k) => {
-    if (k < at || node.type !== 'item') return
-    const item = items[node.i]!
-    if ((item.kind === 'user' && !item.side) || item.kind === 'woke') at = k + 1
-  })
-  // Past what shows nothing (the turn's start), so the line sits right on what it follows.
-  return at
+  return Object.assign(laid, { running: steered ?? running, live })
 }
 
 /** "45s", "1m 52s", "2h 5m". */
@@ -1727,16 +1686,18 @@ function StepTicker({ label }: { label: string }) {
   }, [label, shown.label])
   return (
     <span className="relative block min-w-0 overflow-hidden" title={shown.label}>
-      <span key={shown.n} className={cn('text-shimmer block truncate', shown.n > 0 && 'step-in')}>
-        {shown.label}
+      {/* Moving, cut and shimmering on three nested spans: `truncate` fades a cut end with an
+          animation of its own (globals.css), which would replace any other on the same span. */}
+      <span key={shown.n} className={cn('block', shown.n > 0 && 'step-in')}>
+        <span className="block truncate">
+          <span className="text-shimmer">{shown.label}</span>
+        </span>
       </span>
       {shown.previous !== undefined && (
-        <span
-          key={`out${shown.n}`}
-          className="step-out text-shimmer absolute inset-x-0 top-0 block truncate"
-          aria-hidden
-        >
-          {shown.previous}
+        <span key={`out${shown.n}`} className="step-out absolute inset-x-0 top-0 block" aria-hidden>
+          <span className="block truncate">
+            <span className="text-shimmer">{shown.previous}</span>
+          </span>
         </span>
       )}
     </span>
@@ -1883,7 +1844,7 @@ const ToolCode = ({ code, language }: { code: string; language: string }) => (
 /** A visual a teammate drew, under its messages, with its HTML to read beneath. */
 function WidgetCard({ widget }: { widget: Widget }) {
   return (
-    <div className="flex flex-col gap-2 pl-11">
+    <div className="flex flex-col gap-2">
       <div className="rounded-xl border p-4">
         <WidgetFrame html={widget.html} title={widget.title} />
       </div>
@@ -2321,8 +2282,8 @@ function HandbackCard({
 
 /** A long turn's work before its answer, folded under how long it took. */
 /**
- * A turn that ended, where its Working line was and as tall: the pebble pleased, how long it
- * worked over what it did. It opens to its steps and the messages between them.
+ * A turn that ended, under its answer where its Working line was: how long it worked and what it
+ * did, in small. It opens there, to its steps and the messages between them.
  */
 function WorkedFor({
   ms,
@@ -2335,18 +2296,17 @@ function WorkedFor({
 }) {
   return (
     <Collapsible className="flex flex-col gap-4">
-      <CollapsibleTrigger className="group flex items-start gap-2 self-start text-left text-sm text-muted-foreground hover:text-foreground">
-        <PebbleAvatar seed="working" tone="primary" happy className="size-5 flex-none" />
-        <span className="flex min-w-0 flex-col">
-          <span className="text-foreground">{ms > 0 ? `Worked ${duration(ms)}` : 'Worked'}</span>
-          <span className="flex items-center gap-1 text-xs tabular-nums">
-            {steps > 0 ? plural(steps, '1 step', 'steps') : 'Thought'}
-            <ChevronRight
-              className="size-3 flex-none transition-transform group-data-[state=open]:rotate-90"
-              aria-hidden
-            />
-          </span>
-        </span>
+      <CollapsibleTrigger className="group flex items-center gap-1 self-start text-left text-xs text-muted-foreground tabular-nums hover:text-foreground">
+        {[
+          ms > 0 ? `Worked ${duration(ms)}` : 'Worked',
+          steps > 0 && plural(steps, '1 step', 'steps'),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+        <ChevronRight
+          className="size-3 flex-none transition-transform group-data-[state=open]:rotate-90"
+          aria-hidden
+        />
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-4">{children}</CollapsibleContent>
     </Collapsible>
@@ -2363,16 +2323,13 @@ function WorkingLine({
   background,
   teammate,
   subThreads = [],
-  followed = false,
+  who,
   children,
 }: {
   /** When the turn began; unset when how long it worked is not known or not to be said. */
   since?: number
-  /**
-   * What it writes shows under it: with no step yet, the words coming say it works, and a line
-   * showing up over them would push them down.
-   */
-  followed?: boolean
+  /** With several teammates in the thread, who works: its pebble is everyone's colour. */
+  who?: string
   steps: ActivityItem[]
   background: BackgroundTask[]
   /** Who works: named, with its avatar, when sub-threads hang under its line. */
@@ -2390,7 +2347,7 @@ function WorkingLine({
   const ms = since === undefined ? 0 : now - since
   // The parent of its sub-threads' lines shows at once: they would hang from nothing.
   const tree = !!teammate && subThreads.some(isChildWorking)
-  if (!tree && !steps.length && !background.length && (followed || ms < 5_000)) return null
+  if (!tree && !steps.length && !background.length && ms < 5_000) return null
   // Thinking is no step of its own: it shows under the line, uncounted.
   const count = steps.filter((item) => item.kind !== 'thinking').length
   return (
@@ -2418,6 +2375,7 @@ function WorkingLine({
             <StepTicker label={steps.length ? liveStepText(steps.at(-1)!) : 'Working'} />
             <span className="flex min-w-0 items-center gap-1 text-xs tabular-nums">
               {[
+                who,
                 ms >= 1_000 && duration(ms),
                 count > 0 && plural(count, '1 step', 'steps'),
                 background.length > 0 && `${background.length} in background`,
@@ -2702,7 +2660,7 @@ export function ThreadItems({
     working &&
     !items.slice(i + 1).some((it) => it.kind === 'turn' || (it.kind === 'user' && !it.steeredTo))
   /** Its place in a run of one teammate's messages: see `messageRuns`. */
-  type Run = { follows: boolean; close: boolean; followed: boolean }
+  type Run = { starts: boolean; follows: boolean; close: boolean; followed: boolean }
   const render = (item: Item, i: number, run?: Run): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
@@ -2869,31 +2827,29 @@ export function ThreadItems({
       }
       case 'assistant': {
         const author = (item.teammateId && byId.get(item.teammateId)) || teammate
-        // With several teammates, name the author where the speaker changes.
+        // With several teammates, name the author over each run of its messages the thread
+        // shows: from the runs of what is shown, not of every item, since a turn's fold hides
+        // its earlier messages. Outside a list of runs (an Aside), where the speaker changes.
         const previous = items
           .slice(0, i)
           .findLast((it): it is Extract<Item, { kind: 'assistant' }> => it.kind === 'assistant')
         const named =
           several &&
           author &&
-          !run?.follows &&
-          (!previous ||
-            previous.teammateId !== item.teammateId ||
-            items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
+          (run
+            ? run.starts
+            : !previous ||
+              previous.teammateId !== item.teammateId ||
+              items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
         return (
+          // No avatar: the thread's one living picture is its Working line's pebble. With
+          // several teammates, a name over each run says whose it is.
           <div
             key={item.key}
             data-seq={item.seq}
-            className={cn('group/message flex items-start gap-3', run?.close && '-mt-3')}
+            className={cn('group/message flex items-start', run?.close && '-mt-3')}
           >
-            {/* After its own message, no avatar again: the run shows it once, on its first. */}
-            {author &&
-              (run?.follows ? (
-                <div className="w-8 flex-none" aria-hidden />
-              ) : (
-                <TeammateAvatar teammate={author} className="mt-0.5 size-8" />
-              ))}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
               {/* As wide as its text, so actions floating by its first line sit at the end of a short line, not at the far edge. */}
               <div
@@ -2956,7 +2912,7 @@ export function ThreadItems({
         const playbook = playbookCard(item)
         if (playbook)
           return (
-            <div key={item.key} className="pl-11">
+            <div key={item.key}>
               {playbook.card === 'playbook' ? (
                 <PlaybookCard playbookKey={playbook.id} />
               ) : playbook.card === 'progress' ? (
@@ -3347,6 +3303,7 @@ export function ThreadItems({
   const show = (list: Node[]): React.ReactNode[] => {
     const runs = messageRuns(list.map(runEntry))
     const runAt = (at: number): Run => ({
+      starts: runs.starts.has(at),
       follows: runs.follows.has(at),
       close: runs.close.has(at),
       followed: runs.close.has(at + 1),
@@ -3403,33 +3360,31 @@ export function ThreadItems({
       ),
     )
   }
-  // The running turn's line, at the top of the turn (workingLineAt); background work alone keeps
-  // its line at the end.
-  const workingAbove = workingLine && nodes.running !== undefined
-  const lineAt = workingAbove ? workingLineAt(nodes, items, nodes.runningFrom) : nodes.length
+  // With several teammates, who works now: the turn that started last.
+  const worker = several
+    ? byId.get(
+        items.findLast((it): it is Extract<Item, { kind: 'start' }> => it.kind === 'start')
+          ?.teammateId ?? '',
+      )?.name
+    : undefined
   const workingLineNode = workingLine && (
     <WorkingLine
       key="working"
+      {...(worker ? { who: worker } : {})}
       {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
       steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
       background={background}
       {...(teammate ? { teammate } : {})}
       subThreads={childThreads}
-      followed={lineAt < nodes.length}
     >
       {nodes.live.map((i) => render(items[i]!, i))}
     </WorkingLine>
   )
   return (
     <div className="flex flex-col gap-4">
-      {/* One list, by key: what moves past the line as the turn goes on or ends is not remounted. */}
-      {[
-        ...show(nodes.slice(0, lineAt)),
-        ...(workingAbove ? [workingLineNode] : []),
-        ...show(nodes.slice(lineAt)),
-      ]}
+      {show(nodes)}
       {pending}
-      {!workingAbove && workingLineNode}
+      {workingLineNode}
       {eventsWaitingSince ? (
         <EventsWaiting since={eventsWaitingSince} />
       ) : working && computerDown ? (
@@ -4714,7 +4669,7 @@ function SuggestedReplyButtons({
   }
 
   return (
-    <div className="flex flex-col -mt-2 gap-1.5 pl-11">
+    <div className="flex flex-col -mt-2 gap-1.5">
       <div className="flex flex-wrap gap-2">
         {replies.actions?.map((a) =>
           a.action === 'merge'

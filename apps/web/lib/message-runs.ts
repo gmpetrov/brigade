@@ -5,11 +5,13 @@
 export type RunEntry = { author: string } | 'step' | 'break'
 
 /**
- * Where a teammate's messages in a row show its avatar once, on the first: `follows`, the
- * messages after it in the run, shown without one; `close`, those right after another message
- * of the run, with nothing between, drawn close to it.
+ * A teammate's messages in a row, as the thread shows them (what a fold hides is not among the
+ * entries): `starts`, the first of each run, which names its author when several teammates are
+ * in the thread; `follows`, the messages after it in the run; `close`, those right after another
+ * message of the run, with nothing between, drawn close to it.
  */
 export function messageRuns(entries: RunEntry[]) {
+  const starts = new Set<number>()
   const follows = new Set<number>()
   const close = new Set<number>()
   let author: string | undefined
@@ -20,9 +22,9 @@ export function messageRuns(entries: RunEntry[]) {
         follows.add(at)
         const before = entries[at - 1]
         if (before && before !== 'step' && before !== 'break') close.add(at)
-      }
+      } else starts.add(at)
       author = entry.author
     }
   })
-  return { follows, close }
+  return { starts, follows, close }
 }

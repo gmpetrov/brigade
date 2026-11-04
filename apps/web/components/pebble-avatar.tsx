@@ -94,7 +94,6 @@ export function PebbleAvatar({
   title,
   crown = false,
   tone,
-  happy = false,
 }: {
   seed: string
   className?: string
@@ -102,8 +101,6 @@ export function PebbleAvatar({
   crown?: boolean
   /** In the theme's primary colour, its eyes the page's own (a Working line), not its seed's. */
   tone?: 'primary'
-  /** Still, its eyes closed in happy arcs: the work is done. */
-  happy?: boolean
 }) {
   return (
     <span
@@ -114,7 +111,6 @@ export function PebbleAvatar({
       title={title}
       className={cn('pebble relative flex size-8 shrink-0', className)}
       style={tone === 'primary' ? { ...pebbleStyle(seed), ...PRIMARY } : pebbleStyle(seed)}
-      {...(happy ? { 'data-happy': '' } : {})}
     >
       <span className="pebble-body" />
       <span className="pebble-face">
