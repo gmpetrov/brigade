@@ -83,6 +83,9 @@ test('a done block quoted in an explanation closes nothing', () => {
   // In the middle of the reply, an example too.
   const middle = `It looks like\n${DONE}\nonce the work is done.`
   assert.deepEqual(mapped(true, middle), [{ type: 'message.done', id: 'r1', text: middle }])
+  // Under a list item, the item's: Markdown reads it as part of the list, not the reply's end.
+  const listed = `Nothing is implemented yet.\n\n- Example:\n\n${DONE.replace(/^/gm, '  ')}`
+  assert.deepEqual(mapped(true, listed), [{ type: 'message.done', id: 'r1', text: listed }])
 })
 
 test('only the call a done block stands for is the runner’s to send', () => {

@@ -197,3 +197,25 @@ test('a done block declares done at the end of the reply only', () => {
     done: 'Shipped',
   })
 })
+
+test('a block under a list item is the item’s: an example, read as text', () => {
+  // Markdown reads the block as part of the item, not of the reply's end.
+  const listed = [
+    'Nothing has been implemented yet. Proposed success footer:',
+    '',
+    '- Example:',
+    '',
+    '  ```done',
+    '  CSV export merged (#412) and live',
+    '  ```',
+  ].join('\n')
+  assert.deepEqual(replyCard(listed), { text: listed })
+  assert.equal(withoutCard(listed), listed)
+  const buttons = '1. The buttons:\n   ```replies\n   Send it\n   ```'
+  assert.deepEqual(replyCard(buttons), { text: buttons })
+  // Still being written there, it shows as it comes.
+  const writing = '- Example:\n  ```done\n  CSV exp'
+  assert.equal(withoutCard(writing), writing)
+  // At the start of its line, after the list, the block is the reply's own.
+  assert.equal(replyCard('- Shipped the export.\n\n```done\nShipped\n```').done, 'Shipped')
+})

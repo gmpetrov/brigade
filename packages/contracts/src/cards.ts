@@ -30,27 +30,39 @@ type Fence = {
   end: number
   /** Still being written: no closing fence yet, it runs to the end of the text. */
   open: boolean
+  /** Its opening fence's indent: a block Brigade reads has none (readable). */
+  indent: number
 }
 
 /**
  * A reply's fenced code blocks at its top level, as Markdown reads them: a block inside another
  * (an example in a ```` fence) is that block's text, not a block of its own, so a card or a done
- * block quoted in an explanation is never read as one.
+ * block quoted in an explanation is never read as one. Fences indented up to 3 spaces count here,
+ * as they open and close blocks; which of them Brigade reads is `readable`'s to say.
  */
 function fences(text: string): Fence[] {
   const found: Fence[] = []
-  let open: { char: string; length: number; info: string; start: number; body: number } | undefined
+  let open:
+    | { char: string; length: number; info: string; start: number; body: number; indent: number }
+    | undefined
   for (let at = 0; ;) {
     const next = text.indexOf('\n', at)
     const after = next < 0 ? text.length : next + 1
-    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(
+    const fence = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(
       text.slice(at, next < 0 ? undefined : next).replace(/\r$/, ''),
     )
-    const [marks, rest] = fence ? [fence[1]!, fence[2]!] : ['', '']
+    const [indent, marks, rest] = fence ? [fence[1]!, fence[2]!, fence[3]!] : ['', '', '']
     if (!open) {
       // A backtick fence's info string has no backtick in it.
       if (fence && !(marks[0] === '`' && rest.includes('`')))
-        open = { char: marks[0]!, length: marks.length, info: rest.trim(), start: at, body: after }
+        open = {
+          char: marks[0]!,
+          length: marks.length,
+          info: rest.trim(),
+          start: at,
+          body: after,
+          indent: indent.length,
+        }
     } else if (fence && marks[0] === open.char && marks.length >= open.length && !rest.trim()) {
       found.push({
         info: open.info,
@@ -58,6 +70,7 @@ function fences(text: string): Fence[] {
         start: open.start,
         end: after,
         open: false,
+        indent: open.indent,
       })
       open = undefined
     }
@@ -71,9 +84,18 @@ function fences(text: string): Fence[] {
       start: open.start,
       end: text.length,
       open: true,
+      indent: open.indent,
     })
   return found
 }
+
+/**
+ * A block Brigade reads, a card or a done block: one whose fence starts its line. Indented, it
+ * may be an item's in a list (`- Example:` then the block under it), which Markdown reads as part
+ * of that item, not of the reply's end: an example, never read. At the start of its line, a fence
+ * belongs to no list.
+ */
+const readable = (block: Fence) => block.indent === 0
 
 /** The text without these blocks. */
 function without(text: string, blocks: Fence[]) {
@@ -102,7 +124,7 @@ export function replyCard(text: string): {
   choices?: Choices
   done?: string
 } {
-  const blocks = fences(text).filter((block) => !block.open)
+  const blocks = fences(text).filter((block) => !block.open && readable(block))
   const cards = blocks.filter((block) => CARDS.has(block.info))
   const done = blocks.findLast(
     (block) =>
@@ -226,6 +248,7 @@ export function withoutCard(text: string) {
   const last = fences(text).at(-1)
   const writing =
     last?.open &&
+    readable(last) &&
     (BLOCKS.includes(last.info) ||
       // Its opening fence still being written: "```rep".
       (!text.slice(last.start).includes('\n') &&
