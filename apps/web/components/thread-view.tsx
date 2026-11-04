@@ -2717,41 +2717,44 @@ export function ThreadItems({
               ) : (
                 <TeammateAvatar teammate={author} className="mt-0.5 size-8" />
               ))}
-            <div className="relative flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
-              {/* A file it names opens from its own working folder first. */}
-              <FileLinksProvider
-                value={{
-                  teammateId: item.teammateId,
-                  ...(item.images ? { images: item.images } : {}),
-                }}
-              >
-                {/* A card it ends with shows once the reply is done, without its markup. */}
-                <Markdown text={item.done ? item.text : withoutCard(item.text)} />
-              </FileLinksProvider>
-              {/* With its next message close under it, they float over its corner, where a pointer shows them. */}
-              {item.done && (
-                <div
-                  className={cn(
-                    '-ml-1.5 flex',
-                    run?.followed &&
-                      '[@media(hover:hover)]:absolute [@media(hover:hover)]:-top-3 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
-                  )}
+              {/* As wide as its text, so actions floating over its corner sit by a short line, not at the far edge. */}
+              <div className="relative flex w-fit max-w-full min-w-0 flex-col gap-0.5">
+                {/* A file it names opens from its own working folder first. */}
+                <FileLinksProvider
+                  value={{
+                    teammateId: item.teammateId,
+                    ...(item.images ? { images: item.images } : {}),
+                  }}
                 >
-                  <MessageActions
-                    text={item.text}
-                    onReply={
-                      onReply &&
-                      (() =>
-                        onReply({
-                          seq: item.seq,
-                          ...(author ? { teammateId: author.id } : {}),
-                          text: replyText(item.text),
-                        }))
-                    }
-                  />
-                </div>
-              )}
+                  {/* A card it ends with shows once the reply is done, without its markup. */}
+                  <Markdown text={item.done ? item.text : withoutCard(item.text)} />
+                </FileLinksProvider>
+                {/* With its next message close under it, they float over its corner, where a pointer shows them. */}
+                {item.done && (
+                  <div
+                    className={cn(
+                      '-ml-1.5 flex',
+                      run?.followed &&
+                        '[@media(hover:hover)]:absolute [@media(hover:hover)]:-top-3 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
+                    )}
+                  >
+                    <MessageActions
+                      text={item.text}
+                      onReply={
+                        onReply &&
+                        (() =>
+                          onReply({
+                            seq: item.seq,
+                            ...(author ? { teammateId: author.id } : {}),
+                            text: replyText(item.text),
+                          }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )
