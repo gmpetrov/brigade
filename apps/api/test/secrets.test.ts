@@ -434,6 +434,27 @@ describe('a reply streamed over several deltas', () => {
     assert.deepEqual(texts(await maskDeltas(awake, 's', [delta(2, `r8_${r(32)} `, 'kept')])), [''])
   })
 
+  test('a batch with its done that failed to be stored, sent again after the hub slept', async () => {
+    const store = memoryStore()
+    const bearer = `r8_${r(32)}`
+    const first = new DeltaStreams(store)
+    assert.deepEqual(texts(await maskDeltas(first, 's', [delta(1, 'Authorization: Bearer ')])), [
+      'Authorization: Bearer ',
+    ])
+    const batch = [
+      delta(2, `${bearer} ok `),
+      {
+        seq: 3,
+        event: { type: 'message.done', id: 'm1', text: `Authorization: Bearer ${bearer} ok` },
+      },
+    ]
+    assert.equal(texts(await maskDeltas(first, 's', batch))[0], '[redacted: a token] ok ')
+    // Not stored: the runner sends the batch again, to a hub that slept meanwhile.
+    const again = await maskDeltas(new DeltaStreams(store), 's', batch)
+    assert.equal(texts(again)[0], '')
+    assert.ok(!JSON.stringify(again.slice(0, 1)).includes(bearer.slice(3, 11)))
+  })
+
   test('cut short before its end: only the held word is missing; plain text goes out as it comes', async () => {
     const out = await maskDeltas(streamsOf(), 's', [
       delta(1, 'Hello the'),
@@ -442,14 +463,14 @@ describe('a reply streamed over several deltas', () => {
     assert.deepEqual(texts(out), ['Hello ', 'there, '])
   })
 
-  test('a delta sent again is not stored twice; a done ends its stream', async () => {
+  test('a delta sent again is not stored twice; one after its done neither', async () => {
     const streams = streamsOf()
     assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), ['a b '])
     assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), [''])
     await maskDeltas(streams, 's', [
       { seq: 2, event: { type: 'message.done', id: 'm1', text: 'a b' } },
     ])
-    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(3, 'c ')])), ['c '])
+    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(3, 'c ')])), [''])
   })
 
   test('replies of two messages stream apart', async () => {

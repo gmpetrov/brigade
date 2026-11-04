@@ -356,8 +356,13 @@ const STREAMS_MAX = 200
 /** A reply that streamed for this long is given up: its turn ended without its message.done. */
 const STREAM_MAX_MS = 60 * 60_000
 
-/** How long a reply given up is remembered: its later deltas, if any, are not stored. */
-const GIVEN_UP_MS = 24 * 60 * 60_000
+/**
+ * How long a reply ended or given up is remembered, and how many at most: its deltas sent
+ * again (a batch that failed to be stored) are stored empty. A runner sends them again
+ * within minutes.
+ */
+const GIVEN_UP_MS = 6 * 60 * 60_000
+const GIVEN_UP_MAX = 500
 
 /** Where the hub keeps small state that outlives its memory (HubHost.load and save). */
 export type StreamStore = {
@@ -419,18 +424,19 @@ export class DeltaStreams {
     return out
   }
 
-  /** Its message.done came: the reply is whole. */
+  /**
+   * Its message.done came: the reply is whole. Remembered as ended, not forgotten: should its
+   * batch fail to be stored, the runner sends its deltas again, and those are stored empty (the
+   * done holds the whole reply), never read afresh without what came before.
+   */
   end(key: string) {
-    this.live.delete(key)
-    if (this.started.delete(key)) {
-      this.store.save(`delta-stream:${key}`, undefined)
-      this.saveLists()
-    }
+    if (!this.started.has(key)) return
+    this.giveUp(key, this.now())
+    this.saveLists()
   }
 
   private start(key: string) {
     const now = this.now()
-    for (const [id, at] of this.givenUp) if (now - at > GIVEN_UP_MS) this.givenUp.delete(id)
     for (const [id, at] of this.started)
       if (now - at > STREAM_MAX_MS || this.started.size >= STREAMS_MAX) this.giveUp(id, now)
       else break
@@ -443,6 +449,9 @@ export class DeltaStreams {
     this.live.delete(key)
     this.store.save(`delta-stream:${key}`, undefined)
     this.givenUp.set(key, now)
+    for (const [id, at] of this.givenUp)
+      if (now - at > GIVEN_UP_MS || this.givenUp.size > GIVEN_UP_MAX) this.givenUp.delete(id)
+      else break
   }
 
   private saveLists() {
