@@ -40,7 +40,10 @@ teammate waits on its own ticket (`harness/aside.ts`, `ASIDE_PROTOCOL`).
   every one before it, even when one waiting is cancelled (`Thread.sides`). Its turn coming
   first, a cancel or an edit stops it; a failure leaves the message queued as before.
 - **The thread shows it where it began**: the person's bubble and the reply under it, which the
-  queue above the composer leaves out while the aside is under way or about to pass it on. Its
+  queue at the end of the thread leaves out while the aside is under way or about to pass it on.
+  Only once the runner says it began (`message.side` answering): until then the message shows
+  in the queue, as any message does. The dashboard used to show every message written during a
+  turn as an aside at once and move it to the queue when none began, which read as a bug. Its
   reading carries the reply and route (`message.user`'s `side`), so a page or a timeline jump
   that starts there still shows the aside. A settled reading does not change the thread's
   status (`statusAfter`), its work time (`caps.ts`) or its timeline.

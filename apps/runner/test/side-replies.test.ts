@@ -395,13 +395,13 @@ test('no side reply for Brigade’s own messages, when memory is short, or when 
     sides('none', failed).map((e) => e.status),
     ['answering', 'failed'],
   )
-  // All three wait for the turn, as before: each in a turn of its own, in order.
-  for (let count = 2; count <= 4; count++) {
-    await finish('none')
-    await started('none', count)
-  }
+  // All three wait for the turn, as before, and go into the next one together, in order.
   await finish('none')
+  await started('none', 2)
   for (const id of [note, short, failed]) assert.equal(users('none', id).length, 1)
+  await finish('none')
+  await sleep(60)
+  assert.equal(turns('none'), 2, 'no turn of their own after it')
   sideSays = 'ok\nROUTE: answer'
 })
 
