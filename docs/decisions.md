@@ -117,6 +117,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   on with one; fork sub-agents, on by default in SDK sessions since Claude Code 2.1.302, stay off
   (`CLAUDE_CODE_FORK_SUBAGENT=0`) until that is decided on its own. Its bundled skills stay: Claude Code turns a skill
   off by name, whatever it comes from, so it would also turn off a member's or a repository's skill of the same name.
+  Its privacy mod (`cc-plugin-privacy@builtin`, since 2.1.317) is off (`enabledPlugins`): it asks before a shell or
+  web call that holds the signed-in account's email and may leave the computer (a curl with the member's address, on
+  a Mac signed in to their own Claude), and a thread asks before nothing, so the call failed with "canUseTool callback
+  is not provided" where it had run. `enabledPlugins` joins a member's own, so their plugins stay as they set them.
 - **Brigade's tools reach Claude Code as JSON** (the bridge patch). The adapter served them through the MCP SDK's
   `McpServer`, which keeps a zod schema per tool for the whole turn; zod objects are heavy, and a teammate's App tools
   (883 tools, 3.8 MB of JSON, on the workspace computer) held about 600 MB in each running turn's bridge. The patch
@@ -146,6 +150,30 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   meanwhile) waits quietly and is read with the others in the next turn. The dashboard shows a person's messages not
   read yet as they look once read, at the end of the thread above its Working line, where the turn will read them, with
   the status under them; their actions sit in a menu shown while the pointer is over one (always on phones).
+- **A turn a person writes into reads as a chat** (`layoutThread` in `apps/web/components/thread-view.tsx`,
+  `lib/chat-turn.ts`). Seen on Nov 4 at 13:45, once messages went into the running turn: every one carried "Steered
+  into Riley's running turn", and each cut the turn's steps into pieces between them ("Searched once", "Ran cat …",
+  "Searched 3 times"). Now:
+  - A message steered in says nothing under it, and does not cut the turn: its steps stay in its one Working line, then
+    one "Worked for" over the whole turn, under the person's messages and above the answer. A turn that answered since
+    its last step (one that only waited on its background work) or a report woke still starts afresh there.
+  - A question the turn can answer at once gets its answer at once: a person's message steered in tells the teammate
+    to answer it in a line with `answer_message`, then go on (`steeredText`). On Nov 4, "what's my name?" waited 36 s
+    for research to end. The runner records the call as the teammate's message, word for word, which answers the
+    message given to the turn last (`message.done`'s `answers`, `EventMapper`), kept in the thread's saved state so a
+    restart or a hand-over before the answer keeps it (`SavedState.steered`); the call shows no step. That answer
+    stays in sight once the turn ends (`quickReplies`), wherever it falls among the steps. At first it was the text
+    right after the message, before the next step: the teammate reads a message only at its next step, so a step it
+    had already started came between the two ("Searched once" between "comment je m'appelle ?" and its answer, on Nov 4) and the answer folded away with the work; text written between steps can also reach the person only as the
+    server's summary of it (narration). That rule stays for text from a runner without the tool.
+  - A shell command's step reads what it does (`commandSummary`): `cat …/threads/x.md 2>/dev/null || find …` reads
+    `cat x.md`; the step's details and an approval card keep the whole command.
+  - A call to `complete_thread` shows as the thread's Done line, not as a step, unless Brigade refused it (something
+    still open, a summary too long): then it stays a step, with its reason (`closingStep`). The Done line hides while
+    the teammate works again or a message is on its way. The reply still comes after the call, not before it to save
+    the round trip (about 4 s): text written before a tool call may reach the person only as the server's summary of it
+    (narration), and a draft or a table written there would be lost, as with the team card (`UNDER_REPLY` in
+    `apps/runner/src/harness/tools.ts`).
 - **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
   ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
   the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages

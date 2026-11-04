@@ -130,6 +130,12 @@ export const SHOW_WIDGET_TOOL = 'show_widget'
 /** The rules a teammate reads before its first widget in a thread. */
 export const WIDGET_GUIDE_TOOL = 'widget_guide'
 /**
+ * A teammate's answer to a person's message given to its running turn (its answer_message tool):
+ * the runner records it as the teammate's message, which answers that one (message.done's
+ * `answers`), and the call itself shows nothing.
+ */
+export const ANSWER_MESSAGE_TOOL = 'answer_message'
+/**
  * Steps that are no work of their own, by bare tool name: the reply written
  * before one still answers the turn. A closing card counts even when it was
  * refused and called again; so do a wake-up, a task closed and a thread declared done after the
@@ -145,6 +151,7 @@ export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   SUGGEST_REPLIES_TOOL,
   OFFER_CHOICES_TOOL,
   PROPOSE_TEAM_TOOL,
+  ANSWER_MESSAGE_TOOL,
   'set_wakeup',
   'cancel_wakeup',
   'complete_task',
@@ -525,7 +532,18 @@ export const AgentEvent = z.discriminatedUnion('type', [
      */
     masked: z.literal(true).optional(),
   }),
-  z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),
+  z.object({
+    ...base,
+    type: z.literal('message.done'),
+    id: z.string(),
+    text: z.string(),
+    /**
+     * The person's message it answers (its messageId): one given to the running turn, answered at
+     * once with answer_message. It stays in sight once the turn ends, beside that message, rather
+     * than fold away with the turn's steps.
+     */
+    answers: z.string().optional(),
+  }),
   /**
    * The images a finished message shows (`![…](path)` or a link to one), put in the
    * thread's bucket folder by the runner as the message was sent, so the thread shows

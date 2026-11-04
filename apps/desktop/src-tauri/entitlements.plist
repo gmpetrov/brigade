@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Brigade.app asks for nothing: Screen Recording and Accessibility belong to the helper it contains. -->
+  <!-- Screen Recording and Accessibility belong to the helper it contains. The microphone is
+       Brigade.app's own, for dictation in the composers (hardened runtime needs it named). -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
 </dict>
 </plist>

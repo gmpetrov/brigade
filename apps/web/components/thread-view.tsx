@@ -8,6 +8,7 @@ import {
   pickedChoice,
   pickedDesignPath,
   bareToolName,
+  COMPLETE_THREAD_TOOL,
   asksParallel,
   childNote,
   fromParent,
@@ -160,6 +161,14 @@ import {
 } from '@/components/thread-children'
 import { AsideGroup } from '@/components/aside-group'
 import { runningAsides } from '@/lib/aside-layout'
+import {
+  answeredSinceStep,
+  closingStep,
+  quickReplies,
+  type ChatEntry,
+  type ClosingCall,
+} from '@/lib/chat-turn'
+import { commandSummary } from '@/lib/command-summary'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
@@ -219,6 +228,8 @@ export type Item =
       text: string
       done: boolean
       teammateId?: string
+      /** The person's message it answers, given to the running turn (answer_message): it stays in sight. */
+      answers?: string
       /** The images it shows, kept with the thread (message.images): by path, as it writes it. */
       images?: Record<string, string>
     }
@@ -358,6 +369,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
   return useMemo(() => {
     const items: Item[] = []
     const byKey = new Map<string, Item>()
+    // complete_thread calls waiting for their result: shown only if it refused (closingStep).
+    const closing = new Map<string, ClosingCall>()
     let limits: Limits | undefined
     // Messages still queued, and every message id the thread has seen (queued, read or cancelled).
     const queued = new Map<string, QueuedMessage>()
@@ -561,7 +574,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
         case 'message.done': {
           const key = `m${e.teammateId ?? ''}:${e.id}`
           const item = byKey.get(key)
-          if (item?.kind === 'assistant') Object.assign(item, { text: e.text, done: true })
+          const answers = e.answers ? { answers: e.answers } : {}
+          if (item?.kind === 'assistant')
+            Object.assign(item, { text: e.text, done: true, ...answers })
           else
             add({
               kind: 'assistant',
@@ -570,6 +585,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               text: e.text,
               done: true,
               teammateId: e.teammateId,
+              ...answers,
             })
           break
         }
@@ -578,20 +594,29 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           if (item?.kind === 'assistant') item.images = { ...item.images, ...e.images }
           break
         }
-        case 'tool.started':
+        case 'tool.started': {
+          const key = `t${e.teammateId ?? ''}:${e.toolCallId}`
+          // Declaring the thread done shows as its Done line, not as a step: it waits for its
+          // result, and shows only when refused (closingStep).
+          if (bareToolName(e.toolName) === COMPLETE_THREAD_TOOL) {
+            closing.set(key, { seq, toolName: e.toolName, input: e.input })
+            break
+          }
           // The same call started twice (repeated by the harness): one card.
-          if (byKey.has(`t${e.teammateId ?? ''}:${e.toolCallId}`)) break
-          add({
-            kind: 'tool',
-            key: `t${e.teammateId ?? ''}:${e.toolCallId}`,
-            seq,
-            toolName: e.toolName,
-            input: e.input,
-            finished: false,
-          })
+          if (byKey.has(key)) break
+          add({ kind: 'tool', key, seq, toolName: e.toolName, input: e.input, finished: false })
           break
+        }
         case 'tool.finished': {
-          const item = byKey.get(`t${e.teammateId ?? ''}:${e.toolCallId}`)
+          const key = `t${e.teammateId ?? ''}:${e.toolCallId}`
+          const call = closing.get(key)
+          if (call) {
+            closing.delete(key)
+            const step = closingStep(call, e.output, e.isError)
+            if (step && !byKey.has(key)) add({ kind: 'tool', key, ...step })
+            break
+          }
+          const item = byKey.get(key)
           if (item?.kind === 'tool')
             Object.assign(item, { output: e.output, isError: e.isError, finished: true })
           break
@@ -1334,6 +1359,21 @@ const QUICK_TURN_MS = 30_000
 /** A person's message answered on the side during a turn: it shows in its turn's Aside. */
 const isSide = (item: Item) => item.kind === 'user' && !!item.side
 
+/** A message given to the running turn (steered in), not answered on the side. */
+const isSteered = (item: Item) => item.kind === 'user' && !!item.steeredTo && !item.side
+
+/** What an item is in a turn a person wrote into (lib/chat-turn.ts). */
+const chatEntry = (item: Item): ChatEntry =>
+  isSteered(item)
+    ? 'steered'
+    : item.kind === 'assistant'
+      ? item.answers
+        ? 'answer'
+        : 'message'
+      : isActivity(item) && !isAside(item)
+        ? 'step'
+        : 'other'
+
 type Node =
   | { type: 'item'; i: number }
   /**
@@ -1389,7 +1429,9 @@ function layoutThread(items: Item[], working: boolean) {
     const sides = all.filter((i) => isSide(items[i]!))
     const head = group(sides)
     let turn = all.filter((i) => !isSide(items[i]!))
-    if (ms < QUICK_TURN_MS) return [...head, ...group(turn)]
+    // Written into while it ran (messages steered in): its steps fold together however quick.
+    const chat = turn.some((i) => isSteered(items[i]!))
+    if (ms < QUICK_TURN_MS && !chat) return [...head, ...group(turn)]
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, and a long one before that step when only a line follows.
     const { first: final, messages } = turnAnswer(
@@ -1401,10 +1443,13 @@ function layoutThread(items: Item[], working: boolean) {
       steered,
     )
     const answer = new Set(messages)
+    // A reply right after a message steered in answers it: it stays, as the answer does.
+    const quick = quickReplies(turn.map((i) => chatEntry(items[i]!)))
     const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
         !answer.has(at) &&
+        !quick.has(at) &&
         (final < 0 || at < final || isAside(item)) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
@@ -1416,6 +1461,18 @@ function layoutThread(items: Item[], working: boolean) {
     const first = turn.indexOf(folded[0]!)
     const kept = (from: number, to: number) =>
       turn.slice(from, to).filter((i) => !folded.includes(i))
+    // As a chat reads: the person's messages and what answers them in order, then the turn's one
+    // line of work, then its answer.
+    if (chat) {
+      const shown = turn.filter((i) => !folded.includes(i))
+      const at = shown.findIndex((i) => answer.has(turn.indexOf(i)))
+      return [
+        ...head,
+        ...group(at < 0 ? shown : shown.slice(0, at)),
+        { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
+        ...group(at < 0 ? [] : shown.slice(at)),
+      ]
+    }
     return [
       ...head,
       ...group(kept(0, first)),
@@ -1464,10 +1521,16 @@ function layoutThread(items: Item[], working: boolean) {
     // Steered into the turn, such as one that only waited on a server it left running, or woken
     // there by a report from that work: what came before answers the message before, and keeps
     // its answer out of the fold.
+    // A message steered in while the turn works goes on with it, as in a chat: one line of work,
+    // not a fold at each message. Only a turn that answered since its last step (one that just
+    // waited on its background work), or one a report woke, starts afresh there.
     if ((item.kind === 'user' && item.steeredTo) || item.kind === 'woke') {
-      nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
-      since = []
-      steered = item.at
+      if (item.kind === 'woke' || answeredSinceStep(since.map((j) => chatEntry(items[j]!)))) {
+        nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
+        since = []
+        // Its work counts from here; otherwise from where the turn, or its last fold, began.
+        steered = item.at
+      }
     }
     since.push(i)
     if (item.kind === 'turn') {
@@ -1545,13 +1608,22 @@ function activityLabel(group: ActivityItem[]) {
   return text[0]!.toUpperCase() + text.slice(1)
 }
 
+/**
+ * What a step's line says it did: a shell command by what it does (commandSummary), not with
+ * every path and fallback; an approval card still shows the whole of it (toolSummary).
+ */
+function stepSummary(toolName: string, input: unknown) {
+  const command = (input as { command?: unknown } | null)?.command
+  return typeof command === 'string' ? commandSummary(command) : toolSummary(toolName, input)
+}
+
 /** The step happening now, under a live group's line. */
 function stepText(item: ActivityItem) {
   if (item.kind === 'thinking') return 'Thinking'
   if (item.kind === 'file') return `Changed ${item.path}`
   const mail = mailStep(item.toolName, item.input)
   if (mail) return mail.label
-  return `${item.toolName} ${toolSummary(item.toolName, item.input)}`.trim()
+  return `${item.toolName} ${stepSummary(item.toolName, item.input)}`.trim()
 }
 
 const VERBS: Partial<Record<ReturnType<typeof toolKind>, string>> = {
@@ -1592,7 +1664,7 @@ function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
       </>
     )
   const verb = VERBS[toolKind(toolName)]
-  const summary = toolSummary(toolName, input)
+  const summary = stepSummary(toolName, input)
   return (
     <>
       {verb ? (
@@ -2583,16 +2655,9 @@ export function ThreadItems({
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
             {/* Answered on the side: its aside says what became of it. */}
-            {item.side ? null : item.steeredTo && asksParallel(item.text) ? (
+            {/* Steered into the running turn, as in a chat: nothing says so. */}
+            {!item.side && item.steeredTo && asksParallel(item.text) ? (
               <span className="text-xs text-muted-foreground">Sent to a sub-thread</span>
-            ) : item.steeredTo ? (
-              <span className="text-xs text-muted-foreground">
-                Steered into{' '}
-                {(byId.get(item.steeredTo) ?? teammate)?.name
-                  ? `${(byId.get(item.steeredTo) ?? teammate)!.name}’s`
-                  : 'the'}{' '}
-                running turn
-              </span>
             ) : null}
           </div>
         )
@@ -2659,41 +2724,50 @@ export function ThreadItems({
               ) : (
                 <TeammateAvatar teammate={author} className="mt-0.5 size-8" />
               ))}
-            <div className="relative flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
-              {/* A file it names opens from its own working folder first. */}
-              <FileLinksProvider
-                value={{
-                  teammateId: item.teammateId,
-                  ...(item.images ? { images: item.images } : {}),
-                }}
+              {/* As wide as its text, so actions floating by its first line sit at the end of a short line, not at the far edge. */}
+              <div
+                className={cn(
+                  'relative flex w-fit max-w-full min-w-0 flex-col gap-0.5',
+                  // Room for them on the right, so they never cover its text.
+                  item.done && run?.followed && '[@media(hover:hover)]:pr-14',
+                )}
               >
-                {/* A card it ends with shows once the reply is done, without its markup. */}
-                <Markdown text={item.done ? item.text : withoutCard(item.text)} />
-              </FileLinksProvider>
-              {/* With its next message close under it, they float over its corner, where a pointer shows them. */}
-              {item.done && (
-                <div
-                  className={cn(
-                    '-ml-1.5 flex',
-                    run?.followed &&
-                      '[@media(hover:hover)]:absolute [@media(hover:hover)]:-top-3 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
-                  )}
+                {/* A file it names opens from its own working folder first. */}
+                <FileLinksProvider
+                  value={{
+                    teammateId: item.teammateId,
+                    ...(item.images ? { images: item.images } : {}),
+                  }}
                 >
-                  <MessageActions
-                    text={item.text}
-                    onReply={
-                      onReply &&
-                      (() =>
-                        onReply({
-                          seq: item.seq,
-                          ...(author ? { teammateId: author.id } : {}),
-                          text: replyText(item.text),
-                        }))
-                    }
-                  />
-                </div>
-              )}
+                  {/* A card it ends with shows once the reply is done, without its markup. */}
+                  <Markdown text={item.done ? item.text : withoutCard(item.text)} />
+                </FileLinksProvider>
+                {/* With its next message close under it, they float beside its first line, where a pointer shows them. */}
+                {item.done && (
+                  <div
+                    className={cn(
+                      '-ml-1.5 flex',
+                      run?.followed &&
+                        '[@media(hover:hover)]:absolute [@media(hover:hover)]:top-0 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
+                    )}
+                  >
+                    <MessageActions
+                      text={item.text}
+                      onReply={
+                        onReply &&
+                        (() =>
+                          onReply({
+                            seq: item.seq,
+                            ...(author ? { teammateId: author.id } : {}),
+                            text: replyText(item.text),
+                          }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )

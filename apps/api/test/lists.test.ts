@@ -475,6 +475,78 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     assert.match(String(notes().at(-1)!.text), /Done means 200 sign-ups at once without errors\./)
   })
 
+  test('a new thread starts on lines of a list: linked and told before its first turn', async () => {
+    const { GETTING_STARTED } = await import('@brigade/contracts')
+    await lists.seedGettingStarted(scope)
+    const file = await db.document.findFirstOrThrow({ where: { path: GETTING_STARTED.path } })
+    assert.equal(file.createdByType, 'system', 'saved by Brigade')
+    const summary = (await lists.listSummaries(db, scope)).find((l) => l.documentId === file.id)
+    assert.equal(summary?.title, 'Getting started')
+    assert.equal(summary?.total, 5)
+    // Seeding again keeps the file a person may have changed.
+    await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: file.path, bytes: new TextEncoder().encode(`${GETTING_STARTED.text}- [ ] Mine\n`) },
+    )
+    await lists.seedGettingStarted(scope)
+    const kept = await db.document.findFirstOrThrow({ where: { id: file.id } })
+    assert.match(await library.documentText(scope, kept), /- \[ \] Mine/)
+
+    const { startThread } = await import('../src/work.js')
+    const itemIds = await lists.linesToStartOn(db, scope, ids.member, {
+      documentId: file.id,
+      items: [{ id: 'setupline123456a', text: GETTING_STARTED.setupLine }],
+    })
+    assert.deepEqual(itemIds, ['setupline123456a'])
+    const { thread } = await startThread(db, scope, {
+      teammate: riley,
+      computer: { id: ids.computer },
+      memberId: ids.member,
+      title: 'Setup',
+      text: 'Help me set up my team.',
+      listItemIds: itemIds,
+    })
+    const lines = (
+      await library.documentText(
+        scope,
+        await db.document.findFirstOrThrow({ where: { id: file.id } }),
+      )
+    ).split('\n')
+    assert.equal(lines[4], `- [ ] ${GETTING_STARTED.setupLine} <!-- item:setupline123456a -->`)
+    assert.equal(lines[5], `- [ ] Connect the Apps your work lives in, such as GitHub or Gmail`)
+    await until(
+      () =>
+        sent.some(
+          (m) =>
+            m.type === 'thread.prompt' &&
+            (m.thread as { sessionId?: string }).sessionId === thread.id,
+        ),
+      'the first prompt',
+    )
+    const prompt = sent.find(
+      (m) =>
+        m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === thread.id,
+    )!
+    assert.deepEqual(
+      (prompt.thread as { items?: { id: string; text: string }[] }).items?.map((i) => i.id),
+      ['setupline123456a'],
+    )
+    const after = (await lists.listSummaries(db, scope)).find((l) => l.documentId === file.id)
+    assert.equal(after?.inProgress, 1, 'the list shows its line in progress')
+
+    // A line no longer in the file is left out, rather than made an item already missing.
+    assert.deepEqual(
+      await lists.linesToStartOn(db, scope, ids.member, {
+        documentId: file.id,
+        items: [{ id: 'goneline12345678', text: 'A line nobody wrote' }],
+      }),
+      [],
+    )
+    assert.equal(await db.listItem.count({ where: { id: 'goneline12345678' } }), 0)
+  })
+
   test('a person unticks an item; a line removed from the file shows as gone', async () => {
     await lists.setItemDone(
       db,

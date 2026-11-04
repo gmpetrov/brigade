@@ -83,6 +83,35 @@ export function healthOf(
   return everRan ? 'ok' : 'new'
 }
 
+const COLUMN_ORDER: BoardCard['column'][] = ['needs_you', 'in_progress', 'done']
+
+/**
+ * Where an In progress card stands in its column: at work first, then waiting on a review or
+ * a fix, then waiting on a wake-up, which comes back by itself (a card whose threads are idle
+ * with a wake-up pending, even one with a pull request open, as a thread's reason says).
+ */
+const progressRank = (c: Pick<BoardCard, 'reason' | 'wakeAt'>) =>
+  c.reason === 'working' ? 0 : c.wakeAt ? 2 : 1
+
+/**
+ * The order of the cards in a column: the latest activity first, except In progress, where
+ * what is at work comes first, then what waits on a review, then what waits on a wake-up, the
+ * soonest to wake first.
+ */
+export function byBoardOrder(
+  a: Pick<BoardCard, 'column' | 'reason' | 'wakeAt' | 'at'>,
+  b: Pick<BoardCard, 'column' | 'reason' | 'wakeAt' | 'at'>,
+) {
+  const column = COLUMN_ORDER.indexOf(a.column) - COLUMN_ORDER.indexOf(b.column)
+  if (column) return column
+  if (a.column === 'in_progress') {
+    const rank = progressRank(a) - progressRank(b)
+    if (rank) return rank
+    if (progressRank(a) === 2 && a.wakeAt !== b.wakeAt) return a.wakeAt!.localeCompare(b.wakeAt!)
+  }
+  return b.at.localeCompare(a.at)
+}
+
 const THREAD_SELECT = {
   id: true,
   title: true,
@@ -654,7 +683,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     })
   }
 
-  cards.sort((a, b) => b.at.localeCompare(a.at))
+  cards.sort(byBoardOrder)
   stopped.sort((a, b) => b.idleSince.localeCompare(a.idleSince))
   closed.sort((a, b) => b.closedAt.localeCompare(a.closedAt))
   return {

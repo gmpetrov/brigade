@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Merged into Brigade.app's own by Tauri: dictation in the composers records the microphone. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Brigade uses the microphone when you dictate a message.</string>
+</dict>
+</plist>

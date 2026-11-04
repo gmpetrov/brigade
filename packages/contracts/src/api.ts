@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { AttachmentIds } from './attachments.js'
 import { AskReply, QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath } from './library.js'
+import { StartOnLines } from './lists.js'
 import { isHarnessModel } from './models.js'
 import { Logo } from './projects.js'
 import { CLIPBOARD_MAX, Effort, HarnessId } from './runner.js'
@@ -291,6 +292,8 @@ export const StartThread = z
     projectId: z.string().nullish(),
     /** How hard its teammates think; omit for the harness's default. */
     effort: Effort.nullish(),
+    /** Lines of a list it works on, attached before its first turn so its teammate knows. */
+    listLines: StartOnLines.optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 
