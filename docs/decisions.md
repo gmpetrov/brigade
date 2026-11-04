@@ -137,6 +137,15 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   0.9 GB in an hour, some 20 s apart. It still stops what costs nothing (a frozen preview, an idle browser), and anything
   when memory and swap are nearly gone. A turn waiting for memory to start says so at once (`turn.memory`): the thread
   shows "waiting for this computer to have memory free" where it showed "reading your message" for the whole wait.
+- **A person's message during a turn goes into that turn** (`autoSteer` in `apps/runner/src/threads.ts`), as in a chat
+  and as Claude Code does in a terminal: the runner steers it in at the turn's next step, waiting while the turn's
+  session starts, and the turn's reply covers it. On Nov 4, with seven messages sent in a row, the turn answered only
+  the first, tried to close the thread, and was refused for the six waiting; the member compared it with a chat bot
+  that answers what was sent while it worked, together. Side replies (asides) are off unless `BRIGADE_SIDE_REPLIES=1`.
+  A message the turn cannot take (Brigade's own, one to several teammates, a turn waiting on an approval or ending
+  meanwhile) waits quietly and is read with the others in the next turn. The dashboard shows a person's messages not
+  read yet as they look once read, at the end of the thread above its Working line, where the turn will read them, with
+  the status under them; their actions sit in a menu shown while the pointer is over one (always on phones).
 - **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
   ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
   the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages
