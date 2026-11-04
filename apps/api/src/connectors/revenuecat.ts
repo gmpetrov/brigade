@@ -9,11 +9,12 @@ const write = (description: string) => ({ description, write: true })
  * subscriptions, in-app currencies, charts, metrics and experiments, webhooks and customer
  * sign-in (IAM).
  *
- * Signed in with a secret API v2 key the member pastes, sent as a Bearer token, as RevenueCat's
- * docs offer. Its OAuth is not open to Brigade: its registration endpoint answers only clients
- * RevenueCat registered itself (Claude, VS Code…), and refuses others with "The client is not
- * registered. Contact support". A v2 secret key belongs to one project, with the permissions
- * chosen as it was made (read only, or read and write per area), so the row shows that project.
+ * Signed in with RevenueCat's own OAuth: its registration endpoint answers only clients it
+ * registered itself, and RevenueCat registered Brigade (client "Brigade", on Brigade's MCP
+ * redirect URI) on request. A sign-in may reach several projects, so the row names them, and its
+ * credential keeps their ids. Accounts connected before that kept the secret API v2 key their
+ * member pasted (keys: sent as a Bearer token), and one can still be added with a key: a key
+ * belongs to one project, with the permissions chosen as it was made.
  *
  * Tools from RevenueCat's Tools Reference, with its read and write marks, which the server's own
  * readOnlyHint marks agree with. The server lists a key only the tools its permissions reach: a
@@ -23,12 +24,13 @@ const write = (description: string) => ({ description, write: true })
 export const revenuecat: ConnectorDefinition = {
   kind: 'revenuecat',
   label: 'RevenueCat',
-  auth: 'api_key',
+  auth: 'mcp',
   operations: {},
   mcp: {
     url: 'https://mcp.revenuecat.ai/mcp',
-    auth: 'api_key',
-    // No whoami: the key's project, which list-projects gives as its only one.
+    // Its OAuth, and the keys accounts were connected with before it.
+    keys: true,
+    // No whoami: the projects list-projects gives, by name and id.
     account: { tool: 'list-projects', name: revenuecatAccountName, id: revenuecatAccountId },
     tools: {
       // Projects and apps
@@ -210,9 +212,16 @@ export function revenuecatAccountName(output: unknown): string | null {
   return names.length === 1 ? names[0]! : `${names[0]} +${names.length - 1}`
 }
 
-/** The key's project by its id (proj…), the same from one name to the next; several, sorted. */
+/**
+ * The projects by their ids (proj…), the same from one name to the next; several, sorted. Null
+ * when the list goes on to a next page: its first page alone would say two sign-ins reach the
+ * same projects when one reaches more, and renewing an account with it would give its grants
+ * the projects it does not name. An account then signs in as a new one.
+ */
 export function revenuecatAccountId(output: unknown): string | null {
-  const list = (output as { items?: unknown } | null)?.items
+  const page = output as { items?: unknown; next_page?: unknown } | null
+  if (page?.next_page) return null
+  const list = page?.items
   if (!Array.isArray(list)) return null
   const ids = list
     .map((p) => (p as { id?: unknown } | null)?.id)

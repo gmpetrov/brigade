@@ -28,6 +28,7 @@ function mapped(closes: boolean, text: string) {
     undefined,
     undefined,
     undefined,
+    undefined,
     closes,
   )
   mapper.map({ type: 'text-start', id: 'r1' })

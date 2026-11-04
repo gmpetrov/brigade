@@ -16,6 +16,22 @@ fail() { echo "brigade-teammate: $1" >&2; exit 2; }
 user_ok() { echo "$1" | grep -Eq '^bt-[a-z0-9]{1,28}$' || fail "bad user"; }
 id_ok() { echo "$1" | grep -Eq '^[A-Za-z0-9_-]{1,64}$' || fail "bad id"; }
 cred() { case "$1" in claude_code) echo .credentials.json ;; codex) echo auth.json ;; *) fail "bad provider" ;; esac; }
+# <Chrome's Preferences file>: its colors dark, unless its profile chose already. Run as the teammate.
+CHROME_DARK='
+import json, os, sys
+path = sys.argv[1]
+try:
+    prefs = json.load(open(path))
+except FileNotFoundError:
+    prefs = {}
+theme = prefs.setdefault("browser", {}).setdefault("theme", {})
+if "color_scheme2" not in theme:
+    theme["color_scheme2"] = 2
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".brigade", "w") as f:
+        json.dump(prefs, f)
+    os.replace(path + ".brigade", path)
+'
 
 case "\${1:-}" in
   ensure-user) # <user>: a Linux user with a private home
@@ -69,6 +85,11 @@ case "\${1:-}" in
     if ! pgrep -u "$2" -f "user-data-dir=/home/$2/.browser" >/dev/null; then
       runuser -u "$2" -- rm -f "/home/$2/.browser/SingletonLock" "/home/$2/.browser/SingletonCookie" \\
         "/home/$2/.browser/SingletonSocket"
+      # Dark, as the rest of the desktop (Chrome follows neither GTK's settings nor the
+      # desktop's without a session bus): set once in its profile, so a later choice in its
+      # Appearance settings stays. Web pages that have a dark style show it.
+      runuser -u "$2" -- python3 -I -c "$CHROME_DARK" "/home/$2/.browser/Default/Preferences" \\
+        2>/dev/null || true
     fi
     cd /
     # Chrome's output goes to ~/.browser.log, written as the teammate, so the runner can
@@ -564,6 +585,110 @@ esac
 `
 
 /**
+ * Brigade's wallpaper for the cloud computers' desktop, on the public media bucket (R2
+ * brigade-media, media.brigade.lol), not in the repository. A new one goes at a new key, with
+ * its SHA-256 here: the computers check it before using it.
+ */
+export const DESKTOP_WALLPAPER = {
+  url: 'https://media.brigade.lol/cloud/wallpaper-v1.png',
+  sha256: '72c5366903c6000c453d4ee976d88e29141e39c83f084f0233f9751ddd2337cf',
+}
+
+/**
+ * Brigade's wallpaper on the provider's desktop (boat's ascii-desktop, run as `user`), as root:
+ * downloaded to /var/lib/brigade and checked against its SHA-256, then put in ascii-desktop's own
+ * place for it (~/.config/boat/wallpaper.png, which wins over its default), written as that user,
+ * never as root in a folder it owns. ascii-desktop reads it when it starts, and again when it
+ * changes. A wallpaper someone put there stays: it is replaced only while it is the one Brigade
+ * put last (its hash, in wallpaper.put, recorded only once that one is in place). Exits 1 when
+ * the wallpaper could not be put, so the boot's run tries again. Its folder: the first argument
+ * (tests), else /var/lib/brigade.
+ */
+export const WALLPAPER_SCRIPT = `#!/bin/sh
+set -u
+D="\${1:-/var/lib/brigade}"
+WANT=${DESKTOP_WALLPAPER.sha256}
+WALL="$D/wallpaper.png"
+# Only the provider's desktop has a place for it.
+id user >/dev/null 2>&1 && command -v ascii-desktop >/dev/null || exit 0
+hash() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
+if [ "$(hash "$WALL")" != "$WANT" ]; then
+  curl -fsSL --retry 3 --max-time 60 ${DESKTOP_WALLPAPER.url} -o "$WALL.new" || true
+  if [ "$(hash "$WALL.new")" != "$WANT" ]; then
+    rm -f "$WALL.new"
+    echo "brigade-wallpaper: the wallpaper could not be downloaded" >&2
+    exit 1
+  fi
+  chmod 644 "$WALL.new"
+  mv -f "$WALL.new" "$WALL"
+fi
+PUT=$(cat "$D/wallpaper.put" 2>/dev/null || true)
+# As the desktop's user: 0 once it is there, 3 when someone else's stays.
+sudo -H -u user sh -c '
+  F="$HOME/.config/boat/wallpaper.png"
+  HAD=$(sha256sum "$F" 2>/dev/null | cut -d" " -f1)
+  [ "$HAD" = "$3" ] && exit 0
+  [ -z "$HAD" ] || [ "$HAD" = "$2" ] || exit 3
+  mkdir -p "$HOME/.config/boat" && cp "$1" "$F.new" && mv -f "$F.new" "$F"' sh "$WALL" "$PUT" "$WANT"
+case $? in
+  0) echo "$WANT" >"$D/wallpaper.put" ;;
+  3) ;;
+  *) exit 1 ;;
+esac
+`
+
+/**
+ * The desktop's look, for everyone on the computer: GTK apps (Chrome, Files) dark, as the
+ * provider's own bar and dock are, and Brigade's wallpaper on the provider's desktop (boat's
+ * ascii-desktop, run as `user`). Teammates' Chromes start with no session bus (the helper's
+ * `browser`), so they follow GTK's settings files rather than the desktop's settings service:
+ * both are set. /etc/xdg comes after /etc/gtk-*: these files win over the image's own, which
+ * stay as they are. Each user's own settings still win over these.
+ * The wallpaper: brigade-wallpaper (WALLPAPER_SCRIPT), run by the setup and again at each boot
+ * until it is in place.
+ */
+const DESKTOP_LOOK = `# The desktop's look: dark apps, Brigade's wallpaper.
+for V in 3.0 4.0; do
+  sudo install -d /etc/xdg/gtk-$V
+  sudo tee /etc/xdg/gtk-$V/settings.ini >/dev/null <<'GTK'
+[Settings]
+gtk-theme-name=Yaru-dark
+gtk-application-prefer-dark-theme=1
+GTK
+done
+if [ -d /etc/dconf/db ]; then
+  sudo install -d /etc/dconf/db/local.d /etc/dconf/profile
+  [ -f /etc/dconf/profile/user ] || printf 'user-db:user\\nsystem-db:local\\n' | sudo tee /etc/dconf/profile/user >/dev/null
+  sudo tee /etc/dconf/db/local.d/10-brigade-look >/dev/null <<'DCONF'
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+gtk-theme='Yaru-dark'
+DCONF
+  ! command -v dconf >/dev/null || sudo dconf update
+fi
+# Brigade's wallpaper, at each boot until it is in place (a download that failed is tried again).
+sudo tee /usr/local/sbin/brigade-wallpaper >/dev/null <<'WALLPAPER'
+${WALLPAPER_SCRIPT}WALLPAPER
+sudo chmod 755 /usr/local/sbin/brigade-wallpaper
+sudo tee /etc/systemd/system/brigade-wallpaper.service >/dev/null <<'UNIT'
+[Unit]
+Description=Brigade's wallpaper on the desktop
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/brigade-wallpaper
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable brigade-wallpaper.service 2>/dev/null
+sudo /usr/local/sbin/brigade-wallpaper || true
+`
+
+/**
  * The root-owned parts of a workspace computer that change with Brigade: the
  * teammate and thread helpers, and the library folder. Run by the bootstrap,
  * and again on any computer whose runner reports another stamp (a runner
@@ -716,7 +841,7 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl enable brigade-swap.service 2>/dev/null
 sudo systemctl restart brigade-swap.service
-`
+${DESKTOP_LOOK}`
 
 /** Identifies the current setup; the runner reports the one last applied. */
 export const SETUP_SHA = createHash('sha256').update(SETUP).digest('hex')

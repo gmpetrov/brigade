@@ -8,6 +8,7 @@ import pg from 'pg'
 // auth (src/auth.ts, better-auth's organization plugin) against the local database of
 // apps/api/.env: people sign in with a mailed code, as in production. Without Resend, codes and
 // invitation links are logged, which is where the test reads them. Without a database, skipped.
+// Also: a workspace made here starts with its Getting started list (docs/lists.md).
 const fromEnvFile = () => {
   try {
     const line = readFileSync(new URL('../.env', import.meta.url), 'utf8')
@@ -192,6 +193,17 @@ test('the mail says who invites, to what, and links to the invitation', () => {
   assert.match(mail.subject, /Ada invited you to Acme/)
   assert.match(mail.text, /as an admin/)
   assert.ok(mail.text.includes(`${env.WEB_URL[0]}/invite/inv-1`))
+})
+
+test('a new workspace starts with its Getting started list', { skip }, async () => {
+  const { GETTING_STARTED } = await import('@brigade/contracts')
+  const org = await founder('starter')
+  const file = await scoped(org).document.findFirst({
+    where: { kind: 'library', path: GETTING_STARTED.path, deletedAt: null },
+  })
+  assert.ok(file, 'the list is in its library')
+  assert.equal(file.createdByType, 'system')
+  assert.match(file.text, /- \[ \] Set up your team with Chief/)
 })
 
 test('an invited address joins the organization in its first workspace', { skip }, async () => {

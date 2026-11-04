@@ -25,6 +25,16 @@ test('a reply right after a message steered in, before the next step, answers it
   assert.deepEqual([...quickReplies(entries)], [3])
 })
 
+test('an answer given with answer_message stays in sight, whatever steps come between', () => {
+  // Nov 4: "comment je m'appelle ?" went in while a search ran; the answer came after it.
+  const entries: ChatEntry[] = ['message', 'steered', 'step', 'answer', 'step', 'step', 'message']
+  assert.deepEqual([...quickReplies(entries)], [3])
+  // Text in its place, from a runner without the tool, folds with the steps as before.
+  assert.deepEqual([...quickReplies(['steered', 'step', 'message', 'step', 'message'])], [])
+  // Answered so, the turn still goes on as one at the next message.
+  assert.equal(answeredSinceStep(['steered', 'step', 'answer']), false)
+})
+
 test('a turn answered since its last step starts afresh at the next message; a quick reply does not count', () => {
   // Waiting on its background work after answering: the answer stands.
   assert.equal(answeredSinceStep(['step', 'message']), true)

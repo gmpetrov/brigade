@@ -121,7 +121,7 @@ import {
   startAt,
   threadPrompts,
 } from '../thread-history.js'
-import { nextPinPosition, pinnedListThreads, threadLists } from '../lists.js'
+import { linesToStartOn, nextPinPosition, pinnedListThreads, threadLists } from '../lists.js'
 import { noteInThread } from '../thread-notes.js'
 import {
   parseBody,
@@ -1158,6 +1158,9 @@ export const threads = new Hono<AppEnv>()
     const firstLine = mentionsToText(asked).split('\n')[0]!
     if ('error' in project) throw project.error
     const projectId = project.id
+    const listItemIds = input.listLines
+      ? await linesToStartOn(db, scope, scope.memberId, input.listLines)
+      : undefined
     const { thread, outcome } = await startThread(db, scope, {
       // Chosen by the browser, which opened the thread already: never one that exists.
       ...(input.id ? { id: input.id, fresh: true } : {}),
@@ -1175,6 +1178,7 @@ export const threads = new Hono<AppEnv>()
       attachmentIds: input.attachmentIds,
       projectId,
       effort: input.effort ?? null,
+      ...(listItemIds ? { listItemIds } : {}),
     }).catch((error: unknown) => idTaken(error, input.id))
     if (outcome === 'offline') {
       throw new HTTPException(409, {

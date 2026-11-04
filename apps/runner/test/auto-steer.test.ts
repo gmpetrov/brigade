@@ -34,6 +34,8 @@ const threads = new Threads({
 const ends = new Map<string, () => void>()
 const prompts = new Map<string, string[]>()
 const steered = new Map<string, string[]>()
+/** Per thread: the person's message each steered text was, as the harness was told (answer_message answers it). */
+const steeredIds = new Map<string, (string | undefined)[]>()
 /** Per thread: whether its session can take a message now, and whether it refuses them. */
 const live = new Map<string, boolean>()
 const refuses = new Set<string>()
@@ -58,9 +60,10 @@ const seats: { parkTimer?: NodeJS.Timeout }[] = []
         })
         return { status: 'idle' }
       },
-      steer: async (text: string) => {
+      steer: async (text: string, messageId?: string) => {
         if (refuses.has(id)) throw new Error('Harness session has no running turn to steer')
         steered.set(id, [...(steered.get(id) ?? []), text])
+        steeredIds.set(id, [...(steeredIds.get(id) ?? []), messageId])
       },
       stopDrain: async () => undefined,
       park: async () => undefined,
@@ -140,14 +143,16 @@ const finish = async (sessionId: string) => {
 test("a person's messages during a turn go into it, in order, and get no turn of their own", async () => {
   send('a', 'Fix the export')
   await until(() => turns('a') === 1, 'the turn starts')
-  send('a', 'test2')
-  send('a', 'test3')
+  const second = send('a', 'test2')
+  const third = send('a', 'test3')
   await until(() => (steered.get('a') ?? []).length === 2, 'both go into the turn')
   assert.match(steered.get('a')![0]!, /test2/)
   assert.match(steered.get('a')![1]!, /test3/)
   assert.deepEqual(shownSteered('a'), ['test2', 'test3'])
-  // A question it can answer now gets its answer at once, as in a chat.
-  assert.match(steered.get('a')![0]!, /answer it in a line at once/)
+  // A question it can answer now gets its answer at once, as in a chat, with the tool that says
+  // which message it answers.
+  assert.match(steered.get('a')![0]!, /answer it in a line at once with answer_message/)
+  assert.deepEqual(steeredIds.get('a'), [second, third])
   await finish('a')
   await sleep(150)
   assert.equal(turns('a'), 1, 'no turn after it for them')

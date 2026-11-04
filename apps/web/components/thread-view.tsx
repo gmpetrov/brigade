@@ -229,6 +229,8 @@ export type Item =
       text: string
       done: boolean
       teammateId?: string
+      /** The person's message it answers, given to the running turn (answer_message): it stays in sight. */
+      answers?: string
       /** The images it shows, kept with the thread (message.images): by path, as it writes it. */
       images?: Record<string, string>
     }
@@ -573,7 +575,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
         case 'message.done': {
           const key = `m${e.teammateId ?? ''}:${e.id}`
           const item = byKey.get(key)
-          if (item?.kind === 'assistant') Object.assign(item, { text: e.text, done: true })
+          const answers = e.answers ? { answers: e.answers } : {}
+          if (item?.kind === 'assistant')
+            Object.assign(item, { text: e.text, done: true, ...answers })
           else
             add({
               kind: 'assistant',
@@ -582,6 +586,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               text: e.text,
               done: true,
               teammateId: e.teammateId,
+              ...answers,
             })
           break
         }
@@ -1363,7 +1368,9 @@ const chatEntry = (item: Item): ChatEntry =>
   isSteered(item)
     ? 'steered'
     : item.kind === 'assistant'
-      ? 'message'
+      ? item.answers
+        ? 'answer'
+        : 'message'
       : isActivity(item) && !isAside(item)
         ? 'step'
         : 'other'
@@ -2728,41 +2735,50 @@ export function ThreadItems({
               ) : (
                 <TeammateAvatar teammate={author} className="mt-0.5 size-8" />
               ))}
-            <div className="relative flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
-              {/* A file it names opens from its own working folder first. */}
-              <FileLinksProvider
-                value={{
-                  teammateId: item.teammateId,
-                  ...(item.images ? { images: item.images } : {}),
-                }}
+              {/* As wide as its text, so actions floating by its first line sit at the end of a short line, not at the far edge. */}
+              <div
+                className={cn(
+                  'relative flex w-fit max-w-full min-w-0 flex-col gap-0.5',
+                  // Room for them on the right, so they never cover its text.
+                  item.done && run?.followed && '[@media(hover:hover)]:pr-14',
+                )}
               >
-                {/* A card it ends with shows once the reply is done, without its markup. */}
-                <Markdown text={item.done ? item.text : withoutCard(item.text)} />
-              </FileLinksProvider>
-              {/* With its next message close under it, they float over its corner, where a pointer shows them. */}
-              {item.done && (
-                <div
-                  className={cn(
-                    '-ml-1.5 flex',
-                    run?.followed &&
-                      '[@media(hover:hover)]:absolute [@media(hover:hover)]:-top-3 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
-                  )}
+                {/* A file it names opens from its own working folder first. */}
+                <FileLinksProvider
+                  value={{
+                    teammateId: item.teammateId,
+                    ...(item.images ? { images: item.images } : {}),
+                  }}
                 >
-                  <MessageActions
-                    text={item.text}
-                    onReply={
-                      onReply &&
-                      (() =>
-                        onReply({
-                          seq: item.seq,
-                          ...(author ? { teammateId: author.id } : {}),
-                          text: replyText(item.text),
-                        }))
-                    }
-                  />
-                </div>
-              )}
+                  {/* A card it ends with shows once the reply is done, without its markup. */}
+                  <Markdown text={item.done ? item.text : withoutCard(item.text)} />
+                </FileLinksProvider>
+                {/* With its next message close under it, they float beside its first line, where a pointer shows them. */}
+                {item.done && (
+                  <div
+                    className={cn(
+                      '-ml-1.5 flex',
+                      run?.followed &&
+                        '[@media(hover:hover)]:absolute [@media(hover:hover)]:top-0 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
+                    )}
+                  >
+                    <MessageActions
+                      text={item.text}
+                      onReply={
+                        onReply &&
+                        (() =>
+                          onReply({
+                            seq: item.seq,
+                            ...(author ? { teammateId: author.id } : {}),
+                            text: replyText(item.text),
+                          }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )

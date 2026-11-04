@@ -14,6 +14,13 @@ import {
   type Upload,
 } from '@/components/attachments'
 import { Composer } from '@/components/composer'
+import {
+  DictationBar,
+  DictationButton,
+  useDictation,
+  useDictationStatus,
+  withDictated,
+} from '@/components/dictation'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { AskedDocument } from '@/components/document-panel'
@@ -504,6 +511,22 @@ export function NewThread({
   const ready =
     (text.trim() || files.ids.length > 0) && !files.busy && !files.failed && computer && account
 
+  // Dictation: its words go in the box; with send pressed while recording, they go at once.
+  const dictationStatus = useDictationStatus()
+  const sendDictated = useRef(false)
+  const dictation = useDictation((words, sendNow) => {
+    sendDictated.current = sendNow
+    setText(withDictated(text, words))
+    if (!sendNow) focusMessage()
+  })
+  useEffect(() => {
+    dictation.clearError()
+    if (!sendDictated.current || !text.trim()) return
+    sendDictated.current = false
+    void start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- starts once, as the words land
+  }, [text])
+
   const create = (message: string, attachmentIds: string[], id?: string) =>
     api<{ id: string }>('/threads', {
       body: {
@@ -654,19 +677,25 @@ export function NewThread({
     </>
   )
   const composer = (
-    <Composer
-      bare
-      fill={fill}
-      rows={rows}
-      value={text}
-      onChange={setText}
-      onSubmit={() => void start()}
-      disabled={busy}
-      autoFocus={autoFocus}
-      typeToFocus={typeToFocus}
-      placeholder={placeholder ?? `Chat with ${teammate.name}`}
-    />
+    <>
+      {dictation.active && <DictationBar dictation={dictation} />}
+      <div className={dictation.active ? 'hidden' : 'contents'}>
+        <Composer
+          bare
+          fill={fill}
+          rows={rows}
+          value={text}
+          onChange={setText}
+          onSubmit={() => void start()}
+          disabled={busy}
+          autoFocus={autoFocus}
+          typeToFocus={typeToFocus}
+          placeholder={placeholder ?? `Chat with ${teammate.name}`}
+        />
+      </div>
+    </>
   )
+  const mic = <DictationButton status={dictationStatus} dictation={dictation} />
   const teammatePicker = picker && (
     <TeammatePicker
       teammates={picker.teammates}
@@ -799,9 +828,10 @@ export function NewThread({
       <ArrowUp aria-hidden />
     </Button>
   )
-  const message = (error || notice) && (
-    <p className={cn('px-1 text-sm', error ? 'text-destructive-text' : 'text-muted-foreground')}>
-      {error ?? notice}
+  const problem = error ?? (dictation.active ? undefined : dictation.error)
+  const message = (problem || notice) && (
+    <p className={cn('px-1 text-sm', problem ? 'text-destructive-text' : 'text-muted-foreground')}>
+      {problem ?? notice}
     </p>
   )
 
@@ -844,7 +874,12 @@ export function NewThread({
           {composer}
         </div>
         {message && <div className="px-3 pb-2">{message}</div>}
-        <div className="flex flex-wrap items-center gap-1 border-t px-3 py-2">
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-1 border-t px-3 py-2',
+            dictation.active && 'hidden',
+          )}
+        >
           {add}
           {where}
           <div className="ml-auto flex items-center gap-3">
@@ -853,6 +888,7 @@ export function NewThread({
             </span>
             <div className="flex items-center gap-1">
               <EffortButton effort={effort} />
+              {mic}
               {send}
             </div>
           </div>
@@ -863,7 +899,7 @@ export function NewThread({
   // The recording outside the form: its events would reach the form through the portal.
   return (
     <>
-      <form onSubmit={(e) => void start(e)} className="flex flex-col gap-2">
+      <form ref={form} onSubmit={(e) => void start(e)} className="flex flex-col gap-2">
         <Card
           data-composer-frame
           className={cn(
@@ -874,13 +910,14 @@ export function NewThread({
         >
           {uploads}
           {composer}
-          <div className="flex flex-wrap items-center gap-1">
+          <div className={cn('flex flex-wrap items-center gap-1', dictation.active && 'hidden')}>
             {add}
             {teammatePicker}
             {projectPicker}
             {where}
             <div className="ml-auto flex items-center gap-1">
               <EffortButton effort={effort} />
+              {mic}
               {send}
             </div>
           </div>

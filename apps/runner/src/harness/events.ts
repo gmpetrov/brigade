@@ -1,10 +1,13 @@
 // Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
 // this module sees an AI SDK type.
 import {
+  ANSWER_MESSAGE_TOOL,
   Ask,
+  bareToolName,
   COMPLETE_THREAD_TOOL,
   doneLine,
   hasVisibleText,
+  MaskedStream,
   OFFER_CHOICES_TOOL,
   Question,
   replyCard,
@@ -69,6 +72,12 @@ export function askUserQuestions(input: unknown): Question[] | undefined {
     })),
   )
   return parsed.success ? parsed.data : undefined
+}
+
+/** The answer an answer_message call gives, if it gives one a person can read. */
+export function answerText(input: unknown): string | undefined {
+  const text = (input as { text?: unknown } | null | undefined)?.text
+  return typeof text === 'string' && hasVisibleText(text) ? text.trim() : undefined
 }
 
 /** A decline with the person's own words: what they want in place of the ask. */
@@ -359,6 +368,10 @@ export class EventMapper {
   rejected: { toolCallId: string; toolName: string; error: string }[] = []
   /** Calls already shown as started: one repeated after its result must not show twice. */
   private started = new Set<string>()
+  /** Text blocks streaming in this turn, each one's deltas masked as they go out (MaskedStream). */
+  private readonly streams = new Map<string, MaskedStream>()
+  /** answer_message calls recorded as the teammate's message: their result shows nothing. */
+  private answers = new Set<string>()
 
   /**
    * Recognise Claude Code's answer to resuming a conversation it no longer has: it deletes
@@ -393,6 +406,8 @@ export class EventMapper {
      */
     private readonly texts = new Map<string, string>(),
     private readonly reasoning = new Map<string, string>(),
+    /** The person's message given to the running turn last (its messageId), if any. */
+    private readonly steered: () => string | undefined = () => undefined,
     /**
      * Whether a done block declares the thread done (declaredDone): in the turn of a thread a
      * person talks to, not in a child, a playbook's or a schedule's run, nor in a run beside it.
@@ -405,10 +420,19 @@ export class EventMapper {
     const at = new Date().toISOString()
     switch (part.type) {
       case 'text-delta': {
-        this.texts.set(part.id, (this.texts.get(part.id) ?? '') + part.text)
-        return this.emit({ at, type: 'message.delta', id: part.id, text: part.text })
+        const before = this.texts.get(part.id) ?? ''
+        this.texts.set(part.id, before + part.text)
+        // Masked with the text before it, a secret over several deltas whole (MaskedStream). A
+        // block this mapper did not start (a new turn, a turn handed over) goes on from its text
+        // so far, as if it had all gone out: what was held of it shows with its message.done.
+        let stream = this.streams.get(part.id)
+        if (!stream) this.streams.set(part.id, (stream = new MaskedStream(before)))
+        const text = stream.next(part.text)
+        if (!text) return
+        return this.emit({ at, type: 'message.delta', id: part.id, text, masked: true })
       }
       case 'text-end': {
+        this.streams.delete(part.id)
         const { text, replies, choices, done } = replyCard(this.texts.get(part.id) ?? '')
         this.texts.delete(part.id)
         this.emit({ at, type: 'message.done', id: part.id, text })
@@ -473,6 +497,21 @@ export class EventMapper {
         if (this.toolCalls.has(part.toolCallId) || this.started.has(part.toolCallId)) return
         this.started.add(part.toolCallId)
         this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
+        // An answer to a person's message given to the turn: the teammate's message, which
+        // answers the one given to it last, word for word. Without an answer, an error step.
+        const answer =
+          bareToolName(part.toolName) === ANSWER_MESSAGE_TOOL ? answerText(part.input) : undefined
+        if (answer) {
+          this.answers.add(part.toolCallId)
+          const answers = this.steered()
+          return this.emit({
+            at,
+            type: 'message.done',
+            id: part.toolCallId,
+            text: answer,
+            ...(answers ? { answers } : {}),
+          })
+        }
         // The harness's own question tool: a person answers, then the turn continues.
         if (part.toolName === QUESTION_TOOL || part.toolName === ASK_USER_TOOL) {
           const questions =
@@ -539,6 +578,7 @@ export class EventMapper {
       case 'tool-result': {
         const call = this.toolCalls.get(part.toolCallId)
         this.toolCalls.delete(part.toolCallId)
+        if (this.answers.delete(part.toolCallId)) return
         this.emit({
           at,
           type: 'tool.finished',
@@ -556,6 +596,7 @@ export class EventMapper {
       }
       case 'tool-error':
         this.toolCalls.delete(part.toolCallId)
+        if (this.answers.delete(part.toolCallId)) return
         return this.emit({
           at,
           type: 'tool.finished',

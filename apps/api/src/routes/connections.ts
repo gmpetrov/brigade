@@ -110,6 +110,7 @@ type OAuthState = {
     | 'dataforseo'
     | 'ahrefs'
     | 'expo'
+    | 'revenuecat'
     | 'stripe'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
@@ -382,11 +383,22 @@ export const connections = new Hono<AppEnv>()
     }
     // An App that names its accounts (Linear's workspace, Atlassian's site) wins over the
     // sign-in's email, which would show the same on each of a member's accounts.
+    // An App whose accounts have a stable id beside their name (RevenueCat's projects, which
+    // may share a name): the sign-in renews the member's account of that same id, never one
+    // that only has the same name, and keeps the id with its tokens.
+    const byId = server.account && 'tool' in server.account && !!server.account.id
+    const identified = byId ? await keyAccount(server, signedIn) : null
+    if (identified?.accountId) {
+      credential = { ...credential, accountId: identified.accountId }
+      repair = await sameAccountRow(db, scope, kind, identified.accountId)
+    }
     const account =
       stripeLabel ??
-      (server.account
-        ? ((await mcpAccount(server, signedIn)) ?? email)
-        : (email ?? (await mcpAccount(server, signedIn))))
+      (identified
+        ? (identified.account ?? email)
+        : server.account
+          ? ((await mcpAccount(server, signedIn)) ?? email)
+          : (email ?? (await mcpAccount(server, signedIn))))
     // The row would show only the App's name: say so, as the provider's reply may have changed.
     if (!account) console.warn(`mcp connection of ${kind}: no account name`)
     const connection = await createConnection(
@@ -400,6 +412,7 @@ export const connections = new Hono<AppEnv>()
       credential,
       added ?? undefined,
       repair,
+      !byId,
     )
     if (added && config) await refreshApp(db, added.id, config, server, signedIn)
     const repository = appCatalog[kind].skills
@@ -699,19 +712,16 @@ export const connections = new Hono<AppEnv>()
       })
     // The member's account this key reaches already, by id: it gets the new key. A reconnect
     // keeps the row's name and grants, so only with a key of that same account.
-    const rows = await db.connection.findMany({
-      where: { kind, createdByMemberId: scope.memberId, status: { not: 'removed' } },
-    })
-    let same: string | undefined
-    for (const row of rows) {
-      if (!row.vaultSecretId) continue
-      const kept = await openSecret<ApiKeyCredential>(db, scope, row.vaultSecretId).catch(
-        () => null,
-      )
-      if (kept?.accountId === accountId) same = row.id
-    }
+    const same = await sameAccountRow(db, scope, kind, accountId)
     if (reconnect) {
-      const row = rows.find((r) => r.id === reconnect)
+      const row = await db.connection.findFirst({
+        where: {
+          id: reconnect,
+          kind,
+          createdByMemberId: scope.memberId,
+          status: { not: 'removed' },
+        },
+      })
       if (!row) throw new HTTPException(404, { message: 'Connection not found' })
       const refused = keyReconnectRefusal(name, reconnect, same, account)
       if (refused) throw new HTTPException(400, { message: refused })
@@ -1133,7 +1143,30 @@ export function keyReconnectRefusal(
   return `That key reaches ${key ? `another ${app} account (${key})` : `another ${app} account`}: paste a key of this account, or add it as another account`
 }
 
-/** The account a pasted key reaches: its name for the row, and its stable id. */
+/**
+ * The member's account of an App reaching this account id, whether signed in with a key or the
+ * provider's OAuth: both keep the id with their credential.
+ */
+async function sameAccountRow(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  kind: ConnectorKind,
+  accountId: string,
+) {
+  const rows = await db.connection.findMany({
+    where: { kind, createdByMemberId: scope.memberId, status: { not: 'removed' } },
+  })
+  for (const row of rows) {
+    if (!row.vaultSecretId) continue
+    const kept = await openSecret<{ accountId?: string }>(db, scope, row.vaultSecretId).catch(
+      () => null,
+    )
+    if (kept?.accountId === accountId) return row.id
+  }
+  return undefined
+}
+
+/** The account a pasted key or a sign-in reaches: its name for the row, and its stable id. */
 async function keyAccount(server: McpServer, keyed: Parameters<typeof mcpAccount>[1]) {
   if (!server.account || !('tool' in server.account) || !server.account.id)
     return { account: await mcpAccount(server, keyed), accountId: null }

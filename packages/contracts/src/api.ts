@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { AttachmentIds } from './attachments.js'
 import { AskReply, QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath } from './library.js'
+import { StartOnLines } from './lists.js'
 import { isHarnessModel } from './models.js'
 import { Logo } from './projects.js'
 import { CLIPBOARD_MAX, Effort, HarnessId } from './runner.js'
@@ -149,6 +150,7 @@ export const ConnectMcp = z.object({
     'dataforseo',
     'ahrefs',
     'expo',
+    'revenuecat',
     'stripe',
   ]),
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */
@@ -157,11 +159,11 @@ export const ConnectMcp = z.object({
   /** The account being reconnected: Stripe repairs it when its sign-in alone cannot say which. */
   reconnect: z.string().max(100).optional(),
 })
-/** An App whose account signs in to its MCP server with a key the member pastes (RevenueCat). */
+/** An App whose accounts may also sign in to its MCP server with a pasted key (RevenueCat). */
 export const ConnectMcpKey = z.object({
   kind: z.enum(['revenuecat']),
   apiKey: z.string().trim().min(1).max(500),
-  /** The account being reconnected: it gets the new key, whichever project the key reaches. */
+  /** The account being reconnected: it gets the new key only when the key reaches its project. */
   reconnect: z.string().max(100).optional(),
 })
 /** An MCP server's address, to see what it is and how its accounts sign in. */
@@ -291,6 +293,8 @@ export const StartThread = z
     projectId: z.string().nullish(),
     /** How hard its teammates think; omit for the harness's default. */
     effort: Effort.nullish(),
+    /** Lines of a list it works on, attached before its first turn so its teammate knows. */
+    listLines: StartOnLines.optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 

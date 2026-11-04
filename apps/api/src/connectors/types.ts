@@ -253,6 +253,12 @@ export type McpServer = {
      */
     id?: (output: unknown) => string | null
   }
+  /**
+   * Accounts may also sign in with a key the member pastes, beside the server's OAuth
+   * (RevenueCat, whose OAuth came after its keys): a credential holding apiKey is sent as a
+   * Bearer token.
+   */
+  keys?: boolean
   /** oauth: the scopes to ask for, when not all those the server lists. */
   scopes?: string[]
   /**
