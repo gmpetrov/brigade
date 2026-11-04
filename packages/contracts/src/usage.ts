@@ -59,4 +59,14 @@ export type UsageResponse = {
   topThreads: (UsageGroup & { source: UsageSource; teammateId: string | null })[]
   /** The routines whose runs spent the most. */
   topSchedules: UsageGroup[]
+  /**
+   * Tokens by quarter hour, for the card a person shares: each the start of its quarter (UTC,
+   * so the dashboard lays them out in the person's own hours), only those that spent any.
+   */
+  quarters: { at: string; tokens: number }[]
+  /**
+   * The stretch of the same length just before, to say how usage changed; null while Usage has
+   * not counted the whole of it the way it counts now.
+   */
+  previous: UsageTotals | null
 }

@@ -370,6 +370,13 @@ export async function noteUsageRun(
 
 const DAY_MS = 24 * 60 * 60_000
 
+/**
+ * Since when Usage has counted tokens as it does now: response by response, from the harness's
+ * own logs (#567, deployed on 31 October 2026, and on runners as they updated). A stretch that
+ * starts before it was counted otherwise, so it is never compared with one after.
+ */
+export const COUNTED_ALIKE_SINCE = new Date('2026-11-01T00:00:00Z')
+
 type Row = {
   id: string | null
   input: bigint | number | null
@@ -398,6 +405,8 @@ const GROUP_COLUMNS = {
   schedule: Prisma.sql`"scheduleId"`,
   // Stored in UTC, with no zone: its day is UTC's.
   day: Prisma.sql`to_char(date_trunc('day', "at"), 'YYYY-MM-DD')`,
+  // Its quarter hour's start, in UTC like the day.
+  quarter: Prisma.sql`to_char(date_trunc('hour', "at") + floor(extract(minute FROM "at") / 15) * interval '15 minutes', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
 } as const
 
 /**
@@ -411,9 +420,11 @@ export async function usageReport(
 ): Promise<UsageResponse> {
   const all = scope.role === 'owner' || scope.role === 'admin'
   const since = new Date(now.getTime() - days * DAY_MS)
-  const where = Prisma.sql`"workspaceId" = ${scope.workspaceId} AND "at" >= ${since}${
+  const before = new Date(since.getTime() - days * DAY_MS)
+  const whose = Prisma.sql`"workspaceId" = ${scope.workspaceId}${
     all ? Prisma.empty : Prisma.sql` AND "memberId" = ${scope.memberId}`
   }`
+  const where = Prisma.sql`${whose} AND "at" >= ${since}`
   // A turn counted by response keeps its row, to count the turn, but not its tokens (replaced).
   const counted = Prisma.sql`FILTER (WHERE NOT "replaced")`
   const sums = Prisma.sql`sum("inputTokens") ${counted}::bigint AS input,
@@ -443,20 +454,33 @@ export async function usageReport(
       ORDER BY coalesce(sum("inputTokens"::bigint + "outputTokens") ${counted}, 0) DESC
       ${options.limit ? Prisma.sql`LIMIT ${options.limit}` : Prisma.empty}`
   }
-  const [total, daily, byProvider, bySource, byTeammate, byModel, byMember, threads, schedules] =
-    await Promise.all([
-      prisma.$queryRaw<
-        Row[]
-      >`SELECT NULL AS id, ${sums}, ${turns}::bigint AS runs FROM "TokenUsage" WHERE ${where}`,
-      grouped('day'),
-      grouped('provider'),
-      grouped('source'),
-      grouped('teammate', { limit: 20 }),
-      grouped('model', { limit: 10, spent: true }),
-      all ? grouped('member', { limit: 20 }) : Promise.resolve([]),
-      grouped('thread', { limit: 15, notNull: true }),
-      grouped('schedule', { limit: 10, runs: 'threads', notNull: true }),
-    ])
+  const [
+    total,
+    daily,
+    quarters,
+    previous,
+    byProvider,
+    bySource,
+    byTeammate,
+    byModel,
+    byMember,
+    threads,
+    schedules,
+  ] = await Promise.all([
+    prisma.$queryRaw<
+      Row[]
+    >`SELECT NULL AS id, ${sums}, ${turns}::bigint AS runs FROM "TokenUsage" WHERE ${where}`,
+    grouped('day'),
+    grouped('quarter', { spent: true }),
+    previousTotals(whose, before, since, sums, turns),
+    grouped('provider'),
+    grouped('source'),
+    grouped('teammate', { limit: 20 }),
+    grouped('model', { limit: 10, spent: true }),
+    all ? grouped('member', { limit: 20 }) : Promise.resolve([]),
+    grouped('thread', { limit: 15, notNull: true }),
+    grouped('schedule', { limit: 10, runs: 'threads', notNull: true }),
+  ])
   const names = await usageNames(scope, {
     teammates: [...byTeammate, ...threads].map((r) => r.id),
     members: byMember.map((r) => r.id),
@@ -471,6 +495,10 @@ export async function usageReport(
     since: since.toISOString(),
     totals: totals(total[0]),
     daily: everyDay(since, now, daily),
+    quarters: quarters
+      .map((r) => ({ at: r.id ?? '', tokens: Number(r.input ?? 0) + Number(r.output ?? 0) }))
+      .sort((a, b) => a.at.localeCompare(b.at)),
+    previous,
     byProvider: group(byProvider, (id) => (id === 'codex' ? 'Codex' : 'Claude')),
     bySource: group(bySource, (id) => id ?? ''),
     byTeammate: group(byTeammate, (id) => (id && names.teammates.get(id)) || 'Brigade'),
@@ -488,6 +516,29 @@ export async function usageReport(
     }),
     topSchedules: group(schedules, (id) => (id && names.schedules.get(id)) || 'Deleted routine'),
   }
+}
+
+/**
+ * What the stretch from `before` to `since` spent, when Usage counted the whole of it as it
+ * counts now: it starts after COUNTED_ALIKE_SINCE, and the workspace (or the member's accounts)
+ * spent tokens before it began, so a first week is not compared with the days before anyone
+ * used Brigade.
+ */
+async function previousTotals(
+  whose: Prisma.Sql,
+  before: Date,
+  since: Date,
+  sums: Prisma.Sql,
+  turns: Prisma.Sql,
+): Promise<UsageTotals | null> {
+  if (before < COUNTED_ALIKE_SINCE) return null
+  const [first] = await prisma.$queryRaw<{ at: Date | null }[]>`
+    SELECT min("at") AS at FROM "TokenUsage" WHERE ${whose}`
+  if (!first?.at || first.at > before) return null
+  const [row] = await prisma.$queryRaw<Row[]>`
+    SELECT NULL AS id, ${sums}, ${turns}::bigint AS runs FROM "TokenUsage"
+    WHERE ${whose} AND "at" >= ${before} AND "at" < ${since}`
+  return totals(row)
 }
 
 /** Each day of the stretch, with nothing for a day that spent nothing. */
