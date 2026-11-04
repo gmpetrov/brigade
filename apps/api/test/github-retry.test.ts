@@ -5,8 +5,10 @@ import { beforeEach, describe, test } from 'node:test'
 // pull request view for 14 minutes), src/pull-requests.ts:
 // - a read GitHub answers 500, 502, 503 or 504 is asked again after a short wait, a 4xx never,
 //   nor a write;
-// - a 5xx that still fails fails the request, and is reported once per outage, never for a blip
-//   shorter than a minute; a 4xx fails as before, reported by the API's error handler.
+// - a 5xx that still fails fails the request, and is reported once per outage: once 5xx answers
+//   went on for a minute with no other answer between them, never for a blip shorter than that,
+//   and once in ten minutes for one that comes and goes; a 4xx fails as before, reported by the
+//   API's error handler.
 process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
@@ -84,19 +86,47 @@ describe('a GitHub outage, reported', () => {
     assert.equal(reportOutage(t), false, 'a blip')
     assert.equal(reportOutage(t + OUTAGE_REPORT_MS - 1), false, 'still under a minute')
     assert.equal(reportOutage(t + OUTAGE_REPORT_MS), true, 'an outage')
+    // Nov 3: 14 minutes of 5xx, a request every minute or so.
     for (let i = 1; i <= 14; i++)
-      assert.equal(reportOutage(t + OUTAGE_REPORT_MS + i * 60_000), false, 'reported already')
+      assert.equal(reportOutage(t + OUTAGE_REPORT_MS + i * 50_000), false, 'reported already')
   })
 
-  test('a blip under a minute is never reported, and a later one starts afresh', () => {
+  test('short blips apart are never reported, even when GitHub was not asked between them', () => {
     const t = 1_000_000
     assert.equal(reportOutage(t), false)
     assert.equal(reportOutage(t + 50_000), false)
-    // GitHub answered for a while: the next 5xx is a new outage, not the first one's tail.
-    const later = t + 50_000 + OUTAGE_GAP_MS + 1
+    // Nothing asked for over a minute: the next 5xx is a new blip, not the first one's tail.
+    const later = t + 50_000 + OUTAGE_REPORT_MS + 1
     assert.equal(reportOutage(later), false)
     assert.equal(reportOutage(later + 30_000), false)
-    assert.equal(reportOutage(later + OUTAGE_REPORT_MS), true)
+    assert.equal(reportOutage(later + 30_000 + OUTAGE_REPORT_MS), true, 'this one lasted')
+  })
+
+  test('a blip, GitHub answering, then another blip: not reported', async () => {
+    const t = 1_000_000
+    assert.equal(reportOutage(t), false)
+    // A request in between that GitHub answered, through the retrying fetch.
+    await askAgain('GET', github(503, 200).send, [1, 1])
+    assert.equal(reportOutage(t + 30_000), false)
+    await askAgain('GET', github(404).send, [1, 1])
+    assert.equal(reportOutage(t + OUTAGE_REPORT_MS + 10_000), false, 'answered meanwhile')
+    // Still answering 5xx after being asked again: the run goes on.
+    await askAgain('GET', github(503).send, [1, 1])
+    assert.equal(reportOutage(t + 2 * OUTAGE_REPORT_MS + 10_000), true)
+  })
+
+  test('an outage that comes and goes is reported once in ten minutes', async () => {
+    const t = 1_000_000
+    reportOutage(t)
+    assert.equal(reportOutage(t + OUTAGE_REPORT_MS), true)
+    await askAgain('GET', github(200).send, [1, 1])
+    const again = t + OUTAGE_REPORT_MS + 60_000
+    reportOutage(again)
+    assert.equal(reportOutage(again + OUTAGE_REPORT_MS), false, 'within ten minutes')
+    await askAgain('GET', github(200).send, [1, 1])
+    const later = t + OUTAGE_REPORT_MS + OUTAGE_GAP_MS
+    reportOutage(later)
+    assert.equal(reportOutage(later + OUTAGE_REPORT_MS), true, 'a new outage')
   })
 
   test("a view's 5xx fails as a 502 the error handler does not send again; a 4xx it does", async () => {

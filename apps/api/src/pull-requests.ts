@@ -129,6 +129,7 @@ export async function askAgain(
   const read = !method || ['GET', 'HEAD'].includes(method.toUpperCase())
   for (let attempt = 0; ; attempt++) {
     const response = await send()
+    if (!transient(response.status)) githubAnswered()
     if (!read || !transient(response.status) || attempt >= waits.length) return response
     await response.body?.cancel().catch(() => {})
     await new Promise((resolve) => setTimeout(resolve, waits[attempt]))
@@ -137,27 +138,37 @@ export async function askAgain(
 
 /** A run of 5xx answers from GitHub shorter than this is not reported: a blip, asked again. */
 export const OUTAGE_REPORT_MS = 60_000
-/** A 5xx this long after the last one starts a new outage. */
+/** After an outage is reported, no other is for this long: one that comes and goes is one report. */
 export const OUTAGE_GAP_MS = 10 * 60_000
 
-/** GitHub's current run of 5xx answers (one for the whole API: GitHub's outage is everyone's). */
+/**
+ * GitHub's current run of 5xx answers (one for the whole API: GitHub's outage is everyone's):
+ * ended by any other answer of GitHub's, or by a minute without one; and when one was last reported.
+ */
 let outage: { since: number; last: number; reported: boolean } | null = null
+let reportedAt: number | null = null
 
 /**
- * Whether a 5xx GitHub still answered after being asked again is to be reported now: once per
- * outage, once it lasted OUTAGE_REPORT_MS; never for a blip shorter than that.
+ * Whether a 5xx GitHub still answered after being asked again is to be reported now: once 5xx
+ * answers have gone on for OUTAGE_REPORT_MS with no other answer between them; once per run, and
+ * not for another run within OUTAGE_GAP_MS of a report; never for a blip shorter than a minute.
  */
 export function reportOutage(now = Date.now()) {
-  if (!outage || now - outage.last > OUTAGE_GAP_MS)
+  if (!outage || now - outage.last > OUTAGE_REPORT_MS)
     outage = { since: now, last: now, reported: false }
   outage.last = now
   if (outage.reported || now - outage.since < OUTAGE_REPORT_MS) return false
   outage.reported = true
+  if (reportedAt !== null && now - reportedAt < OUTAGE_GAP_MS) return false
+  reportedAt = now
   return true
 }
 
-/** For tests: forget the outage under way. */
-export const forgetOutage = () => void (outage = null)
+/** GitHub answered other than a 5xx: the run of 5xx under way, if any, has ended. */
+export const githubAnswered = () => void (outage = null)
+
+/** For tests: forget the outage under way and the last report. */
+export const forgetOutage = () => void ((outage = null), (reportedAt = null))
 
 /**
  * The name Brigade keeps a repository's pull requests under, for a name someone gives (a card
