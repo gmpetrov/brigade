@@ -10,19 +10,24 @@ The web code is `apps/web/components/dictation.tsx`, the API's `apps/api/src/dic
 
 - The browser records with `MediaRecorder` (WebM/Opus in Chrome and Firefox, MP4/AAC in
   Safari) and posts the recording to `POST /api/dictation` (multipart `audio`).
-- The API sends it to Groq's `whisper-large-v3-turbo` (OpenAI-compatible
-  `/openai/v1/audio/transcriptions`, language detected) and answers `{ text }`. Nothing is
-  stored, in the database or the bucket.
+- The API sends it to Whisper Large v3 Turbo (language detected) and answers `{ text }`.
+  Nothing is stored, in the database or the bucket. The provider (`transcriber()`), both
+  taking OpenAI's multipart transcription request:
+  - **OpenRouter** for now (`OPENROUTER_API_KEY`): `openai/whisper-large-v3-turbo` at
+    `openrouter.ai/api/v1/audio/transcriptions`, which OpenRouter serves from DeepInfra or Groq.
+  - **Groq**'s own API once `GROQ_API_KEY` is set, used first: `whisper-large-v3-turbo`.
+  - `DICTATION_MODEL` names another transcription model of the provider, such as OpenRouter's
+    `x-ai/grok-stt-1.0`.
 - A recording stops by itself after 10 minutes, and the API takes 20 MB at most
   (`DICTATION_MAX_*` in `@brigade/contracts`). A recording in which the microphone never
   rose above silence is not sent ("Nothing was heard"), which spares Whisper's habit of
   inventing words for silence.
-- Groq's errors are not shown as they are: a rate limit is "Dictation is busy", an
+- The provider's errors are not shown as they are: a rate limit is "Dictation is busy", an
   unreadable file "This recording could not be transcribed", the rest "Transcription failed".
 
 ## Who has it
 
-- Without `GROQ_API_KEY` on the API, there is no microphone (`GET /api/dictation` answers
+- Without `OPENROUTER_API_KEY` or `GROQ_API_KEY` on the API, there is no microphone (`GET /api/dictation` answers
   `{ available: false, reason: 'off' }`).
 - With it, while billing is on (docs/billing.md), it comes with Brigade Cloud: a workspace
   without the plan sees the microphone greyed, "Dictation comes with Brigade Cloud", which
@@ -38,5 +43,6 @@ released before that cannot use the microphone; the composer says so.
 
 ## Production
 
-`GROQ_API_KEY` is a secret on the `brigade-api` Worker (`wrangler secret put GROQ_API_KEY`).
-Whisper Large v3 Turbo costs $0.04 an hour of audio, billed for at least 10 seconds a request.
+`OPENROUTER_API_KEY` (or later `GROQ_API_KEY`) is a secret on the `brigade-api` Worker
+(`wrangler secret put OPENROUTER_API_KEY`). On OpenRouter, Whisper Large v3 Turbo costs from
+$0.012 an hour of audio (DeepInfra) to $0.04 (Groq), as its models list says.

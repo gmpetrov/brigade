@@ -151,10 +151,14 @@ const Env = z.object({
    */
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   /**
-   * Dictation in the composers (src/dictation.ts): a Groq API key, for Whisper Large v3 Turbo.
-   * It comes with Brigade Cloud while billing is on. Without it, no microphone button.
+   * Dictation in the composers (src/dictation.ts), by Whisper Large v3 Turbo: an OpenRouter API
+   * key, or a Groq one (used first when both are set). It comes with Brigade Cloud while billing
+   * is on. Without either, no microphone button. DICTATION_MODEL picks another of the
+   * provider's transcription models (OpenRouter's x-ai/grok-stt-1.0, say).
    */
+  OPENROUTER_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
+  DICTATION_MODEL: z.string().optional(),
   /** The domain agents' addresses are on. */
   MAIL_DOMAIN: z.string().default('mails.brigade.lol'),
   /**

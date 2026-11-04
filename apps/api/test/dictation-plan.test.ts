@@ -21,9 +21,9 @@ const fromEnvFile = () => {
 process.env.DATABASE_URL ??= fromEnvFile() ?? 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-// Billing on, with keys that reach nothing: nothing here calls Stripe or Groq.
+// Billing on, with keys that reach nothing: nothing here calls Stripe or OpenRouter.
 process.env.STRIPE_SECRET_KEY = 'sk_test_never_called'
-process.env.GROQ_API_KEY = 'gsk_test_never_sent'
+process.env.OPENROUTER_API_KEY = 'sk-or-test-never-sent'
 
 async function reachable() {
   const client = new pg.Client({

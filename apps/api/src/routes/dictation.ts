@@ -3,8 +3,7 @@
 import { DICTATION_MAX_BYTES } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { env } from '../config.js'
-import { dictationStatus, requireDictation, transcribe } from '../dictation.js'
+import { dictationStatus, requireDictation, transcribe, transcriber } from '../dictation.js'
 import { requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 export const dictation = new Hono<AppEnv>()
@@ -21,5 +20,5 @@ export const dictation = new Hono<AppEnv>()
     const form = await c.req.parseBody()
     const audio = form.audio
     if (!(audio instanceof Blob)) throw new HTTPException(400, { message: 'Attach the recording' })
-    return c.json(await transcribe(audio, { key: env.GROQ_API_KEY! }))
+    return c.json(await transcribe(audio, { to: transcriber()! }))
   })
