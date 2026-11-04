@@ -1506,8 +1506,9 @@ function layoutThread(items: Item[], working: boolean) {
       if (item.kind === 'woke' || answeredSinceStep(since.map((j) => chatEntry(items[j]!)))) {
         nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
         since = []
+        // Its work counts from here; otherwise from where the turn, or its last fold, began.
+        steered = item.at
       }
-      steered = item.at
     }
     since.push(i)
     if (item.kind === 'turn') {
