@@ -186,8 +186,14 @@ function catalogTools(
       )
     return variant
   }
-  const accountParam = several
-    ? { account: { type: 'string', enum: accounts, description: `The ${label} account to use` } }
+  const accountParam: Record<string, JSONSchema7> = several
+    ? {
+        account: {
+          type: 'string',
+          enum: accounts,
+          description: `The ${label} account to use`,
+        },
+      }
     : {}
   const tools: Record<string, Tool> = {
     [find]: tool({
