@@ -153,9 +153,12 @@ test('Brigade’s answer, its refusal, a failure and no answer in time each end 
       isError: false,
     },
   )
-  const open = { error: 'Not done yet: something is still open in this thread.' }
-  const refused = await declareDone(async () => open, started)
-  assert.deepEqual([refused.output, refused.isError], [open, true])
+  // Refused: Brigade answers what is open as a failed call (schedules.ts), so it comes as an error.
+  const open = 'Not done yet: something is still open in this thread.'
+  const refused = await declareDone(async () => {
+    throw new Error(open)
+  }, started)
+  assert.deepEqual([refused.output, refused.isError], [{ error: open }, true])
   const failed = await declareDone(async () => {
     throw new Error('The API is restarting')
   }, started)
@@ -209,7 +212,7 @@ function scriptedHarness(text: string, answered: boolean) {
 /** A turn of a thread whose teammate writes `text`, Brigade answering complete_thread after a while. */
 async function turn(
   text: string,
-  options: { answered?: boolean; child?: boolean; answer?: unknown },
+  options: { answered?: boolean; child?: boolean; refuse?: string },
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'brigade-done-block-'))
   const events: AgentEvent[] = []
@@ -226,9 +229,8 @@ async function turn(
   const callSchedule: ScheduleCaller = async (call) => {
     calls.push(call)
     await new Promise((resolve) => setTimeout(resolve, 80))
-    return (
-      options.answer ?? { done: { summary: 'x', at: '2026-11-04T14:00:00.000Z' }, next: 'Done.' }
-    )
+    if (options.refuse) throw new Error(options.refuse)
+    return { done: { summary: 'x', at: '2026-11-04T14:00:00.000Z' }, next: 'Done.' }
   }
   const thread = new HarnessThread(
     spec,
@@ -319,17 +321,15 @@ test('answered early, the turn’s end and the guess at the next message wait fo
 })
 
 test('refused, the turn still ends, with what is open under the reply', async () => {
-  const open = {
-    error:
-      'Not done yet: something is still open in this thread. Deal with each:\n- Pull request #9 is still open: merge it.',
-  }
-  const t = await turn(`${REPLY}\n\n${DONE}`, { answer: open })
+  const open =
+    'Not done yet: something is still open in this thread. Deal with each:\n- Pull request #9 is still open: merge it.'
+  const t = await turn(`${REPLY}\n\n${DONE}`, { refuse: open })
   assert.equal(t.outcome.status, 'idle')
   const finished = t.events.find((e) => e.type === 'tool.finished') as {
     output: unknown
     isError: boolean
   }
-  assert.deepEqual([finished.output, finished.isError], [open, true])
+  assert.deepEqual([finished.output, finished.isError], [{ error: open }, true])
   assert.equal(shown(t.seen).at(-1), 'turn.completed')
 })
 

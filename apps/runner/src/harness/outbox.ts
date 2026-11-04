@@ -47,8 +47,9 @@ export class Outbox {
 
 /**
  * A done block's call, sent to Brigade: its tool.finished with Brigade's answer. Declared done,
- * the thread shows its Done line; refused (something still open), failed or unanswered within
- * `waitMs`, an error the person sees under the reply, with why.
+ * the thread shows its Done line. Refused (Brigade answers what is still open as a failed call),
+ * failed, or not answered within `waitMs`: an error, with why, which the person sees under the
+ * reply.
  */
 export async function declareDone(
   call: ScheduleCaller,
@@ -73,8 +74,7 @@ export async function declareDone(
     toolName: COMPLETE_THREAD_TOOL,
     input: started.input,
   }).then(
-    // Brigade refuses with what is still open, as an answer: an error all the same here.
-    (output) => ({ output, isError: refused(output) }),
+    (output) => ({ output, isError: false }),
     (error: unknown) => ({
       output: { error: error instanceof Error ? error.message : String(error) },
       isError: true,
@@ -94,8 +94,3 @@ export async function declareDone(
     clearTimeout(timer)
   }
 }
-
-const refused = (output: unknown) =>
-  typeof output === 'object' &&
-  output !== null &&
-  typeof (output as { error?: unknown }).error === 'string'
