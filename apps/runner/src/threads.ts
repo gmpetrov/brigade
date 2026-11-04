@@ -86,6 +86,11 @@ const aborted = (signal: AbortSignal) =>
 const PARK_AFTER_MS = 5 * 60_000
 /** How much of what others said a teammate is told at the start of its turn. */
 const CATCH_UP_CHARS = 100_000
+/**
+ * The most text queued messages read together in one turn have (joinQueued): half of what a
+ * turn is told, so what others said since its last turn still fits beside them.
+ */
+const JOIN_CHARS = CATCH_UP_CHARS / 2
 const LOG_ENTRIES = 200
 /** Teammates handing the thread to one another stop after this many handoffs without a member. */
 const MAX_HANDOFFS = 40
@@ -1385,21 +1390,30 @@ export class Threads {
    * The messages queued right behind this one, for the same teammate, go into its turn: shown
    * now, in order, and read together, rather than each in a turn of its own after the other.
    * Stops at the first that cannot, so the thread keeps the order they were written in:
-   * another teammate's, one held for a person, one being steered or already in the turn.
+   * another teammate's, one held for a person, one being steered or already in the turn. Never
+   * past a message to several teammates: the next ones answer it before this one reads more.
+   * Never past JOIN_CHARS together: the turn is told the thread within CATCH_UP_CHARS, which
+   * would drop the earliest of them (one too long goes in a turn of its own, as before).
    * Gives the log's end after the last, with its spec (the thread as it is now), or nothing.
    */
   private async joinQueued(thread: Thread, message: Message) {
-    const teammateId = message.specs[0]!.teammate.id
+    if (message.specs.length > 1) return undefined
+    const spec = message.specs[0]!
+    const teammateId = spec.teammate.id
+    let chars = this.promptText(message, spec).length
     let last: { upTo: number; spec: ThreadSpec } | undefined
     for (const next of [...thread.messages.values()]) {
       if (next === message || next.joined) continue
       if (next.state !== 'queued' || next.specs[0]!.teammate.id !== teammateId) break
+      chars += this.promptText(next, next.specs[0]!).length
+      if (chars > JOIN_CHARS) break
       // A side reply under way, or about to pass it to the turn, ends: the turn reads it.
       await this.endSide(thread, next)
       // Cancelled, or settled on the side, meanwhile.
       if (next.state !== 'queued') continue
       next.joined = true
       last = { upTo: await this.show(thread, next), spec: next.specs[0]! }
+      if (next.specs.length > 1) break
     }
     return last
   }

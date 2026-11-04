@@ -95,14 +95,14 @@ const spec = (sessionId: string, teammate = 'mark', note = '') =>
     note,
   }) as unknown as ThreadSpec
 
-const message = (sessionId: string, text: string, teammate = 'mark') =>
+const message = (sessionId: string, text: string, teammate = 'mark', then: string[] = []) =>
   threads.handle({
     type: 'thread.prompt',
-    commandId: `c-${text}`,
-    thread: spec(sessionId, teammate, text),
+    commandId: `c-${text.slice(0, 40)}`,
+    thread: spec(sessionId, teammate, text.slice(0, 40)),
     text,
     memberId: 'm1',
-    then: [],
+    then: then.map((id) => spec(sessionId, id, text.slice(0, 40))),
     attachments: [],
   })
 
@@ -111,7 +111,7 @@ const of = (sessionId: string) =>
 
 /** Waits until `ok` holds, rather than for a fixed time a busy computer may overrun. */
 async function until(ok: () => boolean, what: string) {
-  for (let i = 0; i < 200 && !ok(); i++) await sleep(10)
+  for (let i = 0; i < 500 && !ok(); i++) await sleep(20)
   assert.ok(ok(), what)
 }
 const turns = (sessionId: string) => of(sessionId).filter((e) => e.type === 'turn.started').length
@@ -169,6 +169,76 @@ test('a message for another teammate keeps its place: the ones after it wait for
   await until(() => turns('t2') === 4, "Mark's turn for the last one starts")
   assert.equal(told.at(-1)!.teammate, 'mark')
   assert.match(told.at(-1)!.text, /Two/)
+  end()
+  await sleep(50)
+})
+
+test('queued messages too long to be told together each get a turn, none dropped', async () => {
+  message('t3', 'Start')
+  await until(() => turns('t3') === 1, 'the first turn starts')
+  // Each about 60k characters: together past what a turn is told, the first would be cut.
+  message('t3', `FIRST ${'a'.repeat(60_000)}`)
+  message('t3', `SECOND ${'b'.repeat(60_000)}`)
+  await until(
+    () => of('t3').filter((e) => e.type === 'message.queued').length === 2,
+    'both wait for the turn',
+  )
+  end()
+  await until(() => turns('t3') === 2, 'the next turn starts')
+  assert.match(told.at(-1)!.text, /FIRST/)
+  assert.doesNotMatch(told.at(-1)!.text, /SECOND/)
+  end()
+  await until(() => turns('t3') === 3, 'the second gets a turn of its own')
+  assert.match(told.at(-1)!.text, /SECOND/)
+  end()
+  await sleep(50)
+})
+
+test('a message to two teammates: the second answers it before the next message is read', async () => {
+  message('t4', 'Start')
+  await until(() => turns('t4') === 1, 'the first turn starts')
+  message('t4', 'For Mark then Nina', 'mark', ['nina'])
+  message('t4', 'Then this')
+  await until(
+    () => of('t4').filter((e) => e.type === 'message.queued').length === 2,
+    'both wait for the turn',
+  )
+  end()
+  await until(() => turns('t4') === 2, "Mark's turn starts")
+  assert.match(told.at(-1)!.text, /For Mark then Nina/)
+  assert.doesNotMatch(told.at(-1)!.text, /Then this/)
+  end()
+  await until(() => turns('t4') === 3, "Nina's turn starts")
+  assert.equal(told.at(-1)!.teammate, 'nina')
+  end()
+  await until(() => turns('t4') === 4, "Mark's turn for the next message starts")
+  assert.equal(told.at(-1)!.teammate, 'mark')
+  assert.match(told.at(-1)!.text, /Then this/)
+  end()
+  await sleep(50)
+})
+
+test('read together up to a message to two teammates, not past it', async () => {
+  message('t5', 'Start')
+  await until(() => turns('t5') === 1, 'the first turn starts')
+  message('t5', 'Before it')
+  message('t5', 'For Mark then Nina', 'mark', ['nina'])
+  message('t5', 'After it')
+  await until(
+    () => of('t5').filter((e) => e.type === 'message.queued').length === 3,
+    'all three wait for the turn',
+  )
+  end()
+  await until(() => turns('t5') === 2, "Mark's turn starts")
+  assert.match(told.at(-1)!.text, /Before it/)
+  assert.match(told.at(-1)!.text, /For Mark then Nina/)
+  assert.doesNotMatch(told.at(-1)!.text, /After it/)
+  end()
+  await until(() => turns('t5') === 3, "Nina's turn starts")
+  assert.equal(told.at(-1)!.teammate, 'nina')
+  end()
+  await until(() => turns('t5') === 4, "Mark's turn for the last one starts")
+  assert.match(told.at(-1)!.text, /After it/)
   end()
   await sleep(50)
 })
