@@ -5,6 +5,7 @@
 import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { cloudEntitled, EMAIL_PLAN_REQUIRED } from '../billing.js'
 import { attachmentKey, presignGet } from '../bucket.js'
 import { Prisma, prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { watchReplies } from '../replies.js'
@@ -80,6 +81,9 @@ export async function checkDraft(
   },
 ): Promise<string | null> {
   const { address, thread, draft } = input
+  // Resend charges for each mail: Brigade's addresses send only on the Cloud plan.
+  if (!(await cloudEntitled(address.workspaceId)))
+    return `${EMAIL_PLAN_REQUIRED}. Nothing was sent${input.byPerson ? '' : ': tell the person'}.`
   const box = threadBox(address, thread.projectId)
   const recipients = [...draft.to, ...(draft.cc ?? [])].map(bareAddress)
   if (!recipients.length) return 'An email needs at least one recipient'

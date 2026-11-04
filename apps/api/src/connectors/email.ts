@@ -4,6 +4,7 @@
 // goes through Resend with Brigade's key. A thread only ever touches its own variant's box.
 import { SEND_LATER_MAX_DAYS, emailTitle } from '@brigade/contracts'
 import { z } from 'zod'
+import { cloudEntitled, EMAIL_PLAN_REQUIRED } from '../billing.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { boxKey, newAlias, senderOfBox, variantLocal } from '../mail/addresses.js'
 import { awaitMail } from '../mail/inbound.js'
@@ -441,6 +442,9 @@ export const email: ConnectorDefinition = {
       target: (i) => `sign-up address for "${i.purpose}"`,
       run: async (ctx, i) => {
         const { db, address, box, thread } = await context(ctx)
+        // Its mail comes through Resend, which charges for it: on the Cloud plan only.
+        if (!(await cloudEntitled(address.workspaceId)))
+          throw new ConnectorError(`${EMAIL_PLAN_REQUIRED}. Tell the person.`)
         const alias = await newAlias(db, {
           address,
           projectId: box.projectId,

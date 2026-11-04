@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 const FEATURES = [
   'Teammates keep working when your Mac is asleep, closed or you don’t have one',
   'Brigade’s cloud computer, shared by the workspace, up to 4 threads at once',
+  'An email address for each teammate, and the Inbox to follow their mail',
   'Still on your own Claude or ChatGPT plan: no charge for AI usage',
 ]
 
@@ -77,8 +78,8 @@ export default function BillingPage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-extrabold tracking-tight">Billing</h1>
         <p className="max-w-prose text-muted-foreground">
-          Brigade is free on your own machines. Brigade Cloud adds the cloud computer, for this
-          workspace. {!admin && 'Only owners and admins can change the plan.'}
+          Brigade is free on your own machines. Brigade Cloud adds the cloud computer and email
+          addresses, for this workspace. {!admin && 'Only owners and admins can change the plan.'}
         </p>
       </header>
 

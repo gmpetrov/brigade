@@ -1,7 +1,8 @@
 # Billing
 
 Brigade is free on members' own machines. **Brigade Cloud**, $99 a month per workspace
-(€99 in the euro zone), adds the workspace's cloud computer. One subscription per
+(€99 in the euro zone), adds the workspace's cloud computer and Brigade's own email
+addresses (see Email below). One subscription per
 workspace, paid by the owner or admin who subscribes. All of it is in
 `apps/api/src/billing.ts`.
 
@@ -99,3 +100,19 @@ Settings › Billing shows it as "Included by Brigade", with nothing to manage.
 
 Without `STRIPE_WEBHOOK_SECRET`, the plan is read from Stripe when Checkout returns and
 each time Settings › Billing opens, so a cancellation in the portal shows there.
+
+## Email
+
+Brigade's own addresses send and receive through Resend, which charges for each mail, so they
+come with Brigade Cloud (`requireEmailPlan`, `EMAIL_PLAN_REQUIRED` in `billing.ts`). Without
+the plan, while billing is on:
+
+- turning an agent's address on and making a project's mailbox answer 402
+  (`routes/email.ts`);
+- a thread cannot make a sign-up address (`email_new_address`), and no mail is sent, by a
+  teammate or by a person from the Inbox (`checkDraft` in `mail/outbound.ts`);
+- the Inbox shows its paywall instead of the list (`GET /api/inbox/plan`,
+  `components/inbox-paywall.tsx`), unless a Gmail account brings mail of its own: Gmail
+  costs nothing and stays open.
+
+Addresses already on keep receiving: their mail waits in the Inbox until the plan comes back.

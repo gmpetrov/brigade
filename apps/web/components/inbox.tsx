@@ -11,6 +11,7 @@ import {
   type InboxDraft,
   type InboxItem,
   type InboxMessage,
+  type InboxPlan,
   type InboxSourceView,
   type InboxStatus,
 } from '@brigade/contracts'
@@ -43,6 +44,7 @@ import {
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
+import { InboxPaywall } from '@/components/inbox-paywall'
 import { AddRule } from '@/components/project-email'
 import { ProjectIcon, ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
@@ -453,6 +455,8 @@ export function InboxView() {
   if (q) search.set('q', q)
   const path = `/inbox?${search}`
   const list = useApi<InboxList>(restore === 'done' ? path : null)
+  // Brigade's own addresses come with Brigade Cloud (Resend charges for each mail).
+  const plan = useApi<InboxPlan>('/inbox/plan')
   const reloadList = list.reload
 
   // Older pages, appended below the first: kept for the filters they were asked with.
@@ -613,6 +617,10 @@ export function InboxView() {
       icon: <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />,
       label: chosenProject.name,
     })
+
+  // Without the plan, the offer instead of the list, unless a Gmail account brings mail of its own.
+  if (plan.data?.needed && list.data && !sources.some((s) => s.kind === 'gmail'))
+    return <InboxPaywall plan={plan.data} />
 
   return (
     // data-inbox: on a wide screen the page holds still behind its two columns (globals.css).
