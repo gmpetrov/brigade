@@ -66,6 +66,9 @@ export function closeLine(output: unknown): { label: string; detail: string } {
     .split('\n')
     .filter((line) => line.startsWith('- '))
     .map((line) => line.slice(2).split(': ')[0]!.trim())
-  const first = reason.split('\n')[0]!.replace(/^Not done yet:\s*/, '').trim()
+  const first = reason
+    .split('\n')[0]!
+    .replace(/^Not done yet:\s*/, '')
+    .trim()
   return { label: 'Not marked done', detail: listed.length ? listed.join('; ') : first }
 }

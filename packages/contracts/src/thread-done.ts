@@ -26,7 +26,12 @@ export const COMPLETE_THREAD_TOOL = 'complete_thread'
 export function doneLine(block: string, reply: string): string {
   const first = reply
     .split('\n')
-    .map((line) => line.replace(/^\s*(?:#+|[-*>•]|\d+[.)])\s*/, '').replace(/[*_`]/g, '').trim())
+    .map((line) =>
+      line
+        .replace(/^\s*(?:#+|[-*>•]|\d+[.)])\s*/, '')
+        .replace(/[*_`]/g, '')
+        .trim(),
+    )
     .find(Boolean)
   const line = (block || first || 'Delivered').replace(/\s+/g, ' ').trim()
   if (line.length <= DONE_SUMMARY_MAX) return line

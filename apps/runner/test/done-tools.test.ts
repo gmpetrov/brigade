@@ -93,7 +93,11 @@ const told = (s: ThreadSpec) =>
 test('a thread at the top is told to declare its work done, and that a merge wakes it', () => {
   const top = told(spec({}))
   assert.match(top, /## Done\n\nWhen the work asked in this thread is delivered/)
-  assert.match(top, /call `complete_thread` in the same turn/)
+  // In the reply, not with a call: nothing to wait on before the person reads it.
+  assert.match(top, /end the reply that delivers it with a `done` block/)
+  assert.match(top, /```done\nCSV export merged \(#412\) and live\n```/)
+  assert.match(top, /a `done` block, if any, after it/)
+  assert.doesNotMatch(top, /call `complete_thread`/)
   // An answered question closes too, even on suggested replies; choices it needs picked do not.
   assert.match(top, /A question is delivered by your answer/)
   assert.match(top, /nor is a reply that ends on choices you need picked/)
@@ -102,6 +106,6 @@ test('a thread at the top is told to declare its work done, and that a merge wak
   // A child reports: no such section, and a merge only leaves a note there.
   const child = told(spec({ parent: { id: 'p1', title: 'Launch' } }))
   assert.doesNotMatch(child, /## Done\n/)
-  assert.doesNotMatch(child, /complete_thread/)
+  assert.doesNotMatch(child, /complete_thread|`done` block/)
   assert.match(child, /the thread notes it once it is merged/)
 })

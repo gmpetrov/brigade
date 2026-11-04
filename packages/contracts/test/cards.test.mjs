@@ -128,3 +128,37 @@ test('older suggest_replies calls are read the same way', () => {
   assert.equal(safeReplies({ replies: ['/visual'] }), null)
   assert.ok(buttonText('Send it'))
 })
+
+test('a done block comes out of the reply as its line, beside its buttons', async () => {
+  const { doneLine } = await import('../dist/thread-done.js')
+  assert.deepEqual(replyCard(`${reply}\n\n\`\`\`done\nCSV export merged (#412)\n\`\`\`\n`), {
+    text: reply,
+    done: 'CSV export merged (#412)',
+  })
+  // After the buttons, or before them: both read, and the person sees neither block.
+  const both = `${reply}\n\`\`\`replies\nMerge #148\n\`\`\`\n\`\`\`done\nAnswered\n\`\`\``
+  assert.deepEqual(replyCard(both), {
+    text: reply,
+    replies: { replies: ['Merge #148'] },
+    done: 'Answered',
+  })
+  const before = `${reply}\n\`\`\`done\nAnswered\n\`\`\`\n\`\`\`replies\nMerge #148\n\`\`\``
+  assert.deepEqual(replyCard(before), replyCard(both))
+  // Its line on several lines runs together; an empty block still declares done (doneLine).
+  assert.equal(replyCard('Ok.\n```done\n  Shipped\n  and live \n```').done, 'Shipped and live')
+  assert.equal(replyCard('Ok.\n```done\n```').done, '')
+  // No block, nothing declared.
+  assert.equal(replyCard(reply).done, undefined)
+  // The line: its own, else the reply's first, cut at a word to fit.
+  assert.equal(doneLine('Shipped', 'Long reply'), 'Shipped')
+  assert.equal(doneLine('', '## Le paywall est en place\n\nDétails…'), 'Le paywall est en place')
+  assert.equal(doneLine('', ''), 'Delivered')
+  const long = doneLine(`${'mot '.repeat(100)}fin`, '')
+  assert.ok(long.length <= 300 && !long.endsWith(' ') && long.startsWith('mot mot'))
+})
+
+test('a done block still being written does not show', () => {
+  assert.equal(withoutCard(`${reply}\n\n\`\`\`do`), reply)
+  assert.equal(withoutCard(`${reply}\n\n\`\`\`done\nShipp`), reply)
+  assert.equal(withoutCard(`${reply}\n\n\`\`\`done\nShipped\n\`\`\``), reply)
+})

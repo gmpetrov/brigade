@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answeredSinceStep, closingStep, quickReplies, type ChatEntry } from '../lib/chat-turn'
+import {
+  answeredSinceStep,
+  closeLine,
+  closingStep,
+  quickReplies,
+  type ChatEntry,
+} from '../lib/chat-turn'
 
 // A turn a person wrote into: their messages and what answers them stay in order, its steps
 // together (docs/decisions.md, "A person's message during a turn goes into that turn").
@@ -48,4 +54,28 @@ test('a complete_thread call shows as a step only when it did not close the thre
     isError: true,
     finished: true,
   })
+})
+
+test('a close Brigade refused says it was not, and what is open', () => {
+  const refusal = {
+    error:
+      'Not done yet: something is still open in this thread. Deal with each, or say in your reply ' +
+      'what remains:\n- Pull request #682 in acme/web (“Done block”) is still open: its work is ' +
+      'delivered once it is merged, or closed.\n- The child thread “Review #682” has not reported ' +
+      'yet: you are woken when it does.',
+  }
+  assert.deepEqual(closeLine(refusal), {
+    label: 'Not marked done',
+    detail:
+      'Pull request #682 in acme/web (“Done block”) is still open; The child thread “Review #682” has not reported yet',
+  })
+  // A failure, or no answer: its first line.
+  assert.deepEqual(
+    closeLine({ error: 'Brigade did not answer in time: the thread may not be declared done.' }),
+    {
+      label: 'Not marked done',
+      detail: 'Brigade did not answer in time: the thread may not be declared done.',
+    },
+  )
+  assert.deepEqual(closeLine(undefined), { label: 'Not marked done', detail: '' })
 })

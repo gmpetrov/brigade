@@ -127,7 +127,7 @@ test('schedules, triggers and wake-ups are offered only in a thread a person sta
 
 test("a schedule's run declares nothing done, and no merge wakes it", () => {
   const run = textFor({ origin: 'schedule' })
-  assert.doesNotMatch(run, /## Done|`complete_thread`/)
+  assert.doesNotMatch(run, /## Done|`complete_thread`|`done` block/)
   assert.match(run, /the thread notes it once it is merged/)
   const trigger = textFor({ origin: 'trigger' })
   assert.match(trigger, /## Done/)
