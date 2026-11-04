@@ -91,6 +91,11 @@ const CATCH_UP_CHARS = 100_000
  * turn is told, so what others said since its last turn still fits beside them.
  */
 const JOIN_CHARS = CATCH_UP_CHARS / 2
+/**
+ * The most queued messages read together in one turn: well under LOG_ENTRIES, which the log
+ * keeps, so showing them all never drops the first before its turn is told it.
+ */
+const JOIN_MESSAGES = 20
 const LOG_ENTRIES = 200
 /** Teammates handing the thread to one another stop after this many handoffs without a member. */
 const MAX_HANDOFFS = 40
@@ -1392,8 +1397,9 @@ export class Threads {
    * Stops at the first that cannot, so the thread keeps the order they were written in:
    * another teammate's, one held for a person, one being steered or already in the turn. Never
    * past a message to several teammates: the next ones answer it before this one reads more.
-   * Never past JOIN_CHARS together: the turn is told the thread within CATCH_UP_CHARS, which
-   * would drop the earliest of them (one too long goes in a turn of its own, as before).
+   * Never past JOIN_CHARS together, nor JOIN_MESSAGES: the turn is told the thread within
+   * CATCH_UP_CHARS, from a log of LOG_ENTRIES, either of which would drop the earliest of them
+   * (one too long goes in a turn of its own, as before).
    * Gives the log's end after the last, with its spec (the thread as it is now), or nothing.
    */
   private async joinQueued(thread: Thread, message: Message) {
@@ -1401,12 +1407,13 @@ export class Threads {
     const spec = message.specs[0]!
     const teammateId = spec.teammate.id
     let chars = this.promptText(message, spec).length
+    let count = 1
     let last: { upTo: number; spec: ThreadSpec } | undefined
     for (const next of [...thread.messages.values()]) {
       if (next === message || next.joined) continue
       if (next.state !== 'queued' || next.specs[0]!.teammate.id !== teammateId) break
       chars += this.promptText(next, next.specs[0]!).length
-      if (chars > JOIN_CHARS) break
+      if (chars > JOIN_CHARS || ++count > JOIN_MESSAGES) break
       // A side reply under way, or about to pass it to the turn, ends: the turn reads it.
       await this.endSide(thread, next)
       // Cancelled, or settled on the side, meanwhile.

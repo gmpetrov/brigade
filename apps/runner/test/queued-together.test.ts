@@ -242,3 +242,26 @@ test('read together up to a message to two teammates, not past it', async () => 
   end()
   await sleep(50)
 })
+
+test('at most twenty queued messages go into one turn, the rest into the next', async () => {
+  message('t6', 'Start')
+  await until(() => turns('t6') === 1, 'the first turn starts')
+  const ids = Array.from({ length: 25 }, (_, i) => `note-${String(i + 1).padStart(2, '0')}`)
+  for (const id of ids) message('t6', id)
+  await until(
+    () => of('t6').filter((e) => e.type === 'message.queued').length === 25,
+    'all wait for the turn',
+  )
+  end()
+  await until(() => turns('t6') === 2, 'the next turn starts')
+  const first = told.at(-1)!.text
+  for (const id of ids.slice(0, 20)) assert.match(first, new RegExp(id))
+  assert.doesNotMatch(first, /note-21/)
+  end()
+  await until(() => turns('t6') === 3, 'the rest go into the turn after it')
+  const second = told.at(-1)!.text
+  for (const id of ids.slice(20)) assert.match(second, new RegExp(id))
+  end()
+  await sleep(100)
+  assert.equal(turns('t6'), 3, 'no turn of their own after them')
+})
