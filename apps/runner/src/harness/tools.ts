@@ -84,9 +84,80 @@ const CATALOG_MIN_CHARS = Number(process.env.BRIGADE_CATALOG_MIN_CHARS) || 300_0
 const CARD_KINDS = new Set(['github', 'gmail', 'email'])
 /** The catalog tools of an App, always loaded in Claude Code: they are small (CATALOG_TOOL). */
 export const CATALOG_TOOL = Symbol('catalog tool')
-/** How much of its operations' schemas a search returns at most, whole. */
-const FOUND_SCHEMA_CHARS = 40_000
+/**
+ * The most a search answers, its operations together, and the start of each one's description
+ * it gives. Claude Code moves a tool result past 25,000 tokens into a file, which the teammate
+ * must then read in pieces: on Nov 4 a search for a PostHog trend came to 133k characters, its
+ * operations' descriptions alone up to 15k each, and the schema of one to 100k.
+ */
+const FOUND_CHARS = 30_000
+const FOUND_DESCRIPTION_CHARS = 600
 const FOUND_MAX = 12
+/**
+ * The most one operation's description and schema take when described. Past it, the schema
+ * keeps its descriptions only near its top (SCHEMA_NOTES_DEPTH), then none: its shape stays
+ * whole, and the operation's own description keeps its start (DESCRIBED_DESCRIPTION_CHARS).
+ */
+const DESCRIBED_CHARS = 60_000
+const DESCRIBED_DESCRIPTION_CHARS = 4_000
+const SCHEMA_NOTES_DEPTH = 2
+
+/**
+ * JSON Schema's keywords whose value is a schema (or, for `items`, a list of them), a list of
+ * schemas, or a map of names to schemas (`dependencies` maps a name to a schema or to a list of
+ * names). Every other keyword's value is data (`const`, `enum`, `default`, `examples`,
+ * `required`, `dependentRequired`…), kept as it is: a key named `description` there is a value.
+ */
+const SCHEMA_KEYWORDS = new Set([
+  'items',
+  'additionalItems',
+  'additionalProperties',
+  'contains',
+  'propertyNames',
+  'not',
+  'if',
+  'then',
+  'else',
+  'unevaluatedItems',
+  'unevaluatedProperties',
+  'contentSchema',
+])
+const SCHEMA_LISTS = new Set(['allOf', 'anyOf', 'oneOf', 'prefixItems'])
+const SCHEMA_MAPS = new Set([
+  'properties',
+  'patternProperties',
+  '$defs',
+  'definitions',
+  'dependentSchemas',
+  'dependencies',
+])
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * A JSON schema without the notes (`description`) of its subschemas deeper than `depth` (every
+ * one when below zero): what it accepts stays the same. Only schemas are walked, through the
+ * keywords that hold them; data in it stays whole.
+ */
+export function withoutDeepNotes(schema: unknown, depth: number, level = 0): unknown {
+  if (!isRecord(schema)) return schema
+  const sub = (value: unknown) => withoutDeepNotes(value, depth, level + 1)
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === 'description' && level > depth) continue
+    if (SCHEMA_KEYWORDS.has(key)) out[key] = Array.isArray(value) ? value.map(sub) : sub(value)
+    else if (SCHEMA_LISTS.has(key) && Array.isArray(value)) out[key] = value.map(sub)
+    else if (SCHEMA_MAPS.has(key) && isRecord(value))
+      out[key] = Object.fromEntries(
+        Object.entries(value).map(([name, v]) => [name, Array.isArray(v) ? v : sub(v)]),
+      )
+    else out[key] = value
+  }
+  return out
+}
+
+const charsOf = (value: unknown) => JSON.stringify(value ?? {}).length
 
 const catalogued = (kind: string, grants: ConnectorGrant[]) => {
   if (CARD_KINDS.has(kind)) return false
@@ -152,13 +223,34 @@ function catalogTools(
       ...value,
       ...(options.defer ? { [NAMESPACE]: namespace } : {}),
     } as JSONSchema7)
-  const entry = (v: Variant, withSchema: boolean) => ({
+  /** An operation as told: the start of its description when it is long (`shortened`). */
+  const entry = (v: Variant, descriptionChars = Infinity) => ({
     operation: v.name,
-    description: v.description,
+    description: v.description.slice(0, descriptionChars),
+    ...(v.description.length > descriptionChars ? { shortened: true } : {}),
     ...(v.write ? { write: true } : {}),
     ...(several ? { accounts: v.grants.map(accountOf) } : {}),
-    ...(withSchema ? { inputSchema: v.inputSchema } : {}),
   })
+  /**
+   * An operation described: whole while it fits DESCRIBED_CHARS, else its schema without the
+   * notes deep in it, then without any, and the start of its description.
+   */
+  const described = (v: Variant) => {
+    const whole = { ...entry(v), inputSchema: v.inputSchema }
+    if (charsOf(whole) <= DESCRIBED_CHARS) return whole
+    const short = entry(v, DESCRIBED_DESCRIPTION_CHARS)
+    const condensed = {
+      ...short,
+      inputSchema: withoutDeepNotes(v.inputSchema, SCHEMA_NOTES_DEPTH),
+      condensed: 'Notes deep in the schema are left out; what it accepts is whole.',
+    }
+    if (charsOf(condensed) <= DESCRIBED_CHARS) return condensed
+    return {
+      ...short,
+      inputSchema: withoutDeepNotes(v.inputSchema, -1),
+      condensed: "The schema's notes are left out; what it accepts is whole.",
+    }
+  }
   const words = (text: string) =>
     text
       .toLowerCase()
@@ -199,8 +291,8 @@ function catalogTools(
     [find]: tool({
       description:
         `Find ${label}'s operations for a task, by words of what you want to do (empty: all of them, by name). ` +
-        `Each comes with its description${several ? ', the accounts that have it' : ''}, and its input schema while ` +
-        `they fit; call ${describe} for one without, then ${run} to call it. [${where}]`,
+        `Each comes with its description (its start when long)${several ? ', the accounts that have it' : ''}, and ` +
+        `its input schema while they fit; call ${describe} for one without, then ${run} to call it. [${where}]`,
       inputSchema: schema({
         type: 'object',
         properties: {
@@ -232,13 +324,19 @@ function catalogTools(
           .filter((x) => x.score > 0)
           .sort((a, b) => b.score - a.score)
           .slice(0, FOUND_MAX)
-        let budget = FOUND_SCHEMA_CHARS
+        // The best first: each takes its share of FOUND_CHARS, its schema while that fits too;
+        // past it, the others come by name.
+        let budget = FOUND_CHARS
         return {
           operations: scored.map(({ v }) => {
-            const size = JSON.stringify(v.inputSchema ?? {}).length
-            const fits = size <= budget
-            if (fits) budget -= size
-            return entry(v, fits)
+            const told = entry(v, FOUND_DESCRIPTION_CHARS)
+            const size = charsOf(told)
+            if (size > budget) return { operation: v.name }
+            budget -= size
+            const schemaSize = charsOf(v.inputSchema)
+            if (schemaSize > budget) return told
+            budget -= schemaSize
+            return { ...told, inputSchema: v.inputSchema }
           }),
         }
       },
@@ -246,7 +344,8 @@ function catalogTools(
     [describe]: tool({
       description:
         `The description and input schema of one of ${label}'s operations (${find} finds them)` +
-        `${several ? ', as the account given has it (needed when its accounts have it differently)' : ''}. [${where}]`,
+        `${several ? ', as the account given has it (needed when its accounts have it differently)' : ''}; ` +
+        `a very long one comes condensed, what its schema accepts whole. [${where}]`,
       inputSchema: schema({
         type: 'object',
         properties: {
@@ -256,7 +355,7 @@ function catalogTools(
         required: ['operation'],
       }),
       execute: async (input: { operation: string; account?: string }) =>
-        entry(variantFor(input.operation, input.account, true), true),
+        described(variantFor(input.operation, input.account, true)),
     }),
     [run]: tool({
       description:
