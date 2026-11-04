@@ -735,13 +735,29 @@ function DetailsPill({
           setDetails(true)
         }}
       >
-        {project && (
-          <span title={project.name} className="flex">
-            <ProjectIcon project={project} className="size-6 rounded-md text-xs" />
-            <span className="sr-only">{project.name}: </span>
+        {(project || teammate) && (
+          <span className="flex shrink-0 items-center">
+            {project && (
+              <span title={project.name} className="flex">
+                <ProjectIcon project={project} className="size-6 rounded-full text-xs" />
+                <span className="sr-only">{project.name}: </span>
+              </span>
+            )}
+            {teammate && (
+              // On the project's circle, in a ring of the pill's colour that cuts it, as on a
+              // board card.
+              <span
+                className={cn(
+                  'flex rounded-full',
+                  project &&
+                    '-ml-2 bg-card p-[1.5px] transition-colors group-hover:bg-accent group-aria-pressed:bg-accent',
+                )}
+              >
+                <TeammateAvatar teammate={teammate} className="size-6" />
+              </span>
+            )}
           </span>
         )}
-        {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
         {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
         <Label className="max-w-72 min-w-0 truncate" title={label}>
           {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
