@@ -47,6 +47,8 @@ export function query({ prompt, options }) {
       yield ev({ type: 'message_stop' })
       yield { type: 'assistant', parent_tool_use_id: null, session_id: 'fake-session', message: { id: 'm-' + text, role: 'assistant', content: [{ type: 'text', text: said }] } }
       yield { type: 'result', subtype: 'success', is_error: false, result: 'Answer to ' + text, user_message_uuid: message.uuid, ...base }
+      // Its guess at the person's next message, once the turn is over.
+      if (options.promptSuggestions) yield { type: 'prompt_suggestion', suggestion: 'After ' + text, session_id: 'fake-session' }
     }
     note({ what: 'input closed', id })
   }
@@ -157,5 +159,27 @@ test("a kept process's host tool call reaches the turn running now", async () =>
   for (const parts of turns) {
     assert.equal(parts.filter((p) => p.type === 'tool-call').length, 1)
     assert.equal(parts.filter((p) => p.type === 'tool-result').length, 1)
+  }
+})
+
+test("Claude Code's guess at the next message ends an answered turn, and the process stays", async () => {
+  const { turns, record } = await bridgeTurn(LIVE_SDK, {
+    permissionMode: 'allow-all',
+    env: { ...claudeSettingsEnv(), BRIGADE_PROMPT_SUGGESTIONS: '1' },
+    prompts: ['one', 'two'],
+  })
+  assert.equal(record.filter((r) => r.what === 'query').length, 1, JSON.stringify(record))
+  for (const [i, word] of ['one', 'two'].entries()) {
+    const raw = turns[i]!.filter((p) => p.type === 'raw').map((p) => p.rawValue as any)
+    assert.ok(
+      raw.some((r) => r.subtype === 'brigade_answered'),
+      `turn ${word} said it was answered`,
+    )
+    // Each turn's own guess, not the one before.
+    assert.deepEqual(
+      raw.filter((r) => r.type === 'prompt_suggestion').map((r) => r.suggestion),
+      [`After ${word}`],
+    )
+    assert.equal(turns[i]!.filter((p) => p.type === 'finish').length, 1)
   }
 })
