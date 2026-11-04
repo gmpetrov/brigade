@@ -150,6 +150,29 @@ test('short of memory past the first few, a turn waits until there is room', asy
   for (const id of ['a', 'b', 'c', 'd', 'e']) end(id)
 })
 
+test('every turn kept waiting for memory says so, those behind the first too', async () => {
+  let room = true
+  const { events, message, startedAt, end } = setup(32, () => room)
+  for (const id of ['a', 'b', 'c', 'd']) message(id)
+  await sleep(60)
+  room = false
+  message('e')
+  message('f')
+  const waits = (id: string) =>
+    events.filter(
+      (e) => e.sessionId === id && e.event.type === 'raw' && e.event.source === TURN_MEMORY_SOURCE,
+    ).length
+  for (let i = 0; i < 100 && waits('f') === 0; i++) await sleep(20)
+  assert.equal(waits('e'), 1, 'e says it waits for memory')
+  assert.equal(waits('f'), 1, 'f, behind e, says so too')
+  assert.equal(startedAt('f'), undefined)
+  room = true
+  for (let i = 0; i < 600 && !startedAt('f'); i++) await sleep(20)
+  assert.ok(startedAt('e') && startedAt('f'), 'both start once there is room')
+  assert.equal(waits('f'), 1, 'said once')
+  for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) end(id)
+})
+
 test('after the memory guard stopped a turn, one fewer at once, then more again', async () => {
   const { threads, events, message, startedAt, end } = setup(8, () => true)
   const ids = ['a', 'b', 'c', 'd', 'e', 'f']
