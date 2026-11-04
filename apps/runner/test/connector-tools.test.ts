@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ConnectorGrant } from '@brigade/contracts'
-import { CATALOG_TOOL, connectorTools, type ConnectorCaller } from '../src/harness/tools.js'
+import {
+  CATALOG_TOOL,
+  connectorTools,
+  withoutDeepNotes,
+  type ConnectorCaller,
+} from '../src/harness/tools.js'
 
 // An App's tools when a thread has several of its accounts: one tool per operation, with an
 // `account` parameter, rather than one per operation and account.
@@ -141,7 +146,10 @@ test('a big App goes behind a catalog: find, describe, run, on the account asked
   const described = (await run(tools.posthog_describe, {
     operation: 'posthog_query-trends',
   })) as any
-  assert.equal(described.inputSchema.properties.query.description.length, 200_000)
+  // Too long to reach the teammate whole: condensed, what it accepts kept.
+  assert.ok(JSON.stringify(described).length <= 60_000)
+  assert.equal(described.inputSchema.properties.query.type, 'string')
+  assert.ok(described.condensed)
   await run(tools.posthog_run, {
     operation: 'posthog_insight-get',
     account: 'NoCo AI',
@@ -225,4 +233,74 @@ test('a catalogued operation whose schema differs by account is described and ru
     calls.map((c) => c.connectionId),
     ['c2'],
   )
+})
+
+// A search or a description past what Claude Code takes as a tool result (25,000 tokens) goes into
+// a file the teammate must read in pieces: on Nov 4 a PostHog search came to 133k characters.
+test('a catalog search stays small: the start of long descriptions, schemas while they fit', async () => {
+  const schema = (n: number) => ({
+    type: 'object',
+    properties: { query: { type: 'object', description: 'q'.repeat(n) } },
+    required: ['query'],
+  })
+  const ops = Array.from({ length: 12 }, (_, i) => ({
+    name: `posthog_query-kind${i}`,
+    write: false,
+    description: `Run a query of kind ${i}. ${'Long documentation. '.repeat(800)}`,
+    inputSchema: schema(i < 2 ? 2_000 : 40_000),
+  }))
+  const tools = connectorTools(
+    [grant('c1', 'Brigade', ops), grant('c2', 'NoCo AI', ops)],
+    async () => 'ok',
+  )
+  const found = (await run(tools.posthog_find, { query: 'query' })) as { operations: any[] }
+  assert.ok(JSON.stringify(found).length <= 30_000 + 500, 'within what a search answers')
+  assert.equal(found.operations.length, 12, 'every match comes, by name at least')
+  const first = found.operations[0]
+  assert.ok(first.shortened && first.description.length <= 600, 'the start of a long description')
+  assert.ok(first.inputSchema, 'a small schema still comes with it')
+  assert.deepEqual(first.accounts, ['Brigade', 'NoCo AI'])
+  assert.ok(
+    found.operations.some((o) => o.inputSchema === undefined),
+    'big schemas by describe',
+  )
+  // Described, it is whole: its description too.
+  const one = (await run(tools.posthog_describe, { operation: first.operation })) as any
+  assert.equal(one.description, ops.find((o) => o.name === first.operation)!.description)
+  assert.equal(one.shortened, undefined)
+})
+
+test('a schema without its deep notes accepts the same, a field named description included', () => {
+  const schema = {
+    type: 'object',
+    description: 'top note',
+    properties: {
+      description: { type: 'string', description: 'a field named description' },
+      series: {
+        type: 'array',
+        description: 'kept near the top',
+        items: {
+          anyOf: [
+            {
+              type: 'object',
+              properties: { event: { type: 'string', description: 'deep note' } },
+              required: ['event'],
+            },
+          ],
+        },
+      },
+    },
+    required: ['description', 'series'],
+  }
+  const near = withoutDeepNotes(schema, 2) as any
+  assert.equal(near.description, 'top note')
+  assert.deepEqual(Object.keys(near.properties), ['description', 'series'])
+  assert.equal(near.properties.description.type, 'string')
+  assert.equal(near.properties.series.items.anyOf[0].properties.event.description, undefined)
+  assert.deepEqual(near.properties.series.items.anyOf[0].required, ['event'])
+  assert.deepEqual(near.required, ['description', 'series'])
+  const bare = withoutDeepNotes(schema, -1) as any
+  assert.equal(bare.description, undefined)
+  assert.equal(bare.properties.description.type, 'string', 'the field stays')
+  assert.equal(bare.properties.description.description, undefined)
 })
