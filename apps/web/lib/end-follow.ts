@@ -12,9 +12,11 @@ export function leavesEnd(input: { type: string; deltaY?: number; key?: string }
 }
 
 /**
- * Whether the thread may glide to its end on its own now: while following, and not within
- * `quietMs` of the person's own input, which their scroll decides.
+ * When the thread may glide to its end on its own: undefined once the person left it; otherwise
+ * in how many ms, 0 for now. Within `quietMs` of their own input their scroll decides, and what
+ * came meanwhile is followed once that is over (nothing else may come to follow it then).
  */
-export function mayFollow(following: boolean, now: number, theirsAt: number, quietMs: number) {
-  return following && now - theirsAt >= quietMs
+export function followIn(following: boolean, now: number, theirsAt: number, quietMs: number) {
+  if (!following) return undefined
+  return Math.max(0, theirsAt + quietMs - now)
 }

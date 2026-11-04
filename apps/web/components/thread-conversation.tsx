@@ -91,7 +91,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
-import { leavesEnd, mayFollow } from '@/lib/end-follow'
+import { followIn, leavesEnd } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
@@ -678,6 +678,8 @@ export function ThreadConversation({
   const followedIn = useRef(false)
   // When the person last scrolled themselves (wheel, touch, keys): their scroll wins.
   const theirsAt = useRef(-Infinity)
+  // What came while they scrolled, followed once they stop.
+  const followLater = useRef<ReturnType<typeof setTimeout>>(undefined)
   const measured = useRef<() => void>(undefined)
   useEffect(() => {
     const view = scroller.current
@@ -739,8 +741,11 @@ export function ThreadConversation({
     view.scrollTo({ top: view.scrollHeight, behavior })
   }
   const followEnd = () => {
-    if (!mayFollow(following.current, performance.now(), theirsAt.current, GLIDE_MS)) return
-    toEnd(followedIn.current ? 'smooth' : 'instant')
+    const wait = followIn(following.current, performance.now(), theirsAt.current, GLIDE_MS)
+    if (wait === undefined) return
+    clearTimeout(followLater.current)
+    if (wait > 0) followLater.current = setTimeout(followEnd, wait)
+    else toEnd(followedIn.current ? 'smooth' : 'instant')
   }
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
@@ -754,7 +759,10 @@ export function ThreadConversation({
     if (!content) return
     const grown = new ResizeObserver(() => followEnd())
     grown.observe(content)
-    return () => grown.disconnect()
+    return () => {
+      grown.disconnect()
+      clearTimeout(followLater.current)
+    }
   }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps -- followEnd reads refs only
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
