@@ -4,14 +4,7 @@
 // shape of a real one.
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import {
-  DeltaStreams,
-  maskDeltas,
-  maskSecrets,
-  maskSecretsIn,
-  memoryStore,
-  secretIn,
-} from '../src/secrets.js'
+import { MaskedStream, maskSecrets, maskSecretsIn, secretIn } from '../src/secrets.js'
 
 // Built from parts, so this file holds no string a secret scanner takes for a real key.
 const r = (n: number, seed = 7) => {
@@ -297,8 +290,23 @@ describe('headers as a tool’s input holds them', () => {
   })
 })
 
+// As the runner streams a reply (apps/runner, EventMapper): one MaskedStream per text block.
 describe('a reply streamed over several deltas', () => {
-  const streamsOf = () => new DeltaStreams(memoryStore())
+  const streamsOf = () => new Map<string, MaskedStream>()
+  const maskDeltas = async (
+    streams: Map<string, MaskedStream>,
+    _thread: string,
+    events: { seq: number; event: { type: string; id: string; text: string } }[],
+  ) =>
+    events.map((e) => {
+      if (e.event.type === 'message.done') {
+        streams.delete(e.event.id)
+        return e
+      }
+      let stream = streams.get(e.event.id)
+      if (!stream) streams.set(e.event.id, (stream = new MaskedStream()))
+      return { ...e, event: { ...e.event, text: stream.next(e.event.text) } }
+    })
   const delta = (seq: number, text: string, id = 'm1') => ({
     seq,
     event: { type: 'message.delta', id, text, at: '2026-11-04T10:00:00.000Z' },
@@ -390,87 +398,12 @@ describe('a reply streamed over several deltas', () => {
     assert.equal(texts(rule).join(''), 'Intro\n---\nNext ')
   })
 
-  test('a hub that sleeps goes on where it was: mid-word, after a header, within a key', async () => {
-    const store = memoryStore()
-    const bearer = `r8_${r(32)}`
-    const lines = Array.from({ length: 5 }, (_, i) => r(32, i + 31))
-    const steps = [
-      'Token ghp_',
-      `${token.slice(4, 20)}`,
-      `${token.slice(20)} and Authorization: Bearer `,
-      `${bearer} then -----BEGIN PRIVATE KEY-----\n`,
-      ...lines.map((l) => `${l}\n`),
-      '-----END PRIVATE KEY-----\nok ',
-    ]
-    let stored = ''
-    // A new hub's memory for each delta, its storage kept.
-    for (const [i, step] of steps.entries())
-      stored += texts(await maskDeltas(new DeltaStreams(store), 's', [delta(i + 1, step)])).join('')
-    for (const secret of [token.slice(4), bearer, ...lines])
-      assert.ok(!stored.includes(secret.slice(4, 14)), secret)
-    assert.equal(
-      stored,
-      'Token [redacted: a GitHub token] and Authorization: Bearer [redacted: a token] then -----BEGIN PRIVATE KEY-----[redacted: a private key]-----END PRIVATE KEY-----\nok ',
-    )
-  })
-
-  test('a reply given up (too many at once, too old, its state lost) stores nothing more', async () => {
-    let now = 0
-    const store = memoryStore()
-    const streams = new DeltaStreams(store, () => now)
-    const say = async (id: string, seq: number, text: string) =>
-      texts(await maskDeltas(streams, 's', [delta(seq, text, id)])).join('')
-    await say('first', 1, 'Authorization: Bearer ')
-    for (let i = 0; i < 200; i++) await say(`other${i}`, 1, 'x ')
-    assert.equal(await say('first', 2, `r8_${r(32)} ok `), '')
-    await say('old', 1, 'Key: ghp_')
-    now += 2 * 60 * 60_000
-    await say('new', 1, 'hi ')
-    assert.equal(await say('old', 2, `${token.slice(4)} ok `), '')
-    // Its state gone from storage while the hub slept: given up, not started afresh.
-    await say('kept', 1, 'Authorization: Bearer ')
-    store.save('delta-stream:s::kept', undefined)
-    const awake = new DeltaStreams(store, () => now)
-    assert.deepEqual(texts(await maskDeltas(awake, 's', [delta(2, `r8_${r(32)} `, 'kept')])), [''])
-  })
-
-  test('a batch with its done that failed to be stored, sent again after the hub slept', async () => {
-    const store = memoryStore()
-    const bearer = `r8_${r(32)}`
-    const first = new DeltaStreams(store)
-    assert.deepEqual(texts(await maskDeltas(first, 's', [delta(1, 'Authorization: Bearer ')])), [
-      'Authorization: Bearer ',
-    ])
-    const batch = [
-      delta(2, `${bearer} ok `),
-      {
-        seq: 3,
-        event: { type: 'message.done', id: 'm1', text: `Authorization: Bearer ${bearer} ok` },
-      },
-    ]
-    assert.equal(texts(await maskDeltas(first, 's', batch))[0], '[redacted: a token] ok ')
-    // Not stored: the runner sends the batch again, to a hub that slept meanwhile.
-    const again = await maskDeltas(new DeltaStreams(store), 's', batch)
-    assert.equal(texts(again)[0], '')
-    assert.ok(!JSON.stringify(again.slice(0, 1)).includes(bearer.slice(3, 11)))
-  })
-
   test('cut short before its end: only the held word is missing; plain text goes out as it comes', async () => {
     const out = await maskDeltas(streamsOf(), 's', [
       delta(1, 'Hello the'),
       delta(2, 're, ghp_aB3c'),
     ])
     assert.deepEqual(texts(out), ['Hello ', 'there, '])
-  })
-
-  test('a delta sent again is not stored twice; one after its done neither', async () => {
-    const streams = streamsOf()
-    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), ['a b '])
-    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), [''])
-    await maskDeltas(streams, 's', [
-      { seq: 2, event: { type: 'message.done', id: 'm1', text: 'a b' } },
-    ])
-    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(3, 'c ')])), [''])
   })
 
   test('replies of two messages stream apart', async () => {

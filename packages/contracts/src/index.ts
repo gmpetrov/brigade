@@ -36,6 +36,7 @@ export * from './side-replies.js'
 export * from './signed-out.js'
 export * from './wakeups.js'
 export * from './search.js'
+export * from './secrets.js'
 export * from './skills.js'
 export * from './suggestions.js'
 export * from './tasks.js'
@@ -111,8 +112,17 @@ export * from './usage.js'
  *     (thread.settle, SETTLE_PROTOCOL).
  * 50: a person's message sent during its teammate's turn gets a side reply (message.side), and
  *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
+ * 51: a reply's deltas come with their secrets masked, each with the text before it
+ *     (MaskedStream, MASKED_DELTAS_PROTOCOL).
  */
-export const PROTOCOL_VERSION = 50
+export const PROTOCOL_VERSION = 51
+/**
+ * Runners from this version on mask the secrets in a reply's deltas as they stream it, each
+ * with the text before it (MaskedStream): a secret over several deltas is masked whole. The API
+ * stores older runners' deltas without their text, which it cannot mask safely one delta at a
+ * time: their reply shows once its message.done comes.
+ */
+export const MASKED_DELTAS_PROTOCOL = 51
 /**
  * Runners from this version on answer a person's message sent during its teammate's turn on
  * the side (message.side), and take keep and queue on it. The API refuses those actions to

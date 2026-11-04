@@ -154,7 +154,8 @@ describe('secrets in stored events', { skip: !database && 'no database answers' 
         runner.sent.some((m) => m.type === 'ack' && m.seq === 2),
         'acknowledged',
       )
-      // A reply that streams the token over two deltas, in two messages of the runner.
+      // A reply's deltas from a runner before MASKED_DELTAS_PROTOCOL, which does not mask them:
+      // stored without their text, which the API cannot mask one delta at a time.
       const delta = (seq: number, text: string) => ({
         sessionId,
         seq,
@@ -162,46 +163,26 @@ describe('secrets in stored events', { skip: !database && 'no database answers' 
       })
       const say = (...events: object[]) =>
         runner.run(() => onRunnerMessage(hub, conn, JSON.stringify({ type: 'events', events })))
-      await say(delta(3, `Your token: ${github.slice(0, 4)}`))
+      const { MASKED_DELTAS_PROTOCOL } = await import('@brigade/contracts')
+      conn.protocolVersion = MASKED_DELTAS_PROTOCOL - 1
+      await say(
+        delta(3, `Your token: ${github.slice(0, 4)}`),
+        delta(4, `${github.slice(4)} is set.`),
+      )
       await conn.queue
-      await say(delta(4, github.slice(4)), delta(5, ' is set.'))
+      // One from it on: as it masked them, a secret alone in one masked here as well.
+      conn.protocolVersion = MASKED_DELTAS_PROTOCOL
+      await say(delta(5, ' Also '), delta(6, `${github} `))
       await conn.queue
       const deltas = await db.sessionEvent.findMany({
         where: { sessionId, type: 'message.delta' },
         orderBy: { seq: 'asc' },
       })
-      const streamed = deltas.map((r) => (r.data as { text: string }).text).join('')
-      assert.equal(streamed, 'Your token: [redacted: a GitHub token] is ')
-      assert.ok(!JSON.stringify(deltas).includes(github.slice(4, 12)), 'no part of it stored')
-      // The hub sleeps between a header and its token, as a Durable Object does: its memory goes,
-      // its storage stays. The token is masked with the header all the same.
-      const locals = (hub as unknown as { locals: Map<string, unknown> }).locals
-      const { memoryStore } = await import('../src/secrets.js')
-      Object.assign(hub.host, memoryStore())
-      locals.delete('delta-streams')
-      const bearer = ['r8', 'Ab3Cd5Ef7Gh9iJ2kL4mN6pQ8rS1tU0vW'].join('_')
-      await say({
-        ...delta(6, 'Authorization: Bearer '),
-        event: { ...delta(6, '').event, id: 'two', text: 'Authorization: Bearer ' },
-      })
-      await conn.queue
-      locals.delete('delta-streams')
-      await say({
-        ...delta(7, ''),
-        event: { ...delta(7, '').event, id: 'two', text: `${bearer} ok ` },
-      })
-      await conn.queue
-      const two = await db.sessionEvent.findMany({
-        where: { sessionId, seq: { in: [6, 7] } },
-        orderBy: { seq: 'asc' },
-      })
-      assert.equal(two.length, 2)
-      assert.ok(!JSON.stringify(two).includes(bearer.slice(3, 11)), 'the token is not stored')
       assert.deepEqual(
-        two.map((r) => (r.data as { text: string }).text),
-        ['Authorization: Bearer ', '[redacted: a token] ok '],
-        'the reply goes on where it was',
+        deltas.map((r) => (r.data as { text: string }).text),
+        ['', '', ' Also ', '[redacted: a GitHub token] '],
       )
+      assert.ok(!JSON.stringify(deltas).includes(github.slice(4, 12)), 'no part of it stored')
     } finally {
       hub.broadcast = original
       for (const timer of conn.retries.values()) clearTimeout(timer)
