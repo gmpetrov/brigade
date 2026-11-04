@@ -151,9 +151,41 @@ export function childPrompt(input: { from: string; parentTitle: string; instruct
 const reportStart = (report: ChildReport) =>
   [clipReport(report.summary, REPORT_START), sentFiles(report)].filter(Boolean).join('\n\n')
 
-/** The note a parent wakes up to when the children it waits for have reported. */
+/**
+ * A review's verdict as Brigade recorded it when the reviewer posted it on GitHub
+ * (github_review_pull_request): its latest, and the commit it read.
+ */
+export type PostedVerdict = {
+  /** The pull request it reviews. */
+  number: number
+  /** null: it has posted none. */
+  verdict: 'approve' | 'request_changes' | null
+  sha: string | null
+}
+
+/**
+ * A review's verdict in a sentence, ahead of its report: the report is the reviewer's own
+ * words, which may say otherwise ("nothing blocking" under a request for changes); the
+ * verdict is what the pull request shows, and what holds its merge back.
+ */
+export function verdictLine(review: PostedVerdict) {
+  if (!review.verdict) return `No verdict posted on GitHub (#${review.number}).`
+  const where = `#${review.number}${review.sha ? `, commit ${review.sha.slice(0, 7)}` : ''}`
+  return `Verdict posted on GitHub: ${review.verdict === 'approve' ? 'approved' : 'changes requested'} (${where}).`
+}
+
+/**
+ * The note a parent wakes up to when the children it waits for have reported. A review's
+ * verdict comes first on its line, before the report's words.
+ */
 export function batchNote(
-  finished: { id: string; title: string; teammate: string; report: ChildReport }[],
+  finished: {
+    id: string
+    title: string
+    teammate: string
+    report: ChildReport
+    review?: PostedVerdict
+  }[],
   unfinished: { id: string; title: string; teammate: string }[],
 ) {
   const lines = [
@@ -165,6 +197,7 @@ export function batchNote(
     ...finished.map((c) =>
       [
         `- ${c.teammate} · “${c.title}” (${c.id}): ${STATUS_WORDS[c.report.status]}.`,
+        c.review && verdictLine(c.review),
         line(c.report.summary),
         sentFiles(c.report),
       ]
@@ -184,7 +217,8 @@ export function batchNote(
 
 /**
  * The note for one report nobody was waiting for: a schedule's run, a child started without
- * waiting for it, or one after its wait ran out (late).
+ * waiting for it, or one after its wait ran out (late). A review's verdict comes before the
+ * report's words.
  */
 export function singleNote(child: {
   id: string
@@ -193,13 +227,14 @@ export function singleNote(child: {
   schedule: string | null
   report: ChildReport
   late?: boolean
+  review?: PostedVerdict
 }) {
   const status = STATUS_WORDS[child.report.status]
   return (
     (child.schedule
       ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${status}:`
       : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${status}${child.late ? ' after you stopped waiting for it' : ''}:`) +
-    `\n\n${reportStart(child.report)}\n\n` +
+    `\n\n${child.review ? `${verdictLine(child.review)}\n\n` : ''}${reportStart(child.report)}\n\n` +
     (child.report.afterPerson ? AFTER_PERSON_HINT : SINGLE_HINT)
   )
 }

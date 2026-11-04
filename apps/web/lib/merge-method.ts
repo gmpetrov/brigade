@@ -61,23 +61,28 @@ export const unreviewedBy = (p: { tracking: PullRequestTracking | null }) => {
 export const reviewHolds = (p: { tracking: PullRequestTracking | null }) =>
   Boolean(reviewer(p) || changesAskedBy(p) || unreviewedBy(p))
 
+/** How its review holds it, in a sentence (reviewHolds); null when it holds nothing back. */
+export function reviewHold(p: { tracking: PullRequestTracking | null }, number: number) {
+  const by = reviewer(p)
+  if (by) return `${by} is still reviewing #${number}`
+  const behind = unreviewedBy(p)
+  if (behind) return `${behind} has not reviewed the latest commits on #${number}`
+  const asked = changesAskedBy(p)
+  if (asked) return `${asked} asked for changes on #${number}`
+  return null
+}
+
 /** Merge, but not without a word while a review is under way, asked for changes or is behind. */
 export function confirmMerge(
   p: { number: number; base?: string; tracking: PullRequestTracking | null } | undefined,
   number: number,
   method: string,
 ) {
-  const by = p ? reviewer(p) : null
-  const behind = p ? unreviewedBy(p) : null
-  const asked = p ? changesAskedBy(p) : null
+  const hold = p ? reviewHold(p, number) : null
   return confirm(
-    by
-      ? `${by} is still reviewing #${number}. Merge it anyway (${method})?`
-      : behind
-        ? `${behind} has not reviewed the latest commits on #${number}. Merge it anyway (${method})?`
-        : asked
-          ? `${asked} asked for changes on #${number}. Merge it anyway (${method})?`
-          : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
+    hold
+      ? `${hold}. Merge it anyway (${method})?`
+      : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
   )
 }
 

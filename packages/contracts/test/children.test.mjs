@@ -17,6 +17,7 @@ import {
   REPORT_START,
   ScheduleOperation,
   singleNote,
+  verdictLine,
   wakesParent,
 } from '../dist/index.js'
 
@@ -280,6 +281,66 @@ test('people see each thread a report note tells about, to open it', () => {
     null,
   )
   assert.equal(noteThreads('Hello'), null)
+})
+
+test('a review’s report comes after the verdict it posted, whatever its words say', () => {
+  // Its words say nothing blocks; the verdict it posted on GitHub asks for changes.
+  const words = report('report', 'Nothing blocking: one minor remark.')
+  const asked = { number: 693, verdict: 'request_changes', sha: '1d0c2e6f00aa' }
+  assert.equal(
+    verdictLine(asked),
+    'Verdict posted on GitHub: changes requested (#693, commit 1d0c2e6).',
+  )
+  assert.equal(
+    verdictLine({ number: 693, verdict: 'approve', sha: '901a6bd2289e' }),
+    'Verdict posted on GitHub: approved (#693, commit 901a6bd).',
+  )
+  assert.equal(
+    verdictLine({ number: 693, verdict: null, sha: null }),
+    'No verdict posted on GitHub (#693).',
+  )
+
+  // Waited for: first on its line, ahead of the report's start, and people still see the thread.
+  const batch = batchNote(
+    [{ id: 'c1', title: 'Review #693', teammate: 'Cody', report: words, review: asked }],
+    [],
+  )
+  assert.match(
+    batch,
+    /- Cody · “Review #693” \(c1\): reports\. Verdict posted on GitHub: changes requested \(#693, commit 1d0c2e6\)\. Nothing blocking/,
+  )
+  assert.deepEqual(noteThreads(batch)?.threads, [
+    {
+      id: 'c1',
+      title: 'Review #693',
+      teammate: 'Cody',
+      status: 'report',
+      summary:
+        'Verdict posted on GitHub: changes requested (#693, commit 1d0c2e6). Nothing blocking: one minor remark.',
+    },
+  ])
+
+  // Past its wait, or not waited for: its own paragraph, before the report.
+  const single = singleNote({
+    id: 'c2',
+    title: 'Review #693',
+    teammate: 'Cody',
+    schedule: null,
+    report: words,
+    late: true,
+    review: asked,
+  })
+  assert.equal(
+    noteThreads(single)?.threads[0]?.summary,
+    'Verdict posted on GitHub: changes requested (#693, commit 1d0c2e6).\n\nNothing blocking: one minor remark.',
+  )
+  assert.equal(childNote(single), 'report')
+
+  // Any other child's note is as it was.
+  assert.doesNotMatch(
+    batchNote([{ id: 'c3', title: 'Bisect', teammate: 'Riley', report: words }], []),
+    /Verdict/,
+  )
 })
 
 test('a message sent to run in parallel asks for a child, and people read it as typed', () => {

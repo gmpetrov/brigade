@@ -104,8 +104,8 @@ after(async () => {
 })
 
 let titles = 0
-/** Riley's thread, and the review it handed to Cody in a child, without waiting for it. */
-async function family() {
+/** Riley's thread, and the review it handed to Cody in a child, without waiting for it unless said. */
+async function family({ awaited = false } = {}) {
   const thread = (data: object): Promise<Row> =>
     prisma.session.create({
       data: {
@@ -123,9 +123,50 @@ async function family() {
     origin: 'child',
     parentId: parent.id,
     parentTeammateId: riley.id,
-    awaited: false,
+    awaited,
   })
   return { parent, child }
+}
+
+let numbers = 690
+/**
+ * Riley's pull request, reviewed by Cody in `child`, with the verdicts it posted on GitHub as
+ * github_review_pull_request records them, oldest first.
+ */
+async function reviewed(
+  parent: Row,
+  child: Row,
+  posted: { verdict: 'approve' | 'request_changes'; sha: string }[],
+) {
+  const number = ++numbers
+  const pull = await prisma.pullRequest.create({
+    data: {
+      ...scope,
+      repository: 'acme/web',
+      number,
+      title: `Change ${number}`,
+      headRef: `brigade/change-${number}`,
+      baseRef: 'main',
+      sessionId: parent.id,
+      authorTeammateId: riley.id,
+      reviewSessionId: child.id,
+    },
+  })
+  for (const [i, p] of posted.entries())
+    await prisma.pullRequestReview.create({
+      data: {
+        ...scope,
+        pullRequestId: pull.id,
+        teammateId: cody.id,
+        sessionId: child.id,
+        verdict: p.verdict,
+        body: 'Its summary on GitHub.',
+        sha: p.sha,
+        round: i + 1,
+        createdAt: new Date(Date.now() - (posted.length - i) * 60_000),
+      },
+    })
+  return number
 }
 
 /** A file the child's runner sent first, as POST /runner/attachments stores it. */
@@ -229,6 +270,78 @@ test('a report brings its parent the whole review and the files it sent', { skip
   })) as { children: { report?: { summary: string } }[] }
   assert.ok(list.children[0]!.report!.summary.length <= REPORT_START)
 })
+
+test(
+  'a review’s report reaches its author after the verdict it posted, whatever its words say',
+  { skip },
+  async () => {
+    const words = 'Nothing blocking: one minor remark.'
+    const report = (child: Row) =>
+      handleChildCall(scoped(scope), scope, child, cody, {
+        name: 'report',
+        status: 'report',
+        summary: words,
+      })
+
+    // Not waited for: its own paragraph, before the report's words.
+    const single = await family()
+    const number = await reviewed(single.parent, single.child, [
+      { verdict: 'request_changes', sha: '1d0c2e6c0ffee' },
+    ])
+    await report(single.child)
+    await endTurn(single.child, 'Reported to Riley.')
+    const [note] = await notes(single.parent)
+    assert.equal(
+      noteThreads(note!)!.threads[0]!.summary,
+      `Verdict posted on GitHub: changes requested (#${number}, commit 1d0c2e6).\n\n${words}`,
+    )
+    // read_child says it too, ahead of the report.
+    const read = (await handleChildCall(scoped(scope), scope, single.parent, riley, {
+      name: 'read_child',
+      threadId: single.child.id,
+    })) as { verdict?: string; report: { summary: string } }
+    assert.equal(
+      read.verdict,
+      `Verdict posted on GitHub: changes requested (#${number}, commit 1d0c2e6).`,
+    )
+    assert.equal(read.report.summary, words)
+
+    // Waited for, after a second look: its latest verdict, first on its line.
+    const waited = await family({ awaited: true })
+    const again = await reviewed(waited.parent, waited.child, [
+      { verdict: 'request_changes', sha: '1d0c2e6c0ffee' },
+      { verdict: 'approve', sha: '901a6bd2289e' },
+    ])
+    await report(waited.child)
+    await endTurn(waited.child, 'Reported to Riley.')
+    const [batch] = await notes(waited.parent)
+    assert.match(batch!, /^The child thread you were waiting for has finished:/)
+    assert.equal(
+      noteThreads(batch!)!.threads[0]!.summary,
+      `Verdict posted on GitHub: approved (#${again}, commit 901a6bd). ${words}`,
+    )
+
+    // A review that posted none says so.
+    const silent = await family()
+    const none = await reviewed(silent.parent, silent.child, [])
+    await report(silent.child)
+    await endTurn(silent.child, 'Reported to Riley.')
+    const [quiet] = await notes(silent.parent)
+    assert.ok(quiet!.includes(`No verdict posted on GitHub (#${none}).\n\n${words}`))
+
+    // Any other child's report comes as it was.
+    const other = await family()
+    await report(other.child)
+    await endTurn(other.child, 'Reported to Riley.')
+    const [plain] = await notes(other.parent)
+    assert.equal(noteThreads(plain!)!.threads[0]!.summary, words)
+    const readOther = (await handleChildCall(scoped(scope), scope, other.parent, riley, {
+      name: 'read_child',
+      threadId: other.child.id,
+    })) as { verdict?: string }
+    assert.equal(readOther.verdict, undefined)
+  },
+)
 
 test("a report cannot send another thread's file", { skip }, async () => {
   const { parent, child } = await family()

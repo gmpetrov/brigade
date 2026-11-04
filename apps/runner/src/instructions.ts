@@ -613,8 +613,11 @@ const replies = (spec: ThreadSpec) =>
   'to merge it, and ' +
   // A merge wakes a thread a person or a trigger started (docs/board.md); elsewhere it leaves a note.
   (!spec.parent && !spec.playbook && !scheduledRun(spec)
-    ? 'you are woken here once it is merged, unless another pull request of this thread is still open.\n\n'
-    : 'the thread notes it once it is merged.\n\n') +
+    ? 'you are woken here once it is merged, unless another pull request of this thread is still open. '
+    : 'the thread notes it once it is merged. ') +
+  'While its review is under way, asked for changes or has not read its latest commits, the button shows why ' +
+  'instead. Before you call a reviewed pull request ready, check the verdict its review posted and on which ' +
+  'commit (the note that brings the report says it first), not only the report’s words.\n\n' +
   "When the next step is trying the app in this thread's preview, write that line as `[preview] Start the " +
   "preview`, in the person's language: it becomes Brigade's own button, shown only while no preview runs, " +
   'which starts it as Preview at the top of the thread does, without you. When it cannot start by itself ' +

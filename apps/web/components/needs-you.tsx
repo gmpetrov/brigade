@@ -45,17 +45,21 @@ import type { EditedEmail } from '@/components/email-cards'
 /** Others listed under the one shown; the rest are a link away. */
 const LISTED = 4
 
-/** Why a pull request waits on a person: a merge that stopped, else where its review stands. */
+/**
+ * Why a pull request waits on a person: a merge that stopped, else where its review stands.
+ * Never "ready to merge": this comes from the database alone, which does not know of commits
+ * after its review, its checks or its conflicts; its card below reads those from GitHub.
+ */
 function pullWaits(pull: PullWaiting) {
   if (pull.mergeStatus === 'stuck') return 'merge stopped'
   const review = pull.review
   switch (review?.state) {
     case 'approved':
-      return `approved by ${review.reviewer?.name ?? 'a teammate'}, ready to merge`
+      return `approved by ${review.reviewer?.name ?? 'a teammate'}`
     case 'changes_requested':
       return `${review.reviewer?.name ?? 'a teammate'} asked for changes`
     case 'skipped':
-      return `ready to merge, no review: ${review.reason}`
+      return `no review: ${review.reason}`
   }
   return 'ready for review'
 }
