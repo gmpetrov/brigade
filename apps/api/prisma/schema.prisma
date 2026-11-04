@@ -635,9 +635,6 @@ model Session {
   /// Its events up to this one are kept cold, in the bucket (src/cold-events.ts): the heavy ones
   /// among them (streamed text, tool calls, the harness's copies) are no longer in SessionEvent.
   coldSeq              Int                @default(0)
-  /// What its events weigh as stored (their data's pg_column_size), counted as they come
-  /// (src/event-volume.ts): the largest threads without reading their events.
-  eventBytes           BigInt             @default(0)
   /// While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
   move                 Json?
   /// When it last came to its computer from another, from which (by name), and its last event then (ThreadSpec.moved).
@@ -709,6 +706,7 @@ model Session {
   followers            ThreadFollow[]     @relation("ThreadFollowed")
   folderBackups        FolderBackup[]
   coldChunks           ColdEventChunk[]
+  eventVolume          ThreadEventVolume?
 
   /// The list items it works on (docs/lists.md).
   listItems ListItemThread[]
@@ -953,6 +951,21 @@ model ColdEventChunk {
 
   @@id([sessionId, firstSeq])
   @@index([workspaceId, createdAt])
+}
+
+/// What a thread's events weigh as stored (their data's pg_column_size), counted as they come
+/// (src/event-volume.ts): the largest threads, without reading their events. A table of its own,
+/// as a BigInt in Session would go wherever a thread is sent as JSON, which cannot hold one.
+model ThreadEventVolume {
+  organizationId String
+  workspaceId    String
+  sessionId      String  @id
+  session        Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bytes          BigInt  @default(0)
+  /// The largest event's.
+  largest        Int     @default(0)
+
+  @@index([workspaceId, bytes])
 }
 
 /// What a workspace's threads wrote to SessionEvent in a day (UTC), counted as events are

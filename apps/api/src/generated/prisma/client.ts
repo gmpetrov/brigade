@@ -206,6 +206,13 @@ export type SessionEvent = Prisma.SessionEventModel
  */
 export type ColdEventChunk = Prisma.ColdEventChunkModel
 /**
+ * Model ThreadEventVolume
+ * What a thread's events weigh as stored (their data's pg_column_size), counted as they come
+ * (src/event-volume.ts): the largest threads, without reading their events. A table of its own,
+ * as a BigInt in Session would go wherever a thread is sent as JSON, which cannot hold one.
+ */
+export type ThreadEventVolume = Prisma.ThreadEventVolumeModel
+/**
  * Model WorkspaceEventDay
  * What a workspace's threads wrote to SessionEvent in a day (UTC), counted as events are
  * stored (src/event-volume.ts): its growth, without reading the events again.

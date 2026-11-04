@@ -255,8 +255,13 @@ describe('cold events', { skip }, () => {
     await quiet(sessionId)
     const before = await reads(sessionId)
     assert.equal(before.all.length, events.length)
+    const updatedAt = async () =>
+      (await prisma.session.findUniqueOrThrow({ where: { id: sessionId } })).updatedAt
 
+    const quietSince = await updatedAt()
     const { chunks, moved } = await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+    // Its place in the lists, by when it last changed, stays where it was.
+    assert.deepEqual(await updatedAt(), quietSince)
     const heavy = events.flatMap((e, i) => (goesCold(e.type, e) ? [i + 1] : []))
     assert.equal(moved, heavy.length)
     assert.equal(chunks, Math.ceil(events.length / SMALL.events))
@@ -316,6 +321,44 @@ describe('cold events', { skip }, () => {
 
     // Pages (also one across chunks), their context, the timeline and the run log, as before.
     assert.deepEqual(await reads(sessionId), before)
+  })
+
+  test("the thread's routes answer the same once it is kept cold: its pages and its log", async () => {
+    const sessionId = await newThread('Routes')
+    const events = work(4)
+    await store(sessionId, events)
+    await quiet(sessionId)
+    const { auth } = await import('../src/auth.js')
+    const { threads } = await import('../src/routes/threads.js')
+    const { Hono } = await import('hono')
+    const getSession = auth.api.getSession
+    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+      user: { id: ids.user },
+      session: {
+        id: `s-cold-${id}`,
+        activeOrganizationId: scope.organizationId,
+        activeWorkspaceId: scope.workspaceId,
+      },
+    })
+    try {
+      const app = new Hono().route('/api/threads', threads)
+      const get = async (path: string) => {
+        const response = await app.request(`/api/threads/${sessionId}${path}`)
+        assert.equal(response.status, 200, await response.clone().text())
+        return response.json()
+      }
+      const paths = ['/events', '/events?from=1', '/events?before=40&since=12', '/log']
+      const before = await Promise.all(paths.map(get))
+      await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+      assert.equal((await thread(sessionId)).coldSeq, events.length)
+      assert.deepEqual(await Promise.all(paths.map(get)), before)
+      // The first page holds the whole thread here, its kept-cold events among them.
+      const all = before[1] as { events: { event: { type: string } }[] }
+      assert.equal(all.events.length, events.length)
+      assert.ok(all.events.some((e) => e.event.type === 'message.delta'))
+    } finally {
+      ;(auth.api as { getSession: unknown }).getSession = getSession
+    }
   })
 
   test('a dashboard that follows the thread is sent every event, a batch at a time', async () => {
@@ -458,6 +501,11 @@ describe('cold events', { skip }, () => {
       before.filter((e) => !inLost(e.seq) || !goesCold(e.event.type, e.event)),
     )
     assert.ok(after.length < before.length)
+    // Its operators hear of it.
+    const { failuresOf } = await import('../src/ops/failures.js')
+    assert.ok(
+      failuresOf('job:cold-events', 60_000).some((f) => f.workspaceId === scope.workspaceId),
+    )
   })
 
   test('events sent again once kept cold are not stored again', async () => {
@@ -655,11 +703,9 @@ describe('cold events', { skip }, () => {
       assert.equal(day.events, 6)
       sizes = await stored()
       assert.equal(day.bytes, sizes.bytes)
-      const session = await prisma.session.findUniqueOrThrow({
-        where: { id: sessionId },
-        select: { eventBytes: true },
-      })
-      assert.equal(session.eventBytes, sizes.bytes)
+      const volume = await prisma.threadEventVolume.findUniqueOrThrow({ where: { sessionId } })
+      assert.equal(volume.bytes, sizes.bytes)
+      assert.equal(volume.largest, sizes.largest)
     } finally {
       for (const timer of conn.retries.values()) clearTimeout(timer)
       runner.close()

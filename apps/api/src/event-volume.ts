@@ -1,5 +1,5 @@
 // What threads write to SessionEvent, counted as it is stored: by workspace and UTC day
-// (WorkspaceEventDay) and by thread (Session.eventBytes). The database's monthly check reads a
+// (WorkspaceEventDay) and by thread (ThreadEventVolume). The database's monthly check reads a
 // workspace's growth and its largest threads from here rather than read every event again, which
 // at a hundred workspaces would be hundreds of GB each time. Sizes are the events' data as the
 // database stores it (pg_column_size: compressed when large), what its storage is billed on.
@@ -36,6 +36,11 @@ export async function countEvents(
         "bytes" = d."bytes" + EXCLUDED."bytes",
         "largest" = greatest(d."largest", EXCLUDED."largest")
     )
-    UPDATE "Session" SET "eventBytes" = "eventBytes" + (SELECT "bytes" FROM "new")
-    WHERE "id" = ${session.id}`
+    INSERT INTO "ThreadEventVolume" AS t ("organizationId", "workspaceId", "sessionId", "bytes", "largest")
+    SELECT ${session.organizationId}::text, ${session.workspaceId}::text, ${session.id}::text,
+           "bytes", "largest"
+    FROM "new" WHERE "events" > 0
+    ON CONFLICT ("sessionId") DO UPDATE SET
+      "bytes" = t."bytes" + EXCLUDED."bytes",
+      "largest" = greatest(t."largest", EXCLUDED."largest")`
 }

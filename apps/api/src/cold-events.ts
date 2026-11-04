@@ -21,6 +21,7 @@ import {
 } from '@brigade/contracts'
 import { coldEventsKey, deleteObject, objectSize, putObject, streamObject } from './bucket.js'
 import { prisma, type Prisma, type Scope } from './db.js'
+import { noteFailure } from './ops/failures.js'
 
 /** A thread with no new event for this long has its events kept cold. */
 export const COLD_AFTER_MS = 30 * 24 * 60 * 60_000
@@ -30,13 +31,17 @@ export type ColdLimits = {
   events: number
   /** About the most bytes of them a chunk holds, as the database stores them (compressed). */
   storedBytes: number
-  /** A run starts no chunk after this long: a job's run ends within JOB_DEADLINE_MS. */
+  /**
+   * A run starts no chunk after this long. Well within JOB_DEADLINE_MS: the queue's consumer runs
+   * a batch's jobs one after the other, and a long one would hold back the others (a schedule's
+   * time, a wake-up).
+   */
   runMs: number
   /** Threads one run looks at, the quietest first. */
   threads: number
 }
 
-const LIMITS: ColdLimits = { events: 1000, storedBytes: 1_000_000, runMs: 60_000, threads: 50 }
+const LIMITS: ColdLimits = { events: 1000, storedBytes: 1_000_000, runMs: 20_000, threads: 50 }
 
 /** An event a thread's page alone reads: it goes once its chunk is in the bucket. */
 export function goesCold(type: string, data: unknown) {
@@ -361,6 +366,8 @@ async function* coldEvents(
         if (full()) yield take()
       }
     } catch (error) {
+      // Brigade's own data lost or broken: its operators hear of it (src/ops/checks.ts).
+      noteFailure('job:cold-events', error, { workspaceId: scope.workspaceId })
       console.error(
         `cold events: ${key} not read (${String(error)}): events ${next}-${upTo - 1} of thread ${sessionId} as the database has them`,
       )

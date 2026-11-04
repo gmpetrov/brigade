@@ -4,8 +4,7 @@
 -- holds it, removes those of them it moved.
 
 -- AlterTable
-ALTER TABLE "Session" ADD COLUMN     "coldSeq" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "eventBytes" BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE "Session" ADD COLUMN     "coldSeq" INTEGER NOT NULL DEFAULT 0;
 
 -- CreateTable
 CREATE TABLE "ColdEventChunk" (
@@ -24,6 +23,17 @@ CREATE TABLE "ColdEventChunk" (
 );
 
 -- CreateTable
+CREATE TABLE "ThreadEventVolume" (
+    "organizationId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "bytes" BIGINT NOT NULL DEFAULT 0,
+    "largest" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "ThreadEventVolume_pkey" PRIMARY KEY ("sessionId")
+);
+
+-- CreateTable
 CREATE TABLE "WorkspaceEventDay" (
     "organizationId" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
@@ -39,8 +49,14 @@ CREATE TABLE "WorkspaceEventDay" (
 -- CreateIndex
 CREATE INDEX "ColdEventChunk_workspaceId_createdAt_idx" ON "ColdEventChunk"("workspaceId", "createdAt");
 
+-- CreateIndex
+CREATE INDEX "ThreadEventVolume_workspaceId_bytes_idx" ON "ThreadEventVolume"("workspaceId", "bytes");
+
 -- AddForeignKey
 ALTER TABLE "ColdEventChunk" ADD CONSTRAINT "ColdEventChunk_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ThreadEventVolume" ADD CONSTRAINT "ThreadEventVolume_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "WorkspaceEventDay" ADD CONSTRAINT "WorkspaceEventDay_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

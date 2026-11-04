@@ -1,7 +1,6 @@
 -- What threads wrote before src/event-volume.ts counted it: each workspace's days, by the events'
--- own time, and each thread's bytes. A migration of its own, after the one that adds the columns,
--- so that Session is not locked while SessionEvent is read: read once into a temporary table,
--- then written, Session last.
+-- own time, and each thread's bytes. A migration of its own, after the one that adds the tables:
+-- SessionEvent is read once, into a temporary table, while nothing is locked but what is written.
 CREATE TEMP TABLE "event_volume" AS
 SELECT "organizationId", "workspaceId", "sessionId", "at"::date AS "day",
        count(*)::int AS "events",
@@ -16,8 +15,9 @@ SELECT "organizationId", "workspaceId", "day", sum("events"), sum("deltas"), sum
 FROM "event_volume"
 GROUP BY 1, 2, 3;
 
-UPDATE "Session" s SET "eventBytes" = v."bytes"
-FROM (SELECT "sessionId", sum("bytes")::bigint AS "bytes" FROM "event_volume" GROUP BY 1) v
-WHERE v."sessionId" = s."id";
+INSERT INTO "ThreadEventVolume" ("organizationId", "workspaceId", "sessionId", "bytes", "largest")
+SELECT "organizationId", "workspaceId", "sessionId", sum("bytes"), max("largest")
+FROM "event_volume"
+GROUP BY 1, 2, 3;
 
 DROP TABLE "event_volume";

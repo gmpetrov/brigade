@@ -80,6 +80,7 @@ export const ModelName = {
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   ColdEventChunk: 'ColdEventChunk',
+  ThreadEventVolume: 'ThreadEventVolume',
   WorkspaceEventDay: 'WorkspaceEventDay',
   TokenUsage: 'TokenUsage',
   Account: 'Account',
@@ -490,7 +491,6 @@ export const SessionScalarFieldEnum = {
   choicesDismissedSeq: 'choicesDismissedSeq',
   lastSeq: 'lastSeq',
   coldSeq: 'coldSeq',
-  eventBytes: 'eventBytes',
   move: 'move',
   movedAt: 'movedAt',
   movedFrom: 'movedFrom',
@@ -632,6 +632,17 @@ export const ColdEventChunkScalarFieldEnum = {
 } as const
 
 export type ColdEventChunkScalarFieldEnum = (typeof ColdEventChunkScalarFieldEnum)[keyof typeof ColdEventChunkScalarFieldEnum]
+
+
+export const ThreadEventVolumeScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  bytes: 'bytes',
+  largest: 'largest'
+} as const
+
+export type ThreadEventVolumeScalarFieldEnum = (typeof ThreadEventVolumeScalarFieldEnum)[keyof typeof ThreadEventVolumeScalarFieldEnum]
 
 
 export const WorkspaceEventDayScalarFieldEnum = {
