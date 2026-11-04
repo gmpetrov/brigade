@@ -27,16 +27,41 @@ test('a reply without spaces reveals while it is still coming', () => {
   let shown = 0
   for (let frame = 0; frame < 120; frame++) {
     if (frame % 12 === 0) text += '我建议使用一个地址作为苹果账号'.repeat(3).slice(0, 35)
-    at = Math.min(text.length, at + revealStep(text.length - at, 1 / 60, false))
+    at = Math.min(text.length, at + revealStep(text.length - at, 1 / 60))
     shown = wordCut(text, Math.floor(at))
   }
   assert.ok(shown > text.length / 2, `${shown} of ${text.length}`)
 })
 
-test('what waits is caught up in about a third of a second, done in less', () => {
-  assert.equal(revealStep(0, 1, false), 60)
-  assert.ok(Math.abs(revealStep(70, 0.35, false) - 70) < 1e-9)
-  assert.ok(revealStep(70, 0.1, true) > revealStep(70, 0.1, false))
+/** Seconds until `chars` that came at once all show, at 60 frames a second. */
+function secondsToShow(chars: number) {
+  let at = 0
+  let frames = 0
+  while (at < chars) {
+    at = Math.min(chars, at + revealStep(chars - at, 1 / 60))
+    frames++
+  }
+  return frames / 60
+}
+
+test('a long reply that came whole is written out over a second or two, not at once', () => {
+  const s = secondsToShow(1600)
+  assert.ok(s > 1 && s < 3, `${s}s`)
+  // A short one in well under a second.
+  assert.ok(secondsToShow(80) < 0.6)
+})
+
+test('text streamed in keeps within about half a second of what came', () => {
+  // 300 characters a second, sent every 200 ms: what waits stays under a second's worth.
+  let came = 0
+  let at = 0
+  let most = 0
+  for (let frame = 0; frame < 600; frame++) {
+    if (frame % 12 === 0) came += 60
+    at = Math.min(came, at + revealStep(came - at, 1 / 60))
+    most = Math.max(most, came - at)
+  }
+  assert.ok(most < 300, `${most} characters behind`)
 })
 
 test('open bold, code and strike close at the end of what came', () => {
