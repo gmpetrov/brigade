@@ -91,7 +91,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
-import { followIn, leavesEnd } from '@/lib/end-follow'
+import { followIn, glides, leavesEnd } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
@@ -744,8 +744,10 @@ export function ThreadConversation({
     const wait = followIn(following.current, performance.now(), theirsAt.current, GLIDE_MS)
     if (wait === undefined) return
     clearTimeout(followLater.current)
-    if (wait > 0) followLater.current = setTimeout(followEnd, wait)
-    else toEnd(followedIn.current ? 'smooth' : 'instant')
+    if (wait > 0) return void (followLater.current = setTimeout(followEnd, wait))
+    const view = scroller.current
+    const distance = view ? view.scrollHeight - view.clientHeight - view.scrollTop : 0
+    toEnd(glides(distance, view?.clientHeight ?? 0, followedIn.current) ? 'smooth' : 'instant')
   }
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
