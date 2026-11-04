@@ -16,6 +16,7 @@ import {
   childPrompt,
   ChildReport,
   clipReport,
+  type PostedVerdict,
   FOLLOWERS_PER_THREAD,
   followNote,
   REPORT_AFTER_PERSON_MINUTES,
@@ -25,6 +26,7 @@ import {
   type PlaybookManifest,
   type ScheduleOperation,
   singleNote,
+  verdictLine,
   WAKEUPS_IN_A_ROW,
   wakesParent,
 } from '@brigade/contracts'
@@ -109,6 +111,43 @@ export async function descendants(db: ScopedDb, id: string) {
     ids.push(...level)
   }
   return ids
+}
+
+/**
+ * The verdicts of those of these threads that review a pull request, by thread: the latest
+ * each posted on GitHub (github_review_pull_request), as Brigade recorded it, with the
+ * commit it read; or none yet, for one whose pull request it reviews. Its report is the
+ * reviewer's own words, which may say otherwise: the note that brings the report says
+ * this first (verdictLine). In a transaction when given one.
+ */
+export async function reviewVerdicts(
+  db: Pick<ScopedDb, 'pullRequest' | 'pullRequestReview'>,
+  ids: string[],
+): Promise<Map<string, PostedVerdict>> {
+  const verdicts = new Map<string, PostedVerdict>()
+  if (!ids.length) return verdicts
+  const posted = await db.pullRequestReview.findMany({
+    where: { sessionId: { in: ids } },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      sessionId: true,
+      verdict: true,
+      sha: true,
+      pullRequest: { select: { number: true } },
+    },
+  })
+  for (const r of posted)
+    if (r.sessionId && !verdicts.has(r.sessionId))
+      verdicts.set(r.sessionId, { number: r.pullRequest.number, verdict: r.verdict, sha: r.sha })
+  const silent = ids.filter((id) => !verdicts.has(id))
+  if (silent.length)
+    for (const p of await db.pullRequest.findMany({
+      where: { reviewSessionId: { in: silent } },
+      select: { number: true, reviewSessionId: true },
+    }))
+      if (p.reviewSessionId)
+        verdicts.set(p.reviewSessionId, { number: p.number, verdict: null, sha: null })
+  return verdicts
 }
 
 /** Dashboards showing the parent refresh its children: told with the parent's own status. */
@@ -214,6 +253,11 @@ export async function settleAwaited(scope: Scope, parentId: string, again = true
       })
       if (count) released.push(c)
     }
+    // A review's verdict goes ahead of its report's words.
+    const verdicts = await reviewVerdicts(
+      tx,
+      delivered.map((c) => c.id),
+    )
     const wakeupId =
       delivered.length || released.length
         ? await reportWakeup(
@@ -226,6 +270,7 @@ export async function settleAwaited(scope: Scope, parentId: string, again = true
                 title: c.title,
                 teammate: c.teammate.name,
                 report: reportOf(c.report)!,
+                review: verdicts.get(c.id),
               })),
               released.map((c) => ({ id: c.id, title: c.title, teammate: c.teammate.name })),
             ),
@@ -299,6 +344,8 @@ export async function deliverReport(scope: Scope, childId: string) {
               report,
               // It was waited for once (start_child, message_thread), and the wait ran out.
               late: !!child.awaitUntil,
+              // A review's verdict goes ahead of its report's words.
+              review: (await reviewVerdicts(tx, [child.id])).get(child.id),
             }),
             reportSource(child.id, stamp),
           )
@@ -987,7 +1034,7 @@ export async function handleChildCall(
         error:
           'No child of this thread, nor a thread it follows, has that id; list_children shows them',
       }
-    const [final, pulls, files] = await Promise.all([
+    const [final, pulls, files, verdicts] = await Promise.all([
       lastMessage(child.id),
       db.pullRequest.findMany({
         where: { sessionId: child.id },
@@ -999,10 +1046,14 @@ export async function handleChildCall(
         select: { path: true, attachment: { select: { size: true, contentType: true } } },
         orderBy: { createdAt: 'asc' },
       }),
+      reviewVerdicts(db, [child.id]),
     ])
     const report = reportOf(child.report)
+    const verdict = verdicts.get(child.id)
     return {
       ...(own ? brief(child) : followedBrief(child, true)),
+      // A review's verdict, ahead of its report's words.
+      ...(verdict ? { verdict: verdictLine(verdict) } : {}),
       ...(report ? { report: { status: report.status, summary: report.summary } } : {}),
       ...(files.length
         ? {

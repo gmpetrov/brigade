@@ -132,7 +132,10 @@ export function PullCard({
   title: string | null
   /** Known to be open (Home's waiting ones): Merge shows even when GitHub's state doesn't load. */
   open?: boolean
-  /** A teammate's merge button under it does the merging: the card shows where it stands instead. */
+  /**
+   * A teammate's merge button under it does the merging, while its review holds nothing back:
+   * the card shows where it stands instead.
+   */
   mergeElsewhere?: boolean
   /** The thread's children: its review, when it ran in one of them, shows as its line once stopped. */
   childThreads?: ThreadChild[]
@@ -169,7 +172,10 @@ export function PullCard({
           </a>
         </Button>
       )
-    if (resolving(p) || (mergeElsewhere && mergeable)) return <PullStatus pull={p} />
+    // The teammate's merge button merges it, unless its review holds it: then that one only
+    // says why, and Merge stays here.
+    if (resolving(p) || (mergeElsewhere && mergeable && !reviewHolds(p)))
+      return <PullStatus pull={p} />
     const button = mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
     // Its review is under way or asked for changes: it says so first, opening the review, and
     // Merge steps back.
