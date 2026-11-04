@@ -151,6 +151,32 @@ test('the swap file is as large as the memory, within 8 GiB, a tenth of the disk
   assert.equal(size(3.9 * GIB, 20, 15), 2)
 })
 
+test('swapping goes through zswap, compressed with zstd, where the kernel has it', () => {
+  const zswapOn = /^zswap_on\(\) \{$[\s\S]*?^\}$/m.exec(setupScript())?.[0]
+  assert.ok(zswapOn)
+  const dir = mkdtempSync(join(tmpdir(), 'zswap-'))
+  const params = {
+    enabled: 'N',
+    compressor: 'lzo',
+    zpool: 'zbud',
+    max_pool_percent: '20',
+    shrinker_enabled: 'N',
+  }
+  for (const [name, value] of Object.entries(params)) writeFileSync(join(dir, name), `${value}\n`)
+  const run = (folder: string) =>
+    spawnSync('sh', ['-c', `set -eu\n${zswapOn}\nzswap_on "$1"`, 'sh', folder], {
+      encoding: 'utf8',
+    })
+  assert.equal(run(dir).status, 0)
+  const read = (name: string) => readFileSync(join(dir, name), 'utf8').trim()
+  assert.equal(read('enabled'), 'Y')
+  assert.equal(read('compressor'), 'zstd')
+  assert.equal(read('zpool'), 'zsmalloc')
+  assert.equal(read('shrinker_enabled'), 'Y')
+  // A kernel without zswap: nothing to do, and the swap file is still made.
+  assert.equal(run(join(dir, 'missing')).status, 0)
+})
+
 test("the teammate helper prunes the computer's own Docker, never its volumes", () => {
   const dir = mkdtempSync(join(tmpdir(), 'system-docker-'))
   const stub = (name: string, body: string) =>
