@@ -58,6 +58,8 @@ export async function bridgeTurn(
     home?: string
     /** The prompts of the session's turns, one after the other (default: one, "hello"). */
     prompts?: string[]
+    /** MCP servers the harness gives Claude Code besides the host's tools. */
+    mcpServers?: Record<string, unknown>
   },
 ): Promise<{
   parts: { type: string; [key: string]: unknown }[]
@@ -97,6 +99,7 @@ export async function bridgeTurn(
   const agent = new HarnessAgent({
     harness: createClaudeCode({
       auth: {},
+      ...(options.mcpServers ? { mcpServers: options.mcpServers as never } : {}),
       ...(options.toolHints ? { toolHints: options.toolHints } : {}),
     }),
     permissionMode: options.permissionMode,

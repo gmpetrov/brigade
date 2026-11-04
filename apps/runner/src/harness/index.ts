@@ -1881,7 +1881,13 @@ export class HarnessThread {
       this.spec,
       (call) => this.callWithFiles(call),
       credentials,
-      browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
+      browser && tabsFile
+        ? {
+            browser: browserMcpServer(browser, tabsFile, {
+              lazy: this.spec.teammate.harness !== 'codex',
+            }),
+          }
+        : {},
       {
         access: this.spec.library,
         folders: this.spec.libraryFolders,
