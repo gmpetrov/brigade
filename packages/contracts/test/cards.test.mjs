@@ -219,3 +219,75 @@ test('a block under a list item is the item’s: an example, read as text', () =
   // At the start of its line, after the list, the block is the reply's own.
   assert.equal(replyCard('- Shipped the export.\n\n```done\nShipped\n```').done, 'Shipped')
 })
+
+// Where a done block is read, case by case, checked against the Markdown parser the dashboard
+// renders replies with (mdast-util-from-markdown 2.1, on Nov 4): read where Markdown has it as one
+// of the reply's last blocks; never where it has it inside another (a list, a quote, raw HTML,
+// another code block). Five it reads as a block go unread here: an indented one, and one right
+// after inline HTML or a link, which a tag-like line opens raw HTML for (htmlEnd). Unread, the
+// thread only stays open.
+test('a done block is read where Markdown reads it as the reply’s own, and nowhere else', () => {
+  const D = '```done\nShipped\n```'
+  const R = '```replies\nSend it\n```'
+  const cases = {
+    plainEnd: `Done.\n\n${D}`,
+    afterButtons: `Done.\n${R}\n${D}`,
+    beforeButtons: `Done.\n${D}\n${R}`,
+    middle: `See:\n${D}\nthen more.`,
+    fourTicks: `Ex:\n\`\`\`\`md\n${D}\n\`\`\`\``,
+    tildes: `Ex:\n~~~\n${D}\n~~~`,
+    listIndented: `- Example:\n\n${D.replace(/^/gm, '  ')}`,
+    listNoBlank: `- Example:\n${D.replace(/^/gm, '  ')}`,
+    orderedList: `1. Example:\n${D.replace(/^/gm, '   ')}`,
+    nestedList: `- a\n  - b\n\n${D.replace(/^/gm, '    ')}`,
+    listThenRoot: `- shipped\n\n${D}`,
+    listThenRootNoBlank: `- shipped\n${D}`,
+    blockquote: `> Example:\n> ${D.replace(/\n/g, '\n> ')}`,
+    blockquoteLazy: `> Example:\n${D}`,
+    htmlDetails: `<details>\n\n${D}\n\n</details>`,
+    htmlDetailsEnd: `<details>\n${D}`,
+    indented1: `Done.\n\n ${D.replace(/\n/g, '\n ')}`,
+    indented3: `Done.\n\n   ${D.replace(/\n/g, '\n   ')}`,
+    indented4: `Done.\n\n    ${D.replace(/\n/g, '\n    ')}`,
+    innerClosesOuter: `Ex:\n\`\`\`md\n${D}\n\`\`\``,
+    unclosedOuter: `Ex:\n\`\`\`\`md\n${D}`,
+    doneInTable: `| a |\n|---|\n| ${'```done'} |`,
+    crlf: `Done.\r\n\r\n\`\`\`done\r\nShipped\r\n\`\`\``,
+    trailingSpaces: `Done.\n\n${D}   \n\n  `,
+    footnote: `Done.[^1]\n\n[^1]: note\n\n${D}`,
+    fenceInListThenRoot: `- item\n  \`\`\`js\n  x\n  \`\`\`\n\n${D}`,
+    htmlComment: `<!-- note\n${D}\n-->`,
+    htmlCommentOneLine: `<!-- note -->\n${D}`,
+    htmlCommentThenRoot: `<!-- a\nb -->\n\n${D}`,
+    htmlPreBlank: `<pre>\n\n${D}\n</pre>`,
+    htmlPreEnd: `<pre>\nx\n</pre>\n${D}`,
+    htmlScript: `<script>\n${D}`,
+    htmlType7: `<custom-tag>\n${D}`,
+    htmlType7AfterPara: `Some text\n<custom-tag>\n${D}`,
+    inlineHtmlPara: `<b>bold</b> text\n${D}`,
+    htmlDivBlankRoot: `<div>\nx\n</div>\n\n${D}`,
+    autolink: `<https://brigade.lol>\n${D}`,
+    heading: `# Done\n${D}`,
+    doctype: `<!DOCTYPE html>\n${D}`,
+  }
+  const read = new Set([
+    'afterButtons',
+    'beforeButtons',
+    'blockquoteLazy',
+    'crlf',
+    'doctype',
+    'fenceInListThenRoot',
+    'footnote',
+    'heading',
+    'htmlCommentOneLine',
+    'htmlCommentThenRoot',
+    'htmlDivBlankRoot',
+    'htmlPreEnd',
+    'listThenRoot',
+    'listThenRootNoBlank',
+    'plainEnd',
+    'trailingSpaces',
+  ])
+  for (const [name, text] of Object.entries(cases))
+    assert.equal(replyCard(text).done !== undefined, read.has(name), name)
+})

@@ -35,24 +35,48 @@ type Fence = {
 }
 
 /**
+ * Raw HTML a line opens, as Markdown reads it (CommonMark's HTML blocks): what ends it, a marker
+ * on a line (`</pre>`, `-->`…) or a blank line. A fence inside it is HTML, not a block. Read
+ * broadly: any line that starts with a tag opens one, so a block after inline HTML may go unread,
+ * never the other way around.
+ */
+function htmlEnd(line: string): RegExp | 'blank' | undefined {
+  if (!/^ {0,3}<[A-Za-z!?/]/.test(line)) return undefined
+  if (/^ {0,3}<(?:script|pre|style|textarea)(?:\s|>|$)/i.test(line))
+    return /<\/(?:script|pre|style|textarea)>/i
+  if (/^ {0,3}<!--/.test(line)) return /-->/
+  if (/^ {0,3}<\?/.test(line)) return /\?>/
+  if (/^ {0,3}<!\[CDATA\[/.test(line)) return /\]\]>/
+  if (/^ {0,3}<![A-Za-z]/.test(line)) return />/
+  return 'blank'
+}
+
+/**
  * A reply's fenced code blocks at its top level, as Markdown reads them: a block inside another
  * (an example in a ```` fence) is that block's text, not a block of its own, so a card or a done
- * block quoted in an explanation is never read as one. Fences indented up to 3 spaces count here,
- * as they open and close blocks; which of them Brigade reads is `readable`'s to say.
+ * block quoted in an explanation is never read as one; nor is one inside raw HTML (htmlEnd).
+ * Fences indented up to 3 spaces count here, as they open and close blocks; which of them
+ * Brigade reads is `readable`'s to say.
  */
 function fences(text: string): Fence[] {
   const found: Fence[] = []
   let open:
     | { char: string; length: number; info: string; start: number; body: number; indent: number }
     | undefined
+  let html: RegExp | 'blank' | undefined
   for (let at = 0; ;) {
     const next = text.indexOf('\n', at)
     const after = next < 0 ? text.length : next + 1
-    const fence = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(
-      text.slice(at, next < 0 ? undefined : next).replace(/\r$/, ''),
-    )
+    const line = text.slice(at, next < 0 ? undefined : next).replace(/\r$/, '')
+    const fence = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line)
     const [indent, marks, rest] = fence ? [fence[1]!, fence[2]!, fence[3]!] : ['', '', '']
-    if (!open) {
+    if (html) {
+      // Raw HTML until its end: a blank line, or its marker (that line is still HTML).
+      if (html === 'blank' ? !line.trim() : html.test(line)) html = undefined
+    } else if (!open && (html = htmlEnd(line))) {
+      // Its marker on the line that opens it ends it there.
+      if (html !== 'blank' && html.test(line.replace(/^ {0,3}<[^\s>]*/, ''))) html = undefined
+    } else if (!open) {
       // A backtick fence's info string has no backtick in it.
       if (fence && !(marks[0] === '`' && rest.includes('`')))
         open = {
