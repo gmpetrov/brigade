@@ -28,6 +28,7 @@ import { audit, type Actor } from './audit.js'
 import { reportOf, reportSource } from './children.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
+import { captureError, markTracked } from './error-tracking.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { linkPullItems, settleItemsOnMerge, type PullItems } from './lists.js'
 import { renamedRepository, teammateGitHub, workspaceGitHub } from './git.js'
@@ -93,19 +94,81 @@ export async function github(db: ScopedDb, scope: Scope, repo: string): Promise<
   const to = renamed && repoPath(renamed.repository)
   return {
     fetch: async (path, init = {}) =>
-      fetch(
-        `${GITHUB_API}${to && path.toLowerCase().startsWith(`${from}/`) ? to + path.slice(from.length) : path}`,
-        {
-          ...init,
-          headers: {
-            ...githubHeaders,
-            authorization: `Bearer ${await installationToken(reached.installationId)}`,
-            ...(init.body ? { 'content-type': 'application/json' } : {}),
+      askAgain(init.method, async () =>
+        fetch(
+          `${GITHUB_API}${to && path.toLowerCase().startsWith(`${from}/`) ? to + path.slice(from.length) : path}`,
+          {
+            ...init,
+            headers: {
+              ...githubHeaders,
+              authorization: `Bearer ${await installationToken(reached.installationId)}`,
+              ...(init.body ? { 'content-type': 'application/json' } : {}),
+            },
           },
-        },
+        ),
       ),
   }
 }
+
+/** A GitHub answer that a short outage gives, worth asking again. A 4xx (and 501) never is. */
+export const transient = (status: number) => [500, 502, 503, 504].includes(status)
+
+/** The waits before asking GitHub again a read it answered 5xx: two more asks, 2 seconds at most. */
+export const RETRY_WAITS_MS = [400, 1_600] as const
+
+/**
+ * A GitHub call, asked again after a short wait while GitHub answers 5xx, for a read only (GET,
+ * HEAD): a write (a merge, a review) GitHub may have made before failing is never sent twice.
+ * The last answer is returned as it is, failed or not.
+ */
+export async function askAgain(
+  method: string | undefined,
+  send: () => Promise<Response>,
+  waits: readonly number[] = RETRY_WAITS_MS,
+) {
+  const read = !method || ['GET', 'HEAD'].includes(method.toUpperCase())
+  for (let attempt = 0; ; attempt++) {
+    const response = await send()
+    if (!transient(response.status)) githubAnswered()
+    if (!read || !transient(response.status) || attempt >= waits.length) return response
+    await response.body?.cancel().catch(() => {})
+    await new Promise((resolve) => setTimeout(resolve, waits[attempt]))
+  }
+}
+
+/** A run of 5xx answers from GitHub shorter than this is not reported: a blip, asked again. */
+export const OUTAGE_REPORT_MS = 60_000
+/** After an outage is reported, no other is for this long: one that comes and goes is one report. */
+export const OUTAGE_GAP_MS = 10 * 60_000
+
+/**
+ * GitHub's current run of 5xx answers (one for the whole API: GitHub's outage is everyone's):
+ * ended by any other answer of GitHub's, or by a minute without one; and when one was last reported.
+ */
+let outage: { since: number; last: number; reported: boolean } | null = null
+let reportedAt: number | null = null
+
+/**
+ * Whether a 5xx GitHub still answered after being asked again is to be reported now: once 5xx
+ * answers have gone on for OUTAGE_REPORT_MS with no other answer between them; once per run, and
+ * not for another run within OUTAGE_GAP_MS of a report; never for a blip shorter than a minute.
+ */
+export function reportOutage(now = Date.now()) {
+  if (!outage || now - outage.last > OUTAGE_REPORT_MS)
+    outage = { since: now, last: now, reported: false }
+  outage.last = now
+  if (outage.reported || now - outage.since < OUTAGE_REPORT_MS) return false
+  outage.reported = true
+  if (reportedAt !== null && now - reportedAt < OUTAGE_GAP_MS) return false
+  reportedAt = now
+  return true
+}
+
+/** GitHub answered other than a 5xx: the run of 5xx under way, if any, has ended. */
+export const githubAnswered = () => void (outage = null)
+
+/** For tests: forget the outage under way and the last report. */
+export const forgetOutage = () => void ((outage = null), (reportedAt = null))
 
 /**
  * The name Brigade keeps a repository's pull requests under, for a name someone gives (a card
@@ -124,9 +187,18 @@ async function call<T>(gh: GitHub, path: string, init?: RequestInit) {
   try {
     return await json<T>(await gh.fetch(path, init))
   } catch (error) {
-    if (error instanceof ConnectorError)
-      throw new HTTPException(502, { message: `GitHub: ${error.message}` })
-    throw error
+    if (!(error instanceof ConnectorError)) throw error
+    const failure = new HTTPException(502, { message: `GitHub: ${error.message}` })
+    if (!error.status || !transient(error.status)) throw failure
+    // GitHub down: the request fails, and the outage is reported once, not each request it failed.
+    if (reportOutage())
+      captureError(
+        new Error(
+          `GitHub has answered 5xx for over ${OUTAGE_REPORT_MS / 1000} seconds: ${error.message}`,
+        ),
+        { kind: 'github:outage', handled: true },
+      )
+    throw markTracked(failure)
   }
 }
 
