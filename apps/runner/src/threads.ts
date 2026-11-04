@@ -92,6 +92,15 @@ const PARK_AFTER_MS = 5 * 60_000
 const WARM_SEATS = Number.isFinite(Number(process.env.BRIGADE_WARM_SEATS))
   ? Number(process.env.BRIGADE_WARM_SEATS || 3)
   : 3
+/** A background thread's idle session parks this soon: nobody waits on its next turn. */
+const BACKGROUND_PARK_MS = Number(process.env.BRIGADE_BACKGROUND_PARK_MS) || 10_000
+/**
+ * Work nobody is waiting on as it runs: a child thread's (sub-threads, reviews), a schedule's or
+ * a trigger's run, a playbook's. Its turns wait while the computer is short of memory, and its
+ * session is not kept warm; a person's turns go first.
+ */
+const inBackground = (spec: ThreadSpec) =>
+  !!spec.parent || !!spec.playbook || spec.origin === 'schedule' || spec.origin === 'trigger'
 /** How much of what others said a teammate is told at the start of its turn. */
 const CATCH_UP_CHARS = 100_000
 /**
@@ -150,6 +159,8 @@ const memoryStopped = (why: string) => `Stopped to give the computer memory back
  * anyway, when fewer than TURNS_ALWAYS run: none of them may end soon to give memory back.
  */
 const MEMORY_WAIT_MS = 5 * 60_000
+/** How often background work waiting for memory checks it again (backgroundRoom). */
+const BACKGROUND_ROOM_CHECK_MS = Number(process.env.BRIGADE_BACKGROUND_ROOM_MS) || 5_000
 /**
  * A turn kept waiting for memory says so only past this: most waits end within a minute (a peak
  * of swapping passes), and a note for each would worry people for nothing.
@@ -1000,6 +1011,7 @@ export class Threads {
     const seat = this.harness(thread, spec)
     clearTimeout(seat.parkTimer)
     seat.parkTimer = undefined
+    seat.idleSince = undefined
     clearTimeout(thread.quietTimer)
     this.pending++
     const me = spec.teammate.id
@@ -1160,8 +1172,13 @@ export class Threads {
         }
         if (outcome.status === 'idle') {
           // Quiet: park the harness, then put what it has not pushed on GitHub.
-          seat.parkTimer = setTimeout(() => this.parkNow(seat), PARK_AFTER_MS)
-          seat.idleSince = Date.now()
+          // Kept warm for a person's next message; work in the background gives its memory back.
+          const background = inBackground(spec)
+          seat.parkTimer = setTimeout(
+            () => this.parkNow(seat),
+            background ? BACKGROUND_PARK_MS : PARK_AFTER_MS,
+          )
+          if (!background) seat.idleSince = Date.now()
           thread.lastSpec = spec
           clearTimeout(thread.quietTimer)
           thread.quietTimer = setTimeout(() => this.memorize(spec.sessionId), QUIET_AFTER_MS)
@@ -1892,6 +1909,7 @@ export class Threads {
         const fresh = log.entries.slice(from - log.start)
         // Nothing a teammate said since last time: nothing to remember.
         if (!fresh.some((e) => e.by)) return
+        if (!(await this.backgroundRoom())) return
         await this.acquire()
         try {
           // Taken from the same log by the next runner, when the thread goes quiet there.
@@ -1952,7 +1970,7 @@ export class Threads {
     this.tidying.add(path)
     void (async () => {
       try {
-        if (this.stopping) return
+        if (!(await this.backgroundRoom())) return
         const run = tidyRun(file)
         const text = await runOnce({
           spec,
@@ -1990,6 +2008,7 @@ export class Threads {
    */
   private async name(spec: ThreadSpec, text: string, from: string) {
     try {
+      if (!(await this.backgroundRoom())) return
       const answer = await runOnce({
         spec,
         ...this.memoryWorkDir(spec, 'title-runs'),
@@ -2311,6 +2330,23 @@ export class Threads {
     this.raiseTimer.unref()
   }
 
+  /**
+   * Work in the background that starts a harness of its own (a title, a memory or tidy run) waits
+   * while the computer is short of memory, checked every 5 s, up to MEMORY_WAIT_MS. False when
+   * the runner stops meanwhile.
+   */
+  private async backgroundRoom() {
+    const room = this.options.memoryRoom
+    if (!room) return !this.stopping
+    const until = Date.now() + MEMORY_WAIT_MS
+    while (!this.stopping) {
+      if (await room().catch(() => true)) return true
+      if (Date.now() >= until) return true
+      await sleep(BACKGROUND_ROOM_CHECK_MS, undefined, { ref: false })
+    }
+    return false
+  }
+
   /** Park an idle seat's session now, then put what it has not pushed on GitHub. */
   private parkNow(seat: Seat) {
     clearTimeout(seat.parkTimer)
@@ -2338,7 +2374,8 @@ export class Threads {
   /**
    * Before a turn starts, the computer has memory for it: else it would only push the memory
    * guard to stop another turn. Fewer than TURNS_ALWAYS turns start at once, unless the guard
-   * stopped one lately. Past that, they check one at a time, SETTLE_MS apart. It waits, said once
+   * stopped one lately or the turn is work in the background (inBackground), which a person's
+   * turns go before. Past that, they check one at a time, SETTLE_MS apart. It waits, said once
    * in its thread, until there is room, or MEMORY_WAIT_MS when fewer than TURNS_ALWAYS run.
    */
   private async waitForMemory(thread: Thread, spec: ThreadSpec) {
@@ -2359,7 +2396,7 @@ export class Threads {
     // now. A computer whose own services hold most of its memory reads short of it at most times,
     // and holding the few turns it runs only kept people waiting (a try after a stop for memory
     // still waits for it, in tryAgain).
-    if (!queue && this.lowered === undefined) {
+    if (!queue && this.lowered === undefined && !inBackground(spec)) {
       this.started++
       // It holds the next back until it has settled, as one let in after reading memory.
       const settled = new Promise<void>((resolve) => setTimeout(resolve, SETTLE_MS).unref())

@@ -14,6 +14,7 @@ const home = await mkdtemp(join(tmpdir(), 'brigade-turn-limit-'))
 process.env.BRIGADE_HOME = home
 process.env.BRIGADE_TURN_SETTLE_MS = '150'
 process.env.BRIGADE_TURN_RAISE_MS = '300'
+process.env.BRIGADE_BACKGROUND_PARK_MS = '200'
 await mkdir(join(home, 'state'), { recursive: true })
 const { Threads } = await import('../src/threads.js')
 
@@ -83,11 +84,12 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
     harnesses.set('mark', seat)
     return seat
   }
-  const message = (sessionId: string) =>
+  const message = (sessionId: string, extra: Partial<ThreadSpec> = {}) =>
     threads.handle({
       type: 'thread.prompt',
       commandId: 'c',
       thread: {
+        ...extra,
         sessionId,
         teammate: { id: 'mark', name: 'Mark', harness: 'claude-code' },
         teammates: [{ id: 'mark', name: 'Mark', harness: 'claude-code' }],
@@ -242,4 +244,24 @@ test('idle sessions past the three latest park at once, and all of them when mem
   await sleep(100)
   assert.deepEqual(parked.slice(2).sort(), ['w3', 'w4'])
   end('w5')
+})
+
+test('a child thread waits for memory even alone, and its idle session parks soon, not kept warm', async () => {
+  let room = false
+  const { message, startedAt, end, parked } = setup(8, () => room)
+  message('child', { parent: { sessionId: 'parent' } } as never)
+  await sleep(300)
+  assert.equal(startedAt('child'), undefined, 'work in the background waits while memory is short')
+  // A person's turn goes ahead meanwhile.
+  message('person')
+  await sleep(100)
+  assert.ok(startedAt('person'), "a person's turn starts at once")
+  room = true
+  await sleep(5_200)
+  assert.ok(startedAt('child'), 'it starts once there is room')
+  end('child')
+  end('person')
+  // BRIGADE_BACKGROUND_PARK_MS is short here: the child's session parks, the person's stays.
+  await sleep(400)
+  assert.deepEqual(parked, ['child'])
 })
