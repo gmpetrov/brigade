@@ -20,7 +20,8 @@ const { openrouterAccountName } = await import('../src/connectors/openrouter.js'
 const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
 const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
 const { ahrefs } = await import('../src/connectors/ahrefs.js')
-const { revenuecat, revenuecatAccountName } = await import('../src/connectors/revenuecat.js')
+const { revenuecat, revenuecatAccountId, revenuecatAccountName } =
+  await import('../src/connectors/revenuecat.js')
 const { keyReconnectRefusal } = await import('../src/routes/connections.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
@@ -317,6 +318,7 @@ test("a RevenueCat account shows as its key's project", () => {
     url: 'https://api.revenuecat.com/v2/projects',
   }
   assert.equal(revenuecatAccountName(one), 'NoCo AI')
+  assert.equal(revenuecatAccountId(one), 'proj2220e338')
   const two = { ...one, items: [...one.items, { object: 'project', id: 'proj9', name: 'Talkie' }] }
   assert.equal(revenuecatAccountName(two), 'NoCo AI +1')
   assert.equal(revenuecatAccountName({ items: [] }), null)
@@ -324,15 +326,33 @@ test("a RevenueCat account shows as its key's project", () => {
   assert.equal(revenuecatAccountName(null), null)
 })
 
-test("a key reconnects only its own project's account", () => {
-  // Project A's row keeps its name and grants: a key of Project B must not take its place.
-  assert.equal(keyReconnectRefusal('RevenueCat', 'Project A', 'Project A'), null)
-  assert.match(
-    keyReconnectRefusal('RevenueCat', 'Project A', 'Project B')!,
-    /reaches Project B, not Project A/,
+test("a key reconnects only its own project's account, by the project's id", () => {
+  // Two projects may both be called Production: their ids tell them apart.
+  const projects = (...items: { id: string; name: string }[]) => ({
+    object: 'list',
+    items: items.map((p) => ({ object: 'project', ...p })),
+  })
+  const a = projects({ id: 'projA1', name: 'Production' })
+  const b = projects({ id: 'projB2', name: 'Production' })
+  assert.equal(revenuecatAccountName(a), revenuecatAccountName(b))
+  assert.equal(revenuecatAccountId(a), 'projA1')
+  assert.equal(revenuecatAccountId(b), 'projB2')
+  assert.equal(
+    revenuecatAccountId(projects({ id: 'projZ', name: 'Z' }, { id: 'projA', name: 'A' })),
+    'projA,projZ',
   )
-  assert.ok(keyReconnectRefusal('RevenueCat', 'Project A', null))
-  assert.ok(keyReconnectRefusal('RevenueCat', null, 'Project B'))
+  assert.equal(revenuecatAccountId({ items: [] }), null)
+  assert.equal(revenuecatAccountId('Unauthorized'), null)
+  // connection-a is Project A's row: a key reaching it (same) may reconnect it, no other may.
+  assert.equal(
+    keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-a', 'Production'),
+    null,
+  )
+  assert.match(
+    keyReconnectRefusal('RevenueCat', 'connection-a', undefined, 'Production')!,
+    /another RevenueCat account \(Production\)/,
+  )
+  assert.ok(keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-b', 'Production'))
 })
 
 test('RevenueCat signs in with a key, and its tools that change something are writes', () => {

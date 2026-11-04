@@ -114,7 +114,11 @@ export type ConnectorKind =
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
-export type ApiKeyCredential = { apiKey: string }
+export type ApiKeyCredential = {
+  apiKey: string
+  /** The account the key reaches, by the provider's stable id (RevenueCat's project), when known. */
+  accountId?: string
+}
 
 /** A trigger option, shown as a text field. */
 export type TriggerOption = {
@@ -240,7 +244,14 @@ export type McpServer = {
    * a URL to GET with the same token, and the name to show from its output, such as the
    * account's organization.
    */
-  account?: ({ tool: string } | { url: string }) & { name: (output: unknown) => string | null }
+  account?: ({ tool: string } | { url: string }) & {
+    name: (output: unknown) => string | null
+    /**
+     * The account's stable id from the same output, for a key the member pastes: two accounts
+     * may share a name, and a key may reconnect only its own account.
+     */
+    id?: (output: unknown) => string | null
+  }
   /** oauth: the scopes to ask for, when not all those the server lists. */
   scopes?: string[]
   /**

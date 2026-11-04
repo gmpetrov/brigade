@@ -29,7 +29,7 @@ export const revenuecat: ConnectorDefinition = {
     url: 'https://mcp.revenuecat.ai/mcp',
     auth: 'api_key',
     // No whoami: the key's project, which list-projects gives as its only one.
-    account: { tool: 'list-projects', name: revenuecatAccountName },
+    account: { tool: 'list-projects', name: revenuecatAccountName, id: revenuecatAccountId },
     tools: {
       // Projects and apps
       'get-account-billing': read('The RevenueCat plan, billing period and tracked revenue.'),
@@ -208,4 +208,14 @@ export function revenuecatAccountName(output: unknown): string | null {
     .filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
   if (!names.length) return null
   return names.length === 1 ? names[0]! : `${names[0]} +${names.length - 1}`
+}
+
+/** The key's project by its id (proj…), the same from one name to the next; several, sorted. */
+export function revenuecatAccountId(output: unknown): string | null {
+  const list = (output as { items?: unknown } | null)?.items
+  if (!Array.isArray(list)) return null
+  const ids = list
+    .map((p) => (p as { id?: unknown } | null)?.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+  return ids.length ? ids.sort().join(',') : null
 }
