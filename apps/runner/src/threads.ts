@@ -84,6 +84,14 @@ const aborted = (signal: AbortSignal) =>
   )
 /** Park an idle harness session after this long; the next message resumes it. */
 const PARK_AFTER_MS = 5 * 60_000
+/**
+ * Idle harness sessions kept running at most, the latest to have answered: the others park now.
+ * A kept Claude Code session holds its process (250 to 430 MB) besides its bridge, for its next
+ * turn to start at once; a computer short of memory parks them all (coolDown).
+ */
+const WARM_SEATS = Number.isFinite(Number(process.env.BRIGADE_WARM_SEATS))
+  ? Number(process.env.BRIGADE_WARM_SEATS || 3)
+  : 3
 /** How much of what others said a teammate is told at the start of its turn. */
 const CATCH_UP_CHARS = 100_000
 /**
@@ -221,6 +229,8 @@ type Seat = {
   harness: HarnessThread
   folder: Folder
   parkTimer: NodeJS.Timeout | undefined
+  /** When its last turn ended idle, while its session stays running for the next (coolDown). */
+  idleSince?: number
   /** The running turn's messages and steps: its answer is what hands it on (handOn). */
   turn: (TurnEntry & { text?: string })[]
   /** The running turn's spec: the teammates its answer may hand on to. */
@@ -1038,6 +1048,7 @@ export class Threads {
         // Set when the turn before it ended, after this one was queued: it would park this one.
         clearTimeout(seat.parkTimer)
         seat.parkTimer = undefined
+        seat.idleSince = undefined
         const controller = new AbortController()
         thread.controller = controller
         thread.running = { teammateId: me, turnId }
@@ -1149,13 +1160,8 @@ export class Threads {
         }
         if (outcome.status === 'idle') {
           // Quiet: park the harness, then put what it has not pushed on GitHub.
-          seat.parkTimer = setTimeout(() => {
-            seat.parkTimer = undefined
-            void seat.harness
-              .park()
-              .then(() => seat.harness.backup())
-              .catch(console.error)
-          }, PARK_AFTER_MS)
+          seat.parkTimer = setTimeout(() => this.parkNow(seat), PARK_AFTER_MS)
+          seat.idleSince = Date.now()
           thread.lastSpec = spec
           clearTimeout(thread.quietTimer)
           thread.quietTimer = setTimeout(() => this.memorize(spec.sessionId), QUIET_AFTER_MS)
@@ -1185,6 +1191,8 @@ export class Threads {
           thread.running = undefined
           thread.controller = undefined
         }
+        // Ended idle, its session stays for the next turn: past the latest few, the oldest park.
+        if (seat.idleSince !== undefined) this.coolDown()
         this.pending--
         thread.slotWait = undefined
         if (counted) this.started--
@@ -2303,6 +2311,30 @@ export class Threads {
     this.raiseTimer.unref()
   }
 
+  /** Park an idle seat's session now, then put what it has not pushed on GitHub. */
+  private parkNow(seat: Seat) {
+    clearTimeout(seat.parkTimer)
+    seat.parkTimer = undefined
+    seat.idleSince = undefined
+    void seat.harness
+      .park()
+      .then(() => seat.harness.backup())
+      .catch(console.error)
+  }
+
+  /**
+   * Idle sessions past the WARM_SEATS latest park now; all of them when the computer is short
+   * of memory (`short`), but those of the thread about to run (`keep`).
+   */
+  private coolDown(short = false, keep?: string) {
+    const idle = [...this.threads.entries()]
+      .filter(([sessionId, t]) => !t.running && sessionId !== keep)
+      .flatMap(([, t]) => [...t.harnesses.values()])
+      .filter((seat) => seat.parkTimer !== undefined && seat.idleSince !== undefined)
+      .sort((a, b) => b.idleSince! - a.idleSince!)
+    for (const seat of idle.slice(short ? 0 : Math.max(0, WARM_SEATS))) this.parkNow(seat)
+  }
+
   /**
    * Before a turn starts, the computer has memory for it: else it would only push the memory
    * guard to stop another turn. Fewer than TURNS_ALWAYS turns start at once, unless the guard
@@ -2311,6 +2343,12 @@ export class Threads {
    */
   private async waitForMemory(thread: Thread, spec: ThreadSpec) {
     const room = this.options.memoryRoom
+    // Short of memory, the sessions only kept for their next turn give theirs back first.
+    if (room)
+      void room().then(
+        (enough) => !enough && this.coolDown(true, spec.sessionId),
+        () => undefined,
+      )
     // Counted as started at once, before any await: turns that come together see one another.
     if (!room) {
       this.started++

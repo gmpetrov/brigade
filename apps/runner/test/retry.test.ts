@@ -198,8 +198,8 @@ test('a turn whose harness process went away is tried again on its own', async (
 })
 
 test('a turn the memory guard stopped goes on once the computer has memory again', async () => {
-  // None at the first try, then room again (the first turn, with none other running, reads none).
-  const room = [false, true, true]
+  // Room for the first turn (read only to park idle sessions), none at the first try, then room again.
+  const room = [true, false, true, true]
   const t = setup(
     'memory',
     [

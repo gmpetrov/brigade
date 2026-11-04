@@ -33,6 +33,8 @@ test.after(async () => {
 function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   const events: { sessionId: string; event: AgentEvent; at: number }[] = []
   const ends = new Map<string, () => void>()
+  /** The threads whose idle session parked, in order. */
+  const parked: string[] = []
   const threads = new Threads({
     concurrency,
     emit: (sessionId, event) => events.push({ sessionId, event, at: Date.now() }),
@@ -49,9 +51,11 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   } as unknown as ConstructorParameters<typeof Threads>[0])
   made.push(threads)
   ;(threads as unknown as { harness: (thread: unknown, spec: ThreadSpec) => unknown }).harness = (
-    _,
+    thread,
     spec,
   ) => {
+    const harnesses = (thread as { harnesses: Map<string, unknown> }).harnesses
+    if (harnesses.has('mark')) return harnesses.get('mark')
     const seat = {
       harness: {
         active: false,
@@ -59,7 +63,7 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
           await new Promise<void>((resolve) => ends.set(spec.sessionId, resolve))
           return { status: 'idle' }
         },
-        park: async () => undefined,
+        park: async () => void parked.push(spec.sessionId),
         backup: async () => undefined,
         awaitingPerson: async () => false,
         holdsMessages: async () => false,
@@ -76,6 +80,7 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
       told: new Set(),
     }
     seats.push(seat)
+    harnesses.set('mark', seat)
     return seat
   }
   const message = (sessionId: string) =>
@@ -97,7 +102,7 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   const startedAt = (sessionId: string) =>
     events.find((e) => e.sessionId === sessionId && e.event.type === 'turn.started')?.at
   const end = (sessionId: string) => ends.get(sessionId)?.()
-  return { threads, events, message, startedAt, end }
+  return { threads, events, message, startedAt, end, parked }
 }
 
 test('past the first few, turns start one at a time, a moment apart', async () => {
@@ -215,4 +220,26 @@ test('a cap lowered while a turn reads memory holds that turn back', async () =>
   await sleep(50)
   assert.equal(startedAt('m6'), undefined, 'five run, the cap is five')
   for (const id of [...ids, 'm6']) end(id)
+})
+
+test('idle sessions past the three latest park at once, and all of them when memory is short', async () => {
+  let room = true
+  const { message, startedAt, end, parked } = setup(8, () => room)
+  const ids = ['w1', 'w2', 'w3', 'w4', 'w5']
+  for (const id of ids) message(id)
+  await sleep(300)
+  for (const id of ids) assert.ok(startedAt(id), `${id} started`)
+  // They end one after the other: the two that ended first park, the three latest stay.
+  for (const id of ids) {
+    end(id)
+    await sleep(20)
+  }
+  await sleep(50)
+  assert.deepEqual(parked, ['w1', 'w2'])
+  // A turn that starts short of memory parks the idle ones left, not its own.
+  room = false
+  message('w5')
+  await sleep(100)
+  assert.deepEqual(parked.slice(2).sort(), ['w3', 'w4'])
+  end('w5')
 })

@@ -722,7 +722,9 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   reply's fork, no structured output, no deferred approval), and ends after `BRIGADE_CLAUDE_KEEP_MS` without a turn
   (2 minutes; 0 keeps none), when the session stops or parks, and with a turn that ends otherwise than answered (an
   error, a stop, work left in the background): the next starts anew, as before. Kept, it holds Claude Code's memory
-  (about 250 MB) for those 2 minutes. The host's tools are kept by their hash and not converted again, and the
+  (250 to 430 MB) for those 2 minutes, so the runner keeps at most `WARM_SEATS` idle sessions running (3, the latest
+  to have answered; `BRIGADE_WARM_SEATS`): the others park at once, rather than after 5 minutes as every idle session
+  did, and a turn that starts while the computer is short of memory parks every idle one but its own. The host's tools are kept by their hash and not converted again, and the
   bridge's `start-config.json` no longer holds them. Codex's app-server already stays across turns. Brigade's tools
   that end most turns (`complete_thread`, `open_ticket`, `show_widget`, `widget_guide`, a child's `report`,
   `complete_task`, `search_workspace`) are always loaded in Claude Code (`alwaysLoad`), never behind a tool search,
