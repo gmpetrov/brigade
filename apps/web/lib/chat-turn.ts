@@ -5,13 +5,19 @@
  * pieces at each message.
  */
 
-/** What an item of a turn is here: a message steered in, the teammate's text, a step, or else. */
-export type ChatEntry = 'steered' | 'message' | 'step' | 'other'
+/**
+ * What an item of a turn is here: a message steered in, the teammate's text, its answer to a
+ * message steered in (answer_message), a step, or else.
+ */
+export type ChatEntry = 'steered' | 'message' | 'answer' | 'step' | 'other'
 
 /**
- * The teammate's messages that answer one steered in: right after it, before the turn's next
- * step (a question it could answer at once). They stay in sight once the turn ends, beside its
- * answer, rather than fold away with its steps.
+ * The teammate's messages that answer one steered in (a question it could answer at once): those
+ * it gave with answer_message, wherever they are, and, from a runner before that tool, its text
+ * right after the message, before the turn's next step. They stay in sight once the turn ends,
+ * beside its answer, rather than fold away with its steps. The teammate reads a message steered in
+ * only at its next step, so a step it started before can come between the two (Nov 4: "Searched
+ * once" between "comment je m'appelle ?" and its answer, which folded): only the tool says so then.
  */
 export function quickReplies(entries: ChatEntry[]): Set<number> {
   const quick = new Set<number>()
@@ -19,7 +25,7 @@ export function quickReplies(entries: ChatEntry[]): Set<number> {
   entries.forEach((entry, at) => {
     if (entry === 'steered') afterSteer = true
     else if (entry === 'step') afterSteer = false
-    else if (entry === 'message' && afterSteer) quick.add(at)
+    else if (entry === 'answer' || (entry === 'message' && afterSteer)) quick.add(at)
   })
   return quick
 }

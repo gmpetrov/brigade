@@ -20,6 +20,7 @@ import {
   type BackgroundWork,
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
+  ANSWER_MESSAGE_TOOL,
   SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
@@ -105,6 +106,7 @@ import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import { backgroundTasks, reportWaitsFor } from './background.js'
 import {
+  answerMessageTool,
   ASK_USER_TOOL,
   appTools,
   askUserTool,
@@ -267,6 +269,7 @@ const INSTRUCTIONS_MAX_BYTES = 256 * 1024
  * and used in most turns. A name the thread has no tool of is ignored.
  */
 const ALWAYS_LOADED = [
+  ANSWER_MESSAGE_TOOL,
   COMPLETE_THREAD_TOOL,
   OPEN_TICKET_TOOL,
   SHOW_WIDGET_TOOL,
@@ -372,6 +375,8 @@ function createAgent(
     [OPEN_TICKET_TOOL]: openTicketTool,
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
+    // A person's message given to the running turn, answered at once (steeredText in threads.ts).
+    [ANSWER_MESSAGE_TOOL]: answerMessageTool,
     // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
     ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
   }
@@ -490,6 +495,8 @@ export class HarnessThread {
   private handingOver = false
   /** What the person has read of the turn: a turn without a reply is asked for one. */
   private readonly replies = new ReplyWatch()
+  /** The person's message given to the running turn last (steer): what answer_message answers. */
+  private steeredId: string | undefined
   /** What the running turn runs in the background now (background.ts): a report waits on its agents. */
   private background: BackgroundWork[] = []
   /**
@@ -542,8 +549,10 @@ export class HarnessThread {
     if (retry && input.kind === 'prompt' && this.saved?.asked)
       input = { kind: 'prompt', text: `${ASKED}\n\n${this.saved.asked}\n\n${input.text}` }
     // An approval, an answer or a ticket goes on with the turn it paused.
-    if (input.kind === 'prompt') this.replies.start()
-    else if (input.kind === 'resume') this.replies.resume()
+    if (input.kind === 'prompt') {
+      this.replies.start()
+      this.steeredId = undefined
+    } else if (input.kind === 'resume') this.replies.resume()
     if (spec.moved && this.saved?.movedAt !== spec.moved.at) await this.arrive(spec.moved)
     let handoff: string | undefined
     // The first turn here since the thread moved: a new session, told the thread so far.
@@ -1004,14 +1013,16 @@ export class HarnessThread {
   /**
    * Give a message to the running turn, which reads it at its next step; what
    * it does about it stays in this turn. Throws when no turn runs, or the
-   * harness cannot take one mid-turn.
+   * harness cannot take one mid-turn. `messageId`: a person's message, which an
+   * answer_message call answers from now on.
    */
-  async steer(text: string) {
+  async steer(text: string, messageId?: string) {
     const live = this.live
     if (!live) throw new Error('No turn is running')
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
     this.replies.steered()
+    this.steeredId = messageId
   }
 
   /**
@@ -1301,6 +1312,7 @@ export class HarnessThread {
       this.toolCalls,
       this.texts,
       this.reasoning,
+      () => this.steeredId,
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the

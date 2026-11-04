@@ -48,7 +48,7 @@ import {
 } from '@brigade/contracts'
 import { ComputerUseError, type RequestOptions } from '../computer-use.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
-import { errorMessage } from './events.js'
+import { answerText, errorMessage } from './events.js'
 import { WIDGET_GUIDE } from './widget-guide.js'
 
 export type ConnectorCaller = (call: {
@@ -845,6 +845,31 @@ export const showWidgetTool = tool({
         'If it shows options, end your reply with a choices block, labels numbered and named as in the widget ("3 · Small square caps"): ' +
         'other teammates see the pick, never the widget.',
     }
+  },
+})
+
+/**
+ * A teammate's answer, at once, to a person's message given to its running turn: a question it
+ * can answer now. Brigade shows it as the teammate's message under theirs, word for word, and
+ * keeps it in sight once the turn ends, where text written between steps can fold away with them
+ * or reach the person only as the server's summary of it (narration). EventMapper records the
+ * call as that message (answerText); the call itself shows nothing.
+ */
+export const answerMessageTool = tool({
+  description:
+    'Answer at once a message a person wrote while you work (it says so), in a line or two, then go on with ' +
+    'the work. It shows as your message, word for word, under theirs, and stays there once your turn ends. ' +
+    "Only for such a message: your turn's reply is still text, at its end, without that answer again.",
+  inputSchema: jsonSchema<{ text: string }>({
+    type: 'object',
+    properties: {
+      text: { type: 'string', description: 'Your answer, as you would write it to them' },
+    },
+    required: ['text'],
+  }),
+  execute: async (input) => {
+    if (!answerText(input)) throw new Error('Give your answer as text')
+    return { shown: true, next: 'Shown under their message. Go on with the work.' }
   },
 })
 

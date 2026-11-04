@@ -228,6 +228,8 @@ export type Item =
       text: string
       done: boolean
       teammateId?: string
+      /** The person's message it answers, given to the running turn (answer_message): it stays in sight. */
+      answers?: string
       /** The images it shows, kept with the thread (message.images): by path, as it writes it. */
       images?: Record<string, string>
     }
@@ -572,7 +574,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
         case 'message.done': {
           const key = `m${e.teammateId ?? ''}:${e.id}`
           const item = byKey.get(key)
-          if (item?.kind === 'assistant') Object.assign(item, { text: e.text, done: true })
+          const answers = e.answers ? { answers: e.answers } : {}
+          if (item?.kind === 'assistant')
+            Object.assign(item, { text: e.text, done: true, ...answers })
           else
             add({
               kind: 'assistant',
@@ -581,6 +585,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               text: e.text,
               done: true,
               teammateId: e.teammateId,
+              ...answers,
             })
           break
         }
@@ -1362,7 +1367,9 @@ const chatEntry = (item: Item): ChatEntry =>
   isSteered(item)
     ? 'steered'
     : item.kind === 'assistant'
-      ? 'message'
+      ? item.answers
+        ? 'answer'
+        : 'message'
       : isActivity(item) && !isAside(item)
         ? 'step'
         : 'other'
