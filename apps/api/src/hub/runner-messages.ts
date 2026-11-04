@@ -23,6 +23,7 @@ import { prisma, type Prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
 import { noteDisk } from '../disk-tickets.js'
 import { keepFilesApart } from '../event-files.js'
+import { maskSecretsIn } from '../secrets.js'
 import { dropDeadWaiters, type Live } from '../held-calls.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
@@ -540,13 +541,15 @@ async function insertEvents(
     at: new Date(event.at),
   })
   // Images and PDFs go to the bucket, not the database (event-files.ts). Runners from
-  // DIRECT_UPLOAD_PROTOCOL on put them there first and send only their names.
+  // DIRECT_UPLOAD_PROTOCOL on put them there first and send only their names. Then secrets
+  // are masked (secrets.ts): a stored event goes whole to every browser that opens the thread.
+  // After the files, which are not text, and which their names replaced.
   const kept = await Promise.all(
     events.map(async ({ seq, event }) => {
       const storable = storableJson(event)
       const apart = await keepFilesApart(session, session.id, storable)
       if (apart !== storable) noteInlineFiles(conn)
-      return { seq, event: apart }
+      return { seq, event: maskSecretsIn(apart) }
     }),
   )
   const all = kept.map((e) => rows(e.seq, e.event))
