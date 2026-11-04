@@ -243,7 +243,10 @@ function PullChip({ pulls }: { pulls: BoardCard['pulls'] }) {
   )
 }
 
-function CardView({ card }: { card: BoardCard }) {
+function CardView({ card, showProject }: { card: BoardCard; showProject: boolean }) {
+  const { projects } = useDashboard()
+  // Its project's circle, beside who is on it; not when the board shows one project.
+  const project = showProject ? projects.find((p) => p.id === card.projectId) : undefined
   const bad = card.reason === 'failed' || card.reason === 'routine_failed'
   const action = card.column === 'needs_you' ? actionText(card) : null
   const working = card.column === 'in_progress' && card.reason === 'working'
@@ -276,14 +279,28 @@ function CardView({ card }: { card: BoardCard }) {
         </span>
       )}
       <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted-foreground">
-        {thread && (
-          <span className="relative shrink-0" title={working ? 'Working now' : undefined}>
-            <TeammateAvatar teammate={thread.teammate} className="size-4.5" />
-            {working && (
+        {(thread || project) && (
+          <span className="flex shrink-0 items-center">
+            {project && (
+              <span title={project.name} className="flex">
+                <ProjectIcon project={project} className="size-4.5 rounded-full text-[0.5625rem]" />
+                <span className="sr-only">{project.name}</span>
+              </span>
+            )}
+            {thread && (
+              // On the project's circle, in a ring of the card's colour that cuts it.
               <span
-                aria-label="Working now"
-                className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border-2 border-card bg-primary"
-              />
+                className={cn('relative rounded-full bg-card', project && '-ml-1.5 p-px')}
+                title={working ? 'Working now' : undefined}
+              >
+                <TeammateAvatar teammate={thread.teammate} className="size-4.5" />
+                {working && (
+                  <span
+                    aria-label="Working now"
+                    className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border-2 border-card bg-primary"
+                  />
+                )}
+              </span>
             )}
           </span>
         )}
@@ -336,10 +353,13 @@ function CardView({ card }: { card: BoardCard }) {
 function Column({
   column,
   cards,
+  showProject,
   footer,
 }: {
   column: (typeof COLUMNS)[number]
   cards: BoardCard[]
+  /** Each card's project, when the board shows several. */
+  showProject: boolean
   footer?: React.ReactNode
 }) {
   return (
@@ -371,7 +391,7 @@ function Column({
         ) : (
           <ul className="flex flex-col gap-2">
             {cards.map((c) => (
-              <CardView key={c.key} card={c} />
+              <CardView key={c.key} card={c} showProject={showProject} />
             ))}
           </ul>
         )}
@@ -890,6 +910,7 @@ export function BoardPage() {
             <Column
               column={c}
               cards={c.value === 'done' ? done : columns[c.value]}
+              showProject={!filters.project}
               footer={
                 c.value === 'done' && (
                   <>
