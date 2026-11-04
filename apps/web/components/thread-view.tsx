@@ -2639,7 +2639,7 @@ export function ThreadItems({
     working &&
     !items.slice(i + 1).some((it) => it.kind === 'turn' || (it.kind === 'user' && !it.steeredTo))
   /** Its place in a run of one teammate's messages: see `messageRuns`. */
-  type Run = { follows: boolean; close: boolean; followed: boolean }
+  type Run = { starts: boolean; follows: boolean; close: boolean; followed: boolean }
   const render = (item: Item, i: number, run?: Run): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
@@ -2806,17 +2806,20 @@ export function ThreadItems({
       }
       case 'assistant': {
         const author = (item.teammateId && byId.get(item.teammateId)) || teammate
-        // With several teammates, name the author where the speaker changes.
+        // With several teammates, name the author over each run of its messages the thread
+        // shows: from the runs of what is shown, not of every item, since a turn's fold hides
+        // its earlier messages. Outside a list of runs (an Aside), where the speaker changes.
         const previous = items
           .slice(0, i)
           .findLast((it): it is Extract<Item, { kind: 'assistant' }> => it.kind === 'assistant')
         const named =
           several &&
           author &&
-          !run?.follows &&
-          (!previous ||
-            previous.teammateId !== item.teammateId ||
-            items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
+          (run
+            ? run.starts
+            : !previous ||
+              previous.teammateId !== item.teammateId ||
+              items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
         return (
           // No avatar: the thread's one living picture is its Working line's pebble. With
           // several teammates, a name over each run says whose it is.
@@ -3280,6 +3283,7 @@ export function ThreadItems({
   const show = (list: Node[]): React.ReactNode[] => {
     const runs = messageRuns(list.map(runEntry))
     const runAt = (at: number): Run => ({
+      starts: runs.starts.has(at),
       follows: runs.follows.has(at),
       close: runs.close.has(at),
       followed: runs.close.has(at + 1),
