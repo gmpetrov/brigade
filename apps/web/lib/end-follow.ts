@@ -20,3 +20,12 @@ export function followIn(following: boolean, now: number, theirsAt: number, quie
   if (!following) return undefined
   return Math.max(0, theirsAt + quietMs - now)
 }
+
+/**
+ * Whether the way to the end is glided rather than jumped: what came in is short (under a
+ * screen away), and the thread was in already. A thread opening, or its pages coming in after
+ * it opened, jumps there: gliding over all of it would scroll the whole thread before the eyes.
+ */
+export function glides(distance: number, viewport: number, settled: boolean) {
+  return settled && distance <= viewport
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { followIn, leavesEnd } from '../lib/end-follow'
+import { followIn, glides, leavesEnd } from '../lib/end-follow'
 
 test('scrolling up, by wheel or keys, leaves the end; down or a touch does not on its own', () => {
   assert.equal(leavesEnd({ type: 'wheel', deltaY: -300 }), true)
@@ -21,4 +21,13 @@ test('what comes while the person scrolls is followed once they stop, unless the
   assert.equal(followIn(true, 10_700, 9_900, 600), 0)
   // They left the end: never.
   assert.equal(followIn(false, 20_000, 9_900, 600), undefined)
+})
+
+test('a few lines glide to the end; a thread opening or a whole page jumps there', () => {
+  // A new line or a card, the thread in: glided.
+  assert.equal(glides(120, 800, true), true)
+  // Its pages coming in after a reload, thousands of pixels away: jumped, not scrolled through.
+  assert.equal(glides(6_000, 800, true), false)
+  // The thread still opening: jumped.
+  assert.equal(glides(120, 800, false), false)
 })
