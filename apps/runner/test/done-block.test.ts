@@ -70,6 +70,21 @@ test('a done block ends the reply as complete_thread, after the reply and its bu
   assert.deepEqual((call as { input: unknown }).input, { summary: REPLY })
 })
 
+test('a done block quoted in an explanation closes nothing', () => {
+  // Showing the syntax, as a pull request's description does: the reply stays whole.
+  const quoted = [
+    'Proposed syntax (nothing implemented yet):',
+    '````markdown',
+    DONE,
+    '````',
+    'I still need to implement and test this.',
+  ].join('\n')
+  assert.deepEqual(mapped(true, quoted), [{ type: 'message.done', id: 'r1', text: quoted }])
+  // In the middle of the reply, an example too.
+  const middle = `It looks like\n${DONE}\nonce the work is done.`
+  assert.deepEqual(mapped(true, middle), [{ type: 'message.done', id: 'r1', text: middle }])
+})
+
 test('only the call a done block stands for is the runner’s to send', () => {
   const at = '2026-11-04T14:00:00.000Z'
   const block = {

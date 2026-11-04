@@ -16,10 +16,75 @@ export const CHOICES_BLOCK = 'choices'
  */
 export const DONE_BLOCK = 'done'
 
-const BLOCK = /```(replies|choices)[ \t]*\r?\n([\s\S]*?)```[ \t]*(?:\r?\n|$)/g
-const DONE = /```done[ \t]*\r?\n([\s\S]*?)```[ \t]*(?:\r?\n|$)/g
-/** From a block's opening fence to the end of the text, while it is still being written. */
-const OPENED = /\n?```(?:replies|choices|done)\b[\s\S]*$/
+/** The blocks that are cards: buttons or alternatives, read from the last one. */
+const CARDS: ReadonlySet<string> = new Set([REPLIES_BLOCK, CHOICES_BLOCK])
+const BLOCKS = [REPLIES_BLOCK, CHOICES_BLOCK, DONE_BLOCK]
+
+/** A fenced code block at the top of a reply (fences). */
+type Fence = {
+  /** Its info string: `replies`, `choices`, `done`, a language… */
+  info: string
+  body: string
+  /** From its opening fence's line to past its closing fence's line. */
+  start: number
+  end: number
+  /** Still being written: no closing fence yet, it runs to the end of the text. */
+  open: boolean
+}
+
+/**
+ * A reply's fenced code blocks at its top level, as Markdown reads them: a block inside another
+ * (an example in a ```` fence) is that block's text, not a block of its own, so a card or a done
+ * block quoted in an explanation is never read as one.
+ */
+function fences(text: string): Fence[] {
+  const found: Fence[] = []
+  let open: { char: string; length: number; info: string; start: number; body: number } | undefined
+  for (let at = 0; ;) {
+    const next = text.indexOf('\n', at)
+    const after = next < 0 ? text.length : next + 1
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(
+      text.slice(at, next < 0 ? undefined : next).replace(/\r$/, ''),
+    )
+    const [marks, rest] = fence ? [fence[1]!, fence[2]!] : ['', '']
+    if (!open) {
+      // A backtick fence's info string has no backtick in it.
+      if (fence && !(marks[0] === '`' && rest.includes('`')))
+        open = { char: marks[0]!, length: marks.length, info: rest.trim(), start: at, body: after }
+    } else if (fence && marks[0] === open.char && marks.length >= open.length && !rest.trim()) {
+      found.push({
+        info: open.info,
+        body: text.slice(open.body, at),
+        start: open.start,
+        end: after,
+        open: false,
+      })
+      open = undefined
+    }
+    if (next < 0) break
+    at = after
+  }
+  if (open)
+    found.push({
+      info: open.info,
+      body: text.slice(Math.min(open.body, text.length)),
+      start: open.start,
+      end: text.length,
+      open: true,
+    })
+  return found
+}
+
+/** The text without these blocks. */
+function without(text: string, blocks: Fence[]) {
+  let rest = ''
+  let at = 0
+  for (const block of [...blocks].sort((a, b) => a.start - b.start)) {
+    rest += text.slice(at, block.start)
+    at = block.end
+  }
+  return rest + text.slice(at)
+}
 
 /**
  * A reply with its card taken out: the last replies or choices block it has,
@@ -27,7 +92,9 @@ const OPENED = /\n?```(?:replies|choices|done)\b[\s\S]*$/
  * person never sees its markup. Replies too long for a button are cut at a word,
  * and a button whose click could do more than send its words is left out (buttonText).
  * A tool call the teammate wrote out as text, at the end, is cut off too. A done block
- * comes out as `done`, its line (empty when it has none: doneLine finds one).
+ * at the reply's very end (nothing after it but cards) comes out as `done`, its line (empty when
+ * it has none: doneLine finds one); one elsewhere is an example, and stays. Blocks inside
+ * another code block are its text (fences).
  */
 export function replyCard(text: string): {
   text: string
@@ -35,20 +102,33 @@ export function replyCard(text: string): {
   choices?: Choices
   done?: string
 } {
-  const dones = [...text.matchAll(DONE)]
-  if (dones.length === 0) return cardOf(text)
-  const done = dones.at(-1)![1]!.replace(/\s+/g, ' ').trim()
-  return { ...cardOf(text.replace(DONE, '').trim()), done }
+  const blocks = fences(text).filter((block) => !block.open)
+  const cards = blocks.filter((block) => CARDS.has(block.info))
+  const done = blocks.findLast(
+    (block) =>
+      block.info === DONE_BLOCK &&
+      !without(
+        text,
+        cards.filter((card) => card.start >= block.end),
+      )
+        .slice(block.end)
+        .trim(),
+  )
+  const taken = done ? [...cards, done] : cards
+  // Taken out, the blocks leave their reply trimmed; a reply without one stays as written.
+  const rest = taken.length ? without(text, taken).trim() : text
+  const read = cardOf(withoutWrittenCall(rest), cards.at(-1))
+  return done ? { ...read, done: done.body.replace(/\s+/g, ' ').trim() } : read
 }
 
-/** The reply and its replies or choices card, a done block already taken out. */
-function cardOf(text: string): { text: string; replies?: SuggestedReplies; choices?: Choices } {
-  const blocks = [...text.matchAll(BLOCK)]
-  const last = blocks.at(-1)
-  if (!last) return { text: withoutWrittenCall(text) }
-  const rest = withoutWrittenCall(text.replace(BLOCK, '').trim())
-  if (last[1] === REPLIES_BLOCK) {
-    const lines = last[2]!
+/** The reply, its cards already taken out, and what its last card reads as. */
+function cardOf(
+  rest: string,
+  last: Fence | undefined,
+): { text: string; replies?: SuggestedReplies; choices?: Choices } {
+  if (!last) return { text: rest }
+  if (last.info === REPLIES_BLOCK) {
+    const lines = last.body
       .split('\n')
       .map((line) =>
         line
@@ -68,7 +148,7 @@ function cardOf(text: string): { text: string; replies?: SuggestedReplies; choic
     })
     return { text: rest, ...(replies ? { replies } : {}) }
   }
-  const choices = safeChoices(json(last[2]!))
+  const choices = safeChoices(json(last.body))
   return { text: rest, ...(choices ? { choices: withDesigns(choices) } : {}) }
 }
 
@@ -138,14 +218,19 @@ function withoutWrittenCall(text: string) {
   return fences % 2 === 0 ? text.slice(0, call.index).trimEnd() : text
 }
 
-/** What a reply still being written shows: none of a card it has begun, even its fence half written. */
+/**
+ * What a reply still being written shows: none of a card it has begun, even its fence half
+ * written. A block it opened inside another code block is that block's text, and shows.
+ */
 export function withoutCard(text: string) {
-  const shown = replyCard(text).text.replace(OPENED, '')
-  const last = shown.slice(shown.lastIndexOf('\n') + 1)
-  const fence =
-    last.startsWith('```') &&
-    [REPLIES_BLOCK, CHOICES_BLOCK, DONE_BLOCK].some((block) => `\`\`\`${block}`.startsWith(last))
-  return (fence ? shown.slice(0, shown.length - last.length) : shown).trimEnd()
+  const last = fences(text).at(-1)
+  const writing =
+    last?.open &&
+    (BLOCKS.includes(last.info) ||
+      // Its opening fence still being written: "```rep".
+      (!text.slice(last.start).includes('\n') &&
+        BLOCKS.some((block) => block.startsWith(last.info))))
+  return replyCard(writing ? text.slice(0, last.start) : text).text.trimEnd()
 }
 
 /** A reply for a button: trimmed, and cut at a word when it is too long. */

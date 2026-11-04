@@ -162,3 +162,38 @@ test('a done block still being written does not show', () => {
   assert.equal(withoutCard(`${reply}\n\n\`\`\`done\nShipp`), reply)
   assert.equal(withoutCard(`${reply}\n\n\`\`\`done\nShipped\n\`\`\``), reply)
 })
+
+// A teammate showing the syntax (as in a pull request's description) does not close its thread.
+const QUOTED = [
+  'Proposed syntax (nothing implemented yet):',
+  '````markdown',
+  '```done',
+  'CSV export merged (#412) and live',
+  '```',
+  '````',
+  'I still need to implement and test this.',
+].join('\n')
+
+test('a block inside another code block is its text: quoted, it declares nothing', () => {
+  assert.deepEqual(replyCard(QUOTED), { text: QUOTED })
+  // Nor are quoted buttons buttons, and a fence of tildes quotes as well.
+  const buttons = `Buttons look like this:\n~~~\n\`\`\`replies\nSend it\n\`\`\`\n~~~`
+  assert.deepEqual(replyCard(buttons), { text: buttons })
+  // Still being written, the example shows as it comes.
+  const writing = QUOTED.slice(0, QUOTED.indexOf('CSV') + 3)
+  assert.equal(withoutCard(writing), writing)
+})
+
+test('a done block declares done at the end of the reply only', () => {
+  // In the middle of an explanation, an example: it stays, and nothing is declared.
+  const middle = 'The block is\n```done\nShipped\n```\nand it goes at the end.'
+  assert.deepEqual(replyCard(middle), { text: middle })
+  // At the end, after the buttons or before them: declared.
+  assert.equal(replyCard(`Shipped.\n\`\`\`done\nShipped\n\`\`\`\n\n`).done, 'Shipped')
+  // Two: the last one at the end counts, the other stays as written.
+  const two = 'Like this:\n```done\nExample\n```\nDone now.\n```done\nShipped\n```'
+  assert.deepEqual(replyCard(two), {
+    text: 'Like this:\n```done\nExample\n```\nDone now.',
+    done: 'Shipped',
+  })
+})
