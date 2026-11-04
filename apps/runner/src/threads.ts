@@ -399,6 +399,8 @@ type Thread = {
 
 export class Threads {
   private threads = new Map<string, Thread>()
+  /** Threads whose memory run waits for the computer to have memory (memorize). */
+  private readonly memoryWaits = new Set<string>()
   /** Slots taken, by turns (waiting for memory or running) and memory runs. */
   private running = 0
   /** Turns started, past waitForMemory; and turns in it. */
@@ -1895,6 +1897,16 @@ export class Threads {
    * taught, for the memory files. Only what was said since the last time.
    */
   private memorize(sessionId: string) {
+    // Its run waits for memory first, outside the thread's queue: a person's next message there
+    // must not wait behind it (backgroundRoom). One wait per thread at a time.
+    if (this.memoryWaits.has(sessionId)) return
+    this.memoryWaits.add(sessionId)
+    void this.backgroundRoom()
+      .then((room) => room && this.memorizeNow(sessionId))
+      .finally(() => this.memoryWaits.delete(sessionId))
+  }
+
+  private memorizeNow(sessionId: string) {
     const thread = this.threads.get(sessionId)
     const spec = thread?.lastSpec
     if (!thread || !spec || thread.takeover || [...thread.waiting.values()].some((n) => n > 0))
@@ -1909,7 +1921,6 @@ export class Threads {
         const fresh = log.entries.slice(from - log.start)
         // Nothing a teammate said since last time: nothing to remember.
         if (!fresh.some((e) => e.by)) return
-        if (!(await this.backgroundRoom())) return
         await this.acquire()
         try {
           // Taken from the same log by the next runner, when the thread goes quiet there.

@@ -265,3 +265,29 @@ test('a child thread waits for memory even alone, and its idle session parks soo
   await sleep(400)
   assert.deepEqual(parked, ['child'])
 })
+
+test("a memory run waiting for memory does not hold a person's next message in its thread", async () => {
+  const { threads, events, message, end } = setup(8, () => false)
+  message('quiet')
+  await sleep(80)
+  end('quiet')
+  await sleep(40)
+  // The thread goes quiet with something to remember, while memory is short.
+  const internals = threads as unknown as {
+    threads: Map<string, { log: Promise<{ entries: unknown[] }> }>
+    memorize: (sessionId: string) => void
+    stopping: boolean
+  }
+  const log = await internals.threads.get('quiet')!.log
+  log.entries.push({ by: 'mark', name: 'Mark', text: 'An answer to remember.' })
+  internals.memorize('quiet')
+  await sleep(30)
+  message('quiet')
+  await sleep(150)
+  const starts = events.filter(
+    (e) => e.sessionId === 'quiet' && e.event.type === 'turn.started',
+  ).length
+  internals.stopping = true
+  assert.equal(starts, 2, "the person's turn starts while the memory run waits")
+  end('quiet')
+})
