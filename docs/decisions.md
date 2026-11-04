@@ -737,3 +737,15 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   which cost a model round trip of its own. And a turn waits for memory only past the first `TURNS_ALWAYS` turns, or
   after the memory guard stopped one lately: the cloud computer's own services hold most of its memory, so it read
   short of it most of the time, and turns waited 6 to 46 s with few others running.
+- **A thread's App tools, light enough for every thread to keep every App.** By the member's choice there is no
+  per-project limit on Apps, so the tools themselves got lighter (`connectorTools`). An App granted with several
+  accounts has one tool per operation, its `account` parameter listing the accounts whose grant has it (a read-only
+  grant has no writes); an operation whose schemas differ between accounts keeps a tool per account. An App whose
+  operations' schemas weigh more than 300 KB (PostHog, Resend, RevenueCat) goes behind a catalog of three small
+  tools, always loaded in Claude Code: `<app>_find` returns the operations for a task with their schemas while they
+  fit (40 KB), `<app>_describe` gives one's schema, `<app>_run` calls one; the API checks each call by its operation
+  as before (scope, approvals). Apps the dashboard shows cards for by tool name (GitHub, Gmail, email) keep their
+  tools. The bridge keeps the tools it was sent, and a turn whose finish said so (`toolsKept`) is followed by turns
+  that send only their hash (`toolsHash`), until they change or a turn fails. On a thread with 1,247 tools (6.7 MB),
+  this left 504 (0.6 MB): the tool names in each request went from 68k to 26k characters, Claude Code's process from
+  about 380 to 260 MB, its bridge from about 230 to 150-180 MB.
