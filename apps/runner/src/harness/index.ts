@@ -13,6 +13,7 @@ import { createCodex } from '@ai-sdk/harness-codex'
 import {
   ATTACHMENT_MAX,
   CODEX_DEFAULT_MODEL,
+  COMPLETE_THREAD_TOOL,
   LIBRARY_FILE_MAX,
   type AccountRef,
   type AgentEvent,
@@ -259,6 +260,20 @@ const ASKED =
 /** What Codex may read of a thread's AGENTS.md (its own default is 32 KiB). */
 const INSTRUCTIONS_MAX_BYTES = 256 * 1024
 
+/**
+ * Brigade's own tools Claude Code always has loaded (the rest it finds through tool search): small,
+ * and used in most turns. A name the thread has no tool of is ignored.
+ */
+const ALWAYS_LOADED = [
+  COMPLETE_THREAD_TOOL,
+  OPEN_TICKET_TOOL,
+  SHOW_WIDGET_TOOL,
+  WIDGET_GUIDE_TOOL,
+  'report',
+  'complete_task',
+  'search_workspace',
+]
+
 /** The teammate's model for the harness; none leaves Claude Code on the account's own. */
 function withModel(teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>) {
   const model = runModel(teammate.harness, teammate.model)
@@ -296,9 +311,15 @@ function createAgent(
     : createClaudeCode({
         ...settings,
         ...(effort ? { effort } : {}),
-        // Never deferred behind tool search: a card comes right before the answer, with no tool
-        // load between.
-        ...(chief ? { toolHints: { [PROPOSE_TEAM_TOOL]: { alwaysLoad: true } } } : {}),
+        // Never deferred behind tool search: the tools that end most turns (a ticket, a card, the
+        // thread done, a child's report) come right before the answer, with no tool load between.
+        // Each load is a model round trip of its own (about 2 s; 538 in 928 turns before these).
+        toolHints: Object.fromEntries(
+          [...ALWAYS_LOADED, ...(chief ? [PROPOSE_TEAM_TOOL] : [])].map((name) => [
+            name,
+            { alwaysLoad: true },
+          ]),
+        ),
       })
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.

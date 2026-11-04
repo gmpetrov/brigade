@@ -198,8 +198,8 @@ test('a turn whose harness process went away is tried again on its own', async (
 })
 
 test('a turn the memory guard stopped goes on once the computer has memory again', async () => {
-  // Room for the first turn, none at the first try, then room again.
-  const room = [true, false, true, true]
+  // None at the first try, then room again (the first turn, with none other running, reads none).
+  const room = [false, true, true]
   const t = setup(
     'memory',
     [
@@ -264,6 +264,8 @@ test('waiting for memory does not use up the tries of a turn the guard stopped',
 test('a person taking control while a try waits for memory: it does not run', async () => {
   let room = true
   const t = setup('takeover-wait', [{ status: 'failed', error: BRIDGE_CLOSED }], async () => room)
+  // The guard stopped a turn elsewhere lately: even alone, a turn waits for memory.
+  t.threads.stoppedForMemory('elsewhere', 'pressure')
   t.message('Go')
   await sleep(50)
   // The try is queued, then waits for memory before it starts.
