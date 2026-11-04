@@ -2580,7 +2580,7 @@ export function ThreadItems({
   background = [],
   eventsWaitingSince,
   computerDown,
-  childThreads = [],
+  childThreads,
   drafting = false,
   onRetry,
   admin = false,
@@ -2634,8 +2634,11 @@ export function ThreadItems({
   eventsWaitingSince?: string | null
   /** Its computer is away (restarting, offline): said instead of how the turn goes, which waits on it. */
   computerDown?: ComputerDown
-  /** The thread's child threads: where a teammate started one, its line shows how it is doing. */
-  childThreads?: ThreadChild[]
+  /**
+   * The thread's child threads: where a teammate started one, its line shows how it is doing.
+   * Required: left out, every child would show as still working, with no report.
+   */
+  childThreads: ThreadChild[]
   /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
   drafting?: boolean
   /** Tries the turn that failed last again. Unset when they cannot write in the thread. */
