@@ -220,12 +220,11 @@ test('a block under a list item is the item’s: an example, read as text', () =
   assert.equal(replyCard('- Shipped the export.\n\n```done\nShipped\n```').done, 'Shipped')
 })
 
-// Where a done block is read, case by case, checked against the Markdown parser the dashboard
-// renders replies with (mdast-util-from-markdown 2.1, on Nov 4): read where Markdown has it as one
-// of the reply's last blocks; never where it has it inside another (a list, a quote, raw HTML,
-// another code block). Five it reads as a block go unread here: an indented one, and one right
-// after inline HTML or a link, which a tag-like line opens raw HTML for (htmlEnd). Unread, the
-// thread only stays open.
+// Where a done block is read, case by case, as the Markdown parser the dashboard renders replies
+// with reads the reply (mdast-util-from-markdown 2.1): read where it is one of the reply's last
+// root blocks, never where it is inside another (a list item, a quote, raw HTML, another code
+// block). Each case was checked against that parser's tree on Nov 4, by hand-written readers
+// before it, each of which a case below caught.
 test('a done block is read where Markdown reads it as the reply’s own, and nowhere else', () => {
   const D = '```done\nShipped\n```'
   const R = '```replies\nSend it\n```'
@@ -269,9 +268,18 @@ test('a done block is read where Markdown reads it as the reply’s own, and now
     autolink: `<https://brigade.lol>\n${D}`,
     heading: `# Done\n${D}`,
     doctype: `<!DOCTYPE html>\n${D}`,
+    // A list's code block that its list ends, then a bare fence: the done is that block's text.
+    listCodeEndedByList: '- Example:\n  ```js\n  x\n```\n```done\nShipped\n```',
+    // A code block opened on the bullet's line, then a bare fence: the same.
+    bulletLineCode: '- ```js\n  x\n  ```\n\n```\n```done\nShipped\n```',
+    // A non-breaking space is no blank line: raw HTML goes on, and the fence is in it.
+    nbspInHtml: '<details>\n\u00a0\n```done\nShipped\n```',
+    // Nor does it end a closing fence's line: the block goes on, the done inside it.
+    nbspAfterFence: '```text\nexample\n```\u00a0\n```done\nShipped\n```',
   }
   const read = new Set([
     'afterButtons',
+    'autolink',
     'beforeButtons',
     'blockquoteLazy',
     'crlf',
@@ -283,6 +291,10 @@ test('a done block is read where Markdown reads it as the reply’s own, and now
     'htmlCommentThenRoot',
     'htmlDivBlankRoot',
     'htmlPreEnd',
+    'htmlType7AfterPara',
+    'indented1',
+    'indented3',
+    'inlineHtmlPara',
     'listThenRoot',
     'listThenRootNoBlank',
     'plainEnd',

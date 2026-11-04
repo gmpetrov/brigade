@@ -3,6 +3,7 @@
 // the reply rather than called as tools, the reply stays the last thing in the
 // turn: nothing after it to summarize or to ask for again, and no request spent
 // on a tool's result.
+import { fromMarkdown } from 'mdast-util-from-markdown'
 import { designFolderOf, designOptionsOf } from './design.js'
 import { Choices, REPLY_ACTIONS, SUGGESTED_REPLY_MAX, SuggestedReplies } from './events.js'
 
@@ -20,109 +21,53 @@ export const DONE_BLOCK = 'done'
 const CARDS: ReadonlySet<string> = new Set([REPLIES_BLOCK, CHOICES_BLOCK])
 const BLOCKS = [REPLIES_BLOCK, CHOICES_BLOCK, DONE_BLOCK]
 
-/** A fenced code block at the top of a reply (fences). */
-type Fence = {
-  /** Its info string: `replies`, `choices`, `done`, a language… */
+/** A code block at the reply's root (rootBlocks): what Brigade may read as a card or done. */
+type Block = {
+  /** Its info string's first word: `replies`, `choices`, `done`, a language… */
   info: string
   body: string
-  /** From its opening fence's line to past its closing fence's line. */
+  /** From its opening fence to past its closing fence's line break. */
   start: number
   end: number
-  /** Still being written: no closing fence yet, it runs to the end of the text. */
-  open: boolean
-  /** Its opening fence's indent: a block Brigade reads has none (readable). */
-  indent: number
+  /** Opened with a fence, and ended by one: not still being written. */
+  fenced: boolean
+  closed: boolean
 }
 
-/**
- * Raw HTML a line opens, as Markdown reads it (CommonMark's HTML blocks): what ends it, a marker
- * on a line (`</pre>`, `-->`…) or a blank line. A fence inside it is HTML, not a block. Read
- * broadly: any line that starts with a tag opens one, so a block after inline HTML may go unread,
- * never the other way around.
- */
-function htmlEnd(line: string): RegExp | 'blank' | undefined {
-  if (!/^ {0,3}<[A-Za-z!?/]/.test(line)) return undefined
-  if (/^ {0,3}<(?:script|pre|style|textarea)(?:\s|>|$)/i.test(line))
-    return /<\/(?:script|pre|style|textarea)>/i
-  if (/^ {0,3}<!--/.test(line)) return /-->/
-  if (/^ {0,3}<\?/.test(line)) return /\?>/
-  if (/^ {0,3}<!\[CDATA\[/.test(line)) return /\]\]>/
-  if (/^ {0,3}<![A-Za-z]/.test(line)) return />/
-  return 'blank'
-}
+type Root = ReturnType<typeof fromMarkdown>['children'][number]
 
 /**
- * A reply's fenced code blocks at its top level, as Markdown reads them: a block inside another
- * (an example in a ```` fence) is that block's text, not a block of its own, so a card or a done
- * block quoted in an explanation is never read as one; nor is one inside raw HTML (htmlEnd).
- * Fences indented up to 3 spaces count here, as they open and close blocks; which of them
- * Brigade reads is `readable`'s to say.
+ * The reply's blocks at its root, as Markdown reads them, with the parser the dashboard renders
+ * replies with: a code block in a list item, a quote, raw HTML or another code block is that
+ * container's, not the reply's, so a card or a done block quoted in an explanation is never read
+ * as one. Each root node, a code block's summed up (else undefined).
  */
-function fences(text: string): Fence[] {
-  const found: Fence[] = []
-  let open:
-    | { char: string; length: number; info: string; start: number; body: number; indent: number }
-    | undefined
-  let html: RegExp | 'blank' | undefined
-  for (let at = 0; ;) {
-    const next = text.indexOf('\n', at)
-    const after = next < 0 ? text.length : next + 1
-    const line = text.slice(at, next < 0 ? undefined : next).replace(/\r$/, '')
-    const fence = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line)
-    const [indent, marks, rest] = fence ? [fence[1]!, fence[2]!, fence[3]!] : ['', '', '']
-    if (html) {
-      // Raw HTML until its end: a blank line, or its marker (that line is still HTML).
-      if (html === 'blank' ? !line.trim() : html.test(line)) html = undefined
-    } else if (!open && (html = htmlEnd(line))) {
-      // Its marker on the line that opens it ends it there.
-      if (html !== 'blank' && html.test(line.replace(/^ {0,3}<[^\s>]*/, ''))) html = undefined
-    } else if (!open) {
-      // A backtick fence's info string has no backtick in it.
-      if (fence && !(marks[0] === '`' && rest.includes('`')))
-        open = {
-          char: marks[0]!,
-          length: marks.length,
-          info: rest.trim(),
-          start: at,
-          body: after,
-          indent: indent.length,
-        }
-    } else if (fence && marks[0] === open.char && marks.length >= open.length && !rest.trim()) {
-      found.push({
-        info: open.info,
-        body: text.slice(open.body, at),
-        start: open.start,
-        end: after,
-        open: false,
-        indent: open.indent,
-      })
-      open = undefined
-    }
-    if (next < 0) break
-    at = after
+function rootBlocks(text: string): (Block | undefined)[] {
+  return fromMarkdown(text).children.map((node) => codeBlock(text, node))
+}
+
+function codeBlock(text: string, node: Root): Block | undefined {
+  const start = node.position?.start.offset
+  let end = node.position?.end.offset
+  if (node.type !== 'code' || start === undefined || end === undefined) return undefined
+  const lines = text.slice(start, end).split(/\r?\n/)
+  const opening = /^ {0,3}(`{3,}|~{3,})/.exec(lines[0]!)?.[1]
+  const closing = lines.length > 1 && /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(lines.at(-1)!)?.[1]
+  // Its line break goes with it.
+  if (text.startsWith('\r\n', end)) end += 2
+  else if (text[end] === '\n') end += 1
+  return {
+    info: node.lang ?? '',
+    body: node.value,
+    start,
+    end,
+    fenced: !!opening,
+    closed: !!opening && !!closing && closing[0] === opening[0] && closing.length >= opening.length,
   }
-  if (open)
-    found.push({
-      info: open.info,
-      body: text.slice(Math.min(open.body, text.length)),
-      start: open.start,
-      end: text.length,
-      open: true,
-      indent: open.indent,
-    })
-  return found
 }
-
-/**
- * A block Brigade reads, a card or a done block: one whose fence starts its line. Indented, it
- * may be an item's in a list (`- Example:` then the block under it), which Markdown reads as part
- * of that item, not of the reply's end: an example, never read. At the start of its line, a fence
- * belongs to no list.
- */
-const readable = (block: Fence) => block.indent === 0
 
 /** The text without these blocks. */
-function without(text: string, blocks: Fence[]) {
+function without(text: string, blocks: Block[]) {
   let rest = ''
   let at = 0
   for (const block of [...blocks].sort((a, b) => a.start - b.start)) {
@@ -132,15 +77,19 @@ function without(text: string, blocks: Fence[]) {
   return rest + text.slice(at)
 }
 
+/** A replies or choices block, written whole. */
+const isCard = (block: Block | undefined): block is Block =>
+  !!block && block.closed && CARDS.has(block.info)
+
 /**
  * A reply with its card taken out: the last replies or choices block it has,
- * wherever it is. A block that does not read is dropped all the same, so the
+ * wherever it is at its root. A block that does not read is dropped all the same, so the
  * person never sees its markup. Replies too long for a button are cut at a word,
  * and a button whose click could do more than send its words is left out (buttonText).
  * A tool call the teammate wrote out as text, at the end, is cut off too. A done block
  * at the reply's very end (nothing after it but cards) comes out as `done`, its line (empty when
- * it has none: doneLine finds one); one elsewhere is an example, and stays. Blocks inside
- * another code block are its text (fences).
+ * it has none: doneLine finds one); one elsewhere is an example, and stays. Only blocks at the
+ * reply's root are read (rootBlocks).
  */
 export function replyCard(text: string): {
   text: string
@@ -148,18 +97,11 @@ export function replyCard(text: string): {
   choices?: Choices
   done?: string
 } {
-  const blocks = fences(text).filter((block) => !block.open && readable(block))
-  const cards = blocks.filter((block) => CARDS.has(block.info))
-  const done = blocks.findLast(
-    (block) =>
-      block.info === DONE_BLOCK &&
-      !without(
-        text,
-        cards.filter((card) => card.start >= block.end),
-      )
-        .slice(block.end)
-        .trim(),
-  )
+  const roots = rootBlocks(text)
+  const cards = roots.filter(isCard)
+  // The last block that is not a card: a done block if the reply ends on it.
+  const last = roots.findLast((block): boolean => !isCard(block))
+  const done = last?.closed && last.info === DONE_BLOCK ? last : undefined
   const taken = done ? [...cards, done] : cards
   // Taken out, the blocks leave their reply trimmed; a reply without one stays as written.
   const rest = taken.length ? without(text, taken).trim() : text
@@ -170,7 +112,7 @@ export function replyCard(text: string): {
 /** The reply, its cards already taken out, and what its last card reads as. */
 function cardOf(
   rest: string,
-  last: Fence | undefined,
+  last: Block | undefined,
 ): { text: string; replies?: SuggestedReplies; choices?: Choices } {
   if (!last) return { text: rest }
   if (last.info === REPLIES_BLOCK) {
@@ -266,13 +208,15 @@ function withoutWrittenCall(text: string) {
 
 /**
  * What a reply still being written shows: none of a card it has begun, even its fence half
- * written. A block it opened inside another code block is that block's text, and shows.
+ * written. A block it opened in a list item, a quote or another block is that container's, and
+ * shows (rootBlocks).
  */
 export function withoutCard(text: string) {
-  const last = fences(text).at(-1)
+  const last = rootBlocks(text).at(-1)
   const writing =
-    last?.open &&
-    readable(last) &&
+    !!last &&
+    last.fenced &&
+    !last.closed &&
     (BLOCKS.includes(last.info) ||
       // Its opening fence still being written: "```rep".
       (!text.slice(last.start).includes('\n') &&
