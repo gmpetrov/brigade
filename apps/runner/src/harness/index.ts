@@ -108,6 +108,7 @@ import {
   appTools,
   askUserTool,
   computerUseTools,
+  CATALOG_TOOL,
   connectorTools,
   credentialTools,
   doneTools,
@@ -297,6 +298,10 @@ function createAgent(
   // account's token from the environment if it has one, else the login in its
   // config directory.
   const settings = { auth: {}, mcpServers }
+  // Connector tools grow with each account connected; Codex loads them on demand.
+  const apps = connectorTools(spec.connectors, callConnector, {
+    defer: spec.teammate.harness === 'codex',
+  })
   const codex = spec.teammate.harness === 'codex'
   const chief = spec.teammate.kind === 'chief'
   // The thread's effort; none leaves each CLI on its own default.
@@ -315,15 +320,19 @@ function createAgent(
         // thread done, a child's report) come right before the answer, with no tool load between.
         // Each load is a model round trip of its own (about 2 s; 538 in 928 turns before these).
         toolHints: Object.fromEntries(
-          [...ALWAYS_LOADED, ...(chief ? [PROPOSE_TEAM_TOOL] : [])].map((name) => [
-            name,
-            { alwaysLoad: true },
-          ]),
+          [
+            ...ALWAYS_LOADED,
+            ...(chief ? [PROPOSE_TEAM_TOOL] : []),
+            // A big App's catalog (catalogTools): a few small tools, found then called, without a
+            // tool search before them.
+            ...Object.entries(apps)
+              .filter(([, t]) => (t as unknown as Record<symbol, unknown>)[CATALOG_TOOL])
+              .map(([name]) => name),
+          ].map((name) => [name, { alwaysLoad: true }]),
         ),
       })
   const tools = {
-    // Connector tools grow with each account connected; Codex loads them on demand.
-    ...connectorTools(spec.connectors, callConnector, { defer: codex }),
+    ...apps,
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ConnectorGrant } from '@brigade/contracts'
-import { connectorTools, type ConnectorCaller } from '../src/harness/tools.js'
+import { CATALOG_TOOL, connectorTools, type ConnectorCaller } from '../src/harness/tools.js'
 
 // An App's tools when a thread has several of its accounts: one tool per operation, with an
 // `account` parameter, rather than one per operation and account.
@@ -102,4 +102,62 @@ test('one account: the tools as before, no parameter', () => {
   assert.deepEqual(Object.keys(tools), ['posthog_query'])
   assert.equal(schemaOf(tools.posthog_query).properties.account, undefined)
   assert.match((tools.posthog_query as { description: string }).description, /\[PostHog: Brigade\]/)
+})
+
+test('a big App goes behind a catalog: find, describe, run, on the account asked', async () => {
+  const calls: Parameters<ConnectorCaller>[0][] = []
+  const heavy = (n: number) => ({
+    type: 'object',
+    properties: { query: { type: 'string', description: 'x'.repeat(n) } },
+  })
+  const ops = [
+    { name: 'posthog_query-trends', write: false, inputSchema: heavy(200_000) },
+    { name: 'posthog_feature-flag-update', write: true, inputSchema: heavy(150_000) },
+    { name: 'posthog_insight-get', write: false, inputSchema: heavy(10) },
+  ]
+  const tools = connectorTools(
+    [
+      grant('c1', 'Brigade', ops),
+      grant(
+        'c2',
+        'NoCo AI',
+        ops.filter((o) => !o.write),
+      ),
+    ],
+    async (call) => {
+      calls.push(call)
+      return 'ok'
+    },
+  )
+  assert.deepEqual(Object.keys(tools).sort(), ['posthog_describe', 'posthog_find', 'posthog_run'])
+  for (const t of Object.values(tools))
+    assert.ok((t as unknown as Record<symbol, unknown>)[CATALOG_TOOL], 'always loaded')
+  const found = (await run(tools.posthog_find, { query: 'insight' })) as { operations: any[] }
+  assert.equal(found.operations[0].operation, 'posthog_insight-get')
+  assert.ok(found.operations[0].inputSchema, 'a small schema comes with it')
+  // A schema past what a search returns whole: described on its own.
+  const trends = (await run(tools.posthog_find, { query: 'trends' })) as { operations: any[] }
+  assert.equal(trends.operations[0].inputSchema, undefined)
+  const described = (await run(tools.posthog_describe, {
+    operation: 'posthog_query-trends',
+  })) as any
+  assert.equal(described.inputSchema.properties.query.description.length, 200_000)
+  await run(tools.posthog_run, {
+    operation: 'posthog_insight-get',
+    account: 'NoCo AI',
+    input: { query: 'q' },
+  })
+  assert.deepEqual(
+    calls.map((c) => [c.connectionId, c.operation, c.input]),
+    [['c2', 'posthog_insight-get', { query: 'q' }]],
+  )
+  // A write the read-only account lacks.
+  await assert.rejects(
+    run(tools.posthog_run, {
+      operation: 'posthog_feature-flag-update',
+      account: 'NoCo AI',
+      input: {},
+    }),
+    /use one of Brigade/,
+  )
 })
