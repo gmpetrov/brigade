@@ -151,7 +151,7 @@ export const SECRET_PATTERNS: SecretPattern[] = [
     kind: 'a secret',
     hint: ['KEY', 'SECRET', 'TOKEN', 'PASSW', '--'],
     pattern:
-      /((?:\b[A-Z][A-Z0-9_]*(?:API_KEY|SECRET|SECRET_KEY|TOKEN|PASSWORD|PASSWD)\s*=\s*|--(?:api-key|token|secret|password)[= ])["']?)([^\s"'`]{12,})()/g,
+      /((?:\b(?:[A-Z0-9]+_)*(?:API_?KEY|ACCESS_KEY|PRIVATE_KEY|SECRET(?:_KEY)?|TOKEN|PASSWORD|PASSWD)\s*=\s*|--(?:api-key|token|secret|password)[= ])["']?)([^\s"'`]{12,})()/g,
     real: (secret) => !TEMPLATE.test(secret) && random(2)(secret),
   },
   {

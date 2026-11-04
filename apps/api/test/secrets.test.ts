@@ -74,6 +74,11 @@ const cases: [string, string, string][] = [
     'root 812 node server.js BOAT_API_KEY=[redacted: a secret] PORT=3000',
   ],
   [
+    'secrets in an env file, whatever their name ends with',
+    `TOKEN=${r(20)}\nAWS_SECRET_ACCESS_KEY="${r(40, 9)}"\nDB_PASSWORD=${r(14, 4)}`,
+    'TOKEN=[redacted: a secret]\nAWS_SECRET_ACCESS_KEY="[redacted: a secret]"\nDB_PASSWORD=[redacted: a secret]',
+  ],
+  [
     'a secret passed as a flag',
     `boat deploy --api-key ${r(32)} --yes`,
     'boat deploy --api-key [redacted: a secret] --yes',
