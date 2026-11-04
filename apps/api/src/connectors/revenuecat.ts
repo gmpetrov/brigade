@@ -212,9 +212,16 @@ export function revenuecatAccountName(output: unknown): string | null {
   return names.length === 1 ? names[0]! : `${names[0]} +${names.length - 1}`
 }
 
-/** The key's project by its id (proj…), the same from one name to the next; several, sorted. */
+/**
+ * The projects by their ids (proj…), the same from one name to the next; several, sorted. Null
+ * when the list goes on to a next page: its first page alone would say two sign-ins reach the
+ * same projects when one reaches more, and renewing an account with it would give its grants
+ * the projects it does not name. An account then signs in as a new one.
+ */
 export function revenuecatAccountId(output: unknown): string | null {
-  const list = (output as { items?: unknown } | null)?.items
+  const page = output as { items?: unknown; next_page?: unknown } | null
+  if (page?.next_page) return null
+  const list = page?.items
   if (!Array.isArray(list)) return null
   const ids = list
     .map((p) => (p as { id?: unknown } | null)?.id)

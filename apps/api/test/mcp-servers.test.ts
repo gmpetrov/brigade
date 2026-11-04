@@ -342,6 +342,14 @@ test("a key reconnects only its own project's account, by the project's id", () 
     'projA,projZ',
   )
   assert.equal(revenuecatAccountId({ items: [] }), null)
+  // A list with more pages names only some of the projects: no identity to renew an account by.
+  assert.equal(
+    revenuecatAccountId({
+      ...projects({ id: 'projA1', name: 'A' }),
+      next_page: '/v2/projects?starting_after=projA1',
+    }),
+    null,
+  )
   assert.equal(revenuecatAccountId('Unauthorized'), null)
   // connection-a is Project A's row: a key reaching it (same) may reconnect it, no other may.
   assert.equal(
