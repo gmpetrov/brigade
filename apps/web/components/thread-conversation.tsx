@@ -91,6 +91,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
+import { leavesEnd, mayFollow } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
@@ -675,6 +676,9 @@ export function ThreadConversation({
   const gliding = useRef(false)
   const glideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const followedIn = useRef(false)
+  // When the person last scrolled themselves (wheel, touch, keys): their scroll wins.
+  const theirsAt = useRef(-Infinity)
+  const measured = useRef<() => void>(undefined)
   useEffect(() => {
     const view = scroller.current
     if (!view) return
@@ -685,11 +689,28 @@ export function ThreadConversation({
       following.current = end
       setAtEnd(end)
     }
+    measured.current = measure
     // Opening or closing a fold moves the end too, without a scroll.
     const afterClick = () => requestAnimationFrame(measure)
-    // The person scrolls: from now on where it is says where they want to read, glide or not.
-    const theirs = () => {
-      gliding.current = false
+    // The person scrolls: a glide on its way stops where it is, and where they take it says
+    // where they want to read. Up, they leave the end at once, so nothing glides them back.
+    const theirs = (event: Event) => {
+      theirsAt.current = performance.now()
+      if (gliding.current) {
+        gliding.current = false
+        clearTimeout(glideTimer.current)
+        view.scrollTo({ top: view.scrollTop, behavior: 'instant' })
+      }
+      if (
+        leavesEnd({
+          type: event.type,
+          ...(event instanceof WheelEvent ? { deltaY: event.deltaY } : {}),
+          ...(event instanceof KeyboardEvent ? { key: event.key } : {}),
+        })
+      ) {
+        following.current = false
+        setAtEnd(false)
+      }
     }
     view.addEventListener('scroll', measure, { passive: true })
     view.addEventListener('click', afterClick)
@@ -709,24 +730,29 @@ export function ThreadConversation({
     if (behavior === 'smooth') {
       gliding.current = true
       clearTimeout(glideTimer.current)
-      glideTimer.current = setTimeout(() => (gliding.current = false), GLIDE_MS)
+      // Once there, where it is is read again (the button back to the end goes).
+      glideTimer.current = setTimeout(() => {
+        gliding.current = false
+        measured.current?.()
+      }, GLIDE_MS)
     }
     view.scrollTo({ top: view.scrollHeight, behavior })
   }
-  const followEnd = () => toEnd(followedIn.current ? 'smooth' : 'instant')
+  const followEnd = () => {
+    if (!mayFollow(following.current, performance.now(), theirsAt.current, GLIDE_MS)) return
+    toEnd(followedIn.current ? 'smooth' : 'instant')
+  }
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
   useEffect(() => {
-    if (following.current) followEnd()
+    followEnd()
     followedIn.current = loaded
   }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded]) // eslint-disable-line react-hooks/exhaustive-deps
   // A reply revealed word by word grows between events (lib/stream-text.ts): followed as it grows.
   useEffect(() => {
     const content = scroller.current?.firstElementChild
     if (!content) return
-    const grown = new ResizeObserver(() => {
-      if (following.current) followEnd()
-    })
+    const grown = new ResizeObserver(() => followEnd())
     grown.observe(content)
     return () => grown.disconnect()
   }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps -- followEnd reads refs only
