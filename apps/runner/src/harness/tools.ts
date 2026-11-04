@@ -102,35 +102,59 @@ const DESCRIBED_CHARS = 60_000
 const DESCRIBED_DESCRIPTION_CHARS = 4_000
 const SCHEMA_NOTES_DEPTH = 2
 
-/** Keys whose value maps names to schemas: a key `description` there is a field, not a note. */
-const NAMED_SCHEMAS = new Set([
+/**
+ * JSON Schema's keywords whose value is a schema (or, for `items`, a list of them), a list of
+ * schemas, or a map of names to schemas (`dependencies` maps a name to a schema or to a list of
+ * names). Every other keyword's value is data (`const`, `enum`, `default`, `examples`,
+ * `required`, `dependentRequired`…), kept as it is: a key named `description` there is a value.
+ */
+const SCHEMA_KEYWORDS = new Set([
+  'items',
+  'additionalItems',
+  'additionalProperties',
+  'contains',
+  'propertyNames',
+  'not',
+  'if',
+  'then',
+  'else',
+  'unevaluatedItems',
+  'unevaluatedProperties',
+  'contentSchema',
+])
+const SCHEMA_LISTS = new Set(['allOf', 'anyOf', 'oneOf', 'prefixItems'])
+const SCHEMA_MAPS = new Set([
   'properties',
   'patternProperties',
   '$defs',
   'definitions',
   'dependentSchemas',
+  'dependencies',
 ])
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
 /**
- * A JSON schema without the descriptions deeper than `depth` levels (all of them when below
- * zero): what it accepts stays the same, only its notes go.
+ * A JSON schema without the notes (`description`) of its subschemas deeper than `depth` (every
+ * one when below zero): what it accepts stays the same. Only schemas are walked, through the
+ * keywords that hold them; data in it stays whole.
  */
-export function withoutDeepNotes(
-  schema: unknown,
-  depth: number,
-  level = 0,
-  named = false,
-): unknown {
-  if (Array.isArray(schema)) return schema.map((v) => withoutDeepNotes(v, depth, level + 1))
-  if (!schema || typeof schema !== 'object') return schema
-  return Object.fromEntries(
-    Object.entries(schema)
-      .filter(([key]) => named || key !== 'description' || level <= depth)
-      .map(([key, value]) => [
-        key,
-        withoutDeepNotes(value, depth, level + 1, !named && NAMED_SCHEMAS.has(key)),
-      ]),
-  )
+export function withoutDeepNotes(schema: unknown, depth: number, level = 0): unknown {
+  if (!isRecord(schema)) return schema
+  const sub = (value: unknown) => withoutDeepNotes(value, depth, level + 1)
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === 'description' && level > depth) continue
+    if (SCHEMA_KEYWORDS.has(key)) out[key] = Array.isArray(value) ? value.map(sub) : sub(value)
+    else if (SCHEMA_LISTS.has(key) && Array.isArray(value)) out[key] = value.map(sub)
+    else if (SCHEMA_MAPS.has(key) && isRecord(value))
+      out[key] = Object.fromEntries(
+        Object.entries(value).map(([name, v]) => [name, Array.isArray(v) ? v : sub(v)]),
+      )
+    else out[key] = value
+  }
+  return out
 }
 
 const charsOf = (value: unknown) => JSON.stringify(value ?? {}).length

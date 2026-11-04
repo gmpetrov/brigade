@@ -755,7 +755,7 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   must read in pieces): a search answers in 30k characters at most, with the start of each description (600) and the
   schemas while they fit; a description past 60k keeps its schema's notes only near its top, then none, what the
   schema accepts whole, and the start of the operation's own description. On Nov 4 a PostHog search came to 133k
-  characters and the trends query's description to 115k; with these limits, 30k and 51k. Apps the dashboard shows cards for by tool name (GitHub, Gmail, email) keep their
+  characters and the trends query's description to 115k; with these limits, 30k and 60k. Apps the dashboard shows cards for by tool name (GitHub, Gmail, email) keep their
   tools. The bridge keeps the tools it was sent, and a turn whose finish said so (`toolsKept`) is followed by turns
   that send only their hash (`toolsHash`), until they change or a turn fails. On a thread with 1,247 tools (6.7 MB),
   this left 504 (0.6 MB): the tool names in each request went from 68k to 26k characters, Claude Code's process from

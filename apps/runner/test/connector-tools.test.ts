@@ -270,12 +270,19 @@ test('a catalog search stays small: the start of long descriptions, schemas whil
   assert.equal(one.shortened, undefined)
 })
 
-test('a schema without its deep notes accepts the same, a field named description included', () => {
+test('a schema without its deep notes accepts the same: its data, and fields named description, stay', () => {
   const schema = {
     type: 'object',
     description: 'top note',
     properties: {
       description: { type: 'string', description: 'a field named description' },
+      other: { type: 'string' },
+      payload: { const: { description: 'a value, not a note', id: 1 } },
+      kind: {
+        enum: [{ description: 'an allowed value' }, 'plain'],
+        default: { description: 'a default' },
+        examples: [{ description: 'an example' }],
+      },
       series: {
         type: 'array',
         description: 'kept near the top',
@@ -290,17 +297,24 @@ test('a schema without its deep notes accepts the same, a field named descriptio
         },
       },
     },
+    dependencies: { description: ['other'], other: { description: 'a note', required: ['kind'] } },
+    dependentRequired: { description: ['other'] },
     required: ['description', 'series'],
   }
-  const near = withoutDeepNotes(schema, 2) as any
+  const near = withoutDeepNotes(schema, 1) as any
   assert.equal(near.description, 'top note')
-  assert.deepEqual(Object.keys(near.properties), ['description', 'series'])
-  assert.equal(near.properties.description.type, 'string')
+  assert.equal(near.properties.series.description, 'kept near the top')
   assert.equal(near.properties.series.items.anyOf[0].properties.event.description, undefined)
   assert.deepEqual(near.properties.series.items.anyOf[0].required, ['event'])
-  assert.deepEqual(near.required, ['description', 'series'])
   const bare = withoutDeepNotes(schema, -1) as any
   assert.equal(bare.description, undefined)
-  assert.equal(bare.properties.description.type, 'string', 'the field stays')
   assert.equal(bare.properties.description.description, undefined)
+  assert.equal(bare.properties.description.type, 'string', 'the field stays')
+  // Data keeps its keys, `description` included: what the schema accepts is the same.
+  assert.deepEqual(bare.properties.payload, schema.properties.payload)
+  assert.deepEqual(bare.properties.kind, schema.properties.kind)
+  assert.deepEqual(bare.dependencies.description, ['other'])
+  assert.deepEqual(bare.dependencies.other, { required: ['kind'] })
+  assert.deepEqual(bare.dependentRequired, schema.dependentRequired)
+  assert.deepEqual(bare.required, schema.required)
 })
