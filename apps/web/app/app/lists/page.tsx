@@ -1,9 +1,10 @@
 'use client'
 import type { ListSummary, ProjectSummary } from '@brigade/contracts'
-import { ArrowDownUp, Library, Search } from 'lucide-react'
+import { ArrowDownUp, Check, Library, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { ListRow } from '@/components/list-row'
+import { NewList } from '@/components/new-list'
 import { LIST_LIVE } from '@/components/list-items'
 import { ProjectIcon } from '@/components/projects'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 type Sort = 'recent' | 'name'
 const SORTS: { value: Sort; label: string }[] = [
@@ -59,8 +61,9 @@ export default function ListsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-1">
+      {/* New list stays top right; on a phone, search and sort go on a row of their own. */}
+      <header className="flex flex-wrap items-end gap-x-2 gap-y-4">
+        <div className="mr-auto flex flex-col gap-1">
           <h1 className="text-3xl font-extrabold tracking-tight">Lists</h1>
           {lists.data && lists.data.length > 0 && (
             <p className="text-[13.5px] text-muted-foreground">
@@ -78,7 +81,7 @@ export default function ListsPage() {
           )}
         </div>
         {lists.data && lists.data.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="order-last flex w-full items-center gap-2 md:order-none md:w-auto">
             <div className="relative flex-1 md:w-64 md:flex-none">
               <Search
                 aria-hidden
@@ -115,6 +118,7 @@ export default function ListsPage() {
             </DropdownMenu>
           </div>
         )}
+        <NewList />
       </header>
       {lists.error ? (
         <p className="text-sm text-destructive-text">{lists.error.message}</p>
@@ -124,10 +128,7 @@ export default function ListsPage() {
           <Skeleton className="h-44 rounded-3xl" />
         </div>
       ) : lists.data.length === 0 ? (
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          No list yet. A Markdown file of the library with checkboxes (<code>- [ ] Ship it</code>)
-          shows here, and its lines can be handed to a teammate.
-        </p>
+        <EmptyLists />
       ) : groups.length === 0 ? (
         <p className="text-sm text-muted-foreground">No list matches “{query.trim()}”.</p>
       ) : (
@@ -168,5 +169,59 @@ function ListGroup({ project, lists }: { project: ProjectSummary | null; lists: 
         ))}
       </div>
     </section>
+  )
+}
+
+/** A sample of what a list looks like, for a workspace without one yet. */
+const SAMPLE = [
+  { text: 'Write the launch post', done: true },
+  { text: 'Set up the landing page', teammate: 'Riley' },
+  { text: 'Post on Product Hunt' },
+]
+
+/** No list yet: what one looks like and what it is for, and a way to make the first. */
+function EmptyLists() {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-3xl border bg-card px-6 py-10 text-center shadow-sm">
+      <div
+        aria-hidden
+        className="mb-2 flex w-64 max-w-full flex-col gap-1 rounded-xl border bg-background px-3 py-2.5 text-left"
+      >
+        {SAMPLE.map((line) => (
+          <div key={line.text} className="flex items-center gap-2 py-0.5 text-xs">
+            <span
+              className={cn(
+                'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-muted-foreground/60',
+                line.done && 'border-success bg-success text-background',
+              )}
+            >
+              {line.done && <Check className="size-2.5" strokeWidth={3.5} />}
+            </span>
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate',
+                line.done && 'text-muted-foreground line-through',
+              )}
+            >
+              {line.text}
+            </span>
+            {line.teammate && (
+              <span className="flex shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 text-[10.5px] font-semibold">
+                <span className="size-1.5 rounded-full bg-primary" />
+                {line.teammate}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <h2 className="text-[15px] font-bold">No list yet</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Write a checklist, hand its lines to teammates and follow them here. Each line is ticked
+        once its work is done.
+      </p>
+      <div className="mt-2">
+        <NewList variant="outline" label="Create your first list" />
+      </div>
+    </div>
   )
 }

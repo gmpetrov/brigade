@@ -18,6 +18,7 @@ import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
+import { seedGettingStarted } from '../lists.js'
 import { placeNewHub } from '../platform/node.js'
 import { LOGO_HEADERS, readLogo } from '../logos.js'
 import {
@@ -206,6 +207,11 @@ export const workspaces = new Hono<AppEnv>()
       data: { name },
     })
     await ensureChief(workspace)
+    // Its first list, so Lists shows from day one how lines go to teammates. A failed save
+    // leaves the workspace without it: nothing else needs it.
+    await seedGettingStarted({ organizationId, workspaceId: workspace.id }).catch((error) =>
+      console.warn(`workspaces: no getting-started list in ${workspace.id}: ${String(error)}`),
+    )
     // Every workspace gets its own cloud computer (when a provider is configured), unless
     // billing is on: then with its Cloud plan (src/billing.ts).
     await createWorkspaceComputer(workspace)

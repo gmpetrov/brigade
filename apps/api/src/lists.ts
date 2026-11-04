@@ -7,6 +7,7 @@ import { memberMayWrite } from './account-sharing.js'
 import { createHash } from 'node:crypto'
 import {
   findLine,
+  GETTING_STARTED,
   insertLine,
   ListItemId,
   listCounts,
@@ -725,6 +726,46 @@ export async function handOff(
     data: { teammateId: teammate.id, items: ids, threads },
   })
   return { threadIds: threads }
+}
+
+/**
+ * The lines a new thread starts on (StartThread's `listLines`), as items of their list: picked
+ * as a hand-off picks them, before the thread exists, so they are linked before its first turn.
+ * Returns their item ids.
+ */
+export async function linesToStartOn(
+  db: ScopedDb,
+  scope: Scope,
+  memberId: string,
+  input: { documentId: string; items: Picked[] },
+) {
+  const file = await listFile(db, { id: input.documentId })
+  // Only lines the file has: one gone (edited, deleted) leaves the thread to start without it,
+  // rather than on an item already missing from its list.
+  const list = parseList(await storedText(scope, file))
+  const there = input.items.filter(
+    (p) =>
+      list.lines.some((l) => l.id === p.id && sameItemText(l.text, p.text)) ||
+      typeof findLine(list, p.text) !== 'string',
+  )
+  if (there.length === 0) return []
+  return [...new Set(await itemsFor(db, scope, { type: 'member', id: memberId }, file, there))]
+}
+
+/**
+ * Give a new workspace its first list (GETTING_STARTED), at the library's root, saved by
+ * Brigade. A workspace whose library has that file already keeps its own.
+ */
+export async function seedGettingStarted(scope: Scope) {
+  const db = scoped(scope)
+  if (await db.document.findFirst({ where: { kind: 'library', path: GETTING_STARTED.path } }))
+    return
+  await saveLibraryFile(
+    db,
+    scope,
+    { type: 'system', id: 'brigade' },
+    { path: GETTING_STARTED.path, bytes: new TextEncoder().encode(GETTING_STARTED.text) },
+  )
 }
 
 /**
