@@ -271,7 +271,7 @@ const isPlain = (value: unknown): value is Record<string, unknown> =>
  * delta ends with is held until a space or a line break says it is a whole word, and a private
  * key's block from its BEGIN line until its END line, so no delta holds the start of a secret
  * whose end has not come yet; the message.done that follows holds the whole reply. The runner
- * keeps one per text block it streams (MASKED_DELTAS_PROTOCOL), alongside the block's text.
+ * keeps one per text block it streams, alongside the block's text, and marks its deltas masked.
  */
 export class MaskedStream {
   constructor(

@@ -397,7 +397,7 @@ export class EventMapper {
         if (!stream) this.streams.set(part.id, (stream = new MaskedStream(before)))
         const text = stream.next(part.text)
         if (!text) return
-        return this.emit({ at, type: 'message.delta', id: part.id, text })
+        return this.emit({ at, type: 'message.delta', id: part.id, text, masked: true })
       }
       case 'text-end': {
         this.streams.delete(part.id)

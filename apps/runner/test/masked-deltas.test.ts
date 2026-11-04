@@ -1,5 +1,5 @@
 // A reply's deltas leave the runner with their secrets masked, each with the text before it
-// (EventMapper, MaskedStream; MASKED_DELTAS_PROTOCOL): a secret the harness streams over several
+// (EventMapper, MaskedStream), and marked so: a secret the harness streams over several
 // deltas never goes out in part. Made-up secrets, built from parts.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -29,8 +29,10 @@ test('a token and a header streamed in pieces go out masked; the done holds the 
     'Use [redacted: a GitHub token] with Authorization: Bearer [redacted: a token] ',
   )
   assert.ok(!out.includes(token.slice(4, 12)) && !out.includes(bearer.slice(3, 11)))
-  // No delta is sent while what it holds may start a secret: no empty one either.
+  // No delta is sent while what it holds may start a secret: no empty one either. Each is
+  // marked masked, which the API keeps the text of (an unmarked one, from before, it drops).
   assert.ok(deltas(events).every((d) => d.length > 0))
+  assert.ok(events.every((e) => e.type !== 'message.delta' || e.masked === true))
   // The whole reply in its done, which the API masks as it stores it.
   assert.equal(events.find((e) => e.type === 'message.done')?.type, 'message.done')
 })

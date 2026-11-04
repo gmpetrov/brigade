@@ -4,7 +4,6 @@
 import {
   BACKUP_PROTOCOL,
   DIRECT_UPLOAD_PROTOCOL,
-  MASKED_DELTAS_PROTOCOL,
   MIN_PROTOCOL_VERSION,
   RESUME_PROTOCOL,
   RunnerToApi,
@@ -483,13 +482,13 @@ async function noteLogin(
 
 /**
  * A delta's text as stored. A secret can come over several deltas ("ghp_", then the rest),
- * which no one of them shows: runners from MASKED_DELTAS_PROTOCOL on mask them as they stream
- * them, each with the text before it. An older runner's deltas are stored without their text,
- * which the API cannot mask safely one at a time: its reply shows once its message.done comes.
+ * which no one of them shows: the runner masks them as it streams them, each with the text
+ * before it, and marks them masked. A delta not marked so (an older runner's, or one it wrote
+ * before it was updated and sends only now) is stored without its text, which the API cannot
+ * mask safely on its own: its reply shows once its message.done comes.
  */
-function withoutDeltaText(conn: RunnerConn, event: AgentEvent): AgentEvent {
-  if (event.type !== 'message.delta' || (conn.protocolVersion ?? 0) >= MASKED_DELTAS_PROTOCOL)
-    return event
+function withoutDeltaText(event: AgentEvent): AgentEvent {
+  if (event.type !== 'message.delta' || event.masked === true) return event
   return { ...event, text: '' }
 }
 
@@ -559,7 +558,7 @@ async function insertEvents(
   // After the files, which are not text, and which their names replaced.
   const kept = await Promise.all(
     events.map(async ({ seq, event }) => {
-      const storable = storableJson(withoutDeltaText(conn, event))
+      const storable = storableJson(withoutDeltaText(event))
       const apart = await keepFilesApart(session, session.id, storable)
       if (apart !== storable) noteInlineFiles(conn)
       return { seq, event: maskSecretsIn(apart) }

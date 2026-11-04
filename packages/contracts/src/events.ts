@@ -512,7 +512,19 @@ export const AgentEvent = z.discriminatedUnion('type', [
     /** With route steer: when it is given to the running turn, unless its sender keeps it. */
     steerAt: z.string().optional(),
   }),
-  z.object({ ...base, type: z.literal('message.delta'), id: z.string(), text: z.string() }),
+  z.object({
+    ...base,
+    type: z.literal('message.delta'),
+    id: z.string(),
+    text: z.string(),
+    /**
+     * Its secrets masked by the runner as it streamed the reply, with the text before it
+     * (MaskedStream). The API stores the text of no other delta: a secret over several deltas
+     * shows in none of them alone, and one written before (an older runner's, still waiting to
+     * be sent) may hold part of one.
+     */
+    masked: z.literal(true).optional(),
+  }),
   z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),
   /**
    * The images a finished message shows (`![…](path)` or a link to one), put in the

@@ -154,25 +154,22 @@ describe('secrets in stored events', { skip: !database && 'no database answers' 
         runner.sent.some((m) => m.type === 'ack' && m.seq === 2),
         'acknowledged',
       )
-      // A reply's deltas from a runner before MASKED_DELTAS_PROTOCOL, which does not mask them:
-      // stored without their text, which the API cannot mask one delta at a time.
-      const delta = (seq: number, text: string) => ({
+      // Deltas the runner did not mark masked (an older runner's, or ones written before it was
+      // updated and sent only now): stored without their text, which no one of them masks alone.
+      const delta = (seq: number, text: string, masked?: true) => ({
         sessionId,
         seq,
-        event: { at, type: 'message.delta', id: 'reply', text },
+        event: { at, type: 'message.delta', id: 'reply', text, ...(masked ? { masked } : {}) },
       })
       const say = (...events: object[]) =>
         runner.run(() => onRunnerMessage(hub, conn, JSON.stringify({ type: 'events', events })))
-      const { MASKED_DELTAS_PROTOCOL } = await import('@brigade/contracts')
-      conn.protocolVersion = MASKED_DELTAS_PROTOCOL - 1
       await say(
         delta(3, `Your token: ${github.slice(0, 4)}`),
         delta(4, `${github.slice(4)} is set.`),
       )
       await conn.queue
-      // One from it on: as it masked them, a secret alone in one masked here as well.
-      conn.protocolVersion = MASKED_DELTAS_PROTOCOL
-      await say(delta(5, ' Also '), delta(6, `${github} `))
+      // Marked masked: kept, and a secret alone in one masked here as well.
+      await say(delta(5, ' Also ', true), delta(6, `${github} `, true))
       await conn.queue
       const deltas = await db.sessionEvent.findMany({
         where: { sessionId, type: 'message.delta' },
