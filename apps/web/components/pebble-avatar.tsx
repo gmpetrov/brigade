@@ -78,6 +78,13 @@ export function pebbleStyle(seed: string): CSSProperties {
   } as CSSProperties
 }
 
+/** A pebble in the theme's primary colour, its eyes cut out in the colour of the page under it. */
+const PRIMARY = {
+  '--pebble-c1': 'var(--primary)',
+  '--pebble-c2': 'var(--primary)',
+  '--pebble-eye': 'var(--background)',
+} as CSSProperties
+
 /** An agent's picture: a softly morphing pebble with pill eyes that blink into happy
  * arcs, unique to its seed (the agent's id) and the same wherever it shows. The chief
  * wears a small gold crown. Size it with the className (`size-8`). */
@@ -86,11 +93,17 @@ export function PebbleAvatar({
   className,
   title,
   crown = false,
+  tone,
+  happy = false,
 }: {
   seed: string
   className?: string
   title?: string
   crown?: boolean
+  /** In the theme's primary colour, its eyes the page's own (a Working line), not its seed's. */
+  tone?: 'primary'
+  /** Still, its eyes closed in happy arcs: the work is done. */
+  happy?: boolean
 }) {
   return (
     <span
@@ -100,7 +113,8 @@ export function PebbleAvatar({
       aria-label={title}
       title={title}
       className={cn('pebble relative flex size-8 shrink-0', className)}
-      style={pebbleStyle(seed)}
+      style={tone === 'primary' ? { ...pebbleStyle(seed), ...PRIMARY } : pebbleStyle(seed)}
+      {...(happy ? { 'data-happy': '' } : {})}
     >
       <span className="pebble-body" />
       <span className="pebble-face">

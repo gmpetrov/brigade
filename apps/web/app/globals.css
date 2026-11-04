@@ -322,6 +322,35 @@
     }
   }
 
+  /* The Working line's step (components/thread-view.tsx, StepTicker): the next comes up from
+   * below as the last goes up. */
+  .step-in {
+    animation: step-in 0.4s ease-out both;
+  }
+  .step-out {
+    animation: step-out 0.4s ease-out both;
+  }
+  @keyframes step-in {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+  @keyframes step-out {
+    to {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .step-in {
+      animation: none;
+    }
+    .step-out {
+      display: none;
+    }
+  }
+
   /* A status line a light passes over, while a teammate gets to a message
    * (components/thread-view.tsx). Still for those who ask for less motion. */
   .text-shimmer {
@@ -577,6 +606,22 @@
       transform: none;
       opacity: 1;
     }
+  }
+  /* Its work done (a turn's Worked line): it stops, its eyes closed in happy arcs. */
+  .pebble[data-happy] .pebble-body {
+    animation-play-state: paused;
+  }
+  .pebble[data-happy] .pebble-face {
+    animation: none;
+  }
+  .pebble[data-happy] .pebble-pill {
+    animation: none;
+    opacity: 0;
+  }
+  .pebble[data-happy] .pebble-smile {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
   /* Out of sight (pebble-avatar.tsx): it stands still, and costs nothing on each frame. */
   .pebble[data-still] * {

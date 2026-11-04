@@ -116,6 +116,7 @@ import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
+import { PebbleAvatar } from '@/components/pebble-avatar'
 import { PreviewElementChips } from '@/components/preview-elements'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
@@ -1355,9 +1356,6 @@ function actionsLast(items: Item[], is: number[]) {
 /** What a long turn's "Worked for" line folds away: its steps and the messages between them. */
 const FOLDS = new Set<Item['kind']>(['thinking', 'tool', 'file', 'assistant', 'plan', 'note'])
 
-/** A turn quicker than this just answers: its steps fold, without a "Worked for" line. */
-const QUICK_TURN_MS = 30_000
-
 /** A person's message answered on the side during a turn: it shows in its turn's Aside. */
 const isSide = (item: Item) => item.kind === 'user' && !!item.side
 
@@ -1385,7 +1383,7 @@ type Node =
   | { type: 'asides'; is: number[]; live: boolean; quiet?: boolean }
   | { type: 'activity'; is: number[]; live: boolean }
   | { type: 'control'; is: number[] }
-  | { type: 'worked'; key: string; ms: number; inner: Node[] }
+  | { type: 'worked'; key: string; ms: number; steps: number; inner: Node[] }
 
 /**
  * How the thread reads: steps in a row fold together, and a long turn that ended
@@ -1433,7 +1431,8 @@ function layoutThread(items: Item[], working: boolean) {
     let turn = all.filter((i) => !isSide(items[i]!))
     // Written into while it ran (messages steered in): its steps fold together however quick.
     const chat = turn.some((i) => isSteered(items[i]!))
-    if (ms < QUICK_TURN_MS && !chat) return [...head, ...group(turn)]
+    // However quick, a turn that worked ends on its line, where its Working line was: nothing
+    // above its answer moves as it ends.
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, and a long one before that step when only a line follows.
     const { first: final, messages } = turnAnswer(
@@ -1460,6 +1459,10 @@ function layoutThread(items: Item[], working: boolean) {
       )
     })
     if (!folded.some((i) => isActivity(items[i]!))) return [...head, ...group(turn)]
+    const steps = folded.filter((i) => {
+      const item = items[i]!
+      return isActivity(item) && !isAside(item) && item.kind !== 'thinking'
+    }).length
     const first = turn.indexOf(folded[0]!)
     const kept = (from: number, to: number) =>
       turn.slice(from, to).filter((i) => !folded.includes(i))
@@ -1471,7 +1474,7 @@ function layoutThread(items: Item[], working: boolean) {
       return [
         ...head,
         ...group(at < 0 ? shown : shown.slice(0, at)),
-        { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
+        { type: 'worked', key: `w${end}`, ms, steps, inner: group(folded) },
         ...group(at < 0 ? [] : shown.slice(at)),
       ]
     }
@@ -1479,7 +1482,7 @@ function layoutThread(items: Item[], working: boolean) {
       ...head,
       ...group(kept(0, first)),
       // Keyed by its end: an older page loading above does not close it.
-      { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
+      { type: 'worked', key: `w${end}`, ms, steps, inner: group(folded) },
       ...group(kept(first, turn.length)),
     ]
   }
@@ -1651,6 +1654,75 @@ function stepText(item: ActivityItem) {
   const mail = mailStep(item.toolName, item.input)
   if (mail) return mail.label
   return `${item.toolName} ${stepSummary(item.toolName, item.input)}`.trim()
+}
+
+const DOING: Record<ReturnType<typeof toolKind>, string> = {
+  command: 'Running',
+  read: 'Reading',
+  edit: 'Editing',
+  search: 'Searching',
+  web: 'Searching the web',
+  browser: 'Using the browser',
+  other: 'Using',
+}
+
+/** A path as its file's name: the line has room for little. */
+const fileName = (text: string) =>
+  /^[^\s]*\/[^\s/]+$/.test(text) ? text.slice(text.lastIndexOf('/') + 1) : text
+
+/** The step happening now, on the Working line: "Reading thread-view.tsx", "Running the tests". */
+function liveStepText(item: ActivityItem) {
+  if (item.kind === 'thinking') return 'Thinking'
+  if (item.kind === 'file') return `Editing ${fileName(item.path)}`
+  const mail = mailStep(item.toolName, item.input)
+  if (mail) return mail.label
+  const kind = toolKind(item.toolName)
+  if (kind === 'browser') return DOING.browser
+  if (kind === 'other')
+    return `${DOING.other} ${bareToolName(item.toolName).replace(/_/g, ' ')}`.trim()
+  const summary = fileName(stepSummary(item.toolName, item.input))
+  if (kind === 'web') return summary ? `Searching the web for ${summary}` : DOING.web
+  return `${DOING[kind]} ${summary}`.trim()
+}
+
+/** How long a step shows at least: steps a teammate takes in a burst would flicker past. */
+const STEP_SHOWS_MS = 1_000
+
+/**
+ * The step happening now, the next one coming up from below as the last goes up. Each shows a
+ * second at least; of steps that came meanwhile, the latest shows next, the others skipped.
+ */
+function StepTicker({ label }: { label: string }) {
+  const [shown, setShown] = useState({ label, previous: undefined as string | undefined, n: 0 })
+  const since = useRef(0)
+  useEffect(() => {
+    since.current = Date.now()
+  }, [])
+  useEffect(() => {
+    if (label === shown.label) return
+    const show = () => {
+      since.current = Date.now()
+      setShown((s) => (s.label === label ? s : { label, previous: s.label, n: s.n + 1 }))
+    }
+    const timer = setTimeout(show, Math.max(0, since.current + STEP_SHOWS_MS - Date.now()))
+    return () => clearTimeout(timer)
+  }, [label, shown.label])
+  return (
+    <span className="relative block min-w-0 overflow-hidden" title={shown.label}>
+      <span key={shown.n} className={cn('text-shimmer block truncate', shown.n > 0 && 'step-in')}>
+        {shown.label}
+      </span>
+      {shown.previous !== undefined && (
+        <span
+          key={`out${shown.n}`}
+          className="step-out text-shimmer absolute inset-x-0 top-0 block truncate"
+          aria-hidden
+        >
+          {shown.previous}
+        </span>
+      )}
+    </span>
+  )
 }
 
 const VERBS: Partial<Record<ReturnType<typeof toolKind>, string>> = {
@@ -2230,15 +2302,33 @@ function HandbackCard({
 }
 
 /** A long turn's work before its answer, folded under how long it took. */
-function WorkedFor({ ms, children }: { ms: number; children: React.ReactNode }) {
+/**
+ * A turn that ended, where its Working line was and as tall: the pebble pleased, how long it
+ * worked over what it did. It opens to its steps and the messages between them.
+ */
+function WorkedFor({
+  ms,
+  steps,
+  children,
+}: {
+  ms: number
+  steps: number
+  children: React.ReactNode
+}) {
   return (
     <Collapsible className="flex flex-col gap-4">
-      <CollapsibleTrigger className="group flex items-center gap-1.5 border-b pb-2 text-left text-sm text-muted-foreground hover:text-foreground">
-        Worked for {duration(ms)}
-        <ChevronDown
-          className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
-          aria-hidden
-        />
+      <CollapsibleTrigger className="group flex items-start gap-2 self-start text-left text-sm text-muted-foreground hover:text-foreground">
+        <PebbleAvatar seed="working" tone="primary" happy className="size-5 flex-none" />
+        <span className="flex min-w-0 flex-col">
+          <span className="text-foreground">{ms > 0 ? `Worked ${duration(ms)}` : 'Worked'}</span>
+          <span className="flex items-center gap-1 text-xs tabular-nums">
+            {steps > 0 ? plural(steps, '1 step', 'steps') : 'Thought'}
+            <ChevronRight
+              className="size-3 flex-none transition-transform group-data-[state=open]:rotate-90"
+              aria-hidden
+            />
+          </span>
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-4">{children}</CollapsibleContent>
     </Collapsible>
@@ -2255,10 +2345,16 @@ function WorkingLine({
   background,
   teammate,
   subThreads = [],
+  followed = false,
   children,
 }: {
   /** When the turn began; unset when how long it worked is not known or not to be said. */
   since?: number
+  /**
+   * What it writes shows under it: with no step yet, the words coming say it works, and a line
+   * showing up over them would push them down.
+   */
+  followed?: boolean
   steps: ActivityItem[]
   background: BackgroundTask[]
   /** Who works: named, with its avatar, when sub-threads hang under its line. */
@@ -2276,43 +2372,48 @@ function WorkingLine({
   const ms = since === undefined ? 0 : now - since
   // The parent of its sub-threads' lines shows at once: they would hang from nothing.
   const tree = !!teammate && subThreads.some(isChildWorking)
-  if (!tree && !steps.length && !background.length && ms < 5_000) return null
+  if (!tree && !steps.length && !background.length && (followed || ms < 5_000)) return null
   // Thinking is no step of its own: it shows under the line, uncounted.
   const count = steps.filter((item) => item.kind !== 'thinking').length
   return (
     <Collapsible className="flex min-w-0 flex-col text-sm">
-      <CollapsibleTrigger
-        className={cn(
-          'group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground',
-          tree && 'h-8 gap-2',
-        )}
-      >
-        {tree ? (
-          <>
-            <TeammateAvatar teammate={teammate!} className="size-5 flex-none" />
-            <span className="flex-none text-foreground">{teammate!.name}</span>
-            <span className="flex-none">Working</span>
-          </>
-        ) : (
-          <>
-            <span
-              className="mr-0.5 size-1.5 flex-none animate-pulse rounded-full bg-primary"
-              aria-hidden
-            />
-            <span className="flex-none text-foreground">Working</span>
-          </>
-        )}
-        {count > 0 && <span className="flex-none">· {plural(count, '1 step', 'steps')}</span>}
-        {background.length > 0 && (
-          <span className="min-w-0 truncate">· {background.length} in background</span>
-        )}
-        {/* How long it has worked, then the chevron, right after what it says: not at the far edge. */}
-        {ms >= 5_000 && <span className="flex-none">· {duration(ms)}</span>}
-        <ChevronRight
-          className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
-          aria-hidden
-        />
-      </CollapsibleTrigger>
+      {tree ? (
+        <CollapsibleTrigger className="group flex h-8 max-w-full min-w-0 items-center gap-2 self-start text-left text-muted-foreground hover:text-foreground">
+          <TeammateAvatar teammate={teammate!} className="size-5 flex-none" />
+          <span className="flex-none text-foreground">{teammate!.name}</span>
+          <span className="flex-none">Working</span>
+          {count > 0 && <span className="flex-none">· {plural(count, '1 step', 'steps')}</span>}
+          {background.length > 0 && (
+            <span className="min-w-0 truncate">· {background.length} in background</span>
+          )}
+          {ms >= 5_000 && <span className="flex-none">· {duration(ms)}</span>}
+          <ChevronRight
+            className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+            aria-hidden
+          />
+        </CollapsibleTrigger>
+      ) : (
+        // The step happening now over how long it has worked, the pebble at work on the step's line.
+        <CollapsibleTrigger className="group flex max-w-full min-w-0 items-start gap-2 self-start text-left text-muted-foreground hover:text-foreground">
+          <PebbleAvatar seed="working" tone="primary" className="size-5 flex-none" />
+          <span className="flex min-w-0 flex-col">
+            <StepTicker label={steps.length ? liveStepText(steps.at(-1)!) : 'Working'} />
+            <span className="flex min-w-0 items-center gap-1 text-xs tabular-nums">
+              {[
+                ms >= 1_000 && duration(ms),
+                count > 0 && plural(count, '1 step', 'steps'),
+                background.length > 0 && `${background.length} in background`,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'Working'}
+              <ChevronRight
+                className="size-3 flex-none transition-transform group-data-[state=open]:rotate-90"
+                aria-hidden
+              />
+            </span>
+          </span>
+        </CollapsibleTrigger>
+      )}
       {tree && <SubThreadsWorking children={subThreads} />}
       <CollapsibleContent className="mt-2 ml-0.5 flex flex-col gap-2 border-l pl-3">
         <RecentSteps>{children}</RecentSteps>
@@ -3276,12 +3377,16 @@ export function ThreadItems({
           {node.is.map((i) => render(items[i]!, i))}
         </Fold>
       ) : (
-        <WorkedFor key={node.key} ms={node.ms}>
+        <WorkedFor key={node.key} ms={node.ms} steps={node.steps}>
           {show(node.inner)}
         </WorkedFor>
       ),
     )
   }
+  // The running turn's line, at the top of the turn (workingLineAt); background work alone keeps
+  // its line at the end.
+  const workingAbove = workingLine && nodes.running !== undefined
+  const lineAt = workingAbove ? workingLineAt(nodes, items, nodes.runningFrom) : nodes.length
   const workingLineNode = workingLine && (
     <WorkingLine
       key="working"
@@ -3290,14 +3395,11 @@ export function ThreadItems({
       background={background}
       {...(teammate ? { teammate } : {})}
       subThreads={childThreads}
+      followed={lineAt < nodes.length}
     >
       {nodes.live.map((i) => render(items[i]!, i))}
     </WorkingLine>
   )
-  // The running turn's line, at the top of the turn (workingLineAt); background work alone keeps
-  // its line at the end.
-  const workingAbove = workingLine && nodes.running !== undefined
-  const lineAt = workingAbove ? workingLineAt(nodes, items, nodes.runningFrom) : nodes.length
   return (
     <div className="flex flex-col gap-4">
       {/* One list, by key: what moves past the line as the turn goes on or ends is not remounted. */}
