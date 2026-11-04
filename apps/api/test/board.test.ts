@@ -16,7 +16,7 @@ process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 
 const { prisma, scoped } = await import('../src/db.js')
-const { board, dayIn, healthOf, outcomeOf } = await import('../src/board.js')
+const { board, byBoardOrder, dayIn, healthOf, outcomeOf } = await import('../src/board.js')
 const database = await Promise.race([
   prisma.$queryRaw`select 1 from "Session" limit 1`.then(() => true),
   new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
@@ -50,6 +50,51 @@ test("a routine's health: paused, failed when its last run failed or it couldn't
   assert.equal(healthOf(live, ['nothing', 'report'], true), 'ok')
   assert.equal(healthOf(live, [], false), 'new')
   assert.equal(healthOf(live, [], true), 'ok', 'no run this week, but it ran before')
+})
+
+test('In progress: at work first, then waiting on a review, then on a wake-up, the soonest first', () => {
+  const card = (
+    key: string,
+    column: 'needs_you' | 'in_progress' | 'done',
+    reason: 'working' | 'review' | 'wakeup' | 'ticket' | null,
+    at: string,
+    wakeAt: string | null = null,
+  ) => ({ key, column, reason, at, wakeAt })
+  const cards = [
+    card('wakes-sunday', 'in_progress', 'wakeup', '2026-11-04T15:00:00Z', '2026-11-08T15:37:00Z'),
+    card('review-old', 'in_progress', 'review', '2026-11-02T10:00:00Z'),
+    card('asking', 'needs_you', 'ticket', '2026-11-04T09:00:00Z'),
+    card('working-old', 'in_progress', 'working', '2026-11-03T10:00:00Z'),
+    // A line whose threads are idle with a wake-up: it waits on the wake-up.
+    card(
+      'line-wakes-tonight',
+      'in_progress',
+      'review',
+      '2026-11-04T14:00:00Z',
+      '2026-11-04T17:15:00Z',
+    ),
+    card('review-new', 'in_progress', 'review', '2026-11-04T12:00:00Z'),
+    // At work with a wake-up set too: it is at work.
+    card('working-new', 'in_progress', 'working', '2026-11-04T13:00:00Z', '2026-11-05T12:40:00Z'),
+    card('wakes-thursday', 'in_progress', 'wakeup', '2026-11-01T08:00:00Z', '2026-11-05T12:40:00Z'),
+    card('done', 'done', null, '2026-11-04T11:00:00Z'),
+  ]
+  const order = (column: string) =>
+    [...cards]
+      .sort(byBoardOrder)
+      .filter((c) => c.column === column)
+      .map((c) => c.key)
+  assert.deepEqual(order('in_progress'), [
+    'working-new',
+    'working-old',
+    'review-new',
+    'review-old',
+    'line-wakes-tonight',
+    'wakes-thursday',
+    'wakes-sunday',
+  ])
+  assert.deepEqual(order('needs_you'), ['asking'])
+  assert.deepEqual(order('done'), ['done'])
 })
 
 test("today is the routine's own day, in its time zone", () => {

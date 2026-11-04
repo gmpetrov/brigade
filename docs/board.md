@@ -55,6 +55,10 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 - **In progress** is a thread at work (or its children it waits for), one waiting on a wake-up it
   set, or one whose pull request is being reviewed or fixed. A thread that failed on an error the
   runner tries again by itself stays here until those tries are over (src/failed.ts).
+- **In progress puts what is at work first**, the latest activity first; then what waits on a
+  review or a fix; then what waits on a wake-up (its threads idle with one pending), the soonest
+  to wake first. A thread waiting days for its wake-up no longer sits among those at work. The
+  other columns show the latest activity first.
 - **A card shows its next wake-up**: an alarm and the time of the earliest pending wake-up of its
   threads (the full date on hover), in any column but Done, so it says when its teammate comes
   back on its own.
