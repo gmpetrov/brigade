@@ -1,8 +1,17 @@
 // The Inbox (src/inbox.ts): the list across sources, one item, done, handed to a teammate, its
 // thread asked to reply, a person's own reply.
-import { HandInboxItem, InboxQuery, ReplyInboxItem, SetInboxDone } from '@brigade/contracts'
+import {
+  HandInboxItem,
+  InboxQuery,
+  ReplyInboxItem,
+  SetInboxDone,
+  type InboxPlan,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { cloudEntitled } from '../billing.js'
+import { suggestName } from '../mail/addresses.js'
+import { addressOf } from '../mail/names.js'
 import { attachmentKey, directUploads, presignGet, streamObject } from '../bucket.js'
 import {
   askedToReply,
@@ -39,6 +48,28 @@ export const inbox = new Hono<AppEnv>()
         ...(before ? { before } : {}),
       }),
     )
+  })
+
+  /** Whether the Inbox shows its paywall, and the teammate whose address it shows. */
+  .get('/plan', async (c) => {
+    const { db, scope } = c.var
+    if (await cloudEntitled(scope.workspaceId))
+      return c.json<InboxPlan>({ needed: false, teammate: null, address: null })
+    const teammate = await db.teammate.findFirst({
+      where: { archivedAt: null, kind: 'teammate' },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, name: true },
+    })
+    const own = teammate
+      ? await db.mailAddress.findFirst({
+          where: { teammateId: teammate.id },
+          select: { name: true },
+        })
+      : null
+    // The name it would get, as turning it on picks it: never another workspace's riley@.
+    const local =
+      own?.name ?? (teammate ? await suggestName(teammate.name).catch(() => null) : null)
+    return c.json<InboxPlan>({ needed: true, teammate, address: local ? addressOf(local) : null })
   })
 
   /** Every mailbox, and one whole (Inbox › Mailboxes). */

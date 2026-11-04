@@ -16,6 +16,7 @@ import {
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { appFor } from '../apps.js'
+import { requireEmailPlan } from '../billing.js'
 import { audit } from '../audit.js'
 import { triggersOf } from '../connectors/index.js'
 import type { ScopedDb } from '../db.js'
@@ -176,6 +177,7 @@ export const email = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     if (!(await db.app.count({ where: { key: 'email' } })))
       throw new HTTPException(409, { message: 'Turn the Email App on first' })
+    await requireEmailPlan(scope.workspaceId)
     const input = await parseBody(c.req.raw, EnableAgentAddress)
     const teammate = await db.teammate.findFirst({
       where: { id: c.req.param('teammateId'), archivedAt: null },
@@ -207,6 +209,7 @@ export const email = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     if (!(await db.app.count({ where: { key: 'email' } })))
       throw new HTTPException(409, { message: 'Turn the Email App on first' })
+    await requireEmailPlan(scope.workspaceId)
     const input = await parseBody(c.req.raw, CreateInbox)
     // Checked before the inbox is made, so a refused address leaves no inbox behind.
     if (input.publicAddress) {

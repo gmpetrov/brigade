@@ -147,6 +147,16 @@ export type InboxSourceView = {
   project: { id: string; name: string } | null
 }
 
+/**
+ * Whether the Inbox asks for Brigade Cloud first (GET /inbox/plan): Brigade's own addresses come
+ * with it. teammate and address: the one the paywall shows, the workspace's first teammate.
+ */
+export type InboxPlan = {
+  needed: boolean
+  teammate: { id: string; name: string } | null
+  address: string | null
+}
+
 export const InboxQuery = z.object({
   source: z.string().max(200).optional(),
   teammate: z.string().max(100).optional(),

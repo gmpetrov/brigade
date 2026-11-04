@@ -5,6 +5,9 @@ Brigade's own addresses for agents and projects, on its mail domain (`MAIL_DOMAI
 Resend: the **Email App** (`apps/api/src/mail/`, `connectors/email.ts`, `routes/email.ts`). The decision record is
 `Projects/Brigade/decisions/agent-email-spec.md` in the library.
 
+When billing is on, Brigade's own addresses come with Brigade Cloud: without the plan, none turns on
+and nothing is sent (`docs/billing.md`, Email).
+
 ## Addresses
 
 - **An agent's address** (`MailAddress` kind `agent`): `riley@`. Off by default; an owner or admin

@@ -88,6 +88,20 @@ export async function requireCloudPlan(workspaceId: string) {
 }
 
 /**
+ * Email on Brigade's own addresses comes with the Cloud plan: Resend charges for each mail sent
+ * and received. Turning an address on, making a sign-up address and sending are refused
+ * without it; Gmail, which costs nothing, is not.
+ */
+export const EMAIL_PLAN_REQUIRED =
+  'Email addresses come with Brigade Cloud: an owner or admin subscribes in Settings › Billing'
+
+/** 402 unless the workspace may use Brigade's email addresses. */
+export async function requireEmailPlan(workspaceId: string) {
+  if (!(await cloudEntitled(workspaceId)))
+    throw new HTTPException(402, { message: EMAIL_PLAN_REQUIRED })
+}
+
+/**
  * `run` alone for the workspace's billing: no other Checkout, event or read for it meanwhile,
  * whichever Worker or process it reaches. Its writes go through `tx`, the lock's transaction:
  * should `run` outlive the lock, they fail and are rolled back rather than land after another

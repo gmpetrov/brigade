@@ -148,7 +148,7 @@ export function Pricing() {
               </li>
               <li>
                 <Icon name="check" />
-                Everything in Free, plus Brigade&apos;s cloud computer
+                Everything in Free, plus an email address for each teammate
               </li>
             </ul>
             <AuthLink className={c('btn pri lg')} href={SIGN_UP} data-pebble-target>
@@ -271,9 +271,9 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              Yes. Turn on the Email App and each teammate gets an address of its own. It sends from
-              it, and replies come back to the teammate that started the conversation, not to your
-              inbox.
+              Yes, with Cloud. Turn on the Email App and each teammate gets an address of its own.
+              It sends from it, and replies come back to the teammate that started the conversation,
+              not to your inbox.
             </p>
           </details>
           <details>
