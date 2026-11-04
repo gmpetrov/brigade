@@ -161,3 +161,68 @@ test('a big App goes behind a catalog: find, describe, run, on the account asked
     /use one of Brigade/,
   )
 })
+
+test('a catalogued operation whose schema differs by account is described and run as that account has it', async () => {
+  const calls: Parameters<ConnectorCaller>[0][] = []
+  const pad = 'x'.repeat(310_000)
+  const tools = connectorTools(
+    [
+      grant('c1', 'A', [
+        {
+          name: 'example_search',
+          write: false,
+          inputSchema: {
+            type: 'object',
+            description: pad,
+            properties: { query: { type: 'string' } },
+            required: ['query'],
+          },
+        },
+      ]),
+      grant('c2', 'B', [
+        {
+          name: 'example_search',
+          write: false,
+          inputSchema: {
+            type: 'object',
+            properties: { project: { type: 'string' } },
+            required: ['project'],
+          },
+        },
+      ]),
+    ],
+    async (call) => {
+      calls.push(call)
+      return 'ok'
+    },
+  )
+  assert.deepEqual(Object.keys(tools).sort(), ['posthog_describe', 'posthog_find', 'posthog_run'])
+  const b = (await run(tools.posthog_describe, {
+    operation: 'example_search',
+    account: 'B',
+  })) as any
+  assert.deepEqual(b.inputSchema.required, ['project'])
+  assert.deepEqual(b.accounts, ['B'])
+  // Without an account, an operation its accounts have differently is not described as either's.
+  await assert.rejects(
+    run(tools.posthog_describe, { operation: 'example_search' }),
+    /use one of A, B/,
+  )
+  const a = (await run(tools.posthog_describe, {
+    operation: 'example_search',
+    account: 'A',
+  })) as any
+  assert.deepEqual(a.inputSchema.required, ['query'])
+  // Found once per variant, each with the accounts that have it.
+  const found = (await run(tools.posthog_find, { query: 'search' })) as { operations: any[] }
+  assert.deepEqual(found.operations.map((o) => o.accounts).sort(), [['A'], ['B']])
+  await run(tools.posthog_run, {
+    operation: 'example_search',
+    account: 'B',
+    input: { project: 'p' },
+  })
+  assert.deepEqual(
+    calls.map((c) => c.connectionId),
+    ['c2'],
+  )
+})

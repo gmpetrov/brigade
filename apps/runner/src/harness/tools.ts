@@ -118,22 +118,30 @@ function catalogTools(
   const accountOf = (grant: ConnectorGrant) => grant.externalAccount ?? grant.label
   const accounts = grants.map(accountOf)
   const several = grants.length > 1
-  const operations = new Map<
-    string,
-    {
-      name: string
-      description: string
-      write: boolean
-      inputSchema: unknown
-      grants: ConnectorGrant[]
-    }
-  >()
+  /**
+   * Each operation as its accounts have it: one variant for those whose grant gives it the same
+   * description and schema, another for each that differs.
+   */
+  type Variant = {
+    name: string
+    description: string
+    write: boolean
+    inputSchema: unknown
+    grants: ConnectorGrant[]
+  }
+  const operations = new Map<string, Variant[]>()
   for (const grant of grants)
     for (const operation of grant.operations) {
-      const known = operations.get(operation.name)
-      if (known) known.grants.push(grant)
-      else
-        operations.set(operation.name, { ...operation, write: !!operation.write, grants: [grant] })
+      const variants = operations.get(operation.name) ?? []
+      const same = variants.find(
+        (v) =>
+          v.write === !!operation.write &&
+          v.description === operation.description &&
+          JSON.stringify(v.inputSchema) === JSON.stringify(operation.inputSchema),
+      )
+      if (same) same.grants.push(grant)
+      else variants.push({ ...operation, write: !!operation.write, grants: [grant] })
+      operations.set(operation.name, variants)
     }
   const where = several
     ? `${label}, the account in \`account\`: ${accounts.join(', ')}`
@@ -144,12 +152,12 @@ function catalogTools(
       ...value,
       ...(options.defer ? { [NAMESPACE]: namespace } : {}),
     } as JSONSchema7)
-  const entry = (o: NonNullable<ReturnType<typeof operations.get>>, withSchema: boolean) => ({
-    operation: o.name,
-    description: o.description,
-    ...(o.write ? { write: true } : {}),
-    ...(several ? { accounts: o.grants.map(accountOf) } : {}),
-    ...(withSchema ? { inputSchema: o.inputSchema } : {}),
+  const entry = (v: Variant, withSchema: boolean) => ({
+    operation: v.name,
+    description: v.description,
+    ...(v.write ? { write: true } : {}),
+    ...(several ? { accounts: v.grants.map(accountOf) } : {}),
+    ...(withSchema ? { inputSchema: v.inputSchema } : {}),
   })
   const words = (text: string) =>
     text
@@ -159,12 +167,34 @@ function catalogTools(
   const find = `${kind}_find`
   const describe = `${kind}_describe`
   const run = `${kind}_run`
+  const unknownOperation = (operation: string) =>
+    new Error(`${label} has no operation ${operation}: ${find} finds them`)
+  /** The variant of an operation an account has, or an error saying which accounts do. */
+  const variantFor = (operation: string, account: string | undefined, describing = false) => {
+    const variants = operations.get(operation)
+    if (!variants) throw unknownOperation(operation)
+    // Described without an account, an operation all its accounts have alike.
+    if (describing && account === undefined && variants.length === 1) return variants[0]!
+    const variant = several
+      ? variants.find((v) => v.grants.some((g) => accountOf(g) === account))
+      : variants[0]
+    if (!variant)
+      throw new Error(
+        `${operation} has no ${label} account "${String(account)}": use one of ${variants
+          .flatMap((v) => v.grants.map(accountOf))
+          .join(', ')}`,
+      )
+    return variant
+  }
+  const accountParam = several
+    ? { account: { type: 'string', enum: accounts, description: `The ${label} account to use` } }
+    : {}
   const tools: Record<string, Tool> = {
     [find]: tool({
       description:
         `Find ${label}'s operations for a task, by words of what you want to do (empty: all of them, by name). ` +
-        `Each comes with its description, and its input schema while they fit; call ${describe} for one without, ` +
-        `then ${run} to call it. [${where}]`,
+        `Each comes with its description${several ? ', the accounts that have it' : ''}, and its input schema while ` +
+        `they fit; call ${describe} for one without, then ${run} to call it. [${where}]`,
       inputSchema: schema({
         type: 'object',
         properties: {
@@ -176,9 +206,10 @@ function catalogTools(
         const wanted = words(input.query ?? '')
         if (wanted.length === 0) return { operations: [...operations.keys()] }
         const scored = [...operations.values()]
-          .map((o) => {
-            const name = words(o.name)
-            const text = words(o.description)
+          .flat()
+          .map((v) => {
+            const name = words(v.name)
+            const text = words(v.description)
             const score = wanted.reduce(
               (sum, w) =>
                 sum +
@@ -190,34 +221,36 @@ function catalogTools(
                 (text.includes(w) ? 1 : 0),
               0,
             )
-            return { o, score }
+            return { v, score }
           })
           .filter((x) => x.score > 0)
           .sort((a, b) => b.score - a.score)
           .slice(0, FOUND_MAX)
         let budget = FOUND_SCHEMA_CHARS
         return {
-          operations: scored.map(({ o }) => {
-            const size = JSON.stringify(o.inputSchema ?? {}).length
+          operations: scored.map(({ v }) => {
+            const size = JSON.stringify(v.inputSchema ?? {}).length
             const fits = size <= budget
             if (fits) budget -= size
-            return entry(o, fits)
+            return entry(v, fits)
           }),
         }
       },
     }),
     [describe]: tool({
-      description: `The description and input schema of one of ${label}'s operations (${find} finds them). [${where}]`,
+      description:
+        `The description and input schema of one of ${label}'s operations (${find} finds them)` +
+        `${several ? ', as the account given has it (needed when its accounts have it differently)' : ''}. [${where}]`,
       inputSchema: schema({
         type: 'object',
-        properties: { operation: { type: 'string', description: 'The operation, as found' } },
+        properties: {
+          operation: { type: 'string', description: 'The operation, as found' },
+          ...accountParam,
+        },
         required: ['operation'],
       }),
-      execute: async (input: { operation: string }) => {
-        const o = operations.get(input.operation)
-        if (!o) throw new Error(`${label} has no operation ${input.operation}: ${find} finds them`)
-        return entry(o, true)
-      },
+      execute: async (input: { operation: string; account?: string }) =>
+        entry(variantFor(input.operation, input.account, true), true),
     }),
     [run]: tool({
       description:
@@ -227,15 +260,7 @@ function catalogTools(
         type: 'object',
         properties: {
           operation: { type: 'string', description: 'The operation, as found' },
-          ...(several
-            ? {
-                account: {
-                  type: 'string',
-                  enum: accounts,
-                  description: `The ${label} account to use`,
-                },
-              }
-            : {}),
+          ...accountParam,
           input: { type: 'object', description: "The operation's input, as its schema says" },
         },
         required: ['operation', ...(several ? ['account'] : []), 'input'],
@@ -244,16 +269,13 @@ function catalogTools(
         input: { operation: string; account?: string; input?: unknown },
         { toolCallId },
       ) => {
-        const o = operations.get(input.operation)
-        if (!o) throw new Error(`${label} has no operation ${input.operation}: ${find} finds them`)
-        const grant = several ? o.grants.find((g) => accountOf(g) === input.account) : o.grants[0]
-        if (!grant)
-          throw new Error(
-            `${input.operation} has no ${label} account "${String(input.account)}": use one of ${o.grants.map(accountOf).join(', ')}`,
-          )
+        const variant = variantFor(input.operation, input.account)
+        const grant = several
+          ? variant.grants.find((g) => accountOf(g) === input.account)!
+          : variant.grants[0]!
         return call({
           connectionId: grant.connectionId,
-          operation: o.name,
+          operation: variant.name,
           input: input.input ?? {},
           toolCallId,
           toolName: run,
