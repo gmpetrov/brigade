@@ -302,8 +302,8 @@ export async function completeThread(
   return {
     done: { summary: op.summary, at: at.toISOString() },
     next:
-      'The thread is done. If your reply is written, end your turn here and write nothing more; ' +
-      'else write it now, with a line on what was delivered. A new message from a person reopens it.',
+      'The thread is done. Say in your reply, in a line, what was delivered. A new message from a ' +
+      'person reopens it.',
   }
 }
 

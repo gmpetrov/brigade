@@ -495,8 +495,7 @@ const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
 const DONE =
   '## Done\n\n' +
   'When the work asked in this thread is delivered (merged, sent, saved, answered with a result) and nothing is ' +
-  'pending, call `complete_thread` in the same turn, with a line on what was delivered, right after your reply ' +
-  'in the same step, and write nothing after it. A question is delivered ' +
+  'pending, call `complete_thread` in the same turn, with a line on what was delivered. A question is delivered ' +
   'by your answer: close it even when your reply ends on suggested replies, which are not pending, since any ' +
   'message reopens it. A change that was asked and you only proposed is not delivered, nor is a reply that ends ' +
   'on choices you need picked: leave those open. Brigade refuses it while ' +

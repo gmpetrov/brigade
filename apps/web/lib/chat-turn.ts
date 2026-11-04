@@ -35,3 +35,21 @@ export function answeredSinceStep(entries: ChatEntry[]): boolean {
   if (last < 0) return false
   return entries.some((entry, at) => at > last && entry === 'message' && !quick.has(at))
 }
+
+/** A `complete_thread` call waiting for its result (thread-view.tsx's useThreadItems). */
+export type ClosingCall = { seq: number; toolName: string; input: unknown }
+
+/**
+ * The step a `complete_thread` call shows once its result is in, if any. A call that closed the
+ * thread (its result has `done`) shows as the thread's Done line instead; one refused (something
+ * still open, a summary too long) or failed stays a step, with its reason, as any other call.
+ */
+export function closingStep(
+  call: ClosingCall,
+  output: unknown,
+  isError?: boolean,
+): (ClosingCall & { output: unknown; isError?: boolean; finished: true }) | undefined {
+  const closed = !isError && typeof output === 'object' && output !== null && 'done' in output
+  if (closed) return undefined
+  return { ...call, output, ...(isError ? { isError } : {}), finished: true }
+}

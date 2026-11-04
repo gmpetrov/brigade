@@ -17,3 +17,24 @@ test('a step reads what its command does, each path by its last part', () => {
     'curl -s https://api.example.com/v1/x',
   )
 })
+
+test('only a path is shortened: patterns, packages, short folders and refs stay whole', () => {
+  assert.equal(commandSummary('pnpm --filter @brigade/web test'), 'pnpm --filter @brigade/web test')
+  assert.equal(commandSummary('rg "foo/bar" apps/web'), 'rg "foo/bar" apps/web')
+  assert.equal(
+    commandSummary('sed -n 1,20p apps/web/components/thread-view.tsx'),
+    'sed -n 1,20p thread-view.tsx',
+  )
+  assert.equal(
+    commandSummary('git show origin/main:apps/runner/src/threads.ts'),
+    'git show origin/main:apps/runner/src/threads.ts',
+  )
+  assert.equal(commandSummary('sed -i s/foo/bar/ notes.md'), 'sed -i s/foo/bar/ notes.md')
+})
+
+test('a redirection goes with its target, and quotes keep their separators', () => {
+  assert.equal(commandSummary('ls > /tmp/out'), 'ls')
+  assert.equal(commandSummary('node scripts/x.mjs 2>&1 | tail -5'), 'node scripts/x.mjs | tail -5')
+  assert.equal(commandSummary('grep -n "a;b" /x/y.ts && echo done'), 'grep -n "a;b" y.ts')
+  assert.equal(commandSummary("python3 -I - <<'EOF'\nimport json\nEOF"), 'python3 -I -')
+})

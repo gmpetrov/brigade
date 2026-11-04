@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answeredSinceStep, quickReplies, type ChatEntry } from '../lib/chat-turn'
+import { answeredSinceStep, closingStep, quickReplies, type ChatEntry } from '../lib/chat-turn'
 
 // A turn a person wrote into: their messages and what answers them stay in order, its steps
 // together (docs/decisions.md, "A person's message during a turn goes into that turn").
@@ -27,4 +27,25 @@ test('a turn answered since its last step starts afresh at the next message; a q
   assert.equal(answeredSinceStep(['step', 'steered', 'message']), false)
   assert.equal(answeredSinceStep(['steered', 'message']), false)
   assert.equal(answeredSinceStep([]), false)
+})
+
+test('a complete_thread call shows as a step only when it did not close the thread', () => {
+  const call = {
+    seq: 4,
+    toolName: 'mcp__harness-tools__complete_thread',
+    input: { summary: 'Done' },
+  }
+  const closed = {
+    done: { summary: 'Done', at: '2026-11-04T13:32:13.785Z' },
+    next: 'The thread is done.',
+  }
+  assert.equal(closingStep(call, closed), undefined)
+  const refused = { error: 'Not done yet: pull request #681 is still open.' }
+  assert.deepEqual(closingStep(call, refused), { ...call, output: refused, finished: true })
+  assert.deepEqual(closingStep(call, 'boom', true), {
+    ...call,
+    output: 'boom',
+    isError: true,
+    finished: true,
+  })
 })

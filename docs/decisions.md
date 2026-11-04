@@ -158,10 +158,12 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     stays in sight once the turn ends (`quickReplies`). On Nov 4, "what's my name?" waited 36 s for research to end.
   - A shell command's step reads what it does (`commandSummary`): `cat …/threads/x.md 2>/dev/null || find …` reads
     `cat x.md`; the step's details and an approval card keep the whole command.
-  - The teammate replies, then calls `complete_thread` in the same step, writing nothing after: the person reads the
-    reply while the thread closes, rather than after a round trip just to close (about 4 s). The call shows as the
-    thread's Done line, not as a step; the reply before it still answers the turn (`ASIDE_TOOLS`). The Done line hides
-    while the teammate works again or a message is on its way.
+  - A call to `complete_thread` shows as the thread's Done line, not as a step, unless Brigade refused it (something
+    still open, a summary too long): then it stays a step, with its reason (`closingStep`). The Done line hides while
+    the teammate works again or a message is on its way. The reply still comes after the call, not before it to save
+    the round trip (about 4 s): text written before a tool call may reach the person only as the server's summary of it
+    (narration), and a draft or a table written there would be lost, as with the team card (`UNDER_REPLY` in
+    `apps/runner/src/harness/tools.ts`).
 - **Messages queued during a turn are read together** (`joinQueued` in `apps/runner/src/threads.ts`). When a turn
   ends, the next turn of the same teammate reads every message queued for it right behind the first, in one turn, on
   the spec of the last (the thread as it is now, every file sent with them). One turn per message made seven messages

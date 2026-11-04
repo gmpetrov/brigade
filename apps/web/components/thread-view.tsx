@@ -161,7 +161,13 @@ import {
 } from '@/components/thread-children'
 import { AsideGroup } from '@/components/aside-group'
 import { runningAsides } from '@/lib/aside-layout'
-import { answeredSinceStep, quickReplies, type ChatEntry } from '@/lib/chat-turn'
+import {
+  answeredSinceStep,
+  closingStep,
+  quickReplies,
+  type ChatEntry,
+  type ClosingCall,
+} from '@/lib/chat-turn'
 import { commandSummary } from '@/lib/command-summary'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
@@ -361,6 +367,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
   return useMemo(() => {
     const items: Item[] = []
     const byKey = new Map<string, Item>()
+    // complete_thread calls waiting for their result: shown only if it refused (closingStep).
+    const closing = new Map<string, ClosingCall>()
     let limits: Limits | undefined
     // Messages still queued, and every message id the thread has seen (queued, read or cancelled).
     const queued = new Map<string, QueuedMessage>()
@@ -581,22 +589,29 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           if (item?.kind === 'assistant') item.images = { ...item.images, ...e.images }
           break
         }
-        case 'tool.started':
-          // Declaring the thread done shows as its Done line, not as a step after the reply.
-          if (bareToolName(e.toolName) === COMPLETE_THREAD_TOOL) break
+        case 'tool.started': {
+          const key = `t${e.teammateId ?? ''}:${e.toolCallId}`
+          // Declaring the thread done shows as its Done line, not as a step: it waits for its
+          // result, and shows only when refused (closingStep).
+          if (bareToolName(e.toolName) === COMPLETE_THREAD_TOOL) {
+            closing.set(key, { seq, toolName: e.toolName, input: e.input })
+            break
+          }
           // The same call started twice (repeated by the harness): one card.
-          if (byKey.has(`t${e.teammateId ?? ''}:${e.toolCallId}`)) break
-          add({
-            kind: 'tool',
-            key: `t${e.teammateId ?? ''}:${e.toolCallId}`,
-            seq,
-            toolName: e.toolName,
-            input: e.input,
-            finished: false,
-          })
+          if (byKey.has(key)) break
+          add({ kind: 'tool', key, seq, toolName: e.toolName, input: e.input, finished: false })
           break
+        }
         case 'tool.finished': {
-          const item = byKey.get(`t${e.teammateId ?? ''}:${e.toolCallId}`)
+          const key = `t${e.teammateId ?? ''}:${e.toolCallId}`
+          const call = closing.get(key)
+          if (call) {
+            closing.delete(key)
+            const step = closingStep(call, e.output, e.isError)
+            if (step && !byKey.has(key)) add({ kind: 'tool', key, ...step })
+            break
+          }
+          const item = byKey.get(key)
           if (item?.kind === 'tool')
             Object.assign(item, { output: e.output, isError: e.isError, finished: true })
           break
