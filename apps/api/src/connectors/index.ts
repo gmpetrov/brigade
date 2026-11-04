@@ -20,6 +20,7 @@ import { posthog } from './posthog.js'
 import { dataforseo } from './dataforseo.js'
 import { ahrefs } from './ahrefs.js'
 import { revenuecat } from './revenuecat.js'
+import { expo } from './expo.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -49,6 +50,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   dataforseo,
   ahrefs,
   revenuecat,
+  expo,
   email,
 }
 
@@ -102,6 +104,7 @@ export const triggerCatalog = () =>
         'dataforseo',
         'ahrefs',
         'revenuecat',
+        'expo',
         'email',
         'mcp',
         'webhook',
@@ -333,6 +336,16 @@ export const appCatalog: Record<
     category: 'Finance',
     // A project's key, as a Stripe account is the business's: the workspace's to share.
     personal: false,
+  },
+  expo: {
+    name: 'Expo',
+    description:
+      'Build, submit and update Expo apps with EAS, read their build logs and crashes, and search Expo’s docs, with Expo’s MCP server and its skills.',
+    developer: 'Expo',
+    category: 'Developer tools',
+    // An Expo sign-in reaches its person's accounts and projects: kept to their threads until they share it.
+    personal: true,
+    skills: 'https://github.com/expo/skills/tree/main/plugins/expo',
   },
   mcp: {
     name: 'MCP server',

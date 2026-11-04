@@ -1203,6 +1203,8 @@ enum ConnectorKind {
   ahrefs
   /// RevenueCat, through RevenueCat's own MCP server and a secret API v2 key.
   revenuecat
+  /// Expo (EAS), through Expo's own MCP server and its OAuth.
+  expo
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
   /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.

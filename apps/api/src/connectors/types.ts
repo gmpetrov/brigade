@@ -110,6 +110,7 @@ export type ConnectorKind =
   | 'dataforseo'
   | 'ahrefs'
   | 'revenuecat'
+  | 'expo'
   | 'email'
   | 'mcp'
 

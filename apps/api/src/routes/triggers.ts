@@ -39,6 +39,7 @@ const KINDS: ConnectorKind[] = [
   'dataforseo',
   'ahrefs',
   'revenuecat',
+  'expo',
   'email',
   'mcp',
   'webhook',

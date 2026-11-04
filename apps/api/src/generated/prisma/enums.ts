@@ -183,6 +183,7 @@ export const ConnectorKind = {
   dataforseo: 'dataforseo',
   ahrefs: 'ahrefs',
   revenuecat: 'revenuecat',
+  expo: 'expo',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics',

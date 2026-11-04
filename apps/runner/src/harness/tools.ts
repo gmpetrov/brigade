@@ -594,6 +594,7 @@ export const openTicketTool = tool({
                     'dataforseo',
                     'ahrefs',
                     'revenuecat',
+                    'expo',
                     'mcp',
                   ],
                 },
