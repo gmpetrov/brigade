@@ -130,6 +130,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   days goes, and so does another bridge version's file left 3 days. In the home, not a shared folder: the schemas
   become tool descriptions, so another user must not be able to plant them. Tested in
   `apps/runner/test/claude-bridge-tools.test.ts`.
+- **The memory guard stops only what helps** (`apps/runner/src/memory-guard.ts`). On a computer stuck waiting for
+  memory, it stops running work of the runner's (a turn, a running preview, a browser in use) only while that work holds
+  at least 30% of the memory in use (`OWN_SHARE`); below it, the stall comes from the rest of the computer, and a turn
+  lost would not end it. On Nov 4 Boat's own services held about 6 of 8 GB, and the guard stopped seven turns of 0.3 to
+  0.9 GB in an hour, some 20 s apart. It still stops what costs nothing (a frozen preview, an idle browser), and anything
+  when memory and swap are nearly gone. A turn waiting for memory to start says so at once (`turn.memory`): the thread
+  shows "waiting for this computer to have memory free" where it showed "reading your message" for the whole wait.
 - **Background work holds the turn; sub-agents work for the thread.** A Claude Code teammate's background work
   (sub-agents started with the Agent tool, shells and Monitors run in the background) reports back in a turn Claude
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process

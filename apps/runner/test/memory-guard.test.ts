@@ -179,7 +179,7 @@ test('after the kernel killed something for memory, the guard waits instead of a
   )
 })
 
-test("stuck on memory the rest of the computer holds, it stops nothing that loses work", async () => {
+test('stuck on memory the rest of the computer holds, it stops nothing that loses work', async () => {
   const GB = 1024 * MB
   // 8 GB, 15% of it available: 6.8 GB in use, the provider's services holding most of it.
   const busy: Reading = { ...stuck, total: 8 * GB, available: 0.15 }
@@ -223,8 +223,10 @@ test("stuck on memory the rest of the computer holds, it stops nothing that lose
   await run(turns, stuck)
   assert.deepEqual(stopped, ['turn0'])
   assert.equal(
-    parseMemory('full avg10=1.00 avg60=0 avg300=0 total=0\n', 'MemTotal: 100 kB\nMemAvailable: 50 kB\n')
-      ?.total,
+    parseMemory(
+      'full avg10=1.00 avg60=0 avg300=0 total=0\n',
+      'MemTotal: 100 kB\nMemAvailable: 50 kB\n',
+    )?.total,
     100 * 1024,
   )
 })
