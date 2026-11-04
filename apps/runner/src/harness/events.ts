@@ -1,7 +1,9 @@
 // Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
 // this module sees an AI SDK type.
 import {
+  ANSWER_MESSAGE_TOOL,
   Ask,
+  bareToolName,
   hasVisibleText,
   OFFER_CHOICES_TOOL,
   Question,
@@ -55,6 +57,12 @@ export function askUserQuestions(input: unknown): Question[] | undefined {
     })),
   )
   return parsed.success ? parsed.data : undefined
+}
+
+/** The answer an answer_message call gives, if it gives one a person can read. */
+export function answerText(input: unknown): string | undefined {
+  const text = (input as { text?: unknown } | null | undefined)?.text
+  return typeof text === 'string' && hasVisibleText(text) ? text.trim() : undefined
 }
 
 /** A decline with the person's own words: what they want in place of the ask. */
@@ -345,6 +353,8 @@ export class EventMapper {
   rejected: { toolCallId: string; toolName: string; error: string }[] = []
   /** Calls already shown as started: one repeated after its result must not show twice. */
   private started = new Set<string>()
+  /** answer_message calls recorded as the teammate's message: their result shows nothing. */
+  private answers = new Set<string>()
 
   /**
    * Recognise Claude Code's answer to resuming a conversation it no longer has: it deletes
@@ -379,6 +389,8 @@ export class EventMapper {
      */
     private readonly texts = new Map<string, string>(),
     private readonly reasoning = new Map<string, string>(),
+    /** The person's message given to the running turn last (its messageId), if any. */
+    private readonly steered: () => string | undefined = () => undefined,
   ) {}
 
   map(part: Part) {
@@ -441,6 +453,21 @@ export class EventMapper {
         if (this.toolCalls.has(part.toolCallId) || this.started.has(part.toolCallId)) return
         this.started.add(part.toolCallId)
         this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
+        // An answer to a person's message given to the turn: the teammate's message, which
+        // answers the one given to it last, word for word. Without an answer, an error step.
+        const answer =
+          bareToolName(part.toolName) === ANSWER_MESSAGE_TOOL ? answerText(part.input) : undefined
+        if (answer) {
+          this.answers.add(part.toolCallId)
+          const answers = this.steered()
+          return this.emit({
+            at,
+            type: 'message.done',
+            id: part.toolCallId,
+            text: answer,
+            ...(answers ? { answers } : {}),
+          })
+        }
         // The harness's own question tool: a person answers, then the turn continues.
         if (part.toolName === QUESTION_TOOL || part.toolName === ASK_USER_TOOL) {
           const questions =
@@ -507,6 +534,7 @@ export class EventMapper {
       case 'tool-result': {
         const call = this.toolCalls.get(part.toolCallId)
         this.toolCalls.delete(part.toolCallId)
+        if (this.answers.delete(part.toolCallId)) return
         this.emit({
           at,
           type: 'tool.finished',
@@ -524,6 +552,7 @@ export class EventMapper {
       }
       case 'tool-error':
         this.toolCalls.delete(part.toolCallId)
+        if (this.answers.delete(part.toolCallId)) return
         return this.emit({
           at,
           type: 'tool.finished',

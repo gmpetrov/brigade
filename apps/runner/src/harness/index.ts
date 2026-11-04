@@ -20,6 +20,7 @@ import {
   type BackgroundWork,
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
+  ANSWER_MESSAGE_TOOL,
   SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
@@ -105,6 +106,7 @@ import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import { backgroundTasks, reportWaitsFor } from './background.js'
 import {
+  answerMessageTool,
   ASK_USER_TOOL,
   appTools,
   askUserTool,
@@ -220,6 +222,11 @@ type SavedState = {
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
   recoveries?: number
   /**
+   * The person's message given to the running turn last (steer), by its messageId: what an
+   * answer_message call answers, after a restart or a hand-over too. Cleared when a turn starts.
+   */
+  steered?: string
+  /**
    * The calls the last turn stopped on, waiting for a person (a ticket, a question): their
    * answer still reads right if the process stops without parking, which keeps no turn.
    */
@@ -267,6 +274,7 @@ const INSTRUCTIONS_MAX_BYTES = 256 * 1024
  * and used in most turns. A name the thread has no tool of is ignored.
  */
 const ALWAYS_LOADED = [
+  ANSWER_MESSAGE_TOOL,
   COMPLETE_THREAD_TOOL,
   OPEN_TICKET_TOOL,
   SHOW_WIDGET_TOOL,
@@ -372,6 +380,8 @@ function createAgent(
     [OPEN_TICKET_TOOL]: openTicketTool,
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
+    // A person's message given to the running turn, answered at once (steeredText in threads.ts).
+    [ANSWER_MESSAGE_TOOL]: answerMessageTool,
     // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
     ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
   }
@@ -578,6 +588,8 @@ export class HarnessThread {
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Kept whole, as the transcript keeps its latest message: a request often comes after its context.
     if (input.kind === 'prompt' && !retry) this.saved.asked = input.text
+    // A new turn answers no message given to the one before.
+    if (input.kind === 'prompt') this.saved.steered = undefined
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
     if (input.kind !== 'resume') this.saved.recoveries = 0
     // Found on disk after a stop without warning, this says the turn did not finish.
@@ -1004,14 +1016,25 @@ export class HarnessThread {
   /**
    * Give a message to the running turn, which reads it at its next step; what
    * it does about it stays in this turn. Throws when no turn runs, or the
-   * harness cannot take one mid-turn.
+   * harness cannot take one mid-turn. `messageId`: a person's message, which an
+   * answer_message call answers from now on.
    */
-  async steer(text: string) {
+  async steer(text: string, messageId?: string) {
     const live = this.live
     if (!live) throw new Error('No turn is running')
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
     this.replies.steered()
+    // Saved now: the turn may answer it after a restart, or in the runner it is handed over to.
+    this.saved!.steered = messageId
+    await this.persist().catch((error) =>
+      console.warn(`could not save thread state: ${errorMessage(error)}`),
+    )
+  }
+
+  /** The person's message an answer_message call answers now, if any (steer). */
+  answering() {
+    return this.saved?.steered
   }
 
   /**
@@ -1301,6 +1324,7 @@ export class HarnessThread {
       this.toolCalls,
       this.texts,
       this.reasoning,
+      () => this.answering(),
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
@@ -1754,6 +1778,8 @@ export class HarnessThread {
       ...(this.saved?.recoveries ? { recoveries: this.saved.recoveries } : {}),
       // Still open for the person: their answer comes to the new session as a message.
       ...(this.saved?.later?.length ? { later: this.saved.later } : {}),
+      // The turn goes on there: its answer to the message steered in last still answers it.
+      ...(this.saved?.steered ? { steered: this.saved.steered } : {}),
       accountId: account.id,
       transcript: this.saved?.transcript ?? [],
     }
