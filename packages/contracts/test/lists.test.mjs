@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  GETTING_STARTED,
   findLine,
+  newListPath,
+  newListText,
   handOffMessage,
   handOffParts,
   insertLine,
@@ -241,3 +244,20 @@ for (const block of [
     assert.equal(nested.split('\n')[1], '  * [ ] Child <!-- item:bbbbbbbbbbbbbbbb -->')
   })
 }
+
+test('a new list is a file named after it, at the root or in a project folder', () => {
+  assert.equal(newListPath('Launch plan!'), 'launch-plan.md')
+  assert.equal(newListPath('Été 2027', 'Projects/Acme'), 'Projects/Acme/ete-2027.md')
+  assert.equal(newListPath('Roadmap', 'Projects/Acme/'), 'Projects/Acme/roadmap.md')
+  assert.equal(newListPath('!!!'), 'list.md')
+  const list = parseList(newListText('Launch plan'))
+  assert.equal(list.title, 'Launch plan')
+})
+
+test('the Getting started list has its setup line and five lines in all', () => {
+  const list = parseList(GETTING_STARTED.text)
+  assert.equal(list.title, 'Getting started')
+  assert.equal(list.lines.length, 5)
+  assert.equal(list.lines[0].text, GETTING_STARTED.setupLine)
+  assert.ok(list.lines.every((l) => !l.done && !l.marker))
+})

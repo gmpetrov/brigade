@@ -107,6 +107,13 @@ mission; threads stay where the work happens.
   changing the file. A thread's items reach its teammate (spec, `list_items`) only from lists it
   may read, and a pull request closes only items of lists its author may change, checked when
   it is opened and again when it merges; elsewhere it is only part of the work.
+- **A new workspace starts with a list**, `getting-started.md` at the library's root
+  (`GETTING_STARTED` in `@brigade/contracts`), saved by Brigade when the workspace is created
+  (`seedGettingStarted`): first steps a teammate can take on, so Lists shows from day one how
+  lines are handed over and ticked, rather than an empty page. Its first line, "Set up your team
+  with Chief", is the one the onboarding's setup thread with the chief starts on (StartThread's
+  `listLines`), so the list shows it in progress at once. It is an ordinary list: people edit it,
+  hand its lines over or delete it, and nothing brings it back.
 - **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
   stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
 - **The Board shows the lines that move** (docs/board.md): every list's lines with work on them,
@@ -120,7 +127,10 @@ mission; threads stay where the work happens.
   changed list, lists outside every project last), last changed first or by name, with a search.
   A row's dot alone says where the list stands (orange: a line waits on a person; violet: one is
   in progress); under its title, its count and that line. Wide, a bar shows how far it is; on a
-  phone, a line under the row once anything is ticked.
+  phone, a line under the row once anything is ticked. **New list**, at its top right (and in a
+  project's Lists section, for its folder), asks for a name and makes `<name>.md` (`newListPath`)
+  with that title and a first empty line, then opens it. With no list yet, a card shows a sample
+  list and what lists are for, with the same button.
 - **In the sidebar**, the threads working on a list's items fold under one row for the list,
   where its first thread would be, as a thread's child threads do (`lib/list-groups.ts`). Its
   title opens the list, its caret folds its threads, and its dot is its threads' most pressing
@@ -185,6 +195,8 @@ tools are `schedule.call` operations (`ListOperations`), handled in `apps/api/sr
 - `GET /api/lists/threads/:sessionId`: a thread's items.
 - `POST /api/lists/:documentId/hand-off`: `{ teammateId, items: [{ id, text }], mode, note? }`.
 - `POST /api/lists/:documentId/link`: `{ sessionId, items }`.
+- `POST /api/threads` with `listLines: { documentId, items }`: a new thread that starts on those
+  lines, linked before its first turn (lines no longer in the file are left out).
 - `PUT /api/lists/items/:id/done`: `{ done }`.
 
 Writes to items, their threads and pull requests broadcast `lists.updated`.
@@ -192,6 +204,5 @@ Writes to items, their threads and pull requests broadcast `lists.updated`.
 ## Not done yet
 
 - A pinned list's progress in its sidebar row.
-- Making a new list from the Lists page (a new Markdown file with a checkbox does it).
 - A line's state from its threads' open tickets alone (a thread waiting on a ticket is already
   `waiting`).
