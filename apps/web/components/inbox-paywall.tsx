@@ -2,8 +2,7 @@
 // The Inbox before Brigade Cloud: Brigade's own addresses send and receive through Resend,
 // which charges for each mail, so they come with the paid plan. A few sample emails fade out
 // under the offer, with the address one of the workspace's teammates would get (or, with only
-// Chief, the mail icon). The samples
-// are made up, never the workspace's own mail.
+// Chief, the mail icon). The samples are made up, never the workspace's own mail.
 import type { InboxPlan } from '@brigade/contracts'
 import { Check, Globe, Mail } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
