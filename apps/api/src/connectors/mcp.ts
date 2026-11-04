@@ -19,6 +19,8 @@ export type McpCredential = {
   clientSecret?: string
   tokenEndpoint: string
   revocationEndpoint?: string
+  /** The account signed in to, by the provider's stable id, for Apps that give one (RevenueCat). */
+  accountId?: string
   /** The protected resource the tokens are for (RFC 8707). */
   resource: string
 }

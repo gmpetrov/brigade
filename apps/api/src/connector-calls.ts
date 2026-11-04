@@ -631,6 +631,18 @@ export async function authorisedFetch(
   let credential = await openSecret<GoogleCredential | McpCredential>(db, scope, secretId)
   // A Stripe account connected with a key, before Brigade signed in to Stripe: Stripe's MCP
   // server hides customers' details from keys, so its owner signs in again.
+  // A key pasted for an App that takes keys beside its OAuth (RevenueCat): a Bearer token.
+  if ('apiKey' in credential && connectors[connection.kind]?.mcp?.keys) {
+    const { apiKey } = credential as ApiKeyCredential
+    return async (url: string, init: RequestInit = {}) => {
+      const response = await fetch(url, {
+        ...init,
+        headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
+      })
+      if (response.status === 401) await needsReauth()
+      return response
+    }
+  }
   if ('apiKey' in credential) {
     await needsReauth()
     throw new Error('Brigade now signs in to Stripe instead of using a key: reconnect this account')

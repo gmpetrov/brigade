@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input'
 import { api, type Connection } from '@/lib/api'
 
 /**
- * Apps whose accounts sign in with a key the member pastes, not the provider's OAuth: what the
- * key is and where to make one.
+ * Apps whose accounts may also sign in with a key the member pastes, beside the provider's
+ * OAuth: what the key is and where to make one.
  */
-export const KEY_SIGN_IN: Partial<Record<Connection['kind'], { key: string; help: string }>> = {
+export const KEY_SIGN_IN: Partial<
+  Record<Connection['kind'], { key: string; article: string; help: string }>
+> = {
   revenuecat: {
     key: 'secret API v2 key',
+    article: 'a',
     help: 'Make one in RevenueCat under Project settings → API keys → New secret API key, with API version V2. Give it read access only, or read and write for the areas teammates may change.',
   },
 }

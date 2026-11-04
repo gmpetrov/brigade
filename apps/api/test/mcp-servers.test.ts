@@ -355,9 +355,11 @@ test("a key reconnects only its own project's account, by the project's id", () 
   assert.ok(keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-b', 'Production'))
 })
 
-test('RevenueCat signs in with a key, and its tools that change something are writes', () => {
-  assert.equal(revenuecat.auth, 'api_key')
-  assert.equal(revenuecat.mcp!.auth, 'api_key')
+test('RevenueCat signs in with its OAuth or a key, and its tools that change something are writes', () => {
+  // Its OAuth, and the keys accounts were connected with before it.
+  assert.equal(revenuecat.auth, 'mcp')
+  assert.equal(revenuecat.mcp!.auth, undefined)
+  assert.equal(revenuecat.mcp!.keys, true)
   const tools = Object.entries(revenuecat.mcp!.tools)
   assert.equal(tools.length, 129)
   const reads = /^(get|list|validate|preview|render)-/
