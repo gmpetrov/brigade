@@ -435,7 +435,7 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
       },
     )
     assert.ok('error' in out, 'refused')
-    assert.match((out as { error: string }).error, /A message from a person waits for you/)
+    assert.match((out as { error: string }).error, /A message from a person reached this thread during your turn/)
     assert.equal((await doneOf(t)).doneAt, null)
   })
 

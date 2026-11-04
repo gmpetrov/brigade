@@ -183,3 +183,54 @@ test("refused, it waits quietly and the next turn reads it; Brigade's own are no
   assert.match(next, /A wake-up/)
   await finish('c')
 })
+
+// Review of #678: a message must never reach the turn before one the thread got earlier and has
+// not read, or a correction would be read before what it corrects.
+test('a later message does not overtake one that could not go in: both wait, in order', async () => {
+  live.set('d', false)
+  send('d', 'Start the work')
+  await until(() => turns('d') === 1, 'the turn starts')
+  send('d', 'Rename the export to OLD_NAME')
+  // The first gives up waiting for the session (2 s here); the next one comes after that.
+  await sleep(2_300)
+  live.set('d', true)
+  send('d', 'Correction: use NEW_NAME instead')
+  await sleep(400)
+  assert.deepEqual(steered.get('d') ?? [], [], 'not ahead of the older request')
+  await finish('d')
+  await until(() => turns('d') === 2, 'the next turn reads both')
+  const next = prompts.get('d')!.at(-1)!
+  assert.ok(next.indexOf('OLD_NAME') >= 0 && next.indexOf('OLD_NAME') < next.indexOf('NEW_NAME'))
+  await finish('d')
+  await sleep(100)
+  assert.equal(turns('d'), 2)
+})
+
+test('a message to the turn waits behind an earlier one for two teammates', async () => {
+  send('e', 'Start the work')
+  await until(() => turns('e') === 1, 'the turn starts')
+  const mark = spec('e')
+  const nina = { ...mark, teammate: { ...mark.teammate, id: 'nina', name: 'Nina' } }
+  threads.handle({
+    type: 'thread.prompt',
+    commandId: 'e-both',
+    messageId: 'e-both',
+    thread: mark,
+    then: [nina],
+    memberId: 'm1',
+    attachments: [],
+    text: 'For both: rename the export to OLD_NAME',
+  } as never)
+  send('e', 'Correction: use NEW_NAME instead')
+  await sleep(300)
+  assert.deepEqual(steered.get('e') ?? [], [], 'not ahead of the message for both')
+  for (let turn = 2; turn <= 4; turn++) {
+    await finish('e')
+    await until(() => turns('e') === turn, `turn ${turn} starts`)
+  }
+  const told = prompts.get('e')!
+  assert.match(told[1]!, /OLD_NAME/)
+  assert.doesNotMatch(told[1]!, /NEW_NAME/)
+  assert.match(told[3]!, /NEW_NAME/)
+  await finish('e')
+})

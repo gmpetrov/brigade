@@ -1779,7 +1779,9 @@ export class Threads {
    * A person's message goes into the running turn as soon as it can take one: its session may
    * still be starting, or its prompt on its way. Until AUTO_STEER_WAIT_MS has gone by, the turn
    * ended, or the message was read, cancelled or steered meanwhile; then it simply waits for the
-   * next turn, which reads it with the others queued (joinQueued). Nothing is said of it.
+   * next turn, which reads it with the others queued (joinQueued). Nothing is said of it. Never
+   * ahead of a message the thread got before it and has not read (aheadOf): a correction does
+   * not reach the turn before what it corrects.
    */
   private async autoSteer(thread: Thread, message: Message) {
     const spec = message.specs[0]!
@@ -1791,12 +1793,30 @@ export class Threads {
     for (;;) {
       if (message.state !== 'queued' || thread.running?.turnId !== turnId || Date.now() >= until)
         return
-      if (seat.harness.forkable) {
+      const ahead = this.aheadOf(thread, message)
+      // One before it waits for a turn: this one waits with it, and is read after it.
+      if (ahead === 'waiting') return
+      if (ahead === 'clear' && seat.harness.forkable) {
         if (await this.steer(thread, message, true)) return
         if (++refused >= 5) return
       }
       await sleep(refused ? 1_000 : 250)
     }
+  }
+
+  /**
+   * What the messages the thread got before this one and has not read yet do: none (`clear`),
+   * one going into the turn now (`steering`), or one waiting for a turn, queued or held
+   * (`waiting`). A thread's unread messages are kept in the order they came (Thread.messages).
+   */
+  private aheadOf(thread: Thread, message: Message): 'clear' | 'steering' | 'waiting' {
+    let steering = false
+    for (const m of thread.messages.values()) {
+      if (m === message) break
+      if (m.state === 'steering') steering = true
+      else return 'waiting'
+    }
+    return steering ? 'steering' : 'clear'
   }
 
   /**
