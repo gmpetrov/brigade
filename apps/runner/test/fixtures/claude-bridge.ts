@@ -56,8 +56,17 @@ export async function bridgeTurn(
     toolHints?: Record<string, { readOnly?: boolean; alwaysLoad?: boolean }>
     /** A home kept from an earlier turn (the caller removes it), for what the bridge keeps there. */
     home?: string
+    /** The prompts of the session's turns, one after the other (default: one, "hello"). */
+    prompts?: string[]
+    /** MCP servers the harness gives Claude Code besides the host's tools. */
+    mcpServers?: Record<string, unknown>
   },
-): Promise<{ parts: { type: string; [key: string]: unknown }[]; record: any[] }> {
+): Promise<{
+  parts: { type: string; [key: string]: unknown }[]
+  record: any[]
+  /** Each turn's parts, in order. */
+  turns: { type: string; [key: string]: unknown }[][]
+}> {
   const home = options.home ?? (await mkdtemp(join(tmpdir(), 'claude-bridge-')))
   const record = join(home, 'record.jsonl')
   const work = join(home, 'work')
@@ -90,6 +99,7 @@ export async function bridgeTurn(
   const agent = new HarnessAgent({
     harness: createClaudeCode({
       auth: {},
+      ...(options.mcpServers ? { mcpServers: options.mcpServers as never } : {}),
       ...(options.toolHints ? { toolHints: options.toolHints } : {}),
     }),
     permissionMode: options.permissionMode,
@@ -109,12 +119,20 @@ export async function bridgeTurn(
       sandboxSession: session,
       ...(options.resumeFrom ? { resumeFrom: options.resumeFrom as never } : {}),
     })
-    const result = await agent.stream({ session: harnessSession, prompt: 'hello' })
-    const parts: { type: string; [key: string]: unknown }[] = []
-    for await (const part of result.fullStream) parts.push(part as never)
+    const turns: { type: string; [key: string]: unknown }[][] = []
+    for (const prompt of options.prompts ?? ['hello']) {
+      const result = await agent.stream({ session: harnessSession, prompt })
+      const parts: { type: string; [key: string]: unknown }[] = []
+      for await (const part of result.fullStream) parts.push(part as never)
+      turns.push(parts)
+    }
     await harnessSession.destroy()
     const lines = (await readFile(record, 'utf8').catch(() => '')).trim().split('\n')
-    return { parts, record: lines.filter(Boolean).map((line) => JSON.parse(line)) }
+    return {
+      parts: turns.flat(),
+      turns,
+      record: lines.filter(Boolean).map((line) => JSON.parse(line)),
+    }
   } finally {
     await sandbox.destroy()
     if (!options.home) await rm(home, { recursive: true, force: true })

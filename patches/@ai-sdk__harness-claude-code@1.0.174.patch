@@ -1,8 +1,8 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261bb4807b83 100644
+index 8a4d7c5..8dff892 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
-@@ -1,10 +1,17 @@
+@@ -1,10 +1,19 @@
  import { appendFile, mkdir, writeFile } from "node:fs/promises";
 -import { existsSync, readFileSync } from "node:fs";
 -import { randomUUID } from "node:crypto";
@@ -16,13 +16,28 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  import * as claudeAgentSdk from "@anthropic-ai/claude-agent-sdk";
  import * as mcpServerModule from "@modelcontextprotocol/sdk/server/mcp.js";
 +import { Server as McpLowLevelServer } from "@modelcontextprotocol/sdk/server/index.js";
-+import { CallToolRequestSchema, ErrorCode as McpErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
++import { CallToolRequestSchema, ErrorCode as McpErrorCode, ListToolsRequestSchema, McpError, ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
++import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
++import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 +import { getParseErrorMessage, safeParseAsync } from "@modelcontextprotocol/sdk/server/zod-compat.js";
 +import { toJsonSchemaCompat } from "@modelcontextprotocol/sdk/server/zod-json-schema-compat.js";
  import { isDeepStrictEqual } from "node:util";
  import { z } from "zod/v4";
  //#region ../harness/dist/bridge/index.js
-@@ -1127,6 +1134,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -279,7 +288,11 @@ async function runBridge(options) {
+ 	};
+ 	const writeStartConfig = async (start) => {
+ 		try {
+-			const serialized = JSON.stringify(start);
++			// Brigade: without the host's tools (6 MB on a workspace computer, at each turn): nothing reads them back.
++			const serialized = JSON.stringify(start.tools ? {
++				...start,
++				tools: start.tools.length
++			} : start);
+ 			await writeFile(startConfigPath, serialized);
+ 			if (!existsSync(rerunStartConfigPath)) await writeFile(rerunStartConfigPath, serialized);
+ 		} catch {}
+@@ -1127,6 +1140,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			id: block.id,
  			delta: event.delta.partial_json
  		});
@@ -31,7 +46,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  		return;
  	}
  	if (event.type === "content_block_stop") {
-@@ -1137,9 +1146,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -1137,9 +1152,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			type: "text-end",
  			id: block.id
  		});
@@ -45,7 +60,290 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  		});
  		else send({
  			type: "tool-input-end",
-@@ -1604,6 +1616,21 @@ function createPermissionSettings(input) {
+@@ -1482,8 +1500,281 @@ await runBridge({
+ 	bridgeType: "claude-code",
+ 	bridgeStateDir,
+ 	onStart: runTurn,
+-	onStop: () => lastClaudeSessionId == null ? {} : { claudeSessionId: lastClaudeSessionId }
++	onStop: () => {
++		disposeLiveQuery();
++		return lastClaudeSessionId == null ? {} : { claudeSessionId: lastClaudeSessionId };
++	},
++	onDestroy: () => disposeLiveQuery()
+ });
++/**
++* Brigade: Claude Code's process, kept from one turn to the next. A query per turn started
++* Claude Code anew each time: its binary, the session's resume from its file, its MCP servers
++* (the host's tools, 6 MB of them on a workspace computer, and the browser's relay), seconds
++* before each turn's prompt reached the model. A turn with nothing else to wait for once
++* answered (allow-all, no fork, no structured output, no deferred call) leaves the process
++* running, its input open, and the next turn whose options are the same gives it its prompt as
++* the next message. The process ends after BRIGADE_CLAUDE_KEEP_MS without a turn (0: never
++* kept), when the bridge stops, and with any turn that ends otherwise than answered (an error,
++* a stop, work still running in the background): the next turn starts a new one, as before.
++*/
++const CLAUDE_KEEP_MS = env.BRIGADE_CLAUDE_KEEP_MS != null && env.BRIGADE_CLAUDE_KEEP_MS !== "" && Number.isFinite(Number(env.BRIGADE_CLAUDE_KEEP_MS)) ? Number(env.BRIGADE_CLAUDE_KEEP_MS) : 12e4;
++let liveQuery;
++/** Brigade: the host's tools as served last, by their JSON's hash: a turn with the same converts none again. */
++let keptHostTools;
++/** Brigade: values pushed in, read in order by one reader; closed, it ends once read out. */
++function createMailbox() {
++	const items = [];
++	let wake;
++	let closed = false;
++	const notify = () => {
++		const w = wake;
++		wake = void 0;
++		w?.();
++	};
++	return {
++		push(item) {
++			if (closed) return;
++			items.push(item);
++			notify();
++		},
++		close() {
++			closed = true;
++			notify();
++		},
++		[Symbol.asyncIterator]() {
++			return {
++				next: async () => {
++					for (;;) {
++						if (items.length > 0) return {
++							value: items.shift(),
++							done: false
++						};
++						if (closed) return {
++							value: void 0,
++							done: true
++						};
++						await new Promise((resolve) => wake = resolve);
++					}
++				},
++				return: async () => ({
++					value: void 0,
++					done: true
++				})
++			};
++		}
++	};
++}
++/** Brigade: the longest a lazy MCP server's tool call may take (createLazyMcpServer). */
++const LAZY_MCP_CALL_MS = 30 * 6e4;
++/** Brigade: where a lazy MCP server's tool list is kept, under its key, in the user's own home. */
++function lazyToolsFile(key) {
++	return join(homedir(), ".ai-sdk-harness", ".mcp-tools", `${createHash("sha256").update(String(key)).digest("hex").slice(0, 16)}.json`);
++}
++/**
++* Brigade: an MCP server on stdio started at its first tool call, rather than with Claude Code's
++* process (the browser's relay, about 60 MB, in a turn that never browses). Served in the bridge,
++* it lists the tools the server listed last time (kept under its `lazy` key); with none kept, it
++* starts the server at once and keeps its list. Once started, everything goes to the server: its
++* list, its calls, its word that the list changed. `close` stops it.
++*/
++function createLazyMcpServer(name, config, env) {
++	const { lazy, type: _type, ...stdio } = config;
++	const file = lazyToolsFile(lazy);
++	let kept;
++	try {
++		const entry = JSON.parse(readFileSync(file, "utf8"));
++		if (Array.isArray(entry?.tools)) kept = entry.tools;
++	} catch {}
++	const server = new McpLowLevelServer({
++		name,
++		version: "1.0.0"
++	}, { capabilities: { tools: { listChanged: true } } });
++	let client;
++	// The client being started, closed with the server even before it is ready.
++	let starting;
++	let connecting;
++	let closed = false;
++	const connect = () => connecting ??= (async () => {
++		const transport = new StdioClientTransport({
++			command: stdio.command,
++			args: stdio.args ?? [],
++			env: {
++				...env,
++				...stdio.env
++			},
++			cwd: stdio.cwd ?? workdir,
++			stderr: "inherit"
++		});
++		const started = new McpClient({
++			name: "claude-code",
++			version: "1.0.0"
++		});
++		started.setNotificationHandler(ToolListChangedNotificationSchema, () => {
++			server.sendToolListChanged().catch(() => {});
++		});
++		starting = started;
++		// Any failure before it is ready (connecting, the first list, a close meanwhile) stops it.
++		try {
++			await started.connect(transport);
++			if (closed) throw new Error(`The ${name} MCP server was stopped.`);
++			if (kept == null) {
++				const tools = (await started.listTools()).tools;
++				if (closed) throw new Error(`The ${name} MCP server was stopped.`);
++				kept = tools;
++				try {
++					mkdirSync(dirname(file), {
++						recursive: true,
++						mode: 448
++					});
++					writeFileSync(file, JSON.stringify({ tools: kept }), { mode: 384 });
++				} catch {}
++			}
++		} catch (err) {
++			await started.close().catch(() => {});
++			throw err;
++		}
++		client = started;
++		return started;
++	})().catch((err) => {
++		connecting = void 0;
++		throw err;
++	}).finally(() => {
++		starting = void 0;
++	});
++	server.setRequestHandler(ListToolsRequestSchema, async () => client ? await client.listTools() : { tools: kept ?? (await connect(), kept) });
++	server.setRequestHandler(CallToolRequestSchema, async (request) => {
++		const started = await connect();
++		return await started.callTool(request.params, void 0, {
++			timeout: LAZY_MCP_CALL_MS,
++			resetTimeoutOnProgress: true
++		});
++	});
++	return {
++		config: {
++			type: "sdk",
++			name,
++			instance: server
++		},
++		close: () => {
++			closed = true;
++			void client?.close().catch(() => {});
++			void starting?.close().catch(() => {});
++		}
++	};
++}
++/** Brigade: end the kept process (liveQuery), and the turn reading it, if any. */
++function disposeLiveQuery(live = liveQuery) {
++	if (!live) return;
++	if (liveQuery === live) liveQuery = void 0;
++	live.dead = true;
++	clearTimeout(live.idleTimer);
++	live.input.close();
++	live.turn?.end();
++	live.turn = void 0;
++	try {
++		live.abort.abort();
++	} catch {}
++	void disposeQuery(live.q);
++	for (const close of live.closers ?? []) close();
++}
++/**
++* Brigade: a query whose input stays open between turns, read by one loop that hands each
++* message to the turn reading it (liveTurn). Claude Code at work with no turn to read it (it
++* took up a report by itself) is ended: nobody would see what it does.
++*/
++function openLiveQuery(queryArgs, key, hostTools, hookTarget) {
++	const input = createMailbox();
++	const abort = new AbortController();
++	const live = {
++		key,
++		input,
++		abort,
++		hostTools,
++		hookTarget,
++		dead: false,
++		turn: void 0,
++		idleTimer: void 0,
++		q: void 0
++	};
++	live.q = claudeSdk.query({
++		prompt: input,
++		options: {
++			...queryArgs.options,
++			abortController: abort
++		}
++	});
++	(async () => {
++		let failure;
++		try {
++			for await (const msg of live.q) {
++				if (typeof msg.session_id === "string" && msg.session_id.length > 0) lastClaudeSessionId = msg.session_id;
++				if (live.turn) live.turn.push(msg);
++				else if (msg.parent_tool_use_id == null && (msg.type === "assistant" || msg.type === "stream_event")) {
++					disposeLiveQuery(live);
++					return;
++				}
++			}
++		} catch (err) {
++			failure = err;
++		}
++		if (liveQuery === live) liveQuery = void 0;
++		live.dead = true;
++		clearTimeout(live.idleTimer);
++		live.turn?.end(live.abort.signal.aborted ? void 0 : failure ?? new Error("Claude Code's process ended during the turn."));
++		live.turn = void 0;
++	})();
++	return live;
++}
++/**
++* Brigade: what a turn reads of the kept process, as it read its own query: Claude Code's
++* messages from now until the turn lets go (return), and its interrupt.
++*/
++function liveTurn(live) {
++	const box = createMailbox();
++	let failure;
++	const view = {
++		push: (msg) => box.push(msg),
++		end: (err) => {
++			if (err != null) failure ??= err;
++			box.close();
++		}
++	};
++	live.turn = view;
++	clearTimeout(live.idleTimer);
++	const detach = () => {
++		if (live.turn === view) live.turn = void 0;
++		box.close();
++	};
++	const iterator = box[Symbol.asyncIterator]();
++	return {
++		view,
++		detach,
++		[Symbol.asyncIterator]() {
++			return {
++				next: async () => {
++					const result = await iterator.next();
++					if (result.done && failure != null) throw failure;
++					return result;
++				},
++				return: async () => {
++					detach();
++					return {
++						value: void 0,
++						done: true
++					};
++				}
++			};
++		},
++		return: async () => {
++			detach();
++			return {
++				value: void 0,
++				done: true
++			};
++		},
++		interrupt: () => live.q.interrupt()
++	};
++}
+ function createPermissionOptions(input) {
+ 	const permissionMode = input.start.permissionMode ?? "allow-all";
+ 	const inactiveNativeTools = new Set(input.inactiveNativeTools);
+@@ -1604,6 +1895,21 @@ function createPermissionSettings(input) {
  	};
  }
  /**
@@ -67,7 +365,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  * Claude Code picks a model's output limit, system prompt and default effort
  * from its own reading of the model id, and misreads AI Gateway ids with a
  * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
-@@ -1650,12 +1677,196 @@ function createApprovalPreToolUseHook(input) {
+@@ -1650,12 +1956,196 @@ function createApprovalPreToolUseHook(input) {
  		} };
  	};
  }
@@ -264,25 +562,34 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  async function runTurn(start, turn) {
  	const emit = (msg) => turn.emit(msg);
  	const abortCtl = new AbortController();
-@@ -1670,79 +1881,85 @@ async function runTurn(start, turn) {
+@@ -1669,85 +2159,112 @@ async function runTurn(start, turn) {
+ 	else turn.abortSignal.addEventListener("abort", onHostAbort, { once: true });
  	const streamEventState = createClaudeStreamEventState();
  	const mcpServers = { ...start.mcpServers };
- 	if (start.tools && start.tools.length > 0) {
+-	if (start.tools && start.tools.length > 0) {
 -		const server = new mcpModule.McpServer({
 -			name: "harness-tools",
 -			version: "1.0.0"
--		});
-+		// Brigade: the host's tools as JSON, not as zod. McpServer keeps a zod schema per tool for the
-+		// whole turn, and zod v4 objects are heavy: a thread's 883 App tools (3.8 MB of JSON) held
-+		// about 600 MB in each turn's bridge. Each tool's schema is converted once, as McpServer's
-+		// tools/list did (the same JSON), then let go, and kept as JSON for the next turns
-+		// (createToolSchemas); a tool's zod is built again only when it is called, to check its
-+		// input as McpServer did.
-+		const hostTools = /* @__PURE__ */ new Map();
-+		const schemas = createToolSchemas();
- 		for (const tool of start.tools) {
-+			if (hostTools.has(tool.name)) throw new Error(`Tool ${tool.name} is already registered`);
- 			const hints = start.toolHints?.[tool.name];
++	// Brigade: see liveQuery. Kept only where nothing in the turn waits on the host but its own
++	// tools and questions, which reach this turn through hookTarget and each tool's run.
++	const forkingSession = env.BRIGADE_FORK_SESSION === "1";
++	const keepable = CLAUDE_KEEP_MS > 0 && !forkingSession && (start.permissionMode ?? "allow-all") === "allow-all" && start.deferredToolUseId == null && start.responseFormat == null;
++	// A host tool's call, for this turn: its result comes from this turn's host.
++	const hostToolRun = (toolName) => async (...handlerArgs) => {
++		const [input, extra] = handlerArgs;
++		const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
++		const toolCallId = resolveMcpHandlerToolUseId({
++			state: streamEventState,
++			metadataToolUseId: typeof metadataToolCallId === "string" ? metadataToolCallId : void 0,
++			toolName,
++			input
++		}) ?? randomUUID();
++		streamEventState.mcpHandlerCalls.set(toolCallId, {
++			toolName,
++			input
+ 		});
+-		for (const tool of start.tools) {
+-			const hints = start.toolHints?.[tool.name];
 -			server.registerTool(tool.name, {
 -				description: tool.description ?? "",
 -				inputSchema: jsonSchemaToZodObject(tool.inputSchema),
@@ -306,62 +613,21 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
 -					emit({
 -						type: "tool-call",
 -						toolCallId,
-+			hostTools.set(tool.name, {
-+				definition: hostToolDefinition(tool, hints, schemas),
-+				inputSchema: tool.inputSchema,
-+				run: async (...handlerArgs) => {
-+					const [input, extra] = handlerArgs;
-+					const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-+					const toolCallId = resolveMcpHandlerToolUseId({
-+						state: streamEventState,
-+						metadataToolUseId: typeof metadataToolCallId === "string" ? metadataToolCallId : void 0,
-+						toolName: tool.name,
-+						input
-+					}) ?? randomUUID();
-+					streamEventState.mcpHandlerCalls.set(toolCallId, {
- 						toolName: tool.name,
+-						toolName: tool.name,
 -						input: JSON.stringify(input),
 -						providerExecuted: false
-+						input
- 					});
+-					});
 -					markWaitingOnHostInput({
 -						state: streamEventState,
 -						emit,
 -						toolUseId: toolCallId
-+					if (!streamEventState.emittedToolCallIds.has(toolCallId)) {
-+						streamEventState.emittedToolCallIds.add(toolCallId);
-+						emit({
-+							type: "tool-call",
-+							toolCallId,
-+							toolName: tool.name,
-+							input: JSON.stringify(input),
-+							providerExecuted: false
-+						});
-+						markWaitingOnHostInput({
-+							state: streamEventState,
-+							emit,
-+							toolUseId: toolCallId
-+						});
-+					}
-+					const { output, isError, toolResult } = await turn.requestToolResult(toolCallId).finally(() => {
-+						clearWaitingOnHostInput({
-+							state: streamEventState,
-+							toolUseId: toolCallId
-+						});
-+						if (!streamEventState.mcpToolCalls.has(toolCallId)) streamEventState.pendingStepToolUseIds.delete(toolCallId);
- 					});
+-					});
 -				}
 -				const { output, isError, toolResult } = await turn.requestToolResult(toolCallId).finally(() => {
 -					clearWaitingOnHostInput({
 -						state: streamEventState,
 -						toolUseId: toolCallId
-+					emit({
-+						type: "tool-result",
-+						toolCallId,
-+						toolName: tool.name,
-+						result: output ?? null,
-+						isError: !!isError
- 					});
+-					});
 -					if (!streamEventState.mcpToolCalls.has(toolCallId)) streamEventState.pendingStepToolUseIds.delete(toolCallId);
 -				});
 -				emit({
@@ -373,31 +639,15 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
 -				});
 -				if (toolResult != null) {
 -					const converted = convertHarnessToolModelOutput({ output: toolResult.output });
-+					if (toolResult != null) {
-+						const converted = convertHarnessToolModelOutput({ output: toolResult.output });
-+						return {
-+							content: converted.content.map((part) => part.type === "text" ? part : {
-+								type: "image",
-+								data: part.data,
-+								mimeType: part.mediaType
-+							}),
-+							isError: isError === true || converted.isError
-+						};
-+					}
- 					return {
+-					return {
 -						content: converted.content.map((part) => part.type === "text" ? part : {
 -							type: "image",
 -							data: part.data,
 -							mimeType: part.mediaType
 -						}),
 -						isError: isError === true || converted.isError
-+						content: [{
-+							type: "text",
-+							text: JSON.stringify(output ?? null)
-+						}],
-+						isError
- 					};
- 				}
+-					};
+-				}
 -				return {
 -					content: [{
 -						type: "text",
@@ -405,14 +655,102 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
 -					}],
 -					isError
 -				};
++		if (!streamEventState.emittedToolCallIds.has(toolCallId)) {
++			streamEventState.emittedToolCallIds.add(toolCallId);
++			emit({
++				type: "tool-call",
++				toolCallId,
++				toolName,
++				input: JSON.stringify(input),
++				providerExecuted: false
++			});
++			markWaitingOnHostInput({
++				state: streamEventState,
++				emit,
++				toolUseId: toolCallId
  			});
  		}
-+		schemas.save();
-+		const server = createHostToolsServer(hostTools);
- 		mcpServers["harness-tools"] = {
- 			type: "sdk",
- 			name: "harness-tools",
-@@ -1796,11 +2013,25 @@ async function runTurn(start, turn) {
+-		mcpServers["harness-tools"] = {
+-			type: "sdk",
+-			name: "harness-tools",
+-			instance: server
++		const { output, isError, toolResult } = await turn.requestToolResult(toolCallId).finally(() => {
++			clearWaitingOnHostInput({
++				state: streamEventState,
++				toolUseId: toolCallId
++			});
++			if (!streamEventState.mcpToolCalls.has(toolCallId)) streamEventState.pendingStepToolUseIds.delete(toolCallId);
++		});
++		emit({
++			type: "tool-result",
++			toolCallId,
++			toolName,
++			result: output ?? null,
++			isError: !!isError
++		});
++		if (toolResult != null) {
++			const converted = convertHarnessToolModelOutput({ output: toolResult.output });
++			return {
++				content: converted.content.map((part) => part.type === "text" ? part : {
++					type: "image",
++					data: part.data,
++					mimeType: part.mediaType
++				}),
++				isError: isError === true || converted.isError
++			};
++		}
++		return {
++			content: [{
++				type: "text",
++				text: JSON.stringify(output ?? null)
++			}],
++			isError
+ 		};
++	};
++	// Brigade: the host's tools, kept by their JSON's hash: a turn with the same converts none again,
++	// and only gives each its own run.
++	let hostTools;
++	let toolsKey = "";
++	// Brigade: a host that sent these tools in an earlier turn of this bridge (the turn's finish
++	// said it kept them, under `toolsHash`) sends only their hash.
++	if (start.tools == null && start.toolsHash != null) {
++		if (keptHostTools?.key !== start.toolsHash) throw new Error("Brigade: the bridge no longer has the host's tools; the next turn sends them again.");
++		toolsKey = start.toolsHash;
++		hostTools = keptHostTools.tools;
++		for (const [name, entry] of hostTools) entry.run = hostToolRun(name);
++	} else if (start.tools && start.tools.length > 0) {
++		// Brigade: the host's tools as JSON, not as zod. McpServer keeps a zod schema per tool for the
++		// whole turn, and zod v4 objects are heavy: a thread's 883 App tools (3.8 MB of JSON) held
++		// about 600 MB in each turn's bridge. Each tool's schema is converted once, as McpServer's
++		// tools/list did (the same JSON), then let go, and kept as JSON for the next turns
++		// (createToolSchemas); a tool's zod is built again only when it is called, to check its
++		// input as McpServer did.
++		toolsKey = start.toolsHash ?? createHash("sha256").update(JSON.stringify([start.tools, start.toolHints ?? null])).digest("base64url");
++		if (keptHostTools?.key === toolsKey) {
++			hostTools = keptHostTools.tools;
++			for (const [name, entry] of hostTools) entry.run = hostToolRun(name);
++		} else {
++			hostTools = /* @__PURE__ */ new Map();
++			const schemas = createToolSchemas();
++			for (const tool of start.tools) {
++				if (hostTools.has(tool.name)) throw new Error(`Tool ${tool.name} is already registered`);
++				const hints = start.toolHints?.[tool.name];
++				hostTools.set(tool.name, {
++					definition: hostToolDefinition(tool, hints, schemas),
++					inputSchema: tool.inputSchema,
++					run: hostToolRun(tool.name)
++				});
++			}
++			schemas.save();
++			keptHostTools = {
++				key: toolsKey,
++				tools: hostTools
++			};
++		}
+ 	}
+ 	const compaction = createCompactionLatch((event) => {
+ 		const hasOpenStep = streamEventState.stepOpen;
+@@ -1796,11 +2313,25 @@ async function runTurn(start, turn) {
  		deferredToolUseIds,
  		nativeToolCallNames: streamEventState.nativeToolCallNames
  	});
@@ -434,13 +772,25 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
 +	// Brigade: a side reply (the runner's side-replies) answers from a copy of the conversation it
 +	// resumes: Claude Code forks it under a new id and writes nothing, so the conversation it
 +	// came from, whose turn goes on, never sees it, and its folder keeps no session of its own.
-+	const forking = env.BRIGADE_FORK_SESSION === "1";
++	const forking = forkingSession;
 +	let draining = false;
 +	let drainTimer;
  	const questionPreToolUseHook = createQuestionPreToolUseHook({
  		turn,
  		emit,
-@@ -1818,6 +2049,7 @@ async function runTurn(start, turn) {
+@@ -1815,9 +2346,19 @@ async function runTurn(start, turn) {
+ 			toolUseId
+ 		})
+ 	});
++	// Brigade: the hooks a kept process calls go to the turn that reads it now (liveQuery).
++	const turnHooks = {
++		question: questionPreToolUseHook,
++		postCompact: async (input) => {
++			if (typeof input?.compact_summary === "string") compaction.onSummary(input.compact_summary);
++			return {};
++		}
++	};
++	let hookTarget = { current: turnHooks };
  	const queryArgs = {
  		prompt: queryInput.input,
  		options: {
@@ -448,7 +798,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
-@@ -1840,7 +2072,10 @@ async function runTurn(start, turn) {
+@@ -1840,17 +2381,21 @@ async function runTurn(start, turn) {
  			} } : {},
  			includePartialMessages: true,
  			hooks: {
@@ -458,10 +808,15 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
 +					...permissionMode === "allow-all" ? [] : [{ hooks: [approvalPreToolUseHook] }],
 +					{
  					matcher: "AskUserQuestion",
- 					hooks: [questionPreToolUseHook],
+-					hooks: [questionPreToolUseHook],
++					hooks: [(...hookArgs) => hookTarget.current.question(...hookArgs)],
  					...start.questionTimeoutMs !== void 0 ? { timeout: Math.ceil(start.questionTimeoutMs / 1e3) } : {}
-@@ -1851,6 +2086,10 @@ async function runTurn(start, turn) {
- 				}] }]
+ 				}],
+-				PostCompact: [{ hooks: [async (input) => {
+-					if (typeof input?.compact_summary === "string") compaction.onSummary(input.compact_summary);
+-					return {};
+-				}] }]
++				PostCompact: [{ hooks: [(...hookArgs) => hookTarget.current.postCompact(...hookArgs)] }]
  			},
  			...start.resumeSessionId ?? lastClaudeSessionId ? { resume: start.resumeSessionId ?? lastClaudeSessionId } : start.continue === true || !turn.firstTurn ? { continue: true } : {},
 +			...forking ? {
@@ -471,7 +826,69 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  			...permissionOptions,
  			...Object.keys(settings).length > 0 ? { settings } : {},
  			mcpServers,
-@@ -1916,6 +2155,11 @@ async function runTurn(start, turn) {
+@@ -1860,7 +2405,60 @@ async function runTurn(start, turn) {
+ 	};
+ 	let deferredToolUseId = start.deferredToolUseId;
+ 	let resumingDeferredCall = false;
+-	let q = deferredToolUseId == null ? claudeSdk.query(queryArgs) : void 0;
++	// Brigade: the host's tools, served anew for each new process (an MCP server serves one).
++	// Brigade: the lazy MCP servers' (createLazyMcpServer), stopped with the process they serve.
++	const queryClosers = [];
++	const serveHostTools = () => {
++		if (hostTools) mcpServers["harness-tools"] = {
++			type: "sdk",
++			name: "harness-tools",
++			instance: createHostToolsServer(hostTools)
++		};
++		for (const [name, config] of Object.entries(mcpServers)) if (config != null && typeof config === "object" && config.lazy != null && config.type !== "sdk") {
++			const lazy = createLazyMcpServer(name, config, {
++				...env,
++				...start.env
++			});
++			mcpServers[name] = lazy.config;
++			queryClosers.push(lazy.close);
++		}
++	};
++	let live;
++	let liveView;
++	if (keepable) {
++		const { hooks: _hooks, mcpServers: _mcpServers, abortSignal: _abortSignal, resume: _resume, continue: _continue, ...plain } = queryArgs.options;
++		const key = JSON.stringify([
++			plain,
++			start.mcpServers ?? null,
++			toolsKey
++		]);
++		const resumes = start.resumeSessionId ?? lastClaudeSessionId;
++		if (liveQuery && (liveQuery.dead || liveQuery.key !== key || liveQuery.turn || resumes !== lastClaudeSessionId)) disposeLiveQuery();
++		if (liveQuery) {
++			live = liveQuery;
++			live.hookTarget.current = turnHooks;
++			hookTarget = live.hookTarget;
++		} else {
++			serveHostTools();
++			live = liveQuery = openLiveQuery(queryArgs, key, hostTools, hookTarget);
++			live.closers = queryClosers;
++		}
++		liveView = liveTurn(live);
++		// Stopped for good (after its interrupt, a failure), the process goes with the turn; once
++		// answered, Claude Code only guesses the next message, and the turn lets it go on.
++		abortCtl.signal.addEventListener("abort", () => {
++			if (draining) liveView.detach();
++			else disposeLiveQuery(live);
++		}, { once: true });
++		// The turn's messages go in as the next of the kept process's.
++		void (async () => {
++			for await (const message of queryInput.input) live.input.push(message);
++		})().catch(() => {});
++	} else {
++		disposeLiveQuery();
++		serveHostTools();
++	}
++	let q = live ? liveView : deferredToolUseId == null ? claudeSdk.query(queryArgs) : void 0;
+ 	const hostAborted = new Promise((resolve) => {
+ 		if (abortCtl.signal.aborted) resolve(void 0);
+ 		abortCtl.signal.addEventListener("abort", () => resolve(void 0), { once: true });
+@@ -1916,6 +2514,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -483,7 +900,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -1935,6 +2179,74 @@ async function runTurn(start, turn) {
+@@ -1935,6 +2538,74 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -558,7 +975,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -1975,6 +2287,19 @@ async function runTurn(start, turn) {
+@@ -1975,6 +2646,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -578,7 +995,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -1986,8 +2311,43 @@ async function runTurn(start, turn) {
+@@ -1986,8 +2670,43 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -622,7 +1039,7 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2023,34 +2383,54 @@ async function runTurn(start, turn) {
+@@ -2023,34 +2742,64 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -677,6 +1094,16 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
  		await disposeQuery(q);
++		if (!live) for (const close of queryClosers) close();
++		// Brigade: answered, with nothing left running, the process waits for the next turn (liveQuery).
++		if (live) {
++			liveView.detach();
++			const answered = !live.dead && !emittedTerminalError && !holding() && (draining || queryInput.hasObservedResult && !turn.abortSignal.aborted && !abortCtl.signal.aborted);
++			if (answered) {
++				live.idleTimer = setTimeout(() => disposeLiveQuery(live), CLAUDE_KEEP_MS);
++				live.idleTimer.unref?.();
++			} else disposeLiveQuery(live);
++		}
  	}
  	if (emittedTerminalError) return;
 +	// Brigade: stopped by the host while it guessed, the turn is settled there already. A finish
@@ -685,6 +1112,19 @@ index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..f2b2b71f68e4345fde1c4720b3b6261b
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
+@@ -2059,9 +2808,10 @@ async function runTurn(start, turn) {
+ 			raw: "stop"
+ 		},
+ 		totalUsage: turnUsage ?? streamEventState.stepUsage ?? defaultUsage(),
+-		...totalCostUsd !== void 0 || lastClaudeSessionId !== void 0 ? { harnessMetadata: { "claude-code": {
++		...totalCostUsd !== void 0 || lastClaudeSessionId !== void 0 || hostTools ? { harnessMetadata: { "claude-code": {
+ 			...totalCostUsd !== void 0 ? { costUsd: totalCostUsd } : {},
+-			...lastClaudeSessionId !== void 0 ? { sessionId: lastClaudeSessionId } : {}
++			...lastClaudeSessionId !== void 0 ? { sessionId: lastClaudeSessionId } : {},
++			...hostTools && start.toolsHash != null ? { toolsKept: toolsKey } : {}
+ 		} } } : {}
+ 	});
+ }
 diff --git a/dist/bridge/package.json b/dist/bridge/package.json
 index c65fbaaa7a4718894640b601eeae6486b6cbb769..a4698ef9f52556b8d5bc2f23b793aca28abaac84 100644
 --- a/dist/bridge/package.json
@@ -1034,10 +1474,52 @@ index 719cf20d9b12324f7244c4e0d715ce6023d9e9d7..c95372126c1636f7025e9a7c4bb72078
  
    ajv@8.20.0:
 diff --git a/dist/index.js b/dist/index.js
-index 9e79280b197eef0b56c41c3fcabb0ca4a35b1a02..5d469da3577aa4282b543c5d0a4ed0c641a812a6 100644
+index 9e79280..065cff0 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -1075,9 +1075,13 @@ function createClaudeCode(settings = {}) {
+@@ -5,6 +5,7 @@ import { isRecord, safeParseJSON, tool } from "@ai-sdk/provider-utils";
+ import { WebSocket } from "ws";
+ import { z } from "zod/v4";
+ import { execFileSync } from "node:child_process";
++import { createHash } from "node:crypto";
+ import { readFileSync } from "node:fs";
+ import { homedir } from "node:os";
+ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+@@ -293,6 +294,7 @@ const skillOverridesSchema = z.record(z.string(), z.enum([
+ ]));
+ const startMessageSchema = harnessV1BridgeStartBaseSchema.extend({
+ 	prompt: harnessPromptContentSchema,
++	toolsHash: z.string().optional(),
+ 	instructions: z.string().optional(),
+ 	thinking: thinkingSchema,
+ 	effort: z.enum([
+@@ -328,6 +330,25 @@ const VERSION = "1.0.174";
+ //#endregion
+ //#region src/claude-code-harness.ts
+ /**
++* Brigade: the host's tools' hash, as the bridge keeps them (toolsPayload). Each schema is hashed
++* once per object: an agent's tools keep theirs from turn to turn.
++*/
++const schemaHashes = /* @__PURE__ */ new WeakMap();
++function hostToolsHash(tools, toolHints) {
++	const hash = createHash("sha256");
++	for (const t of tools) {
++		let schema = t.inputSchema != null && typeof t.inputSchema === "object" ? schemaHashes.get(t.inputSchema) : void 0;
++		if (schema == null) {
++			schema = createHash("sha256").update(JSON.stringify(t.inputSchema ?? null)).digest("base64url");
++			if (t.inputSchema != null && typeof t.inputSchema === "object") schemaHashes.set(t.inputSchema, schema);
++		}
++		hash.update(JSON.stringify([t.name, t.description ?? null, schema]));
++		hash.update("\0");
++	}
++	hash.update(JSON.stringify(toolHints ?? null));
++	return hash.digest("base64url");
++}
++/**
+ * Value to use in User-Agent and `x-client-app` headers.
+ */
+ const CLAUDE_CODE_CLIENT_APP = `ai-sdk-harness-claude-code/${VERSION}`;
+@@ -1075,9 +1096,13 @@ function createClaudeCode(settings = {}) {
  					token: coords.token
  				});
  				const attachChannel = new SandboxChannel({
@@ -1051,3 +1533,97 @@ index 9e79280b197eef0b56c41c3fcabb0ca4a35b1a02..5d469da3577aa4282b543c5d0a4ed0c6
  						onHello
  					}),
  					outboundSchema: outboundMessageSchema,
+@@ -1268,6 +1293,22 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 	let stopPromise;
+ 	let pendingResumeFlag = continueOnFirstPrompt;
+ 	let lastClaudeSessionId = resumeSessionId;
++	// Brigade: the host's tools the bridge said it keeps (a turn's finish, `toolsKept`), by their
++	// hash: a turn with the same sends only the hash, not the tools again (6 MB with many Apps).
++	let toolsKept;
++	const toolsPayload = (tools) => {
++		const list = (tools ?? []).map((t) => ({
++			name: t.name,
++			description: t.description,
++			inputSchema: t.inputSchema
++		}));
++		if (list.length === 0) return { tools: list };
++		const toolsHash = hostToolsHash(list, toolHints);
++		return toolsHash === toolsKept ? { toolsHash } : {
++			tools: list,
++			toolsHash
++		};
++	};
+ 	const wireTurn = (turnOpts) => {
+ 		let pendingResolve;
+ 		let pendingReject;
+@@ -1297,6 +1338,8 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 		const settleError = (err) => {
+ 			if (isSettled) return;
+ 			isSettled = true;
++			// Brigade: the next turn sends the tools again, in case the bridge lost them.
++			toolsKept = void 0;
+ 			userMessageSubmitter?.close(err);
+ 			for (const u of unsubs) u();
+ 			pendingReject(err);
+@@ -1324,6 +1367,8 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 		unsubs.push(channel.on("finish", (msg) => {
+ 			const metadata = msg.harnessMetadata?.["claude-code"]?.sessionId;
+ 			if (typeof metadata === "string" && metadata.length > 0) lastClaudeSessionId = metadata;
++			const kept = msg.harnessMetadata?.["claude-code"]?.toolsKept;
++			if (typeof kept === "string") toolsKept = kept;
+ 			forward(msg);
+ 			settleSuccess();
+ 		}));
+@@ -1377,12 +1422,16 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 			done
+ 		};
+ 	};
++	// Brigade: the skills the session last wrote. Writing them reads their manifest back first (on a
++	// cloud computer, a sudo as the teammate), at every turn, for skills that seldom change.
++	let writtenSkills;
+ 	const prepareTurn = async (turnOpts) => {
+ 		if (turnOpts.responseFormat?.type === "json" && turnOpts.responseFormat.schema == null) throw new HarnessCapabilityUnsupportedError({
+ 			message: "Harness 'claude-code' requires a JSON schema for structured output.",
+ 			harnessId: "claude-code"
+ 		});
+-		await writeSkills({
++		const skillsKey = JSON.stringify(turnOpts.skills ?? []);
++		if (skillsKey !== writtenSkills) await writeSkills({
+ 			sandbox,
+ 			homePath: sandboxHomeDir,
+ 			skillsDir: ".claude/skills",
+@@ -1391,7 +1440,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 			invalidSkillNameMessage: ({ name }) => `Invalid Claude Code skill name: ${name}`,
+ 			invalidSkillFilePathMessage: ({ skillName, filePath }) => `Invalid Claude Code skill file path for ${skillName}: ${filePath}`,
+ 			trailingNewline: true
+-		});
++		}).then(() => writtenSkills = skillsKey);
+ 		return wireTurn({
+ 			emit: turnOpts.emit,
+ 			abortSignal: turnOpts.abortSignal
+@@ -1406,11 +1455,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 			const startMessage = {
+ 				type: "start",
+ 				prompt: extractHarnessPromptContent({ prompt: promptOpts.prompt }),
+-				tools: (promptOpts.tools ?? []).map((t) => ({
+-					name: t.name,
+-					description: t.description,
+-					inputSchema: t.inputSchema
+-				})),
++				...toolsPayload(promptOpts.tools),
+ 				...promptOpts.responseFormat == null ? {} : { responseFormat: promptOpts.responseFormat },
+ 				...promptOpts.instructions ? { instructions: promptOpts.instructions } : {},
+ 				model: promptOpts.model,
+@@ -1446,11 +1491,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 				channel.send({
+ 					type: "start",
+ 					prompt: "Continue.",
+-					tools: (continueOpts.tools ?? []).map((t) => ({
+-						name: t.name,
+-						description: t.description,
+-						inputSchema: t.inputSchema
+-					})),
++					...toolsPayload(continueOpts.tools),
+ 					...continueOpts.responseFormat == null ? {} : { responseFormat: continueOpts.responseFormat },
+ 					...continueOpts.instructions ? { instructions: continueOpts.instructions } : {},
+ 					model: continueOpts.model,

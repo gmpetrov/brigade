@@ -13,6 +13,7 @@ import { createCodex } from '@ai-sdk/harness-codex'
 import {
   ATTACHMENT_MAX,
   CODEX_DEFAULT_MODEL,
+  COMPLETE_THREAD_TOOL,
   LIBRARY_FILE_MAX,
   type AccountRef,
   type AgentEvent,
@@ -107,6 +108,7 @@ import {
   appTools,
   askUserTool,
   computerUseTools,
+  CATALOG_TOOL,
   connectorTools,
   credentialTools,
   doneTools,
@@ -259,6 +261,20 @@ const ASKED =
 /** What Codex may read of a thread's AGENTS.md (its own default is 32 KiB). */
 const INSTRUCTIONS_MAX_BYTES = 256 * 1024
 
+/**
+ * Brigade's own tools Claude Code always has loaded (the rest it finds through tool search): small,
+ * and used in most turns. A name the thread has no tool of is ignored.
+ */
+const ALWAYS_LOADED = [
+  COMPLETE_THREAD_TOOL,
+  OPEN_TICKET_TOOL,
+  SHOW_WIDGET_TOOL,
+  WIDGET_GUIDE_TOOL,
+  'report',
+  'complete_task',
+  'search_workspace',
+]
+
 /** The teammate's model for the harness; none leaves Claude Code on the account's own. */
 function withModel(teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>) {
   const model = runModel(teammate.harness, teammate.model)
@@ -282,6 +298,10 @@ function createAgent(
   // account's token from the environment if it has one, else the login in its
   // config directory.
   const settings = { auth: {}, mcpServers }
+  // Connector tools grow with each account connected; Codex loads them on demand.
+  const apps = connectorTools(spec.connectors, callConnector, {
+    defer: spec.teammate.harness === 'codex',
+  })
   const codex = spec.teammate.harness === 'codex'
   const chief = spec.teammate.kind === 'chief'
   // The thread's effort; none leaves each CLI on its own default.
@@ -296,13 +316,23 @@ function createAgent(
     : createClaudeCode({
         ...settings,
         ...(effort ? { effort } : {}),
-        // Never deferred behind tool search: a card comes right before the answer, with no tool
-        // load between.
-        ...(chief ? { toolHints: { [PROPOSE_TEAM_TOOL]: { alwaysLoad: true } } } : {}),
+        // Never deferred behind tool search: the tools that end most turns (a ticket, a card, the
+        // thread done, a child's report) come right before the answer, with no tool load between.
+        // Each load is a model round trip of its own (about 2 s; 538 in 928 turns before these).
+        toolHints: Object.fromEntries(
+          [
+            ...ALWAYS_LOADED,
+            ...(chief ? [PROPOSE_TEAM_TOOL] : []),
+            // A big App's catalog (catalogTools): a few small tools, found then called, without a
+            // tool search before them.
+            ...Object.entries(apps)
+              .filter(([, t]) => (t as unknown as Record<symbol, unknown>)[CATALOG_TOOL])
+              .map(([name]) => name),
+          ].map((name) => [name, { alwaysLoad: true }]),
+        ),
       })
   const tools = {
-    // Connector tools grow with each account connected; Codex loads them on demand.
-    ...connectorTools(spec.connectors, callConnector, { defer: codex }),
+    ...apps,
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),
@@ -1860,7 +1890,13 @@ export class HarnessThread {
       this.spec,
       (call) => this.callWithFiles(call),
       credentials,
-      browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
+      browser && tabsFile
+        ? {
+            browser: browserMcpServer(browser, tabsFile, {
+              lazy: this.spec.teammate.harness !== 'codex',
+            }),
+          }
+        : {},
       {
         access: this.spec.library,
         folders: this.spec.libraryFolders,

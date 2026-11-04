@@ -318,9 +318,21 @@ export const threadTabsFile = (user: string, sessionId: string) =>
  * Claude Code and Codex use natively. It reaches the browser through a relay
  * that gives each thread its own tabs.
  */
-export const browserMcpServer = (port: number, tabsFile: string) => ({
+/**
+ * The thread's browser MCP server: the relay to its teammate's browser. `lazy` (Claude Code's
+ * bridge, createLazyMcpServer): the bridge lists the relay's tools as it listed them last time,
+ * under this key, and starts the relay at the turn's first browser tool call, not with Claude
+ * Code's process (about 60 MB in a turn that never browses). Codex's config takes no such key.
+ */
+export const browserMcpServer = (
+  port: number,
+  tabsFile: string,
+  options: { lazy?: boolean } = {},
+) => ({
   command: process.execPath,
   args: [RELAY, String(port), tabsFile, PLAYWRIGHT_MCP],
+  // The relay and Playwright's server, as installed: another version may list other tools.
+  ...(options.lazy ? { lazy: `browser\0${process.execPath}\0${RELAY}\0${PLAYWRIGHT_MCP}` } : {}),
 })
 
 /**

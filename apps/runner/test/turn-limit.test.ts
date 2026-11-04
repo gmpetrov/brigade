@@ -19,6 +19,7 @@ const home = await mkdtemp(join(tmpdir(), 'brigade-turn-limit-'))
 process.env.BRIGADE_HOME = home
 process.env.BRIGADE_TURN_SETTLE_MS = '150'
 process.env.BRIGADE_TURN_RAISE_MS = '300'
+process.env.BRIGADE_BACKGROUND_PARK_MS = '200'
 await mkdir(join(home, 'state'), { recursive: true })
 const { Threads } = await import('../src/threads.js')
 
@@ -38,6 +39,8 @@ test.after(async () => {
 function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   const events: { sessionId: string; event: AgentEvent; at: number }[] = []
   const ends = new Map<string, () => void>()
+  /** The threads whose idle session parked, in order. */
+  const parked: string[] = []
   const threads = new Threads({
     concurrency,
     emit: (sessionId, event) => events.push({ sessionId, event, at: Date.now() }),
@@ -54,9 +57,11 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   } as unknown as ConstructorParameters<typeof Threads>[0])
   made.push(threads)
   ;(threads as unknown as { harness: (thread: unknown, spec: ThreadSpec) => unknown }).harness = (
-    _,
+    thread,
     spec,
   ) => {
+    const harnesses = (thread as { harnesses: Map<string, unknown> }).harnesses
+    if (harnesses.has('mark')) return harnesses.get('mark')
     const seat = {
       harness: {
         active: false,
@@ -64,7 +69,7 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
           await new Promise<void>((resolve) => ends.set(spec.sessionId, resolve))
           return { status: 'idle' }
         },
-        park: async () => undefined,
+        park: async () => void parked.push(spec.sessionId),
         backup: async () => undefined,
         awaitingPerson: async () => false,
         holdsMessages: async () => false,
@@ -81,13 +86,15 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
       told: new Set(),
     }
     seats.push(seat)
+    harnesses.set('mark', seat)
     return seat
   }
-  const message = (sessionId: string) =>
+  const message = (sessionId: string, extra: Partial<ThreadSpec> = {}) =>
     threads.handle({
       type: 'thread.prompt',
       commandId: 'c',
       thread: {
+        ...extra,
         sessionId,
         teammate: { id: 'mark', name: 'Mark', harness: 'claude-code' },
         teammates: [{ id: 'mark', name: 'Mark', harness: 'claude-code' }],
@@ -102,7 +109,7 @@ function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   const startedAt = (sessionId: string) =>
     events.find((e) => e.sessionId === sessionId && e.event.type === 'turn.started')?.at
   const end = (sessionId: string) => ends.get(sessionId)?.()
-  return { threads, events, message, startedAt, end }
+  return { threads, events, message, startedAt, end, parked }
 }
 
 test('past the first few, turns start one at a time, a moment apart', async () => {
@@ -148,6 +155,24 @@ test('short of memory past the first few, a turn waits until there is room', asy
   await sleep(5_200)
   assert.ok(startedAt('e'), 'it starts once there is room')
   for (const id of ['a', 'b', 'c', 'd', 'e']) end(id)
+})
+
+test('with few turns running, a turn waits for memory only after the guard stopped one', async () => {
+  let room = false
+  const { threads, message, startedAt, end } = setup(8, () => room)
+  message('a')
+  await sleep(60)
+  assert.ok(startedAt('a'), 'one turn starts though memory reads short')
+  threads.stoppedForMemory('a', 'the computer was stuck waiting for memory for 10 s')
+  end('a')
+  await sleep(30)
+  message('b')
+  await sleep(300)
+  assert.equal(startedAt('b'), undefined, 'after a stop, it waits for memory')
+  room = true
+  await sleep(5_200)
+  assert.ok(startedAt('b'), 'it starts once there is room')
+  end('b')
 })
 
 test('every turn kept waiting for memory says so, those behind the first too', async () => {
@@ -242,4 +267,72 @@ test('a cap lowered while a turn reads memory holds that turn back', async () =>
   await sleep(50)
   assert.equal(startedAt('m6'), undefined, 'five run, the cap is five')
   for (const id of [...ids, 'm6']) end(id)
+})
+
+test('idle sessions past the three latest park at once, and all of them when memory is short', async () => {
+  let room = true
+  const { message, startedAt, end, parked } = setup(8, () => room)
+  const ids = ['w1', 'w2', 'w3', 'w4', 'w5']
+  for (const id of ids) message(id)
+  await sleep(300)
+  for (const id of ids) assert.ok(startedAt(id), `${id} started`)
+  // They end one after the other: the two that ended first park, the three latest stay.
+  for (const id of ids) {
+    end(id)
+    await sleep(20)
+  }
+  await sleep(50)
+  assert.deepEqual(parked, ['w1', 'w2'])
+  // A turn that starts short of memory parks the idle ones left, not its own.
+  room = false
+  message('w5')
+  await sleep(100)
+  assert.deepEqual(parked.slice(2).sort(), ['w3', 'w4'])
+  end('w5')
+})
+
+test('a child thread waits for memory even alone, and its idle session parks soon, not kept warm', async () => {
+  let room = false
+  const { message, startedAt, end, parked } = setup(8, () => room)
+  message('child', { parent: { sessionId: 'parent' } } as never)
+  await sleep(300)
+  assert.equal(startedAt('child'), undefined, 'work in the background waits while memory is short')
+  // A person's turn goes ahead meanwhile.
+  message('person')
+  await sleep(100)
+  assert.ok(startedAt('person'), "a person's turn starts at once")
+  room = true
+  await sleep(5_200)
+  assert.ok(startedAt('child'), 'it starts once there is room')
+  end('child')
+  end('person')
+  // BRIGADE_BACKGROUND_PARK_MS is short here: the child's session parks, the person's stays.
+  await sleep(400)
+  assert.deepEqual(parked, ['child'])
+})
+
+test("a memory run waiting for memory does not hold a person's next message in its thread", async () => {
+  const { threads, events, message, end } = setup(8, () => false)
+  message('quiet')
+  await sleep(80)
+  end('quiet')
+  await sleep(40)
+  // The thread goes quiet with something to remember, while memory is short.
+  const internals = threads as unknown as {
+    threads: Map<string, { log: Promise<{ entries: unknown[] }> }>
+    memorize: (sessionId: string) => void
+    stopping: boolean
+  }
+  const log = await internals.threads.get('quiet')!.log
+  log.entries.push({ by: 'mark', name: 'Mark', text: 'An answer to remember.' })
+  internals.memorize('quiet')
+  await sleep(30)
+  message('quiet')
+  await sleep(150)
+  const starts = events.filter(
+    (e) => e.sessionId === 'quiet' && e.event.type === 'turn.started',
+  ).length
+  internals.stopping = true
+  assert.equal(starts, 2, "the person's turn starts while the memory run waits")
+  end('quiet')
 })

@@ -1122,7 +1122,16 @@ function approvalAsk(toolName: string) {
 
 function toolSummary(toolName: string, input: unknown) {
   const i = (input ?? {}) as Record<string, unknown>
-  const value = i.command ?? i.file_path ?? i.path ?? i.pattern ?? i.url ?? i.query ?? i.description
+  // An App catalog's call (<app>_run) reads as the operation it calls.
+  const value =
+    i.command ??
+    i.file_path ??
+    i.path ??
+    i.pattern ??
+    i.url ??
+    i.query ??
+    i.operation ??
+    i.description
   return typeof value === 'string' ? value : ''
 }
 
