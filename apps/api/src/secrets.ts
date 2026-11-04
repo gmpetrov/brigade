@@ -267,55 +267,92 @@ const isPlain = (value: unknown): value is Record<string, unknown> =>
 /**
  * A reply as it streams in (message.delta), each delta masked with the text before it: a
  * secret the harness sends over several deltas ("ghp_", then the rest) is masked whole. What
- * a delta ends with is held until a space or a line break says it is a whole word, so no
- * stored delta holds the start of a secret whose end has not come yet; the message.done that
- * follows holds the whole reply, masked. A reply cut short loses only its last word from its
- * deltas. One per message, kept by the hub (deltaStreams).
+ * a delta ends with is held until a space or a line break says it is a whole word, and a
+ * private key's block from its BEGIN line until its END line, so no stored delta holds the
+ * start of a secret whose end has not come yet; the message.done that follows holds the whole
+ * reply, masked. A reply cut short loses what was held from its deltas. One per message, kept
+ * by the hub (deltaStreams); one the hub lost (it slept, restarted, or had too many) starts
+ * again from the stored deltas, and drops the word it resumes in: its start was held, and lost.
  */
 export class MaskedStream {
-  /** The end of the reply's text so far, as the harness sent it: CONTEXT before what is held, and what is held. */
-  private raw = ''
+  /** The end of the reply's text so far: CONTEXT before what is held, and what is held. */
+  private raw: string
   /** Where in raw what is held starts. */
-  private held = 0
-  private lastSeq = 0
+  private held: number
+  private lastSeq: number
+  /** Resumed without what was held: the word under way is dropped. */
+  private resuming: boolean
+
+  /** `before`: the reply's stored deltas, when the stream resumes after `seq`. */
+  constructor(resumed?: { before: string; seq: number }) {
+    this.raw = resumed?.before.slice(-PEM_MAX) ?? ''
+    this.held = this.raw.length
+    this.lastSeq = resumed?.seq ?? 0
+    this.resuming = !!resumed
+  }
 
   /** The text to store for this delta: '' while it is held, or sent already (a delta sent again). */
   next(seq: number, text: string): string {
     if (seq <= this.lastSeq) return ''
     this.lastSeq = seq
     this.raw += text
+    if (this.resuming) {
+      const space = this.raw.slice(this.held).search(/\s/)
+      if (space < 0) {
+        this.held = this.raw.length
+        return ''
+      }
+      this.held += space
+      this.resuming = false
+    }
     const space = Math.max(
       this.raw.lastIndexOf(' '),
       this.raw.lastIndexOf('\n'),
       this.raw.lastIndexOf('\t'),
     )
-    const cut = this.raw.length - this.held > HOLD_MAX ? this.raw.length : space + 1
+    let cut = this.raw.length - this.held > HOLD_MAX ? this.raw.length : space + 1
+    // A private key's block open: held whole from its BEGIN line, its body masked once its END
+    // line comes (or it grows past any key's size).
+    const begin = this.openKey()
+    if (begin >= 0 && this.raw.length - begin <= PEM_MAX) cut = Math.min(cut, begin)
     if (cut <= this.held) return ''
-    // Masked with the text before it: a secret that started there (a key's header, a URL's
-    // scheme) is masked over what goes out now as well.
+    // Masked with the text before it: a secret that started there (a header, a URL's scheme)
+    // is masked over what goes out now as well. Where the two part, what follows goes out masked
+    // from there: text that went out stays out, but it was masked as well.
     const before = maskSecrets(this.raw.slice(0, this.held))
     const masked = maskSecrets(this.raw.slice(0, cut))
-    // Where they part, a secret that starts in what went out (a key's header) now covers it:
-    // what follows goes out masked from there. Text that went out stays out, but it held no
-    // secret: it was masked as well.
     let same = 0
     while (same < before.length && before[same] === masked[same]) same++
     const out = masked.slice(same)
-    // A private key's block open: from its header on, so that its next lines are masked too.
-    const begin = this.raw.lastIndexOf('-----BEGIN', cut)
-    const open =
-      begin >= 0 && begin > this.raw.lastIndexOf('-----END', cut) && cut - begin < PEM_MAX
-    const from = Math.max(0, open ? Math.min(begin, cut - CONTEXT) : cut - CONTEXT)
+    const from = Math.max(0, cut - CONTEXT)
     this.raw = this.raw.slice(from)
     this.held = cut - from
     return out
+  }
+
+  /** Where the private key block still open in raw starts (its BEGIN line, or what may be one); -1 when none. */
+  private openKey() {
+    const begin = this.raw.lastIndexOf('-----BEGIN')
+    if (begin < 0 || this.raw.indexOf('-----END', begin) >= 0) {
+      // Its first dashes, still coming.
+      const tail = this.raw.slice(-10)
+      const dashes = tail.indexOf('-')
+      return dashes >= 0 && '-----BEGIN'.startsWith(tail.slice(dashes))
+        ? this.raw.length - tail.length + dashes
+        : -1
+    }
+    const line = /^-----BEGIN(?: ([A-Z0-9 ]*)(-----)?)?/.exec(this.raw.slice(begin, begin + 80))!
+    // Its header whole: held only for a private key (a certificate holds no secret).
+    if (line[2]) return line[1]!.endsWith('PRIVATE KEY') ? begin : -1
+    // Still coming, or followed by what no header holds.
+    return begin + line[0].length === this.raw.length ? begin : -1
   }
 }
 
 /** How much text before a delta it is masked with: a URL, a header and its token. */
 const CONTEXT = 512
 
-/** The longest private key block masked across deltas: more than a 4096-bit RSA key's. */
+/** The longest private key block held across deltas: more than a 4096-bit RSA key's. */
 const PEM_MAX = 8192
 
 /** The longest text held back: a "word" longer than this goes out masked as it is. */
@@ -324,29 +361,45 @@ const HOLD_MAX = 8192
 /** Streams of the replies under way, by thread and message; the oldest dropped past this many. */
 const STREAMS_MAX = 500
 
+/** A reply's deltas as stored before `seq`, joined: a lost stream resumes from them. */
+export type StoredDeltas = (
+  message: { id: string; teammateId?: string },
+  seq: number,
+) => Promise<string | undefined>
+
 /**
  * Each message.delta's text masked as its stream reads it (MaskedStream), in seq order; a
- * message.done ends its stream. Other events as they are.
+ * message.done ends its stream. Other events as they are. A stream the hub does not have
+ * resumes from what `stored` finds of its reply, if anything.
  */
-export function maskDeltas<E extends { seq: number; event: { type: string } }>(
+export async function maskDeltas<E extends { seq: number; event: { type: string } }>(
   streams: Map<string, MaskedStream>,
   sessionId: string,
   events: E[],
-): E[] {
-  return events.map((e) => {
+  stored: StoredDeltas = async () => undefined,
+): Promise<E[]> {
+  const out: E[] = []
+  for (const e of events) {
     const event = e.event as { type: string; id?: string; text?: string; teammateId?: string }
-    if (event.type !== 'message.delta' && event.type !== 'message.done') return e
+    if (event.type !== 'message.delta' && event.type !== 'message.done') {
+      out.push(e)
+      continue
+    }
     const key = `${sessionId}:${event.teammateId ?? ''}:${event.id}`
     if (event.type === 'message.done') {
       streams.delete(key)
-      return e
+      out.push(e)
+      continue
     }
     let stream = streams.get(key)
     if (!stream) {
+      const before = await stored({ id: event.id ?? '', teammateId: event.teammateId }, e.seq)
+      stream = new MaskedStream(before === undefined ? undefined : { before, seq: e.seq - 1 })
       if (streams.size >= STREAMS_MAX) streams.delete(streams.keys().next().value!)
-      streams.set(key, (stream = new MaskedStream()))
+      streams.set(key, stream)
     }
     const text = stream.next(e.seq, event.text ?? '')
-    return text === event.text ? e : { ...e, event: { ...event, text } }
-  })
+    out.push(text === event.text ? e : { ...e, event: { ...event, text } })
+  }
+  return out
 }

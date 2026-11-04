@@ -548,10 +548,11 @@ async function insertEvents(
   // first, in order, each with the text before it (MaskedStream): a secret can span several.
   const streams = hub.local('delta-streams', () => new Map<string, MaskedStream>())
   const ordered = [...events].sort((a, b) => a.seq - b.seq)
-  const streamed = maskDeltas(
+  const streamed = await maskDeltas(
     streams,
     session.id,
     ordered.map(({ seq, event }) => ({ seq, event: storableJson(event) })),
+    (message, seq) => storedDeltas(session.id, message, seq),
   )
   const kept = await Promise.all(
     streamed.map(async ({ seq, event: storable }) => {
@@ -584,6 +585,35 @@ async function insertEvents(
       )
     }
   }
+}
+
+/**
+ * A reply's deltas stored before `seq`, joined (its last ones): a stream of them the hub lost
+ * resumes from there (secrets.ts, MaskedStream). Undefined when none is stored: a new reply.
+ * Once per reply the hub has not seen; most are new, one query each.
+ */
+async function storedDeltas(
+  sessionId: string,
+  message: { id: string; teammateId?: string },
+  seq: number,
+) {
+  const rows = await prisma.sessionEvent.findMany({
+    where: {
+      sessionId,
+      type: 'message.delta',
+      // Its deltas come one after the other: the last few thousand events hold them.
+      seq: { gte: seq - 2000, lt: seq },
+      data: { path: ['id'], equals: message.id },
+    },
+    orderBy: { seq: 'desc' },
+    take: 2000,
+    select: { data: true },
+  })
+  const texts = rows
+    .map((r) => r.data as { text?: string; teammateId?: string })
+    .filter((d) => (d.teammateId ?? '') === (message.teammateId ?? ''))
+    .map((d) => d.text ?? '')
+  return texts.length ? texts.reverse().join('') : undefined
 }
 
 /**

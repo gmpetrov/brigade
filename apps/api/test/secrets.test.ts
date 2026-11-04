@@ -298,26 +298,26 @@ describe('a reply streamed over several deltas', () => {
   const texts = (events: { event: { text?: string } }[]) => events.map((e) => e.event.text)
   const token = 'ghp_aB3cD5eF7gH9iJ2kL4mN6pQ8rS1tU0vWxY2z'
 
-  test('a token split in two deltas, in one batch or two: no part of it is stored', () => {
-    const one = maskDeltas(new Map(), 's', [
+  test('a token split in two deltas, in one batch or two: no part of it is stored', async () => {
+    const one = await maskDeltas(new Map(), 's', [
       delta(1, 'Here: ghp_'),
       delta(2, token.slice(4)),
       delta(3, ' done'),
     ])
     assert.equal(texts(one).join(''), 'Here: [redacted: a GitHub token] ')
     const streams = new Map<string, MaskedStream>()
-    const first = maskDeltas(streams, 's', [delta(1, 'Here: ghp_')])
-    const second = maskDeltas(streams, 's', [delta(2, token.slice(4))])
-    const third = maskDeltas(streams, 's', [delta(3, '\nNext')])
+    const first = await maskDeltas(streams, 's', [delta(1, 'Here: ghp_')])
+    const second = await maskDeltas(streams, 's', [delta(2, token.slice(4))])
+    const third = await maskDeltas(streams, 's', [delta(3, '\nNext')])
     const stored = texts([...first, ...second, ...third]).join('')
     assert.equal(stored, 'Here: [redacted: a GitHub token]\n')
     assert.ok(!stored.includes('aB3c') && !stored.includes('ghp_'))
   })
 
-  test('token by token, as a model streams: each piece of the secret is held, then masked', () => {
+  test('token by token, as a model streams: each piece of the secret is held, then masked', async () => {
     const text = `Use Authorization: Bearer r8_${r(32)} and postgres://u:${r(16)}@h/db then -----BEGIN RSA PRIVATE KEY-----\n${r(64)}\n${r(64, 3)}\n-----END RSA PRIVATE KEY----- ok `
     const pieces = text.match(/[\s\S]{1,3}/g)!
-    const out = maskDeltas(
+    const out = await maskDeltas(
       new Map(),
       's',
       pieces.map((p, i) => delta(i + 1, p)),
@@ -335,12 +335,12 @@ describe('a reply streamed over several deltas', () => {
       assert.ok(!stored.includes(piece.slice(0, 8)))
   })
 
-  test('a 4096-bit key’s block, streamed: no line of it is stored', () => {
+  test('a 4096-bit key’s block, streamed: no line of it is stored', async () => {
     const lines = Array.from({ length: 52 }, (_, i) => r(64, i + 11))
     const text = `Key:\n-----BEGIN RSA PRIVATE KEY-----\n${lines.join('\n')}\n-----END RSA PRIVATE KEY-----\nDone `
     const pieces = text.match(/[\s\S]{1,5}/g)!
     const stored = texts(
-      maskDeltas(
+      await maskDeltas(
         new Map(),
         's',
         pieces.map((p, i) => delta(i + 1, p)),
@@ -350,21 +350,90 @@ describe('a reply streamed over several deltas', () => {
     assert.match(stored, /\[redacted: a private key\]-----END RSA PRIVATE KEY-----\nDone $/)
   })
 
-  test('cut short before its end: only the held word is missing; plain text goes out as it comes', () => {
-    const out = maskDeltas(new Map(), 's', [delta(1, 'Hello the'), delta(2, 're, ghp_aB3c')])
+  test('a key with short lines: held from its BEGIN line, so its first line is never stored', async () => {
+    const lines = Array.from({ length: 8 }, (_, i) => r(32, i + 21))
+    const begin = '-----BEGIN PRIVATE KEY-----\n'
+    // Cut short after its first line: nothing of the body goes out.
+    const cut = await maskDeltas(new Map(), 's', [
+      delta(1, `Key: ${begin}`),
+      delta(2, `${lines[0]}\n`),
+    ])
+    assert.equal(texts(cut).join(''), 'Key: ')
+    const whole = await maskDeltas(new Map(), 's', [
+      delta(1, `Key: ${begin}`),
+      ...lines.map((l, i) => delta(i + 2, `${l}\n`)),
+      delta(20, '-----END PRIVATE KEY-----\nok '),
+    ])
+    const stored = texts(whole).join('')
+    for (const line of lines) assert.ok(!stored.includes(line), line)
+    assert.equal(
+      stored,
+      'Key: -----BEGIN PRIVATE KEY-----[redacted: a private key]-----END PRIVATE KEY-----\nok ',
+    )
+  })
+
+  test('a certificate, a public key and a Markdown rule go out as they come', async () => {
+    const cert = await maskDeltas(new Map(), 's', [
+      delta(1, '-----BEGIN CERTIFICATE-----\n'),
+      delta(2, `${r(64)}\n`),
+    ])
+    assert.equal(texts(cert).join(''), `-----BEGIN CERTIFICATE-----\n${r(64)}\n`)
+    const rule = await maskDeltas(new Map(), 's', [delta(1, 'Intro\n---'), delta(2, '\nNext ')])
+    assert.equal(texts(rule).join(''), 'Intro\n---\nNext ')
+  })
+
+  test('a stream the hub lost resumes from the stored deltas', async () => {
+    const bearer = `r8_${r(32)}`
+    // The hub slept between "Bearer " and its token: the token is masked with what was stored.
+    const stored = async () => 'Authorization: Bearer '
+    const after = await maskDeltas(new Map(), 's', [delta(2, `${bearer} ready `)], stored)
+    assert.ok(!texts(after).join('').includes(bearer.slice(3, 11)))
+    // It slept within a word, whose start it held: the rest of that word is dropped.
+    const within = await maskDeltas(
+      new Map(),
+      's',
+      [delta(5, `${token.slice(10)} is set `)],
+      async () => 'Token: ',
+    )
+    assert.deepEqual(texts(within), [' is set '])
+    // A reply nothing was stored of is a new one.
+    const fresh = await maskDeltas(new Map(), 's', [delta(1, 'Hi there ')], async () => undefined)
+    assert.deepEqual(texts(fresh), ['Hi there '])
+  })
+
+  test('a stream dropped for others resumes the same way', async () => {
+    const streams = new Map<string, MaskedStream>()
+    const stored = new Map<string, string>()
+    const loader = async (m: { id: string }) => stored.get(m.id)
+    const say = async (id: string, seq: number, text: string) => {
+      const out = texts(await maskDeltas(streams, 's', [delta(seq, text, id)], loader)).join('')
+      stored.set(id, (stored.get(id) ?? '') + out)
+      return out
+    }
+    await say('first', 1, 'Authorization: Bearer ')
+    for (let i = 0; i < 500; i++) await say(`other${i}`, 1, 'x ')
+    assert.ok(![...streams.keys()].some((k) => k.endsWith(':first')), 'dropped')
+    const bearer = `r8_${r(32)}`
+    assert.ok(!(await say('first', 2, `${bearer} ok `)).includes(bearer.slice(3, 11)))
+  })
+
+  test('cut short before its end: only the held word is missing; plain text goes out as it comes', async () => {
+    const out = await maskDeltas(new Map(), 's', [delta(1, 'Hello the'), delta(2, 're, ghp_aB3c')])
     assert.deepEqual(texts(out), ['Hello ', 'there, '])
   })
 
-  test('a delta sent again is not stored twice; a done ends its stream', () => {
+  test('a delta sent again is not stored twice; a done ends its stream', async () => {
     const streams = new Map<string, MaskedStream>()
-    assert.deepEqual(texts(maskDeltas(streams, 's', [delta(1, 'a b ')])), ['a b '])
-    assert.deepEqual(texts(maskDeltas(streams, 's', [delta(1, 'a b ')])), [''])
-    maskDeltas(streams, 's', [{ seq: 2, event: { type: 'message.done', id: 'm1', text: 'a b' } }])
+    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), ['a b '])
+    assert.deepEqual(texts(await maskDeltas(streams, 's', [delta(1, 'a b ')])), [''])
+    await maskDeltas(streams, 's', [
+      { seq: 2, event: { type: 'message.done', id: 'm1', text: 'a b' } },
+    ])
     assert.equal(streams.size, 0)
   })
 
-  test('replies of two messages stream apart', () => {
-    const out = maskDeltas(new Map(), 's', [
+  test('replies of two messages stream apart', async () => {
+    const out = await maskDeltas(new Map(), 's', [
       delta(1, 'ghp_', 'a'),
       delta(2, 'x y ', 'b'),
       delta(3, `${token.slice(4)} `, 'a'),

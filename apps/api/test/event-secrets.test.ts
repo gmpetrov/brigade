@@ -173,6 +173,26 @@ describe('secrets in stored events', { skip: !database && 'no database answers' 
       const streamed = deltas.map((r) => (r.data as { text: string }).text).join('')
       assert.equal(streamed, 'Your token: [redacted: a GitHub token] is ')
       assert.ok(!JSON.stringify(deltas).includes(github.slice(4, 12)), 'no part of it stored')
+      // The hub loses its streams (it slept) between a header and its token: the token is masked
+      // from the stored deltas.
+      const bearer = ['r8', 'Ab3Cd5Ef7Gh9iJ2kL4mN6pQ8rS1tU0vW'].join('_')
+      await say({
+        ...delta(6, 'Authorization: Bearer '),
+        event: { ...delta(6, '').event, id: 'two', text: 'Authorization: Bearer ' },
+      })
+      await conn.queue
+      hub.local('delta-streams', () => new Map()).clear()
+      await say({
+        ...delta(7, ''),
+        event: { ...delta(7, '').event, id: 'two', text: `${bearer} ok ` },
+      })
+      await conn.queue
+      const two = await db.sessionEvent.findMany({
+        where: { sessionId, seq: { in: [6, 7] } },
+        orderBy: { seq: 'asc' },
+      })
+      assert.equal(two.length, 2)
+      assert.ok(!JSON.stringify(two).includes(bearer.slice(3, 11)), 'the token is not stored')
     } finally {
       hub.broadcast = original
       for (const timer of conn.retries.values()) clearTimeout(timer)
