@@ -685,6 +685,21 @@ export const connections = new Hono<AppEnv>()
     }
     const account = await mcpAccount(server, keyed)
     if (!account) console.warn(`mcp connection of ${kind}: no account name`)
+    // A reconnect keeps the row's grants and name: only with a key of the same project, or
+    // teammates given that project would reach another one.
+    if (reconnect) {
+      const row = await db.connection.findFirst({
+        where: {
+          id: reconnect,
+          kind,
+          createdByMemberId: scope.memberId,
+          status: { not: 'removed' },
+        },
+      })
+      if (!row) throw new HTTPException(404, { message: 'Connection not found' })
+      const refused = keyReconnectRefusal(name, row.externalAccount, account)
+      if (refused) throw new HTTPException(400, { message: refused })
+    }
     const connection = await createConnection(
       scope,
       { kind, label: name, externalAccount: account },
@@ -1083,6 +1098,18 @@ async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType
   } catch {
     return null
   }
+}
+
+/**
+ * Why a key may not reconnect an account, or null: it must reach the same account the row
+ * names (a RevenueCat key, the same project). A key nobody can name cannot say it does.
+ */
+export function keyReconnectRefusal(app: string, row: string | null, key: string | null) {
+  if (!row || !key)
+    return `${app} did not say which account that key reaches: add it as another account instead`
+  if (row !== key)
+    return `That key reaches ${key}, not ${row}: add it as another account, or paste a key of ${row}`
+  return null
 }
 
 /** An App's MCP server as the dashboard shows it: never its client's secret. */

@@ -21,6 +21,7 @@ const { posthog, posthogAccountName } = await import('../src/connectors/posthog.
 const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
 const { ahrefs } = await import('../src/connectors/ahrefs.js')
 const { revenuecat, revenuecatAccountName } = await import('../src/connectors/revenuecat.js')
+const { keyReconnectRefusal } = await import('../src/routes/connections.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -321,6 +322,17 @@ test("a RevenueCat account shows as its key's project", () => {
   assert.equal(revenuecatAccountName({ items: [] }), null)
   assert.equal(revenuecatAccountName('Unauthorized'), null)
   assert.equal(revenuecatAccountName(null), null)
+})
+
+test("a key reconnects only its own project's account", () => {
+  // Project A's row keeps its name and grants: a key of Project B must not take its place.
+  assert.equal(keyReconnectRefusal('RevenueCat', 'Project A', 'Project A'), null)
+  assert.match(
+    keyReconnectRefusal('RevenueCat', 'Project A', 'Project B')!,
+    /reaches Project B, not Project A/,
+  )
+  assert.ok(keyReconnectRefusal('RevenueCat', 'Project A', null))
+  assert.ok(keyReconnectRefusal('RevenueCat', null, 'Project B'))
 })
 
 test('RevenueCat signs in with a key, and its tools that change something are writes', () => {
