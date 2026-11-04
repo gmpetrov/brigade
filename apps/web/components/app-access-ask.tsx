@@ -84,8 +84,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 
   dataforseo: 'mcp',
   ahrefs: 'mcp',
   expo: 'mcp',
-  // A key pasted in the ticket (app-key-form.tsx).
-  revenuecat: 'key',
+  revenuecat: 'mcp',
 }
 
 /**

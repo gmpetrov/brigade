@@ -342,6 +342,14 @@ test("a key reconnects only its own project's account, by the project's id", () 
     'projA,projZ',
   )
   assert.equal(revenuecatAccountId({ items: [] }), null)
+  // A list with more pages names only some of the projects: no identity to renew an account by.
+  assert.equal(
+    revenuecatAccountId({
+      ...projects({ id: 'projA1', name: 'A' }),
+      next_page: '/v2/projects?starting_after=projA1',
+    }),
+    null,
+  )
   assert.equal(revenuecatAccountId('Unauthorized'), null)
   // connection-a is Project A's row: a key reaching it (same) may reconnect it, no other may.
   assert.equal(
@@ -355,9 +363,11 @@ test("a key reconnects only its own project's account, by the project's id", () 
   assert.ok(keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-b', 'Production'))
 })
 
-test('RevenueCat signs in with a key, and its tools that change something are writes', () => {
-  assert.equal(revenuecat.auth, 'api_key')
-  assert.equal(revenuecat.mcp!.auth, 'api_key')
+test('RevenueCat signs in with its OAuth or a key, and its tools that change something are writes', () => {
+  // Its OAuth, and the keys accounts were connected with before it.
+  assert.equal(revenuecat.auth, 'mcp')
+  assert.equal(revenuecat.mcp!.auth, undefined)
+  assert.equal(revenuecat.mcp!.keys, true)
   const tools = Object.entries(revenuecat.mcp!.tools)
   assert.equal(tools.length, 129)
   const reads = /^(get|list|validate|preview|render)-/
