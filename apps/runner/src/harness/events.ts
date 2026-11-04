@@ -324,6 +324,41 @@ const DROPPED_RAW = new Set(['stream_event'])
 /** Longest guess at a person's next message kept: Claude Code's own are under 100 characters. */
 const SUGGESTION_CHARS = 300
 
+/**
+ * How often a reply's streamed text goes out while it is written: what came meanwhile goes as one
+ * message.delta. The stream gives a piece every few characters (12 on average), and each delta is
+ * an event, stored as a row of its own: 44 for a reply, two thirds of every thread's events.
+ * Grouped by 200 ms, 15 times fewer, and the reply still reads as it is written.
+ */
+export const DELTA_EVERY_MS = 200
+
+/**
+ * The harness's copy of a message (a sub-agent's, as Claude Code streams it) without the
+ * signatures of its thinking blocks: an encrypted blob only Anthropic's API reads, often
+ * longer than the thinking itself, that nothing in Brigade uses. The value as it was when it
+ * holds none.
+ */
+export function withoutSignatures(value: unknown): unknown {
+  const message = (value as { message?: { content?: unknown } } | null)?.message
+  const content = message?.content
+  if (!Array.isArray(content) || !content.some(signed)) return value
+  return {
+    ...(value as object),
+    message: {
+      ...message,
+      content: content.map((block) => {
+        if (!signed(block)) return block
+        const { signature: _, ...rest } = block as { signature: unknown }
+        return rest
+      }),
+    },
+  }
+}
+
+const signed = (block: unknown) =>
+  (block as { type?: unknown } | null)?.type === 'thinking' &&
+  typeof (block as { signature?: unknown }).signature === 'string'
+
 /** The bridge's word that the turn is answered and only Claude Code's guess is still to come. */
 export const answered = (event: AgentEvent) =>
   event.type === 'raw' &&
@@ -372,6 +407,9 @@ export class EventMapper {
   private readonly streams = new Map<string, MaskedStream>()
   /** answer_message calls recorded as the teammate's message: their result shows nothing. */
   private answers = new Set<string>()
+  /** Streamed text not sent yet (DELTA_EVERY_MS), with when its first piece came. */
+  private pending: { id: string; text: string; at: string } | undefined
+  private pendingTimer: ReturnType<typeof setTimeout> | undefined
 
   /**
    * Recognise Claude Code's answer to resuming a conversation it no longer has: it deletes
@@ -394,7 +432,7 @@ export class EventMapper {
   }
 
   constructor(
-    private readonly emit: (event: AgentEvent) => void,
+    private readonly send: (event: AgentEvent) => void,
     /**
      * Tool calls seen so far in the thread. Shared across turns: a call that
      * waited for approval finishes in the next turn, which needs its input.
@@ -416,6 +454,36 @@ export class EventMapper {
     private readonly closes = false,
   ) {}
 
+  /**
+   * Send the streamed text not sent yet, as one message.delta, masked (MaskedStream) as each of
+   * its pieces was. Done before any other event (emit), once DELTA_EVERY_MS passed, and by
+   * whoever reads the stream when it ends, whatever way it ended.
+   */
+  flush() {
+    clearTimeout(this.pendingTimer)
+    this.pendingTimer = undefined
+    const pending = this.pending
+    this.pending = undefined
+    if (pending?.text)
+      this.send({
+        at: pending.at,
+        type: 'message.delta',
+        id: pending.id,
+        text: pending.text,
+        masked: true,
+      })
+  }
+
+  /**
+   * Every event but streamed text goes out here, after the text not sent yet: events keep their
+   * order. Only parts that make an event send it: the stream's low-level echoes (DROPPED_RAW),
+   * which come between the pieces of a reply, do not.
+   */
+  private emit(event: AgentEvent) {
+    this.flush()
+    this.send(event)
+  }
+
   map(part: Part) {
     const at = new Date().toISOString()
     switch (part.type) {
@@ -429,7 +497,17 @@ export class EventMapper {
         if (!stream) this.streams.set(part.id, (stream = new MaskedStream(before)))
         const text = stream.next(part.text)
         if (!text) return
-        return this.emit({ at, type: 'message.delta', id: part.id, text, masked: true })
+        // Then grouped (DELTA_EVERY_MS): what goes out of it meanwhile, as one delta.
+        const pending = this.pending
+        if (pending && pending.id === part.id) {
+          pending.text += text
+          return
+        }
+        // Another block's text (two replies in a row): the first one's goes first.
+        this.flush()
+        this.pending = { id: part.id, text, at }
+        this.pendingTimer = setTimeout(() => this.flush(), DELTA_EVERY_MS)
+        return
       }
       case 'text-end': {
         this.streams.delete(part.id)
@@ -661,7 +739,7 @@ export class EventMapper {
           if (!text || text.startsWith('/')) return
           return this.emit({ at, type: 'message.suggested', text: text.slice(0, SUGGESTION_CHARS) })
         }
-        return this.emit({ at, type: 'raw', source: 'harness', value })
+        return this.emit({ at, type: 'raw', source: 'harness', value: withoutSignatures(value) })
       }
       // Stream lifecycle parts carry nothing a person needs to see.
       case 'start':

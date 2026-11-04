@@ -297,6 +297,7 @@ model Workspace {
   heldCalls             HeldCall[]
   runnerCommands        RunnerCommand[]
   specParts             SpecPart[]
+  eventDays             WorkspaceEventDay[]
   triggerDeliveries     TriggerDelivery[]
   projects              Project[]
   projectRepositories   ProjectRepository[]
@@ -631,6 +632,9 @@ model Session {
   choicesDismissedSeq  Int?
   /// Highest contiguous event sequence number stored.
   lastSeq              Int                @default(0)
+  /// Its events up to this one are kept cold, in the bucket (src/cold-events.ts): the heavy ones
+  /// among them (streamed text, tool calls, the harness's copies) are no longer in SessionEvent.
+  coldSeq              Int                @default(0)
   /// While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
   move                 Json?
   /// When it last came to its computer from another, from which (by name), and its last event then (ThreadSpec.moved).
@@ -701,6 +705,8 @@ model Session {
   /// Threads that follow it.
   followers            ThreadFollow[]     @relation("ThreadFollowed")
   folderBackups        FolderBackup[]
+  coldChunks           ColdEventChunk[]
+  eventVolume          ThreadEventVolume?
 
   /// The list items it works on (docs/lists.md).
   listItems ListItemThread[]
@@ -923,6 +929,62 @@ model SessionEvent {
   @@index([workspaceId, at])
   /// Thread lists count each thread's messages and answers by type.
   @@index([sessionId, type])
+}
+
+/// A run of a quiet thread's events kept in the bucket (src/cold-events.ts): every event from
+/// firstSeq to lastSeq, as JSON lines, gzipped, at coldEventsKey. The heavy ones went from
+/// SessionEvent in the transaction that recorded it; the others stay there too.
+model ColdEventChunk {
+  organizationId String
+  workspaceId    String
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  firstSeq       Int
+  lastSeq        Int
+  /// The run that wrote it, in its key (coldEventsKey): each run's copy has a key of its own.
+  attempt        String
+  /// Its events, and those of them no longer in SessionEvent.
+  events         Int
+  moved          Int
+  /// Its JSON lines, and the gzip the bucket holds.
+  bytes          Int
+  storedBytes    Int
+  createdAt      DateTime @default(now())
+
+  @@id([sessionId, firstSeq])
+  @@index([workspaceId, createdAt])
+}
+
+/// What a thread's events weigh as stored (their data's pg_column_size), counted as they come
+/// (src/event-volume.ts): the largest threads, without reading their events. A table of its own,
+/// as a BigInt in Session would go wherever a thread is sent as JSON, which cannot hold one.
+model ThreadEventVolume {
+  organizationId String
+  workspaceId    String
+  sessionId      String  @id
+  session        Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bytes          BigInt  @default(0)
+  /// The largest event's.
+  largest        Int     @default(0)
+
+  @@index([workspaceId, bytes])
+}
+
+/// What a workspace's threads wrote to SessionEvent in a day (UTC), counted as events are
+/// stored (src/event-volume.ts): its growth, without reading the events again.
+model WorkspaceEventDay {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  day            DateTime  @db.Date
+  events         Int       @default(0)
+  /// Of which streamed text (message.delta).
+  deltas         Int       @default(0)
+  /// Their data as stored (pg_column_size), and the largest one's.
+  bytes          BigInt    @default(0)
+  largest        Int       @default(0)
+
+  @@id([workspaceId, day])
 }
 
 /// What a harness spent for the workspace, in tokens: one row per stream of a teammate's turn

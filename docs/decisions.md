@@ -10,7 +10,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   workspace goes through `POST /api/workspaces/switch`, which checks membership. A fresh sign-in defaults to the first
   organization and workspace.
 - **Append-only logs** are enforced in PostgreSQL by triggers on `AuditEntry`, `SessionEvent` and `ConnectionCall`.
-  Rows go only when their workspace is deleted (cascade). `AuditEntry.workspaceId` is null for organization-level actions.
+  Rows go only when their workspace or thread is deleted (cascade), and `SessionEvent` rows also when the transaction
+  that records a chunk of a quiet thread's events, once the bucket holds it, removes those it moved (see "Cold
+  events"): it names the thread (`brigade.cold_session`), and the trigger lets go only rows a recorded chunk covers.
+  No row is ever changed. `AuditEntry.workspaceId` is null for organization-level actions.
 - **Runner link codes** reuse better-auth's `Verification` table (hashed code, 10 minutes, one use). Runner tokens are
   stored as SHA-256 hashes. Linking also records an `Account` ("Claude on <machine>") for the member; its status turns
   `ready` after a successful turn and `needs_sign_in` on an auth error. The credential is never seen.
@@ -21,6 +24,11 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   `turn.completed` → idle, `error` → failed), so it survives disconnects and replays.
 - **Event mapping.** Reasoning becomes `raw` with `source: "reasoning"`. Claude Code's `rate_limit_event` becomes
   `usage.updated` with 5-hour and 7-day utilization and reset times. Low-level `stream_event` echoes are dropped.
+  A reply's streamed text goes out every 200 ms (`DELTA_EVERY_MS` in `apps/runner/src/harness/events.ts`), as one
+  `message.delta` for what came meanwhile, and always before any later event: the stream gives a piece every 12
+  characters or so, and each delta is a row of its own (two thirds of all events before). The harness's copies of
+  sub-agents' messages (`raw`, `source: "harness"`) go out without their thinking blocks' signatures, encrypted
+  blobs only Anthropic's API reads.
 - **Permission mode.** `allow-all` on every computer: Brigade does not ask a person before an action unless the
   teammate opens a ticket (see "Tickets from teammates"), or its policy for connector writes says `ask`.
 - **Thread directory** on a member's machine: `~/.brigade/teammates/<teammate>/threads/<thread>/`. Repositories are
@@ -333,6 +341,36 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   `resolveTicket` (`apps/api/src/decide.ts`), answers tickets for both the Tickets page and the thread view.
 - **Status timeline and run log** (`apps/api/src/timeline.ts`) are computed on request from `SessionEvent`,
   `ConnectionCall`, `Ticket` and `AuditEntry`. A turn held by a cap has no events yet, so its ticket marks it blocked.
+- **Cold events** (`apps/api/src/cold-events.ts`, the `cold-events` job, every 10 minutes for 20 seconds at most). A
+  thread with no new event for 30 days (`Session.updatedAt`, not while starting or running) has its events kept cold:
+  in chunks of up to 1,000 events or about 4 MB of JSON (what a run holds to write one, measured on the events as text,
+  not as the database compresses them: a log repeated over 1 MB is 12 kB there), every event of a range as gzipped
+  JSON lines, in its files folder in the bucket (`coldEventsKey`, deleted with the thread), and the heavy ones leave
+  `SessionEvent`: streamed text, tool calls but those whose calls show what a thread made (`isOutputTool`) and its
+  reply and choices cards, and `raw` events from the harness or reasoning. The rest stays, so whatever reads them
+  there (lists, Home, a page's start and context, the timeline, open asks) reads them as before. `Session.coldSeq`
+  says how far the bucket holds the thread, and `ColdEventChunk` the chunks. A run reads where its chunk ends, then its
+  events, and leaves the thread to another run when they changed in between (another kept them cold). It puts the
+  chunk in the bucket under a key of its own (`attempt`), so that a run that lost the race never overwrites the
+  winner's copy, and checks its size there. Then one transaction records it, moves `coldSeq` over it (only from the
+  value it read: a run that lost the race stops, and removes its copy) and removes its heavy events. A copy goes only when
+  its transaction surely rolled back, never once its COMMIT was sent: a lost answer leaves the outcome unknown, even to
+  a read made just after, and a copy nothing refers to does no harm. One thread that fails holds back none of the
+  others in the run. Pages, the replay
+  to a dashboard and the run log read events with `threadEvents`: up to `coldSeq` from the chunks, a line at a time,
+  in batches of at most 500 events or about 4 MB; after it from the database, read again from the bucket when a chunk
+  was recorded while a batch was being read (also one that came back empty). A chunk the bucket no longer has, or
+  cannot read, is shown as the database holds it: its messages and turns without their work, and its operators are
+  alerted (`job:cold-events`). Events a runner sends again at or below `coldSeq` (an ack lost long ago) are not stored
+  again. A thread that comes back writes its new events to the database, and they go cold in their turn once it is
+  quiet again. Then the database grows with the threads at work, and with the light events, not with every event ever
+  written: on Nov 4, 2026, those that go were 93% of the rows and 94% of their data (22 MB stayed of about 390 MB).
+- **Event volume** (`apps/api/src/event-volume.ts`). What threads write is counted as their checkpoint moves over
+  it, once per event: `WorkspaceEventDay` by workspace and UTC day (events, deltas among them, bytes as stored and the
+  largest), `ThreadEventVolume` by thread (in a table of its own: a `BigInt` in `Session` would go wherever a thread
+  is sent as JSON). The counting is not awaited and never holds a thread back; a failure leaves those events
+  uncounted. The database's monthly check reads growth and the largest threads from them instead of reading every
+  event again. The days before it were filled from the events' own times when it shipped.
 - **Triggers** (`apps/api/src/triggers.ts`, `routes/triggers.ts`). Each connector declares a catalog of events
   that can start a thread (Gmail: email received; Stripe: payment received or failed, new or canceled
   subscription, dispute, refund; GitHub: issue, pull request, review request, comment, push; Calendar: event

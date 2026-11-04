@@ -1,8 +1,9 @@
 // A dashboard's messages, as its workspace's hub takes them (src/hub/workspace-hub.ts): it
 // follows threads (their events replayed, then live), says when it is in view, and relays
 // takeover terminals to the runner that runs their shell.
-import { BrowserToApi, type SequencedEvent } from '@brigade/contracts'
+import { BrowserToApi } from '@brigade/contracts'
 import { audit } from '../audit.js'
+import { sequenced, threadEvents } from '../cold-events.js'
 import { prisma, scoped } from '../db.js'
 import { historyContext, pageStart } from '../thread-history.js'
 import { specFor } from '../thread-spec.js'
@@ -60,23 +61,9 @@ export async function onBrowserMessage(hub: WorkspaceHub, conn: BrowserConn, raw
     send({ type: 'history', sessionId: session.id, firstSeq, context, lastSeq: session.lastSeq })
     afterSeq = firstSeq - 1
   }
-  for (;;) {
-    const rows = await prisma.sessionEvent.findMany({
-      where: { sessionId: session.id, seq: { gt: afterSeq, lte: session.lastSeq } },
-      orderBy: { seq: 'asc' },
-      take: 500,
-    })
-    if (rows.length === 0) break
-    send({
-      type: 'events',
-      events: rows.map((r) => ({
-        sessionId: r.sessionId,
-        seq: r.seq,
-        event: r.data as unknown as SequencedEvent['event'],
-      })),
-    })
-    afterSeq = rows.at(-1)!.seq
-  }
+  // Those kept cold from the bucket (src/cold-events.ts), a batch at a time: never held whole.
+  for await (const rows of threadEvents(session.id, afterSeq + 1, session.lastSeq + 1))
+    send({ type: 'events', events: rows.map(sequenced) })
   // And its status now, and its computer's: a dashboard that was away (a phone asleep) missed their changes.
   const now = await prisma.session.findUnique({
     where: { id: session.id },

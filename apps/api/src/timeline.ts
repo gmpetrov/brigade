@@ -1,5 +1,6 @@
 // A teammate's status timeline and a thread's run log. Both are read from the
 // event, call and audit logs; neither has a store of its own.
+import { LAST_SEQ, threadEvents, type StoredEvent } from './cold-events.js'
 import type { ScopedDb } from './db.js'
 
 export type TimelineState = 'working' | 'waiting' | 'blocked' | 'done'
@@ -169,10 +170,7 @@ export async function teammateTimeline(db: ScopedDb, teammateId: string, from: D
  */
 export async function runLog(db: ScopedDb, sessionId: string) {
   const [events, calls, tickets] = await Promise.all([
-    db.sessionEvent.findMany({
-      where: { sessionId, type: { notIn: ['message.delta'] } },
-      orderBy: { seq: 'asc' },
-    }),
+    allEvents(sessionId),
     db.connectionCall.findMany({
       where: { sessionId },
       include: { connection: { select: { label: true, externalAccount: true, kind: true } } },
@@ -254,4 +252,12 @@ export async function runLog(db: ScopedDb, sessionId: string) {
   ]
   entries.sort((a, b) => a.at.localeCompare(b.at) || (a.seq ?? 0) - (b.seq ?? 0))
   return { entries, members: names }
+}
+
+/** A thread's every event but its streamed text, those kept cold from the bucket too. */
+async function allEvents(sessionId: string) {
+  const events: StoredEvent[] = []
+  for await (const rows of threadEvents(sessionId, 1, LAST_SEQ, { without: ['message.delta'] }))
+    events.push(...rows)
+  return events
 }

@@ -425,6 +425,9 @@ export const ModelName = {
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
+  ColdEventChunk: 'ColdEventChunk',
+  ThreadEventVolume: 'ThreadEventVolume',
+  WorkspaceEventDay: 'WorkspaceEventDay',
   TokenUsage: 'TokenUsage',
   Account: 'Account',
   PullRequest: 'PullRequest',
@@ -509,7 +512,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2582,6 +2585,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SessionEventCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SessionEventCountAggregateOutputType> | number
+        }
+      }
+    }
+    ColdEventChunk: {
+      payload: Prisma.$ColdEventChunkPayload<ExtArgs>
+      fields: Prisma.ColdEventChunkFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ColdEventChunkFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ColdEventChunkFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        findFirst: {
+          args: Prisma.ColdEventChunkFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ColdEventChunkFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        findMany: {
+          args: Prisma.ColdEventChunkFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>[]
+        }
+        create: {
+          args: Prisma.ColdEventChunkCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        createMany: {
+          args: Prisma.ColdEventChunkCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ColdEventChunkCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>[]
+        }
+        delete: {
+          args: Prisma.ColdEventChunkDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        update: {
+          args: Prisma.ColdEventChunkUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        deleteMany: {
+          args: Prisma.ColdEventChunkDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ColdEventChunkUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ColdEventChunkUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>[]
+        }
+        upsert: {
+          args: Prisma.ColdEventChunkUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ColdEventChunkPayload>
+        }
+        aggregate: {
+          args: Prisma.ColdEventChunkAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateColdEventChunk>
+        }
+        groupBy: {
+          args: Prisma.ColdEventChunkGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ColdEventChunkGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ColdEventChunkCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ColdEventChunkCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThreadEventVolume: {
+      payload: Prisma.$ThreadEventVolumePayload<ExtArgs>
+      fields: Prisma.ThreadEventVolumeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadEventVolumeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadEventVolumeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadEventVolumeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadEventVolumeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        findMany: {
+          args: Prisma.ThreadEventVolumeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>[]
+        }
+        create: {
+          args: Prisma.ThreadEventVolumeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        createMany: {
+          args: Prisma.ThreadEventVolumeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadEventVolumeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadEventVolumeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        update: {
+          args: Prisma.ThreadEventVolumeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadEventVolumeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadEventVolumeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadEventVolumeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadEventVolumeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadEventVolumePayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadEventVolumeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadEventVolume>
+        }
+        groupBy: {
+          args: Prisma.ThreadEventVolumeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadEventVolumeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadEventVolumeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadEventVolumeCountAggregateOutputType> | number
+        }
+      }
+    }
+    WorkspaceEventDay: {
+      payload: Prisma.$WorkspaceEventDayPayload<ExtArgs>
+      fields: Prisma.WorkspaceEventDayFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WorkspaceEventDayFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WorkspaceEventDayFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        findFirst: {
+          args: Prisma.WorkspaceEventDayFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WorkspaceEventDayFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        findMany: {
+          args: Prisma.WorkspaceEventDayFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>[]
+        }
+        create: {
+          args: Prisma.WorkspaceEventDayCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        createMany: {
+          args: Prisma.WorkspaceEventDayCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WorkspaceEventDayCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>[]
+        }
+        delete: {
+          args: Prisma.WorkspaceEventDayDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        update: {
+          args: Prisma.WorkspaceEventDayUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        deleteMany: {
+          args: Prisma.WorkspaceEventDayDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WorkspaceEventDayUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WorkspaceEventDayUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>[]
+        }
+        upsert: {
+          args: Prisma.WorkspaceEventDayUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEventDayPayload>
+        }
+        aggregate: {
+          args: Prisma.WorkspaceEventDayAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWorkspaceEventDay>
+        }
+        groupBy: {
+          args: Prisma.WorkspaceEventDayGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkspaceEventDayGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WorkspaceEventDayCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkspaceEventDayCountAggregateOutputType> | number
         }
       }
     }
@@ -8051,6 +8276,7 @@ export const SessionScalarFieldEnum = {
   doneById: 'doneById',
   choicesDismissedSeq: 'choicesDismissedSeq',
   lastSeq: 'lastSeq',
+  coldSeq: 'coldSeq',
   move: 'move',
   movedAt: 'movedAt',
   movedFrom: 'movedFrom',
@@ -8176,6 +8402,47 @@ export const SessionEventScalarFieldEnum = {
 } as const
 
 export type SessionEventScalarFieldEnum = (typeof SessionEventScalarFieldEnum)[keyof typeof SessionEventScalarFieldEnum]
+
+
+export const ColdEventChunkScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  firstSeq: 'firstSeq',
+  lastSeq: 'lastSeq',
+  attempt: 'attempt',
+  events: 'events',
+  moved: 'moved',
+  bytes: 'bytes',
+  storedBytes: 'storedBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type ColdEventChunkScalarFieldEnum = (typeof ColdEventChunkScalarFieldEnum)[keyof typeof ColdEventChunkScalarFieldEnum]
+
+
+export const ThreadEventVolumeScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  bytes: 'bytes',
+  largest: 'largest'
+} as const
+
+export type ThreadEventVolumeScalarFieldEnum = (typeof ThreadEventVolumeScalarFieldEnum)[keyof typeof ThreadEventVolumeScalarFieldEnum]
+
+
+export const WorkspaceEventDayScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  day: 'day',
+  events: 'events',
+  deltas: 'deltas',
+  bytes: 'bytes',
+  largest: 'largest'
+} as const
+
+export type WorkspaceEventDayScalarFieldEnum = (typeof WorkspaceEventDayScalarFieldEnum)[keyof typeof WorkspaceEventDayScalarFieldEnum]
 
 
 export const TokenUsageScalarFieldEnum = {
@@ -10315,6 +10582,9 @@ export type GlobalOmitConfig = {
   replyWatch?: Prisma.ReplyWatchOmit
   threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
+  coldEventChunk?: Prisma.ColdEventChunkOmit
+  threadEventVolume?: Prisma.ThreadEventVolumeOmit
+  workspaceEventDay?: Prisma.WorkspaceEventDayOmit
   tokenUsage?: Prisma.TokenUsageOmit
   account?: Prisma.AccountOmit
   pullRequest?: Prisma.PullRequestOmit

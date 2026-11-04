@@ -39,6 +39,8 @@ test('a token and a header streamed in pieces go out masked; the done holds the 
 
 test('a block handed over halfway goes on masked with its text so far', () => {
   const texts = new Map([['t1', 'Here: ghp_']])
-  const { events } = stream([`${token.slice(4)} done `], texts)
+  const { events, mapper } = stream([`${token.slice(4)} done `], texts)
+  // What it held goes out as its stream ends (EventMapper.flush, DELTA_EVERY_MS).
+  mapper.flush()
   assert.deepEqual(deltas(events), ['[redacted: a GitHub token] done '])
 })
