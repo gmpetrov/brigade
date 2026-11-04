@@ -941,6 +941,8 @@ model ColdEventChunk {
   session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   firstSeq       Int
   lastSeq        Int
+  /// The run that wrote it, in its key (coldEventsKey): each run's copy has a key of its own.
+  attempt        String
   /// Its events, and those of them no longer in SessionEvent.
   events         Int
   moved          Int

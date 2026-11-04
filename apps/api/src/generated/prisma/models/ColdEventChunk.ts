@@ -52,6 +52,7 @@ export type ColdEventChunkMinAggregateOutputType = {
   sessionId: string | null
   firstSeq: number | null
   lastSeq: number | null
+  attempt: string | null
   events: number | null
   moved: number | null
   bytes: number | null
@@ -65,6 +66,7 @@ export type ColdEventChunkMaxAggregateOutputType = {
   sessionId: string | null
   firstSeq: number | null
   lastSeq: number | null
+  attempt: string | null
   events: number | null
   moved: number | null
   bytes: number | null
@@ -78,6 +80,7 @@ export type ColdEventChunkCountAggregateOutputType = {
   sessionId: number
   firstSeq: number
   lastSeq: number
+  attempt: number
   events: number
   moved: number
   bytes: number
@@ -111,6 +114,7 @@ export type ColdEventChunkMinAggregateInputType = {
   sessionId?: true
   firstSeq?: true
   lastSeq?: true
+  attempt?: true
   events?: true
   moved?: true
   bytes?: true
@@ -124,6 +128,7 @@ export type ColdEventChunkMaxAggregateInputType = {
   sessionId?: true
   firstSeq?: true
   lastSeq?: true
+  attempt?: true
   events?: true
   moved?: true
   bytes?: true
@@ -137,6 +142,7 @@ export type ColdEventChunkCountAggregateInputType = {
   sessionId?: true
   firstSeq?: true
   lastSeq?: true
+  attempt?: true
   events?: true
   moved?: true
   bytes?: true
@@ -237,6 +243,7 @@ export type ColdEventChunkGroupByOutputType = {
   sessionId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -273,6 +280,7 @@ export type ColdEventChunkWhereInput = {
   sessionId?: Prisma.StringFilter<"ColdEventChunk"> | string
   firstSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
   lastSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
+  attempt?: Prisma.StringFilter<"ColdEventChunk"> | string
   events?: Prisma.IntFilter<"ColdEventChunk"> | number
   moved?: Prisma.IntFilter<"ColdEventChunk"> | number
   bytes?: Prisma.IntFilter<"ColdEventChunk"> | number
@@ -287,6 +295,7 @@ export type ColdEventChunkOrderByWithRelationInput = {
   sessionId?: Prisma.SortOrder
   firstSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  attempt?: Prisma.SortOrder
   events?: Prisma.SortOrder
   moved?: Prisma.SortOrder
   bytes?: Prisma.SortOrder
@@ -305,6 +314,7 @@ export type ColdEventChunkWhereUniqueInput = Prisma.AtLeast<{
   sessionId?: Prisma.StringFilter<"ColdEventChunk"> | string
   firstSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
   lastSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
+  attempt?: Prisma.StringFilter<"ColdEventChunk"> | string
   events?: Prisma.IntFilter<"ColdEventChunk"> | number
   moved?: Prisma.IntFilter<"ColdEventChunk"> | number
   bytes?: Prisma.IntFilter<"ColdEventChunk"> | number
@@ -319,6 +329,7 @@ export type ColdEventChunkOrderByWithAggregationInput = {
   sessionId?: Prisma.SortOrder
   firstSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  attempt?: Prisma.SortOrder
   events?: Prisma.SortOrder
   moved?: Prisma.SortOrder
   bytes?: Prisma.SortOrder
@@ -340,6 +351,7 @@ export type ColdEventChunkScalarWhereWithAggregatesInput = {
   sessionId?: Prisma.StringWithAggregatesFilter<"ColdEventChunk"> | string
   firstSeq?: Prisma.IntWithAggregatesFilter<"ColdEventChunk"> | number
   lastSeq?: Prisma.IntWithAggregatesFilter<"ColdEventChunk"> | number
+  attempt?: Prisma.StringWithAggregatesFilter<"ColdEventChunk"> | string
   events?: Prisma.IntWithAggregatesFilter<"ColdEventChunk"> | number
   moved?: Prisma.IntWithAggregatesFilter<"ColdEventChunk"> | number
   bytes?: Prisma.IntWithAggregatesFilter<"ColdEventChunk"> | number
@@ -352,6 +364,7 @@ export type ColdEventChunkCreateInput = {
   workspaceId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -366,6 +379,7 @@ export type ColdEventChunkUncheckedCreateInput = {
   sessionId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -378,6 +392,7 @@ export type ColdEventChunkUpdateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -392,6 +407,7 @@ export type ColdEventChunkUncheckedUpdateInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -405,6 +421,7 @@ export type ColdEventChunkCreateManyInput = {
   sessionId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -417,6 +434,7 @@ export type ColdEventChunkUpdateManyMutationInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -430,6 +448,7 @@ export type ColdEventChunkUncheckedUpdateManyInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -458,6 +477,7 @@ export type ColdEventChunkCountOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   firstSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  attempt?: Prisma.SortOrder
   events?: Prisma.SortOrder
   moved?: Prisma.SortOrder
   bytes?: Prisma.SortOrder
@@ -480,6 +500,7 @@ export type ColdEventChunkMaxOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   firstSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  attempt?: Prisma.SortOrder
   events?: Prisma.SortOrder
   moved?: Prisma.SortOrder
   bytes?: Prisma.SortOrder
@@ -493,6 +514,7 @@ export type ColdEventChunkMinOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   firstSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  attempt?: Prisma.SortOrder
   events?: Prisma.SortOrder
   moved?: Prisma.SortOrder
   bytes?: Prisma.SortOrder
@@ -556,6 +578,7 @@ export type ColdEventChunkCreateWithoutSessionInput = {
   workspaceId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -568,6 +591,7 @@ export type ColdEventChunkUncheckedCreateWithoutSessionInput = {
   workspaceId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -610,6 +634,7 @@ export type ColdEventChunkScalarWhereInput = {
   sessionId?: Prisma.StringFilter<"ColdEventChunk"> | string
   firstSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
   lastSeq?: Prisma.IntFilter<"ColdEventChunk"> | number
+  attempt?: Prisma.StringFilter<"ColdEventChunk"> | string
   events?: Prisma.IntFilter<"ColdEventChunk"> | number
   moved?: Prisma.IntFilter<"ColdEventChunk"> | number
   bytes?: Prisma.IntFilter<"ColdEventChunk"> | number
@@ -622,6 +647,7 @@ export type ColdEventChunkCreateManySessionInput = {
   workspaceId: string
   firstSeq: number
   lastSeq: number
+  attempt: string
   events: number
   moved: number
   bytes: number
@@ -634,6 +660,7 @@ export type ColdEventChunkUpdateWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -646,6 +673,7 @@ export type ColdEventChunkUncheckedUpdateWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -658,6 +686,7 @@ export type ColdEventChunkUncheckedUpdateManyWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   firstSeq?: Prisma.IntFieldUpdateOperationsInput | number
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  attempt?: Prisma.StringFieldUpdateOperationsInput | string
   events?: Prisma.IntFieldUpdateOperationsInput | number
   moved?: Prisma.IntFieldUpdateOperationsInput | number
   bytes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -673,6 +702,7 @@ export type ColdEventChunkSelect<ExtArgs extends runtime.Types.Extensions.Intern
   sessionId?: boolean
   firstSeq?: boolean
   lastSeq?: boolean
+  attempt?: boolean
   events?: boolean
   moved?: boolean
   bytes?: boolean
@@ -687,6 +717,7 @@ export type ColdEventChunkSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   sessionId?: boolean
   firstSeq?: boolean
   lastSeq?: boolean
+  attempt?: boolean
   events?: boolean
   moved?: boolean
   bytes?: boolean
@@ -701,6 +732,7 @@ export type ColdEventChunkSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   sessionId?: boolean
   firstSeq?: boolean
   lastSeq?: boolean
+  attempt?: boolean
   events?: boolean
   moved?: boolean
   bytes?: boolean
@@ -715,6 +747,7 @@ export type ColdEventChunkSelectScalar = {
   sessionId?: boolean
   firstSeq?: boolean
   lastSeq?: boolean
+  attempt?: boolean
   events?: boolean
   moved?: boolean
   bytes?: boolean
@@ -722,7 +755,7 @@ export type ColdEventChunkSelectScalar = {
   createdAt?: boolean
 }
 
-export type ColdEventChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "sessionId" | "firstSeq" | "lastSeq" | "events" | "moved" | "bytes" | "storedBytes" | "createdAt", ExtArgs["result"]["coldEventChunk"]>
+export type ColdEventChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "sessionId" | "firstSeq" | "lastSeq" | "attempt" | "events" | "moved" | "bytes" | "storedBytes" | "createdAt", ExtArgs["result"]["coldEventChunk"]>
 export type ColdEventChunkInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
 }
@@ -744,6 +777,10 @@ export type $ColdEventChunkPayload<ExtArgs extends runtime.Types.Extensions.Inte
     sessionId: string
     firstSeq: number
     lastSeq: number
+    /**
+     * The run that wrote it, in its key (coldEventsKey): each run's copy has a key of its own.
+     */
+    attempt: string
     /**
      * Its events, and those of them no longer in SessionEvent.
      */
@@ -1184,6 +1221,7 @@ export interface ColdEventChunkFieldRefs {
   readonly sessionId: Prisma.FieldRef<"ColdEventChunk", 'String'>
   readonly firstSeq: Prisma.FieldRef<"ColdEventChunk", 'Int'>
   readonly lastSeq: Prisma.FieldRef<"ColdEventChunk", 'Int'>
+  readonly attempt: Prisma.FieldRef<"ColdEventChunk", 'String'>
   readonly events: Prisma.FieldRef<"ColdEventChunk", 'Int'>
   readonly moved: Prisma.FieldRef<"ColdEventChunk", 'Int'>
   readonly bytes: Prisma.FieldRef<"ColdEventChunk", 'Int'>

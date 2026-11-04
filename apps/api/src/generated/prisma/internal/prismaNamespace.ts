@@ -8410,6 +8410,7 @@ export const ColdEventChunkScalarFieldEnum = {
   sessionId: 'sessionId',
   firstSeq: 'firstSeq',
   lastSeq: 'lastSeq',
+  attempt: 'attempt',
   events: 'events',
   moved: 'moved',
   bytes: 'bytes',

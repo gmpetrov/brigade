@@ -53,7 +53,7 @@ const { runLog } = await import('../src/timeline.js')
 const { coldEventsKey } = await import('../src/bucket.js')
 
 /** Chunks of at most 20 events: a thread of a few turns makes several. */
-const SMALL = { events: 20, storedBytes: 1_000_000, runMs: 60_000, threads: 50 }
+const SMALL = { events: 20, bytes: 1_000_000, runMs: 60_000, threads: 50 }
 
 const id = randomUUID().slice(0, 8)
 const ids = {
@@ -290,7 +290,7 @@ describe('cold events', { skip }, () => {
     )
     assert.deepEqual(
       (await readdir(folder)).sort(),
-      kept.map((c) => `${c.firstSeq}-${c.lastSeq}.jsonl.gz`).sort(),
+      kept.map((c) => `${c.firstSeq}-${c.lastSeq}.${c.attempt}.jsonl.gz`).sort(),
     )
 
     // The database keeps what everything else reads: messages, turns, notes, what it made, its card.
@@ -493,7 +493,9 @@ describe('cold events', { skip }, () => {
     const before = await pageEvents(sessionId, 1, events.length + 1)
     await keepEventsCold(scope.workspaceId, new Date(), SMALL)
     const [, lost] = await chunksOf(sessionId)
-    await rm(join(bucket, coldEventsKey(scope, sessionId, lost!.firstSeq, lost!.lastSeq)))
+    await rm(
+      join(bucket, coldEventsKey(scope, sessionId, lost!.firstSeq, lost!.lastSeq, lost!.attempt)),
+    )
     const after = await pageEvents(sessionId, 1, events.length + 1)
     const inLost = (seq: number) => seq >= lost!.firstSeq && seq <= lost!.lastSeq
     assert.deepEqual(
@@ -597,27 +599,125 @@ describe('cold events', { skip }, () => {
     assert.deepEqual(read.map(sequenced), before)
   })
 
-  test('a chunk ends near the size it may hold, an event too large alone in one', async () => {
+  test('a chunk ends near the size it may hold as JSON, an event too large alone in one', async () => {
     const sessionId = await newThread('Sized')
     const events = work(3)
     await store(sessionId, events)
     await quiet(sessionId)
     const sizes = await prisma.$queryRaw<{ seq: number; size: number }[]>`
-      SELECT "seq", pg_column_size("data")::int AS "size" FROM "SessionEvent"
+      SELECT "seq", octet_length("data"::text)::int AS "size" FROM "SessionEvent"
       WHERE "sessionId" = ${sessionId} ORDER BY "seq"`
-    const cap = 800
-    await keepEventsCold(scope.workspaceId, new Date(), {
-      ...SMALL,
-      events: 1000,
-      storedBytes: cap,
-    })
-    for (const chunk of await chunksOf(sessionId)) {
+    const cap = 3000
+    await keepEventsCold(scope.workspaceId, new Date(), { ...SMALL, events: 1000, bytes: cap })
+    const kept = await chunksOf(sessionId)
+    assert.ok(kept.length > 1)
+    for (const chunk of kept) {
       const held = sizes.filter((s) => s.seq >= chunk.firstSeq && s.seq <= chunk.lastSeq)
       const total = held.reduce((n, s) => n + s.size, 0)
       assert.ok(total <= cap || held.length === 1, `chunk ${chunk.firstSeq}-${chunk.lastSeq}`)
     }
     assert.equal((await thread(sessionId)).coldSeq, events.length)
     assert.equal((await pageEvents(sessionId, 1, events.length + 1)).length, events.length)
+  })
+
+  test('a chunk is bounded by its events as JSON, not as the database compresses them', async () => {
+    const sessionId = await newThread('Compressible outputs')
+    // A log repeated over 320 kB: a few kB once the database compressed it.
+    const output = 'a line of repetitive log output\n'.repeat(10_000)
+    const events: Event[] = Array.from({ length: 30 }, (_, i) => ({
+      type: 'tool.finished',
+      toolCallId: `log-${i}`,
+      toolName: 'Bash',
+      output,
+      isError: false,
+    }))
+    await store(sessionId, events)
+    await quiet(sessionId)
+    const cap = 1_000_000
+    const [stored] = await prisma.$queryRaw<{ bytes: number }[]>`
+      SELECT sum(pg_column_size("data"))::int AS "bytes" FROM "SessionEvent"
+      WHERE "sessionId" = ${sessionId}`
+    assert.ok(stored!.bytes < cap, 'all of them fit under the cap as the database stores them')
+    await keepEventsCold(scope.workspaceId, new Date(), { ...SMALL, events: 1000, bytes: cap })
+    const kept = await chunksOf(sessionId)
+    for (const chunk of kept)
+      assert.ok(chunk.bytes <= cap || chunk.events === 1, `${chunk.bytes} bytes in a chunk`)
+    assert.ok(kept.length >= 10, `${kept.length} chunks for 9.6 MB of JSON`)
+    assert.equal((await thread(sessionId)).coldSeq, events.length)
+    assert.equal((await pageEvents(sessionId, 1, events.length + 1)).length, events.length)
+  })
+
+  test("a run overtaken between choosing its chunk and reading it never spoils the winner's", async () => {
+    const sessionId = await newThread('Delayed run')
+    const events = work(1)
+    await store(sessionId, events)
+    await quiet(sessionId)
+    const before = await pageEvents(sessionId, 1, events.length + 1)
+    // The first run has chosen where its chunk ends; another keeps it all cold before it reads it.
+    const delegate = prisma.sessionEvent
+    const findMany = delegate.findMany
+    let overtaken = false
+    delegate.findMany = (async (args: { where?: { sessionId?: unknown }; take?: number }) => {
+      if (args.where?.sessionId === sessionId && args.take === undefined && !overtaken) {
+        overtaken = true
+        delegate.findMany = findMany
+        await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+      }
+      return (findMany as (a: unknown) => Promise<unknown>).call(delegate, args)
+    }) as unknown as typeof findMany
+    try {
+      await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+    } finally {
+      delegate.findMany = findMany
+    }
+    assert.ok(overtaken)
+    assert.deepEqual(await pageEvents(sessionId, 1, events.length + 1), before)
+    const kept = await chunksOf(sessionId)
+    const folder = join(
+      bucket,
+      scope.organizationId,
+      scope.workspaceId,
+      'thread-files',
+      sessionId,
+      'events',
+    )
+    assert.deepEqual(
+      (await readdir(folder)).sort(),
+      kept.map((c) => `${c.firstSeq}-${c.lastSeq}.${c.attempt}.jsonl.gz`).sort(),
+      "the winner's copies only",
+    )
+  })
+
+  test('a read whose batch the database returns empty, kept cold meanwhile, reads the bucket', async () => {
+    const sessionId = await newThread('Empty batch')
+    const events = work(1)
+    await store(sessionId, events)
+    await quiet(sessionId)
+    // Six deltas: all of them leave the database once kept cold.
+    const [from, before] = [3, 9]
+    assert.ok(events.slice(from - 1, before - 1).every((e) => e.type === 'message.delta'))
+    const expected = await pageEvents(sessionId, from, before)
+    const delegate = prisma.sessionEvent
+    const findMany = delegate.findMany
+    let overtaken = false
+    delegate.findMany = (async (args: { where?: { sessionId?: unknown }; take?: number }) => {
+      if (args.where?.sessionId === sessionId && args.take === 5 && !overtaken) {
+        overtaken = true
+        delegate.findMany = findMany
+        await keepEventsCold(scope.workspaceId, new Date(), SMALL)
+      }
+      return (findMany as (a: unknown) => Promise<unknown>).call(delegate, args)
+    }) as unknown as typeof findMany
+    const read = []
+    try {
+      for await (const rows of threadEvents(sessionId, from, before, { batch: 5 }))
+        read.push(...rows)
+    } finally {
+      delegate.findMany = findMany
+    }
+    assert.ok(overtaken)
+    assert.equal(expected.length, 6)
+    assert.deepEqual(read.map(sequenced), expected)
   })
 
   test('what threads write is counted once, by workspace and day, and by thread', async () => {

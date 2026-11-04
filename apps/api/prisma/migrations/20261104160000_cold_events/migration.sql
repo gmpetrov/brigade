@@ -13,6 +13,7 @@ CREATE TABLE "ColdEventChunk" (
     "sessionId" TEXT NOT NULL,
     "firstSeq" INTEGER NOT NULL,
     "lastSeq" INTEGER NOT NULL,
+    "attempt" TEXT NOT NULL,
     "events" INTEGER NOT NULL,
     "moved" INTEGER NOT NULL,
     "bytes" INTEGER NOT NULL,

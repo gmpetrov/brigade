@@ -122,14 +122,21 @@ export function threadFileKey(scope: Scope, sessionId: string, name: string) {
 }
 
 /**
- * The bucket key of a chunk of a quiet thread's events, those from `firstSeq` to `lastSeq`
- * (cold-events.ts). In the thread's files folder: deleted with the thread, as its files are.
+ * The bucket key of a chunk of a quiet thread's events, those from `firstSeq` to `lastSeq`, as the
+ * run that wrote it (`attempt`) put it there (cold-events.ts). In the thread's files folder:
+ * deleted with the thread, as its files are.
  */
-export function coldEventsKey(scope: Scope, sessionId: string, firstSeq: number, lastSeq: number) {
+export function coldEventsKey(
+  scope: Scope,
+  sessionId: string,
+  firstSeq: number,
+  lastSeq: number,
+  attempt: string,
+) {
   if (!Number.isSafeInteger(firstSeq) || !Number.isSafeInteger(lastSeq) || firstSeq < 1)
     throw new Error('Invalid bucket key part')
-  if (lastSeq < firstSeq) throw new Error('Invalid bucket key part')
-  return `${threadFilesPrefix(scope, sessionId)}events/${firstSeq}-${lastSeq}.jsonl.gz`
+  if (lastSeq < firstSeq || !SAFE.test(attempt)) throw new Error('Invalid bucket key part')
+  return `${threadFilesPrefix(scope, sessionId)}events/${firstSeq}-${lastSeq}.${attempt}.jsonl.gz`
 }
 
 /** The bucket key an upload's client PUTs to, with its signed URL (uploads.ts). */

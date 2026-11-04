@@ -29,8 +29,11 @@ export const COLD_AFTER_MS = 30 * 24 * 60 * 60_000
 export type ColdLimits = {
   /** The most events a chunk holds. */
   events: number
-  /** About the most bytes of them a chunk holds, as the database stores them (compressed). */
-  storedBytes: number
+  /**
+   * About the most bytes of them a chunk holds, as JSON: what a run holds to write it. Not as the
+   * database stores them, compressed: a log repeated over 1 MB is 12 kB there.
+   */
+  bytes: number
   /**
    * A run starts no chunk after this long. Well within JOB_DEADLINE_MS: the queue's consumer runs
    * a batch's jobs one after the other, and a long one would hold back the others (a schedule's
@@ -41,7 +44,10 @@ export type ColdLimits = {
   threads: number
 }
 
-const LIMITS: ColdLimits = { events: 1000, storedBytes: 1_000_000, runMs: 20_000, threads: 50 }
+const LIMITS: ColdLimits = { events: 1000, bytes: 4_000_000, runMs: 20_000, threads: 50 }
+
+/** Events whose size is read at once, in the database, to find where a chunk ends. */
+const SIZES_AT_ONCE = 100
 
 /** An event a thread's page alone reads: it goes once its chunk is in the bucket. */
 export function goesCold(type: string, data: unknown) {
@@ -122,46 +128,71 @@ export async function keepEventsCold(
 class Raced extends Error {}
 
 /**
+ * Where the thread's next chunk ends, from `firstSeq`: about `limits.bytes` of events as JSON, an
+ * event larger than that alone. Read in the database, a few events at a time, by their size as
+ * text, rather than their data. With the seqs it holds: what reading it whole must find.
+ */
+async function chunkEnd(thread: Thread, firstSeq: number, limits: ColdLimits) {
+  const seqs: number[] = []
+  let total = 0
+  let from = firstSeq
+  while (seqs.length < limits.events) {
+    const take = Math.min(SIZES_AT_ONCE, limits.events - seqs.length)
+    const sizes = await prisma.$queryRaw<{ seq: number; size: number }[]>`
+      SELECT "seq", octet_length("data"::text)::int AS "size"
+      FROM "SessionEvent"
+      WHERE "sessionId" = ${thread.id} AND "seq" >= ${from}::int AND "seq" <= ${thread.lastSeq}::int
+      ORDER BY "seq"
+      LIMIT ${take}::int`
+    for (const { seq, size } of sizes) {
+      if (seqs.length > 0 && total + size > limits.bytes) return seqs
+      seqs.push(seq)
+      total += size
+    }
+    if (sizes.length < take) break
+    from = sizes.at(-1)!.seq + 1
+  }
+  return seqs
+}
+
+/**
  * The thread's next chunk, from the event after coldSeq: put in the bucket, then recorded and its
  * heavy events removed. Undefined when there is nothing to keep, or another run did it meanwhile.
+ * Each run's chunk goes to a key of its own (its attempt): one that lost the race to another never
+ * overwrites what the winner put there, and removes its own copy, which nothing refers to.
  */
 async function keepChunkCold(thread: Thread, limits: ColdLimits) {
   const firstSeq = thread.coldSeq + 1
-  // Where it ends: about storedBytes of events, read by their size first rather than whole.
-  const sizes = await prisma.$queryRaw<{ seq: number; size: number }[]>`
-    SELECT "seq", pg_column_size("data")::int AS "size"
-    FROM "SessionEvent"
-    WHERE "sessionId" = ${thread.id} AND "seq" >= ${firstSeq}::int AND "seq" <= ${thread.lastSeq}::int
-    ORDER BY "seq"
-    LIMIT ${limits.events}::int`
-  if (!sizes.length) {
+  const seqs = await chunkEnd(thread, firstSeq, limits)
+  if (!seqs.length) {
     console.warn(`cold events: thread ${thread.id} holds no event from ${firstSeq} on`)
     return undefined
   }
-  let lastSeq = sizes[0]!.seq
-  let total = 0
-  for (const { seq, size } of sizes) {
-    if (total > 0 && total + size > limits.storedBytes) break
-    total += size
-    lastSeq = seq
-  }
+  const lastSeq = seqs.at(-1)!
   const rows = await prisma.sessionEvent.findMany({
     where: { sessionId: thread.id, seq: { gte: firstSeq, lte: lastSeq } },
     orderBy: { seq: 'asc' },
     select: { seq: true, type: true, at: true, data: true },
   })
+  // Every event its sizes were read for: another run that kept them cold meanwhile has removed
+  // some, and this copy would lack them.
+  if (rows.length !== seqs.length || rows.some((r, i) => r.seq !== seqs[i])) {
+    console.warn(`cold events: thread ${thread.id} changed while read, left to the other run`)
+    return undefined
+  }
   const text = rows
     .map((r) => JSON.stringify({ seq: r.seq, type: r.type, at: r.at.toISOString(), data: r.data }))
     .join('\n')
   const body = await gzip(text)
-  const key = coldEventsKey(thread, thread.id, firstSeq, lastSeq)
+  const attempt = crypto.randomUUID()
+  const key = coldEventsKey(thread, thread.id, firstSeq, lastSeq, attempt)
   await putObject(key, body, 'application/gzip')
-  // In the bucket whole before anything leaves the database.
-  const size = await objectSize(key)
-  if (size !== body.byteLength)
-    throw new Error(`cold events: ${key} holds ${size} bytes, not ${body.byteLength}`)
   const heavy = rows.filter((r) => goesCold(r.type, r.data)).map((r) => r.seq)
   try {
+    // In the bucket whole before anything leaves the database.
+    const size = await objectSize(key)
+    if (size !== body.byteLength)
+      throw new Error(`cold events: ${key} holds ${size} bytes, not ${body.byteLength}`)
     await prisma.$transaction(async (tx) => {
       // The one transaction SessionEvent's rule lets remove this thread's events, those a
       // chunk recorded below holds.
@@ -177,6 +208,7 @@ async function keepChunkCold(thread: Thread, limits: ColdLimits) {
           sessionId: thread.id,
           firstSeq,
           lastSeq,
+          attempt,
           events: rows.length,
           moved: heavy.length,
           bytes: Buffer.byteLength(text),
@@ -193,14 +225,22 @@ async function keepChunkCold(thread: Thread, limits: ColdLimits) {
       }
     })
   } catch (error) {
-    if (!(error instanceof Raced)) throw error
-    // Kept by the other run under another key (a range it cut elsewhere): this copy is no one's.
-    const kept = await prisma.coldEventChunk.findUnique({
-      where: { sessionId_firstSeq: { sessionId: thread.id, firstSeq } },
-      select: { lastSeq: true },
-    })
-    if (kept?.lastSeq !== lastSeq) await deleteObject(key).catch(() => undefined)
-    return undefined
+    // Its copy goes: nothing refers to it.
+    if (error instanceof Raced) {
+      await deleteObject(key).catch(() => undefined)
+      return undefined
+    }
+    // Recorded after all (a commit whose answer was lost on its way): the copy is the thread's.
+    const recorded = await prisma.coldEventChunk
+      .findFirst({ where: { sessionId: thread.id, firstSeq, attempt }, select: { attempt: true } })
+      .then(
+        (row) => !!row,
+        () => undefined,
+      )
+    if (recorded) return { lastSeq, moved: heavy.length }
+    // Not recorded, its copy goes. Not known: it stays, which does no harm (it goes with the thread).
+    if (recorded === false) await deleteObject(key).catch(() => undefined)
+    throw error
   }
   return { lastSeq, moved: heavy.length }
 }
@@ -225,8 +265,11 @@ export const sequenced = (row: StoredEvent): SequencedEvent => ({
   event: row.data as unknown as SequencedEvent['event'],
 })
 
+/** About the most bytes of events, as JSON, a batch read from the bucket holds. */
+const BATCH_BYTES = 4_000_000
+
 type Read = {
-  /** At most this many events in each batch. */
+  /** At most this many events in each batch (and about BATCH_BYTES of them from the bucket). */
   batch?: number
   /** Types left out (a run log's streamed text). */
   without?: string[]
@@ -239,7 +282,7 @@ export const LAST_SEQ = 2_147_483_647
  * A thread's events from `from` up to, not including, `before`, in seq order and in batches:
  * those kept cold from their chunks in the bucket, the others from the database. Read as the
  * events are kept as it goes: a chunk recorded while a batch was read from the database (whose
- * heavy events left it meanwhile) is read again from the bucket.
+ * heavy events left it meanwhile, maybe all of them) is read again from the bucket.
  */
 export async function* threadEvents(
   sessionId: string,
@@ -262,12 +305,14 @@ export async function* threadEvents(
       continue
     }
     const rows = await databaseEvents(sessionId, next, before, batch, options.without)
-    if (!rows.length) return
+    // Kept cold while they were read: some, or all of them, may be gone from the database by
+    // then, and are read from the bucket.
     const now = await prisma.session.findUnique({
       where: { id: sessionId },
       select: { coldSeq: true },
     })
     if (now && now.coldSeq >= next) continue
+    if (!rows.length) return
     yield rows
     next = rows.at(-1)!.seq + 1
   }
@@ -326,17 +371,19 @@ async function* coldEvents(
   const chunks = await prisma.coldEventChunk.findMany({
     where: { sessionId, lastSeq: { gte: from }, firstSeq: { lt: end } },
     orderBy: { firstSeq: 'asc' },
-    select: { firstSeq: true, lastSeq: true },
+    select: { firstSeq: true, lastSeq: true, attempt: true },
   })
   let out: StoredEvent[] = []
-  const full = () => out.length >= batch
+  let outBytes = 0
+  const full = () => out.length >= batch || outBytes >= BATCH_BYTES
   const take = () => {
     const rows = out
     out = []
+    outBytes = 0
     return rows
   }
   let next = from
-  for (const chunk of [...chunks, { firstSeq: end, lastSeq: end - 1 }]) {
+  for (const chunk of [...chunks, { firstSeq: end, lastSeq: end - 1, attempt: '' }]) {
     if (next >= end) break
     if (chunk.firstSeq > next) {
       for await (const rows of allDatabaseEvents(
@@ -353,16 +400,17 @@ async function* coldEvents(
     }
     if (chunk.lastSeq < chunk.firstSeq) continue
     const upTo = Math.min(end, chunk.lastSeq + 1)
-    const key = coldEventsKey(scope, sessionId, chunk.firstSeq, chunk.lastSeq)
+    const key = coldEventsKey(scope, sessionId, chunk.firstSeq, chunk.lastSeq, chunk.attempt)
     try {
       const body = await streamObject(key)
       if (!body) throw new Error('not in the bucket')
-      for await (const row of chunkEvents(sessionId, body)) {
+      for await (const [row, size] of chunkEvents(sessionId, body)) {
         if (row.seq < next) continue
         if (row.seq >= upTo) break
         next = row.seq + 1
         if (without?.includes(row.type)) continue
         out.push(row)
+        outBytes += size
         if (full()) yield take()
       }
     } catch (error) {
@@ -381,11 +429,14 @@ async function* coldEvents(
   if (out.length) yield take()
 }
 
-/** A chunk's events, one line at a time as the bucket sends them: a chunk is never held whole. */
+/**
+ * A chunk's events, one line at a time as the bucket sends them, each with its line's length: a
+ * chunk is never held whole.
+ */
 async function* chunkEvents(
   sessionId: string,
   body: ReadableStream<Uint8Array>,
-): AsyncGenerator<StoredEvent> {
+): AsyncGenerator<[StoredEvent, number]> {
   const reader = body
     .pipeThrough(new DecompressionStream('gzip'))
     .pipeThrough(new TextDecoderStream())
@@ -399,12 +450,12 @@ async function* chunkEvents(
       for (let at = rest.indexOf('\n'); at >= 0; at = rest.indexOf('\n', start)) {
         const line = rest.slice(start, at)
         start = at + 1
-        if (line) yield parseLine(sessionId, line)
+        if (line) yield [parseLine(sessionId, line), line.length]
       }
       rest = rest.slice(start)
       if (done) break
     }
-    if (rest) yield parseLine(sessionId, rest)
+    if (rest) yield [parseLine(sessionId, rest), rest.length]
   } finally {
     await reader.cancel().catch(() => undefined)
   }
