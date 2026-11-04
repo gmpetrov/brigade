@@ -10,7 +10,8 @@ import {
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { cloudEntitled } from '../billing.js'
-import { addressOf, slugOf } from '../mail/names.js'
+import { suggestName } from '../mail/addresses.js'
+import { addressOf } from '../mail/names.js'
 import { attachmentKey, directUploads, presignGet, streamObject } from '../bucket.js'
 import {
   askedToReply,
@@ -65,7 +66,9 @@ export const inbox = new Hono<AppEnv>()
           select: { name: true },
         })
       : null
-    const local = own?.name ?? (teammate ? slugOf(teammate.name) : '')
+    // The name it would get, as turning it on picks it: never another workspace's riley@.
+    const local =
+      own?.name ?? (teammate ? await suggestName(teammate.name).catch(() => null) : null)
     return c.json<InboxPlan>({ needed: true, teammate, address: local ? addressOf(local) : null })
   })
 
