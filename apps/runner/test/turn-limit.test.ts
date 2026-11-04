@@ -134,6 +134,24 @@ test('short of memory past the first few, a turn waits until there is room', asy
   for (const id of ['a', 'b', 'c', 'd', 'e']) end(id)
 })
 
+test('with few turns running, a turn waits for memory only after the guard stopped one', async () => {
+  let room = false
+  const { threads, message, startedAt, end } = setup(8, () => room)
+  message('a')
+  await sleep(60)
+  assert.ok(startedAt('a'), 'one turn starts though memory reads short')
+  threads.stoppedForMemory('a', 'the computer was stuck waiting for memory for 10 s')
+  end('a')
+  await sleep(30)
+  message('b')
+  await sleep(300)
+  assert.equal(startedAt('b'), undefined, 'after a stop, it waits for memory')
+  room = true
+  await sleep(5_200)
+  assert.ok(startedAt('b'), 'it starts once there is room')
+  end('b')
+})
+
 test('after the memory guard stopped a turn, one fewer at once, then more again', async () => {
   const { threads, events, message, startedAt, end } = setup(8, () => true)
   const ids = ['a', 'b', 'c', 'd', 'e', 'f']

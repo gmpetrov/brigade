@@ -233,21 +233,12 @@ test('a turn the memory guard stopped goes on once the computer has memory again
   assert.deepEqual(t.retries, [false, true])
 })
 
-test('a turn waits for the computer to have memory before it starts', async () => {
-  let room = false
-  const t = setup('wait', [], async () => room)
+test('with few turns running, a turn starts at once even when memory reads short', async () => {
+  const t = setup('wait', [], async () => false)
   t.message('Go')
   await sleep(100)
-  assert.equal(turns(t.events), 0)
-  // A short wait says nothing; a longer one says why, once.
-  assert.deepEqual(t.notes(), [])
-  await sleep(5_200)
-  assert.deepEqual(t.notes(), [
-    'The computer is short of memory: Mark starts once it has some again.',
-  ])
-  room = true
-  await sleep(5_200)
   assert.equal(turns(t.events), 1)
+  assert.deepEqual(t.notes(), [])
 })
 
 test('waiting for memory does not use up the tries of a turn the guard stopped', async () => {

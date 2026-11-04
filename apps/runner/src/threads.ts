@@ -2240,9 +2240,9 @@ export class Threads {
 
   /**
    * Before a turn starts, the computer has memory for it: else it would only push the memory
-   * guard to stop another turn. Past TURNS_ALWAYS turns, they check one at a time, SETTLE_MS
-   * apart. It waits, said once in its thread, until there is room, or MEMORY_WAIT_MS when
-   * fewer than TURNS_ALWAYS run.
+   * guard to stop another turn. Fewer than TURNS_ALWAYS turns start at once, unless the guard
+   * stopped one lately. Past that, they check one at a time, SETTLE_MS apart. It waits, said once
+   * in its thread, until there is room, or MEMORY_WAIT_MS when fewer than TURNS_ALWAYS run.
    */
   private async waitForMemory(thread: Thread, spec: ThreadSpec) {
     const room = this.options.memoryRoom
@@ -2252,6 +2252,17 @@ export class Threads {
       return true
     }
     const queue = this.started + this.entering >= TURNS_ALWAYS
+    // Fewer than TURNS_ALWAYS run, and the guard has stopped none lately (lowered): the turn starts
+    // now. A computer whose own services hold most of its memory reads short of it at most times,
+    // and holding the few turns it runs only kept people waiting (a try after a stop for memory
+    // still waits for it, in tryAgain).
+    if (!queue && this.lowered === undefined) {
+      this.started++
+      // It holds the next back until it has settled, as one let in after reading memory.
+      const settled = new Promise<void>((resolve) => setTimeout(resolve, SETTLE_MS).unref())
+      this.admission = Promise.all([this.admission, settled]).then(() => undefined)
+      return true
+    }
     this.entering++
     // Stop, or a person taking control, ends the wait, as they would end the turn.
     const controller = new AbortController()
