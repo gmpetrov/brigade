@@ -35,6 +35,8 @@ export function useFlip<T extends HTMLElement>(ref: RefObject<T | null>, reset: 
   const tops = useRef(new WeakMap<Element, number>())
   const order = useRef<Element[]>([])
   const lastReset = useRef(reset)
+  // The lift each row is on, if any: a row lifted again keeps its own.
+  const lifts = useRef(new WeakMap<Element, Animation>())
   useLayoutEffect(() => {
     const list = ref.current
     if (!list) {
@@ -61,6 +63,10 @@ export function useFlip<T extends HTMLElement>(ref: RefObject<T | null>, reset: 
       const sliding = r.getAnimations().filter((a) => a.id === MOVE)
       shown.set(r, was + (sliding.length ? slideOffset(r) : 0))
       for (const a of sliding) a.cancel()
+      if (sliding.length) {
+        lifts.current.delete(r)
+        r.style.zIndex = ''
+      }
     }
     const now = new Map(rows.map((r) => [r, layoutTop(r, list)]))
     for (const [r, top] of now) tops.current.set(r, top)
@@ -71,12 +77,14 @@ export function useFlip<T extends HTMLElement>(ref: RefObject<T | null>, reset: 
       const dy = from === undefined ? 0 : from - now.get(r)!
       return Math.abs(dy) >= 1 ? [{ r, dy }] : []
     })
-    // The row that climbed furthest, past at least one other.
-    const climber = moves.reduce<{ r: HTMLElement; dy: number } | undefined>(
-      (best, m) => (m.dy > (best?.dy ?? 0) ? m : best),
-      undefined,
-    )
-    const passed = climber && climber.dy > climber.r.offsetHeight / 2 ? climber.r : undefined
+    // The row that climbed past the others: a row further than any other, not all of them
+    // moving up together (a row removed above them).
+    const climbs = moves.toSorted((a, b) => b.dy - a.dy)
+    const climber = climbs[0]
+    const passed =
+      climber && climber.dy - Math.max(0, climbs[1]?.dy ?? 0) >= climber.r.offsetHeight
+        ? climber.r
+        : undefined
     for (const { r, dy } of moves) {
       if (r === passed) {
         r.style.zIndex = '1'
@@ -88,7 +96,10 @@ export function useFlip<T extends HTMLElement>(ref: RefObject<T | null>, reset: 
           ],
           { id: MOVE, duration: LIFT, easing: EASE },
         )
+        lifts.current.set(r, lift)
         const done = () => {
+          if (lifts.current.get(r) !== lift) return
+          lifts.current.delete(r)
           r.style.zIndex = ''
         }
         lift.onfinish = done
