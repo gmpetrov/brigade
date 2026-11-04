@@ -724,7 +724,13 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   error, a stop, work left in the background): the next starts anew, as before. Kept, it holds Claude Code's memory
   (250 to 430 MB) for those 2 minutes, so the runner keeps at most `WARM_SEATS` idle sessions running (3, the latest
   to have answered; `BRIGADE_WARM_SEATS`): the others park at once, rather than after 5 minutes as every idle session
-  did, and a turn that starts while the computer is short of memory parks every idle one but its own. The host's tools are kept by their hash and not converted again, and the
+  did, and a turn that starts while the computer is short of memory parks every idle one but its own. Work nobody
+  waits on as it runs (`inBackground`: child threads, so reviews too, and schedules', triggers' and playbooks' runs)
+  is never kept warm (its idle session parks after 10 s) and its turns wait while memory is short even when few turns
+  run, so a person's turns go first; titles, memory and tidy runs, each a harness process of its own, wait for
+  memory too. In Claude Code, the thread's browser relay (about 60 MB) starts at the first browser tool call: the
+  bridge lists its tools as the relay listed them last time (`lazy` in the MCP server's config, the list kept under
+  that key) and hands everything to the relay once it runs. The host's tools are kept by their hash and not converted again, and the
   bridge's `start-config.json` no longer holds them. Codex's app-server already stays across turns. Brigade's tools
   that end most turns (`complete_thread`, `open_ticket`, `show_widget`, `widget_guide`, a child's `report`,
   `complete_task`, `search_workspace`) are always loaded in Claude Code (`alwaysLoad`), never behind a tool search,
