@@ -12,12 +12,20 @@ import { join } from 'node:path'
 import { run } from './repos.js'
 
 /**
- * Past this, the reserve goes and caches are cleared even while their teammate works.
- * Before 95%: boat's snapshots fail past it, and a stop or resume then loses work.
+ * How full the disk is (statfs: 1 - bavail / blocks, ext4's reserve counted as used) past
+ * which boat no longer resumes a stopped computer on a machine of its size: measured on
+ * Nov 4, a small or default machine's disk holds 84.2 GB, and boat refused a resume at
+ * 78.7 GB used ("largest budget: 76.0 GB"). A computer stopped past it stays down. Its
+ * snapshots fail past 95%.
  */
-export const CRITICAL = 0.9
+export const RESUME_LIMIT = 0.9
+/**
+ * Past this, the reserve goes and caches are cleared even while their teammate works: well
+ * before RESUME_LIMIT, which an install crosses in a minute.
+ */
+export const CRITICAL = 0.85
 /** Room is set aside only while the disk stays under this full with it: well below CRITICAL. */
-const RESERVE_UNDER = 0.85
+const RESERVE_UNDER = 0.8
 /** At most this much set aside… */
 const RESERVE_MAX = 2 * 1024 ** 3
 /** …and at most this share of the disk. */
@@ -60,7 +68,7 @@ const MINTLIFY_SITES = '.mintlify/previews'
  * After everything was freed, still this full: someone must act (a ticket in Needs you).
  * Below FULL again, it closes.
  */
-export const STILL_FULL = 0.85
+export const STILL_FULL = 0.8
 
 /** Package managers whose runs write into the caches cleared here, by the name their command has. */
 const MANAGERS = new Set([

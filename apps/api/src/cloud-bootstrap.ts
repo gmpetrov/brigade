@@ -876,6 +876,36 @@ done
 exit $F
 `
 
+/**
+ * Before a stop (cloud.ts's roomToStop): how full the disk is as boat counts it at the resume,
+ * its size and what is available to users from df (ext4's reserve counted as used, as boat
+ * does), and the bytes of what Brigade puts there itself and makes again after a resume: the
+ * swap file (brigade-swap, at boot) and the runner's reserve (disk.ts, at its next check).
+ * With `free`, those two are removed first, so the snapshot leaves them out; a swap file in use
+ * stays when its pages do not fit back in memory. Prints "<size> <avail> <swap> <reserve>".
+ */
+export const diskBeforeStopScript = (free: boolean) => `sudo sh -s -- ${free ? 1 : 0} <<'ROOM'
+set -u
+S=/brigade.swap
+R=/home/brigade/.brigade/state/disk-reserve
+bytes() { if [ -f "$1" ]; then echo $(( $(stat -c %b "$1") * 512 )); else echo 0; fi; }
+if [ "$1" = 1 ]; then
+  if [ -f "$S" ]; then
+    if swapon --show=NAME --noheadings | grep -qx "$S"; then
+      timeout 120 swapoff "$S" && rm -f "$S"
+    else
+      rm -f "$S"
+    fi
+  fi
+  rm -f "$R"
+fi
+echo $(df -B1 --output=size,avail / | tail -1) $(bytes "$S") $(bytes "$R")
+ROOM
+`
+
+/** Brigade's swap file back after a stop that did not happen (cloud.ts's roomToStop). */
+export const SWAP_BACK = 'sudo systemctl restart brigade-swap.service'
+
 /** Install the runner under its own Linux user, as a service that survives stop and resume. */
 export function bootstrapScript(input: { apiUrl: string; code: string }) {
   return `set -eu

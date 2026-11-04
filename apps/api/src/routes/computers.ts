@@ -120,9 +120,14 @@ export const computers = new Hono<AppEnv>()
       where: { id: c.req.param('id'), kind: 'cloud' },
     })
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
-    await hubs
+    const result = await hubs
       .get(computer.workspaceId)
       .stopComputer(computer, { type: 'member', id: c.var.scope.memberId })
+    // Stopped now, it would stay down (cloud.ts's roomToStop).
+    if (result && !result.stopped)
+      throw new HTTPException(409, {
+        message: `The computer keeps running: ${result.reason}. Delete files on it first.`,
+      })
     return c.json({ ok: true })
   })
 

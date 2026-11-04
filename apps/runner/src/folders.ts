@@ -81,10 +81,10 @@ const REGENERABLE = new Set([
 const MEMBER_TRIM_QUIET_MS = 3 * 24 * 60 * 60_000
 /** …and one quiet TRIM_QUIET_MS while less than this is free (a tenth of the disk, on a small one). */
 const MEMBER_SHORT = 20 * 1024 ** 3
-/** Archive folders once the disk is this full… */
-const FULL = 0.8
+/** Archive folders once the disk is this full (below STILL_FULL and CRITICAL, disk.ts)… */
+const FULL = 0.75
 /** …until it is down to this. */
-const ENOUGH = 0.65
+const ENOUGH = 0.6
 /**
  * The swap file the computer's setup makes for frozen previews (brigade-swap, in the API's
  * cloud-bootstrap.ts): space set aside, not files. No reason to trim thread folders, so
@@ -1045,6 +1045,16 @@ export class Folders {
       if (!(await exists(workDir, runAs))) return
       const status = (error as { status?: number }).status
       if (status === 409 || status === 410) return
+      // Deleted while this computer was offline, and never told: its folder goes, as when it
+      // is archived, rather than being refused again every few minutes while it fills the disk.
+      if (
+        status === 404 &&
+        !this.options.inUse(name.sessionId) &&
+        (await this.options.archives.gone(name).catch(() => false))
+      ) {
+        await this.removeNow(name, workDir, runAs)
+        return
+      }
       this.state.backupRetryAt[workDir] = Date.now() + BACKUP_RETRY_MS
       this.save()
       return `${workDir}: ${String(error)}`

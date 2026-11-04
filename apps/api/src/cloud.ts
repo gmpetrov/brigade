@@ -16,10 +16,12 @@ import { hubs } from './hub.js'
 import { currentHub } from './hub/context.js'
 import {
   bootstrapScript,
+  diskBeforeStopScript,
   GIVE_HOMES_BACK,
   reinstallScript,
   SETUP_SHA,
   setupScript,
+  SWAP_BACK,
 } from './cloud-bootstrap.js'
 import { restored } from './cloud-restore.js'
 import { backupComputer } from './cloud-replace.js'
@@ -369,7 +371,7 @@ export async function stopWithoutPlan(computer: {
   if (computer.kind !== 'cloud' || (await cloudEntitled(computer.workspaceId))) return false
   console.log(`stopping ${computer.id}: its workspace has no Cloud plan`)
   state().keptAlive.delete(computer.id)
-  await stopComputer(computer, { type: 'system', id: 'billing' })
+  await stopComputer(computer, { type: 'system', id: 'billing' }, { force: true })
   return true
 }
 
@@ -388,7 +390,7 @@ export async function shutDown(computer: {
   if (computer.kind !== 'cloud' || state().provisioning.has(computer.id) || !refOf(computer)) return
   if (await unfinished(computer)) return retire(computer)
   state().keptAlive.delete(computer.id)
-  await stopComputer(computer, { type: 'system', id: 'billing' })
+  await stopComputer(computer, { type: 'system', id: 'billing' }, { force: true })
 }
 
 /**
@@ -420,13 +422,82 @@ export async function enforcePlan(computer: Parameters<typeof shutDown>[0]) {
   )
 }
 
-/** In the hub: stop the computer with its provider; its runner went with it. */
+/**
+ * How full a computer's disk may be when it stops (1 - available / size, as df and boat count
+ * it). boat resumes a computer on a machine of its size only below about 90% (76.0 of 84.2 GB,
+ * measured on Nov 4; RESUME_LIMIT in the runner's disk.ts): stopped past it, a computer stays
+ * down. Kept below it, as an install may write a little more before the snapshot.
+ */
+export const STOP_LIMIT = 0.88
+
+/** A stop that waits: the computer's disk is too full for boat to resume it (roomToStop). */
+export type StopResult = { stopped: true } | { stopped: false; reason: string }
+
+/** The disk before a stop (diskBeforeStopScript): how full it is, and without Brigade's own files. */
+async function diskBeforeStop(ref: ComputerRef, free: boolean) {
+  const result = await provider!.exec(ref, diskBeforeStopScript(free))
+  const [size, avail, swap, reserve] = result.stdout.trim().split(/\s+/).map(Number)
+  if (result.exitCode !== 0 || !(size! > 0) || ![avail, swap, reserve].every(Number.isFinite))
+    return null
+  return { used: 1 - avail! / size!, without: 1 - (avail! + swap! + reserve!) / size! }
+}
+
+const percent = (share: number) => `${Math.round(share * 100)}%`
+
+/**
+ * Before a stop: whether boat will resume the computer (STOP_LIMIT). Past it, Brigade's swap
+ * file and the runner's reserve go first, so the snapshot leaves them out (both come back after
+ * the resume); still past it, the stop waits, the swap file back, while the runner frees space
+ * (its own thresholds are lower, disk.ts) and its owners are told (disk_full). A computer that
+ * does not answer stops as before.
+ */
+async function roomToStop(
+  computerId: string,
+  ref: ComputerRef,
+  force: boolean,
+): Promise<StopResult> {
+  const before = await diskBeforeStop(ref, false).catch(() => null)
+  if (!before || before.used < STOP_LIMIT) return { stopped: true }
+  const full = (used: number) =>
+    `its disk is ${percent(used)} full: boat would not resume it past ${percent(STOP_LIMIT)}`
+  // Not enough to make room, unless it stops anyway (force): then whatever helps.
+  if (before.without >= STOP_LIMIT && !force)
+    return { stopped: false, reason: full(before.without) }
+  const after = await diskBeforeStop(ref, true).catch(() => null)
+  console.log(
+    `made room on ${computerId} before its stop: ${percent(before.used)} → ${after ? percent(after.used) : '?'}`,
+  )
+  if (after && after.used < STOP_LIMIT) return { stopped: true }
+  if (force) return { stopped: false, reason: full(after?.used ?? before.used) }
+  await provider!
+    .exec(ref, SWAP_BACK)
+    .catch((error) => console.warn(`swap back on ${computerId} failed: ${String(error)}`))
+  return { stopped: false, reason: full(after?.used ?? before.used) }
+}
+
+/**
+ * In the hub: stop the computer with its provider; its runner went with it. Not while its disk
+ * is too full for boat to resume it (roomToStop), unless `force` (its workspace has no plan:
+ * it cannot keep running, and says so in the log).
+ */
 export async function stopComputer(
   computer: { id: string; organizationId: string; workspaceId: string; providerRef: unknown },
   actor: { type: 'member' | 'system'; id: string },
-) {
+  options: { force?: boolean } = {},
+): Promise<StopResult> {
   const ref = refOf(computer)
-  if (!provider || !ref) return
+  if (!provider || !ref) return { stopped: true }
+  const room = await roomToStop(computer.id, ref, options.force ?? false)
+  if (!room.stopped) {
+    const error = new Error(`${computer.id} not stopped: ${room.reason}`)
+    console.error(error.message)
+    // The idle stop asks each minute: said once an hour.
+    if (Date.now() - (tooFullNoted.get(computer.id) ?? 0) >= TOO_FULL_NOTE_EVERY_MS) {
+      tooFullNoted.set(computer.id, Date.now())
+      noteFailure('cloud:disk-too-full-to-stop', error, { workspaceId: computer.workspaceId })
+    }
+    if (!options.force) return room
+  }
   await provider.stop(ref)
   // Its runner went with it, without closing its connection.
   currentHub(computer.workspaceId).dropRunner(computer.id)
@@ -438,7 +509,12 @@ export async function stopComputer(
     action: 'computer.stopped',
     target: { type: 'computer', id: computer.id },
   })
+  return { stopped: true }
 }
+
+/** When each computer's refused stop was last sent to ops (stopComputer). */
+const tooFullNoted = new Map<string, number>()
+const TOO_FULL_NOTE_EVERY_MS = 60 * 60_000
 
 /**
  * Set a cloud computer's desktop clipboard to `text`, or read it: resolves with the clipboard
@@ -812,6 +888,7 @@ async function backUpThenStop(
   const current = await prisma.computer.findUnique({ where: { id: computer.id } })
   if (busy > 0 || Date.now() - since < idleMs || current?.status !== 'running') return
   console.log(`stopping idle computer ${computer.id}`)
+  // A stop that waits (roomToStop) is kept alive again at once by the next minute's check.
   state().keptAlive.delete(computer.id)
   await stopComputer(current, { type: 'system', id: 'brigade' }).catch((error) =>
     console.error('idle stop failed', error),

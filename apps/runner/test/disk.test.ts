@@ -190,25 +190,25 @@ test('a package manager installing is told from one running something', () => {
     assert.equal(installs(args), false, args)
 })
 
-test('the disk is said full from 85% until it is back under 80%, and said again every 10 minutes', () => {
+test('the disk is said full from 80% until it is back under 75%, and said again every 10 minutes', () => {
   const at = 1_000_000
-  // Under 80%: not full; said once, then only every 10 minutes.
-  const first = diskReport(undefined, 0.78, at)
+  // Under 75%: not full; said once, then only every 10 minutes.
+  const first = diskReport(undefined, 0.73, at)
   assert.deepEqual(first, { full: false, at })
-  assert.equal(diskReport(first!, 0.83, at + 60_000), null)
-  assert.deepEqual(diskReport(first!, 0.83, at + 10 * 60_000), {
+  assert.equal(diskReport(first!, 0.78, at + 60_000), null)
+  assert.deepEqual(diskReport(first!, 0.78, at + 10 * 60_000), {
     full: false,
     at: at + 10 * 60_000,
   })
-  // From 85%: full at once.
-  const full = diskReport(first!, 0.86, at + 60_000)
+  // From 80%: full at once, well before boat stops resuming the computer (90%).
+  const full = diskReport(first!, 0.81, at + 60_000)
   assert.deepEqual(full, { full: true, at: at + 60_000 })
-  // Still full down to 80%, then not.
-  assert.equal(diskReport(full!, 0.81, at + 120_000), null)
-  assert.deepEqual(diskReport(full!, 0.79, at + 120_000), { full: false, at: at + 120_000 })
+  // Still full down to 75%, then not.
+  assert.equal(diskReport(full!, 0.76, at + 120_000), null)
+  assert.deepEqual(diskReport(full!, 0.74, at + 120_000), { full: false, at: at + 120_000 })
   // A runner just started between the two says nothing: an open ticket stays open.
-  assert.equal(diskReport(undefined, 0.82, at), null)
-  assert.deepEqual(diskReport(undefined, 0.79, at), { full: false, at })
+  assert.equal(diskReport(undefined, 0.77, at), null)
+  assert.deepEqual(diskReport(undefined, 0.74, at), { full: false, at })
 })
 
 test("a teammate's old harness sessions and unused npx packages go, the rest stays", async (t) => {

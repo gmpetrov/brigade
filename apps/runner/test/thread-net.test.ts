@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 import { dirname } from 'node:path'
 import { test } from 'node:test'
-import { asTeammate, dockerSocket } from '../src/thread-net.js'
+import { asTeammate, dockerSocket, netWithTries } from '../src/thread-net.js'
 
 // What runs as a teammate finds the runner's Node first: sudo's PATH has only the system's.
 const withNode = [
@@ -63,4 +63,35 @@ test("a teammate's command finds the runner's Node first, then sudo's PATH", () 
     { env: { PATH: '/usr/bin:/bin' } },
   ).toString()
   assert.equal(echoed, 'a b|$HOME||')
+})
+
+test("a thread's network is tried again when the helper fails, and never left to the computer's", async () => {
+  const net = { thread: 'cmthread1', address: '10.231.0.6' }
+  // Its lock held by the other threads' (a resumed computer bringing them all back): then up.
+  let calls = 0
+  const made = await netWithTries(
+    'cmthread1',
+    async () => {
+      if (++calls < 3) throw Object.assign(new Error('timed out'), { stderr: '' })
+      return net
+    },
+    3,
+    1,
+  )
+  assert.deepEqual(made, net)
+  assert.equal(calls, 3)
+  // Failing each time: the thread's command fails with why, rather than running without it.
+  await assert.rejects(
+    netWithTries(
+      'cmthread1',
+      async () => {
+        throw Object.assign(new Error('Command failed'), {
+          stderr: 'brigade-thread: no address left\n',
+        })
+      },
+      2,
+      1,
+    ),
+    /own network could not be set up on the computer \(brigade-thread: no address left\)/,
+  )
 })

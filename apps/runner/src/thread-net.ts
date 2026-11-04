@@ -39,32 +39,66 @@ const nets = new Map<string, Promise<ThreadNet | null>>()
 const down = new Set<string>()
 
 /**
- * The thread's network, made if needed; null where threads have none (see
- * above) or when the helper failed. Then the thread stays on the computer's
- * network until the runner restarts, so that its preview and its commands
- * never end up on two networks (as when the setup arrives after the runner).
+ * How long the helper's `up` may take. It waits for the helper's lock: a resumed computer
+ * brings all its threads back at once, over a disk still being restored, and on Nov 4 one
+ * waited past the 30 seconds it had then.
+ */
+const UP_TIMEOUT_MS = 120_000
+/** Tries of `up`, a little apart, before the thread's command fails. */
+const UP_TRIES = 3
+const UP_AGAIN_MS = 5_000
+
+/**
+ * The thread's network, made if needed; null where threads have none (see above): no helper
+ * on this computer, which then stays so until the runner restarts, so that a thread's preview
+ * and its commands never end up on two networks (as when the setup arrives after the runner).
+ * When the helper fails, tried again (netWithTries), then a rejection: the thread's command
+ * fails rather than running on the computer's network, next to every other thread's, and the
+ * next one tries again.
  */
 export function threadNet(sessionId: string): Promise<ThreadNet | null> {
   if (!ENABLED) return Promise.resolve(null)
   down.delete(sessionId)
   let net = nets.get(sessionId)
   if (!net) {
-    net = run('sudo', ['-n', THREAD_HELPER, 'up', sessionId], { cwd: '/', timeout: 30_000 }).then(
-      async ({ stdout }) => ({
-        thread: sessionId,
-        address: stdout.trim(),
-        isolated: await isolate(sessionId),
-      }),
-      (error: { stderr?: string } & Error) => {
-        console.warn(
-          `thread ${sessionId} runs on the computer's network: ${(error.stderr || error.message).trim()}`,
-        )
-        return null
-      },
-    )
-    nets.set(sessionId, net)
+    const made = existsSync(THREAD_HELPER)
+      ? netWithTries(sessionId, async () => {
+          const { stdout } = await run('sudo', ['-n', THREAD_HELPER, 'up', sessionId], {
+            cwd: '/',
+            timeout: UP_TIMEOUT_MS,
+          })
+          return { thread: sessionId, address: stdout.trim(), isolated: await isolate(sessionId) }
+        })
+      : Promise.resolve(null)
+    net = made
+    nets.set(sessionId, made)
+    made.catch(() => {
+      if (nets.get(sessionId) === made) nets.delete(sessionId)
+    })
   }
   return net
+}
+
+/** `up` tried `tries` times, `againMs` more apart each time; its last failure, said plainly. */
+export async function netWithTries(
+  sessionId: string,
+  up: () => Promise<ThreadNet>,
+  tries = UP_TRIES,
+  againMs = UP_AGAIN_MS,
+): Promise<ThreadNet> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await up()
+    } catch (error) {
+      const why = ((error as { stderr?: string }).stderr || (error as Error).message).trim()
+      if (attempt >= tries)
+        throw new Error(
+          `This thread's own network could not be set up on the computer (${why}), so nothing of it ran. Send a message to try again.`,
+        )
+      console.warn(`thread ${sessionId}'s network, try ${attempt} of ${tries}: ${why}`)
+      await new Promise((resolve) => setTimeout(resolve, againMs * attempt))
+    }
+  }
 }
 
 /** Its holder, started: false with an older helper (the setup arrives after the runner) or when it failed. */

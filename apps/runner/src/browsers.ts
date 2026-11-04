@@ -104,9 +104,16 @@ export async function ensureBrowser(teammate: { id: string; name: string }, url?
   return port
 }
 
+/**
+ * How long Chrome may take to listen. A second or two most of the time; on a computer just
+ * resumed, its profile still comes back from the snapshot, and on Nov 4 Chrome took longer than
+ * the 20 seconds it had then: the thread was told its browser did not start, while it did.
+ */
+const LISTEN_WAIT_MS = 60_000
+
 /** Once the browser listens on its port; an error with Chrome's reason when it does not. */
 async function untilListening(user: string, port: number) {
-  for (let i = 0; i < 100 && !(await listening(port)); i++)
+  for (let i = 0; i < LISTEN_WAIT_MS / 200 && !(await listening(port)); i++)
     await new Promise((r) => setTimeout(r, 200))
   if (!(await listening(port))) {
     const why = await chromeErrors(user)
