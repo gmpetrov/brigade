@@ -182,6 +182,7 @@ export const ConnectorKind = {
   posthog: 'posthog',
   dataforseo: 'dataforseo',
   ahrefs: 'ahrefs',
+  revenuecat: 'revenuecat',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics',

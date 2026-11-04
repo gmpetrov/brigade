@@ -9,6 +9,7 @@ import {
   ConnectGitHub,
   ConnectGoogle,
   ConnectMcp,
+  ConnectMcpKey,
   ConnectMcpServer,
   InspectMcp,
   ConnectWebhookApp,
@@ -18,7 +19,7 @@ import {
 import { installAppSkills } from '../app-skills.js'
 import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
 import { stripeAccountLabel, stripeAccountOf, stripeAccounts } from '../connectors/stripe.js'
-import type { ConnectorKind } from '../connectors/types.js'
+import type { ApiKeyCredential, ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
 import { accountKey } from '../subscriptions/stripe.js'
 import { deleteTriggers } from './triggers.js'
@@ -179,6 +180,11 @@ export async function createConnection(
   existing?: { id: string },
   /** The row this sign-in repairs, when its label alone cannot say which (Stripe's). */
   repair?: string,
+  /**
+   * false: only `repair` says which row this sign-in renews, never the account's name (a pasted
+   * key, whose accounts are told apart by id: two may share a name).
+   */
+  matchByName = true,
 ) {
   const db = scoped(scope)
   const id = randomUUID()
@@ -198,7 +204,7 @@ export async function createConnection(
             status: { not: 'removed' },
           },
         })
-      : credential && connection.externalAccount
+      : credential && connection.externalAccount && matchByName
         ? await db.connection.findFirst({
             where: {
               appId: app.id,
@@ -276,6 +282,7 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   posthog: true,
   dataforseo: true,
   ahrefs: true,
+  revenuecat: true,
   email: !unavailable('email'),
   mcp: true,
   webhook: true,
@@ -658,6 +665,65 @@ export const connections = new Hono<AppEnv>()
       verifier,
     })
     return c.json({ url, appId: app.id })
+  })
+
+  /**
+   * An account of an App that signs in to its MCP server with a pasted key (RevenueCat): the
+   * key is checked against the server before it is kept, and the row named from it.
+   */
+  .post('/mcp/key', async (c) => {
+    const { scope, db } = c.var
+    const { kind, apiKey, reconnect } = await parseBody(c.req.raw, ConnectMcpKey)
+    const server = connectors[kind]!.mcp!
+    const name = appCatalog[kind].name
+    const keyed = (url: string, init: RequestInit = {}) =>
+      fetch(url, {
+        ...init,
+        headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
+      })
+    try {
+      await listMcpTools(keyed, server)
+    } catch (error) {
+      throw new HTTPException(400, {
+        message: `${name} did not accept that key (${error instanceof Error ? error.message : 'error'})`,
+      })
+    }
+    // Which account the key reaches, by name for its row and by id to tell it apart.
+    const { account, accountId } = await keyAccount(server, keyed)
+    if (!account) console.warn(`mcp connection of ${kind}: no account name`)
+    if (!accountId)
+      throw new HTTPException(400, {
+        message: `${name} did not say which account that key reaches`,
+      })
+    // The member's account this key reaches already, by id: it gets the new key. A reconnect
+    // keeps the row's name and grants, so only with a key of that same account.
+    const rows = await db.connection.findMany({
+      where: { kind, createdByMemberId: scope.memberId, status: { not: 'removed' } },
+    })
+    let same: string | undefined
+    for (const row of rows) {
+      if (!row.vaultSecretId) continue
+      const kept = await openSecret<ApiKeyCredential>(db, scope, row.vaultSecretId).catch(
+        () => null,
+      )
+      if (kept?.accountId === accountId) same = row.id
+    }
+    if (reconnect) {
+      const row = rows.find((r) => r.id === reconnect)
+      if (!row) throw new HTTPException(404, { message: 'Connection not found' })
+      const refused = keyReconnectRefusal(name, reconnect, same, account)
+      if (refused) throw new HTTPException(400, { message: refused })
+    }
+    const credential: ApiKeyCredential = { apiKey, accountId }
+    const connection = await createConnection(
+      scope,
+      { kind, label: name, externalAccount: account },
+      credential,
+      undefined,
+      same,
+      false,
+    )
+    return c.json({ id: connection.id }, 201)
   })
 
   /** Start an MCP App's sign-in, on its server's own OAuth. */
@@ -1047,6 +1113,33 @@ async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType
     return who.email ?? who.name ?? who.id ?? null
   } catch {
     return null
+  }
+}
+
+/**
+ * Why a key may not reconnect an account, or null: it must reach that same account, by id
+ * (`same`: the member's account the key reaches, if any). Two RevenueCat projects may share a
+ * name, so the name alone cannot say.
+ */
+export function keyReconnectRefusal(
+  app: string,
+  reconnect: string,
+  same: string | undefined,
+  key: string | null,
+) {
+  if (same === reconnect) return null
+  return `That key reaches ${key ? `another ${app} account (${key})` : `another ${app} account`}: paste a key of this account, or add it as another account`
+}
+
+/** The account a pasted key reaches: its name for the row, and its stable id. */
+async function keyAccount(server: McpServer, keyed: Parameters<typeof mcpAccount>[1]) {
+  if (!server.account || !('tool' in server.account) || !server.account.id)
+    return { account: await mcpAccount(server, keyed), accountId: null }
+  try {
+    const output = await callMcpTool(keyed, server, server.account.tool, {})
+    return { account: server.account.name(output), accountId: server.account.id(output) }
+  } catch {
+    return { account: null, accountId: null }
   }
 }
 

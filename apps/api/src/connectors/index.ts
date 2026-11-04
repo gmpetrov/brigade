@@ -19,6 +19,7 @@ import { openrouter } from './openrouter.js'
 import { posthog } from './posthog.js'
 import { dataforseo } from './dataforseo.js'
 import { ahrefs } from './ahrefs.js'
+import { revenuecat } from './revenuecat.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -47,6 +48,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   posthog,
   dataforseo,
   ahrefs,
+  revenuecat,
   email,
 }
 
@@ -99,6 +101,7 @@ export const triggerCatalog = () =>
         'posthog',
         'dataforseo',
         'ahrefs',
+        'revenuecat',
         'email',
         'mcp',
         'webhook',
@@ -321,6 +324,15 @@ export const appCatalog: Record<
     category: 'Marketing',
     // An Ahrefs sign-in spends its workspace's monthly API units on most calls: kept to its member's threads until they share it.
     personal: true,
+  },
+  revenuecat: {
+    name: 'RevenueCat',
+    description:
+      'Products, entitlements, offerings, paywalls, customers and subscriptions, revenue charts and experiments of an app, with RevenueCat’s MCP server.',
+    developer: 'RevenueCat',
+    category: 'Finance',
+    // A project's key, as a Stripe account is the business's: the workspace's to share.
+    personal: false,
   },
   mcp: {
     name: 'MCP server',

@@ -20,6 +20,9 @@ const { openrouterAccountName } = await import('../src/connectors/openrouter.js'
 const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
 const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
 const { ahrefs } = await import('../src/connectors/ahrefs.js')
+const { revenuecat, revenuecatAccountId, revenuecatAccountName } =
+  await import('../src/connectors/revenuecat.js')
+const { keyReconnectRefusal } = await import('../src/routes/connections.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -295,6 +298,70 @@ test('Ahrefs tools that change something are writes, as its server marks them', 
       /-(create|update|delete|add)$|^management-update-project$/.test(name),
       name,
     )
+})
+
+test("a RevenueCat account shows as its key's project", () => {
+  // list-projects' answer to a project's key, as RevenueCat's server gave it.
+  const one = {
+    object: 'list',
+    items: [
+      {
+        object: 'project',
+        id: 'proj2220e338',
+        name: 'NoCo AI',
+        created_at: '2026-06-14T07:33:34.157Z',
+        icon_url: 'https://www.appatar.io/com.nocontactai/small?store=app_store',
+        icon_url_large: 'https://www.appatar.io/com.nocontactai/large?store=app_store',
+      },
+    ],
+    next_page: null,
+    url: 'https://api.revenuecat.com/v2/projects',
+  }
+  assert.equal(revenuecatAccountName(one), 'NoCo AI')
+  assert.equal(revenuecatAccountId(one), 'proj2220e338')
+  const two = { ...one, items: [...one.items, { object: 'project', id: 'proj9', name: 'Talkie' }] }
+  assert.equal(revenuecatAccountName(two), 'NoCo AI +1')
+  assert.equal(revenuecatAccountName({ items: [] }), null)
+  assert.equal(revenuecatAccountName('Unauthorized'), null)
+  assert.equal(revenuecatAccountName(null), null)
+})
+
+test("a key reconnects only its own project's account, by the project's id", () => {
+  // Two projects may both be called Production: their ids tell them apart.
+  const projects = (...items: { id: string; name: string }[]) => ({
+    object: 'list',
+    items: items.map((p) => ({ object: 'project', ...p })),
+  })
+  const a = projects({ id: 'projA1', name: 'Production' })
+  const b = projects({ id: 'projB2', name: 'Production' })
+  assert.equal(revenuecatAccountName(a), revenuecatAccountName(b))
+  assert.equal(revenuecatAccountId(a), 'projA1')
+  assert.equal(revenuecatAccountId(b), 'projB2')
+  assert.equal(
+    revenuecatAccountId(projects({ id: 'projZ', name: 'Z' }, { id: 'projA', name: 'A' })),
+    'projA,projZ',
+  )
+  assert.equal(revenuecatAccountId({ items: [] }), null)
+  assert.equal(revenuecatAccountId('Unauthorized'), null)
+  // connection-a is Project A's row: a key reaching it (same) may reconnect it, no other may.
+  assert.equal(
+    keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-a', 'Production'),
+    null,
+  )
+  assert.match(
+    keyReconnectRefusal('RevenueCat', 'connection-a', undefined, 'Production')!,
+    /another RevenueCat account \(Production\)/,
+  )
+  assert.ok(keyReconnectRefusal('RevenueCat', 'connection-a', 'connection-b', 'Production'))
+})
+
+test('RevenueCat signs in with a key, and its tools that change something are writes', () => {
+  assert.equal(revenuecat.auth, 'api_key')
+  assert.equal(revenuecat.mcp!.auth, 'api_key')
+  const tools = Object.entries(revenuecat.mcp!.tools)
+  assert.equal(tools.length, 129)
+  const reads = /^(get|list|validate|preview|render)-/
+  for (const [name, tool] of tools) assert.equal(tool.write, !reads.test(name), name)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

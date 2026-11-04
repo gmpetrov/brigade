@@ -831,6 +831,7 @@ export type Connection = {
     | 'posthog'
     | 'dataforseo'
     | 'ahrefs'
+    | 'revenuecat'
     | 'email'
     | 'mcp'
   label: string
