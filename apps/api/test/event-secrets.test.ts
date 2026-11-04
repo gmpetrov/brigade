@@ -154,6 +154,25 @@ describe('secrets in stored events', { skip: !database && 'no database answers' 
         runner.sent.some((m) => m.type === 'ack' && m.seq === 2),
         'acknowledged',
       )
+      // A reply that streams the token over two deltas, in two messages of the runner.
+      const delta = (seq: number, text: string) => ({
+        sessionId,
+        seq,
+        event: { at, type: 'message.delta', id: 'reply', text },
+      })
+      const say = (...events: object[]) =>
+        runner.run(() => onRunnerMessage(hub, conn, JSON.stringify({ type: 'events', events })))
+      await say(delta(3, `Your token: ${github.slice(0, 4)}`))
+      await conn.queue
+      await say(delta(4, github.slice(4)), delta(5, ' is set.'))
+      await conn.queue
+      const deltas = await db.sessionEvent.findMany({
+        where: { sessionId, type: 'message.delta' },
+        orderBy: { seq: 'asc' },
+      })
+      const streamed = deltas.map((r) => (r.data as { text: string }).text).join('')
+      assert.equal(streamed, 'Your token: [redacted: a GitHub token] is ')
+      assert.ok(!JSON.stringify(deltas).includes(github.slice(4, 12)), 'no part of it stored')
     } finally {
       hub.broadcast = original
       for (const timer of conn.retries.values()) clearTimeout(timer)

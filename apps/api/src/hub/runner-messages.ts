@@ -23,7 +23,7 @@ import { prisma, type Prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
 import { noteDisk } from '../disk-tickets.js'
 import { keepFilesApart } from '../event-files.js'
-import { maskSecretsIn } from '../secrets.js'
+import { maskDeltas, maskSecretsIn, type MaskedStream } from '../secrets.js'
 import { dropDeadWaiters, type Live } from '../held-calls.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
@@ -517,7 +517,7 @@ async function storeEvents(
     const last = Math.max(...events.map((e) => e.seq))
     return hub.send(conn, { type: 'ack', sessionId, seq: last })
   }
-  await insertEvents(conn, session, await withTeammateIds(session, events))
+  await insertEvents(hub, conn, session, await withTeammateIds(session, events))
   await advance(hub, conn, session)
 }
 
@@ -527,6 +527,7 @@ async function storeEvents(
  * every event after it would wait on it, and the thread with them.
  */
 async function insertEvents(
+  hub: WorkspaceHub,
   conn: RunnerConn,
   session: { id: string; organizationId: string; workspaceId: string },
   events: SequencedEvent[],
@@ -543,10 +544,17 @@ async function insertEvents(
   // Images and PDFs go to the bucket, not the database (event-files.ts). Runners from
   // DIRECT_UPLOAD_PROTOCOL on put them there first and send only their names. Then secrets
   // are masked (secrets.ts): a stored event goes whole to every browser that opens the thread.
-  // After the files, which are not text, and which their names replaced.
+  // After the files, which are not text, and which their names replaced. A reply's deltas
+  // first, in order, each with the text before it (MaskedStream): a secret can span several.
+  const streams = hub.local('delta-streams', () => new Map<string, MaskedStream>())
+  const ordered = [...events].sort((a, b) => a.seq - b.seq)
+  const streamed = maskDeltas(
+    streams,
+    session.id,
+    ordered.map(({ seq, event }) => ({ seq, event: storableJson(event) })),
+  )
   const kept = await Promise.all(
-    events.map(async ({ seq, event }) => {
-      const storable = storableJson(event)
+    streamed.map(async ({ seq, event: storable }) => {
       const apart = await keepFilesApart(session, session.id, storable)
       if (apart !== storable) noteInlineFiles(conn)
       return { seq, event: maskSecretsIn(apart) }
