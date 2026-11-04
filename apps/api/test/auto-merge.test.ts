@@ -21,7 +21,8 @@ import { parseEnv } from 'node:util'
 //   report's wake-up brought ended (its message found by the wake-up's id, never its text),
 //   whatever other turn ends first; one delivered before wake-ups kept the report holds nothing;
 //   one whose report wakes nobody, once it is delivered, which looks again; an awaited child's,
-//   as before.
+//   as before;
+// - a merge tells its thread once, even when GitHub's event for it comes while Brigade merges.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -738,6 +739,52 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     assert.ok(
       !merged.has(61),
       'the fresh report is not taken for an old one and has not reached its parent',
+    )
+  })
+  test('a merge tells its thread once, even when GitHub tells of it while Brigade merges', async () => {
+    const { hubs } = await import('../src/hub.js')
+    const { mergeNow, pullRequestEvent } = await import('../src/pull-requests.js')
+    const thread = await opened(70)
+    // Its runner connected: the notes it is sent.
+    const notes: string[] = []
+    const get = hubs.get
+    hubs.get = (workspaceId: string) => {
+      const hub = get(workspaceId)
+      return new Proxy(hub, {
+        get: (target, name) =>
+          name === 'runnerProtocol'
+            ? async () => 99
+            : name === 'sendToRunner'
+              ? async (_: string, message: { type: string; sessionId?: string; text?: string }) => {
+                  if (message.type === 'thread.note' && message.sessionId === thread)
+                    notes.push(message.text!)
+                }
+              : Reflect.get(target, name),
+      })
+    }
+    // GitHub's event for the merge lands before Brigade records it: both see it open.
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const response = await realFetch(url, init)
+      if (init?.method === 'PUT' && new URL(String(url)).pathname.endsWith('/pulls/70/merge'))
+        await pullRequestEvent(scope, repo, pull(70) as never)
+      return response
+    }) as typeof fetch
+    try {
+      await mergeNow(
+        { ...scope, userId: `owner-${suffix}`, memberId: ids.owner, role: 'owner' },
+        repo,
+        70,
+        'squash',
+      )
+    } finally {
+      globalThis.fetch = realFetch
+      hubs.get = get
+    }
+    assert.equal((await row(70)).state, 'merged')
+    assert.deepEqual(
+      notes.filter((n) => n.startsWith('Pull request #70 ')),
+      [`Pull request #70 in ${repo} was merged.`],
     )
   })
 })

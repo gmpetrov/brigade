@@ -340,6 +340,16 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
   )
     return
   const closed = state !== 'open'
+  // Only the write that moves it to its new state tells its thread: a merge from Brigade
+  // (recordMerge), GitHub's webhook and a card's reload can all see it open at once.
+  const moved =
+    row.state !== state &&
+    (
+      await db.pullRequest.updateMany({
+        where: { id: row.id, state: { not: state } },
+        data: { state },
+      })
+    ).count > 0
   await db.pullRequest.updateMany({
     where: { id: row.id },
     data: {
@@ -354,12 +364,12 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
         : {}),
     },
   })
-  if (closed && row.state !== state && row.sessionId) {
+  if (closed && moved && row.sessionId) {
     await settleOnMerge(scope, row.sessionId)
     await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
     await noteInThread(db, row.sessionId, await pullNote(row, state))
   }
-  if (state === 'merged' && row.state !== state) {
+  if (state === 'merged' && moved) {
     await settleItemsOnMerge(db, scope, row)
     // Its thread's teammate is woken, to declare the thread done or say what remains.
     await wakeOnMerge(scope, row).catch((error) =>
@@ -1454,15 +1464,17 @@ async function recordMerge(
   method: MergeMethod,
   data: Record<string, unknown> = {},
 ) {
+  // Its webhook or a reload may have recorded the merge first: then that one told the thread.
+  const moved =
+    (
+      await db.pullRequest.updateMany({
+        where: { id: row.id, state: { not: 'merged' } },
+        data: { state: 'merged' },
+      })
+    ).count > 0
   await db.pullRequest.updateMany({
     where: { id: row.id },
-    data: {
-      state: 'merged',
-      mergedAt: new Date(),
-      mergeStatus: 'none',
-      autoMergeAt: null,
-      note: null,
-    },
+    data: { mergedAt: new Date(), mergeStatus: 'none', autoMergeAt: null, note: null },
   })
   await closeTickets(db, row.id)
   await audit({
@@ -1472,7 +1484,7 @@ async function recordMerge(
     target: { type: 'pull_request', id: row.id },
     data: { repository: row.repository, number: row.number, method, ...data } as never,
   })
-  if (row.sessionId) {
+  if (moved && row.sessionId) {
     await settleOnMerge(scope, row.sessionId)
     await stopThreadPreview(db, row.sessionId, 'Stopped: the pull request was merged')
     const by = actor.type === 'member' ? actor.id : undefined

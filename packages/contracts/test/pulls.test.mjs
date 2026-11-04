@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { resolveConflictsMessage, resolveConflictsNote } from '../dist/index.js'
+import {
+  mergedMessage,
+  mergedPull,
+  resolveConflictsMessage,
+  resolveConflictsNote,
+} from '../dist/index.js'
 
 test('a merge’s ask to resolve conflicts reads back', () => {
   const text = resolveConflictsMessage({
@@ -27,4 +32,13 @@ test('a person’s text is not an ask to resolve conflicts', () => {
     null,
   )
   assert.equal(resolveConflictsNote('hello'), null)
+})
+
+test("a merge's line and its wake-up name the pull request they tell about", () => {
+  const pull = { repository: 'acme/web', number: 698 }
+  assert.deepEqual(mergedPull('Pull request #698 in acme/web was merged.'), pull)
+  assert.deepEqual(mergedPull('Pull request #698 in acme/web was merged by Ada Lovelace.'), pull)
+  assert.deepEqual(mergedPull(mergedMessage(pull)), pull)
+  assert.equal(mergedPull('Pull request #698 in acme/web was closed without merging.'), null)
+  assert.equal(mergedPull('PR #698 is merged.'), null)
 })

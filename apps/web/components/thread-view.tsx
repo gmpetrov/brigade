@@ -19,6 +19,7 @@ import {
   OFFER_CHOICES_TOOL,
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
+  mergedPull,
   resolveConflictsNote,
   SHOW_WIDGET_TOOL,
   splitPreviewElements,
@@ -402,6 +403,16 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
       if (shown || ASKS.has(item.kind)) items.push(item)
       byKey.set(item.key, item)
     }
+    /**
+     * The merge of the same pull request, told just before: its line again (an API from before
+     * one merge was told once), or the wake-up that asks its teammate to close the thread.
+     */
+    const toldMerge = (text: string) => {
+      const pull = mergedPull(text)
+      const last = items.at(-1)
+      const before = last?.kind === 'note' && last.settles ? mergedPull(last.text) : null
+      return !!pull && pull.number === before?.number && pull.repository === before.repository
+    }
     let nextGap = 0
     for (const { seq, event: e } of events) {
       // Past a gap: its line, and what was open before it closes, as unknown.
@@ -455,6 +466,12 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               ...(turnTeammate ? { steeredTo: turnTeammate } : {}),
               side: made,
             })
+            break
+          }
+          // A merge's wake-up says again what its line just said: its turn shows, not the note.
+          if (e.memberId === null && toldMerge(e.text)) {
+            if (!e.steered) turnStartedAt = undefined
+            else if (idle) idle = 'steered'
             break
           }
           // Not steered into a turn: one still open never ended.
@@ -712,9 +729,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             add({ kind: 'thinking', key: `r${seq}`, text: e.value })
           else if (e.source === 'runner' && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value })
-          else if (e.source === THREAD_NOTE_SOURCE && typeof e.value === 'string')
-            add({ kind: 'note', key: `n${seq}`, text: e.value, settles: true })
-          else if (e.source === TURN_WAITING_SOURCE) {
+          else if (e.source === THREAD_NOTE_SOURCE && typeof e.value === 'string') {
+            if (!toldMerge(e.value))
+              add({ kind: 'note', key: `n${seq}`, text: e.value, settles: true })
+          } else if (e.source === TURN_WAITING_SOURCE) {
             const { teammateId, running } = e.value as TurnWaiting
             add({ kind: 'slot', key: `q${seq}`, at: Date.parse(e.at), teammateId, running })
           } else if (e.source === TURN_MEMORY_SOURCE) {
@@ -2562,7 +2580,7 @@ export function ThreadItems({
   background = [],
   eventsWaitingSince,
   computerDown,
-  childThreads = [],
+  childThreads,
   drafting = false,
   onRetry,
   admin = false,
@@ -2616,8 +2634,11 @@ export function ThreadItems({
   eventsWaitingSince?: string | null
   /** Its computer is away (restarting, offline): said instead of how the turn goes, which waits on it. */
   computerDown?: ComputerDown
-  /** The thread's child threads: where a teammate started one, its line shows how it is doing. */
-  childThreads?: ThreadChild[]
+  /**
+   * The thread's child threads: where a teammate started one, its line shows how it is doing.
+   * Required: left out, every child would show as still working, with no report.
+   */
+  childThreads: ThreadChild[]
   /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
   drafting?: boolean
   /** Tries the turn that failed last again. Unset when they cannot write in the thread. */
@@ -3020,7 +3041,6 @@ export function ThreadItems({
               number={opened.number}
               title={opened.title}
               mergeElsewhere={mergeOffered(i, opened)}
-              childThreads={childThreads}
             />
           )
         return <ToolStep key={item.key} threadId={threadId} item={item} />

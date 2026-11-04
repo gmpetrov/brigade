@@ -1,11 +1,12 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
-// its changes, its review line and review badge the reviewer's thread, and an owner or
+// its changes, its review line the reviewer's thread, and an owner or
 // admin merges it from here, after a word while its review is under way, asked for
 // changes or did not read its latest commits (then Review again has them read). One that
 // conflicts has Resolve conflicts instead: its teammate resolves them, then it merges by
-// itself. In its thread, its review's child thread shows under it as a line, like a child a
-// teammate started. A thread's outputs show the same pull request as a row (thread-outputs).
+// itself. Its review is the line under its title, which opens the review's thread: no badge or
+// line of its own says it again. A thread's outputs show the same pull request as a row
+// (thread-outputs).
 import {
   ExternalLink,
   GitCompareArrows,
@@ -16,11 +17,10 @@ import {
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
-import { PullStatus, ReviewLink, reviewLine, reviewThread } from '@/components/pull-status'
-import { atEnd, ChildLine } from '@/components/thread-children'
+import { PullStatus, pullStatus, ReviewLink, reviewLine } from '@/components/pull-status'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
-import { api, pullHref, useApi, type PullRequestState, type ThreadChild } from '@/lib/api'
+import { api, pullHref, useApi, type PullRequestState } from '@/lib/api'
 import {
   blockedBecause,
   canMerge,
@@ -30,7 +30,6 @@ import {
   resolving,
   reviewer,
   reviewHolds,
-  changesAskedBy,
   unreviewedBy,
   useLastMergeMethod,
 } from '@/lib/merge-method'
@@ -125,7 +124,6 @@ export function PullCard({
   title,
   open,
   mergeElsewhere,
-  childThreads = [],
 }: {
   repository: string
   number: number
@@ -137,8 +135,6 @@ export function PullCard({
    * the card shows where it stands instead.
    */
   mergeElsewhere?: boolean
-  /** The thread's children: its review, when it ran in one of them, shows as its line once stopped. */
-  childThreads?: ThreadChild[]
 }) {
   const { me } = useDashboard()
   const { pull, busy, asking, error, merge, resolve, reviewAgain } = usePull(repository, number)
@@ -176,29 +172,9 @@ export function PullCard({
     // says why, and Merge stays here.
     if (resolving(p) || (mergeElsewhere && mergeable && !reviewHolds(p)))
       return <PullStatus pull={p} />
-    const button = mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
-    // Its review is under way or asked for changes: it says so first, opening the review, and
-    // Merge steps back.
-    const thread = reviewThread(p)
-    return reviewHolds(p) ? (
-      <span className="flex flex-none items-center gap-2">
-        {thread ? (
-          <Hint label={`Open ${reviewer(p) ?? unreviewedBy(p) ?? changesAskedBy(p)}'s review`}>
-            <Link
-              href={`/app/threads/${thread}`}
-              className="relative z-10 rounded-md hover:opacity-80"
-            >
-              <PullStatus pull={p} />
-            </Link>
-          </Hint>
-        ) : (
-          <PullStatus pull={p} />
-        )}
-        {button}
-      </span>
-    ) : (
-      button
-    )
+    // Its review under way or asking for changes, the line under its title says so and opens
+    // it, and Merge steps back (outlined).
+    return mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
   }
 
   // Filled, as every card's main action, while it can merge and its review holds nothing back.
@@ -216,10 +192,7 @@ export function PullCard({
     </Button>
   )
 
-  const reviewThreadId = p ? reviewThread(p) : null
-  const review = reviewThreadId ? childThreads.find((c) => c.id === reviewThreadId) : undefined
-
-  const card = (
+  return (
     <div className="relative flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50">
       <Icon
         className={cn(
@@ -237,14 +210,23 @@ export function PullCard({
           href={pullHref(repository, number)}
           className="truncate font-semibold after:absolute after:inset-0"
         >
-          Opened pull request #{number}
-          {title && `: ${title}`}
+          #{number}
+          {title && ` ${title}`}
         </Link>
         <span className="truncate text-xs text-muted-foreground">
           <span className="font-mono">{repository}</span>
           {p && reviewLine(p) && (
             <>
               {' · '}
+              {p.state === 'open' && (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'mr-1.5 inline-block size-1.5 rounded-full align-middle',
+                    REVIEW_DOTS[pullStatus(p).tone],
+                  )}
+                />
+              )}
               <ReviewLink pull={p} />
             </>
           )}
@@ -269,12 +251,13 @@ export function PullCard({
       {action()}
     </div>
   )
-  // At work or waiting on a person, the review's line is at the end of the conversation.
-  if (!review || atEnd(review)) return card
-  return (
-    <div className="flex flex-col gap-1">
-      {card}
-      <ChildLine child={review} className="-mx-2" />
-    </div>
-  )
+}
+
+/** The dot before its review's line: where its review leaves it, as its badge's tone. */
+const REVIEW_DOTS: Record<string, string> = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  destructive: 'bg-destructive-text',
+  progress: 'bg-primary',
+  neutral: 'bg-muted-foreground',
 }

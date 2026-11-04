@@ -144,12 +144,17 @@ const plain = (markdown: string) =>
     .replace(/(\*\*|__|~~|`)/g, '')
     .trim()
 
+/** "Verdict posted on GitHub: changes requested (#698, commit 945a87d)." (verdictLine) */
+const VERDICT = /^Verdict posted on GitHub: (approved|changes requested) \([^)]*\)\.\s*/
+
 /**
  * A thread a report note tells about, as one card that opens it: its dot, who, its title,
  * then the start of what it said, which Show more unfolds in place.
  */
 export function ReportedThread({ thread }: { thread: NoteThread }) {
-  const summary = thread.summary.trim()
+  // A review's verdict, which Brigade puts ahead of its report (verdictLine), is its state.
+  const verdict = VERDICT.exec(thread.summary.trim())
+  const summary = (verdict ? thread.summary.trim().slice(verdict[0].length) : thread.summary).trim()
   const [open, setOpen] = useState(false)
   // Show more only when the report runs past its two lines.
   const [long, setLong] = useState(false)
@@ -164,11 +169,13 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
     return () => observer.disconnect()
   }, [summary, open])
   // Reported is the usual end: only another one is said in words.
-  const state = !thread.status
-    ? 'working'
-    : thread.status === 'report'
-      ? null
-      : (REPORTS[thread.status] ?? thread.status)
+  const state = verdict
+    ? verdict[1]!
+    : !thread.status
+      ? 'working'
+      : thread.status === 'report'
+        ? null
+        : (REPORTS[thread.status] ?? thread.status)
   return (
     <div
       className={cn(
@@ -205,7 +212,20 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
           <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>
         )}
         <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
-        {state && <span className="shrink-0 text-xs text-muted-foreground">{state}</span>}
+        {state && (
+          <span
+            className={cn(
+              'shrink-0 text-xs',
+              state === 'changes requested'
+                ? 'text-warning'
+                : state === 'approved'
+                  ? 'text-success'
+                  : 'text-muted-foreground',
+            )}
+          >
+            {state}
+          </span>
+        )}
         <ChevronRight aria-label="Open" className="size-4 shrink-0 text-muted-foreground" />
       </Link>
       {summary &&
