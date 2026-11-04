@@ -35,9 +35,19 @@ const DENIED_TOOLS = [
 // so turning one off would also turn off a skill of the same name a member or a repository
 // has. Those that do what Brigade does (loop, schedule) find their tools turned off above.
 
+/**
+ * Claude Code's built-in mods that Brigade turns off, by name. Since 2.1.317 its privacy mod asks
+ * before a shell or web call holds the signed-in account's email and may leave the computer (a
+ * curl with the member's address, on a Mac signed in to their own Claude). A thread asks before
+ * nothing, so nobody can answer: the call failed ("canUseTool callback is not provided"), where it
+ * ran before. Settings join a member's own enabledPlugins, so theirs stay as they set them.
+ */
+const DISABLED_MODS = ['cc-plugin-privacy@builtin']
+
 export const CLAUDE_SETTINGS = {
   // Memory is Brigade's (CLAUDE.md's memory sections); Claude Code's own would be a second one.
   autoMemoryEnabled: false,
+  enabledPlugins: Object.fromEntries(DISABLED_MODS.map((name) => [name, false])),
   permissions: { deny: DENIED_TOOLS },
 }
 

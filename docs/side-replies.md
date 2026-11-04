@@ -25,7 +25,11 @@ teammate waits on its own ticket (`harness/aside.ts`, `ASIDE_PROTOCOL`).
   and `codex-bridge-fork.test.ts`).
 - **It only reads.** Claude Code gets Read, Glob and Grep and nothing else; Codex's turn runs in
   its read-only sandbox, without network. Neither has Brigade's tools. Its effort is low and it
-  stops after two minutes (`SIDE_REPLY_TIMEOUT_MS`).
+  stops after two minutes (`SIDE_REPLY_TIMEOUT_MS`). It reads wherever the thread's turn can (the
+  library, the teammate's skills, other checkouts): since harness-claude-code 1.0.176 a run that
+  asks before edits asks the host before any read outside its folder, and a side reply has nobody
+  to ask, so the Claude Code bridge patch lets it read there (`BRIGADE_READS_ANYWHERE`, set with
+  the fork in `apps/runner/src/harness/side-reply-env.ts`, tested in `claude-bridge-reads.test.ts`).
 - **It says what becomes of the message**, on its last line (`ROUTE: answer | steer | queue`,
   `parseSideReply`). answer: the message is read (`message.user` with `side`), runs no turn of
   its own, and the teammate is told the exchange as a note when its next turn starts (`sideNote`).
