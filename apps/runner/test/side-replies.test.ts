@@ -401,11 +401,7 @@ test('no side reply for Brigade’s own messages, when memory is short, or when 
   for (const id of [note, short, failed]) assert.equal(users('none', id).length, 1)
   await finish('none')
   await sleep(60)
-  assert.equal(
-    turns('none'),
-    2,
-    'no turn of their own after it',
-  )
+  assert.equal(turns('none'), 2, 'no turn of their own after it')
   sideSays = 'ok\nROUTE: answer'
 })
 

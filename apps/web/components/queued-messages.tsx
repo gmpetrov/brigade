@@ -8,14 +8,7 @@ import {
   type QueuedMessageAction,
   type ReplyTo,
 } from '@brigade/contracts'
-import {
-  CornerDownRight,
-  Ellipsis,
-  Pencil,
-  RotateCcw,
-  Split,
-  X,
-} from 'lucide-react'
+import { CornerDownRight, Ellipsis, Pencil, RotateCcw, Split, X } from 'lucide-react'
 import { useState } from 'react'
 import { brigadeNote, handOffNote, notePreview } from '@/components/brigade-notes'
 import { useDashboard } from '@/components/dashboard'

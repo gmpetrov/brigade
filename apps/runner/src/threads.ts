@@ -1337,38 +1337,43 @@ export class Threads {
   private enqueueMessage(thread: Thread, message: Message) {
     const [first, ...then] = message.specs
     const sessionId = first!.sessionId
-    this.enqueue(first!, 'prompt', async () => {
-      await message.steering
-      // Its turn came: the teammate answers it itself, rather than a copy on the side.
-      await this.endSide(thread, message)
-      // Settled on the side: no turn of its own.
-      if (message.state !== 'queued' && message.state !== 'shown') return null
-      // Its teammate waits on a person's approval: the message runs once they decide
-      // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
-      if (await this.harness(thread, first!).harness.holdsMessages()) {
-        const shown = message.state === 'shown'
-        message.state = 'held'
-        thread.messages.set(message.id, message)
-        if (!shown) this.emitQueued(sessionId, message)
-        else
-          this.options.emit(sessionId, {
-            at: new Date().toISOString(),
-            type: 'raw',
-            source: 'runner',
-            value: `${first!.teammate.name} reads this message once the pending request is answered.`,
-          })
-        return null
-      }
-      if (!message.upTo) await this.show(thread, message)
-      else {
-        message.state = 'shown'
-        thread.messages.delete(message.id)
-      }
-      const upTo = await message.upTo!
-      // The messages queued right behind it for the same teammate are read with it.
-      const joined = await this.joinQueued(thread, message)
-      return joined ?? upTo
-    }, () => message.joined === true)
+    this.enqueue(
+      first!,
+      'prompt',
+      async () => {
+        await message.steering
+        // Its turn came: the teammate answers it itself, rather than a copy on the side.
+        await this.endSide(thread, message)
+        // Settled on the side: no turn of its own.
+        if (message.state !== 'queued' && message.state !== 'shown') return null
+        // Its teammate waits on a person's approval: the message runs once they decide
+        // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
+        if (await this.harness(thread, first!).harness.holdsMessages()) {
+          const shown = message.state === 'shown'
+          message.state = 'held'
+          thread.messages.set(message.id, message)
+          if (!shown) this.emitQueued(sessionId, message)
+          else
+            this.options.emit(sessionId, {
+              at: new Date().toISOString(),
+              type: 'raw',
+              source: 'runner',
+              value: `${first!.teammate.name} reads this message once the pending request is answered.`,
+            })
+          return null
+        }
+        if (!message.upTo) await this.show(thread, message)
+        else {
+          message.state = 'shown'
+          thread.messages.delete(message.id)
+        }
+        const upTo = await message.upTo!
+        // The messages queued right behind it for the same teammate are read with it.
+        const joined = await this.joinQueued(thread, message)
+        return joined ?? upTo
+      },
+      () => message.joined === true,
+    )
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
       this.enqueue(next, 'prompt', async () =>

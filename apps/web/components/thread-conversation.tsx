@@ -1627,12 +1627,12 @@ export function ThreadConversation({
                       {/* Queued behind a turn, the turn's own Working line says what goes on. */}
                       {(lastOut?.state === 'sent' || lastOut?.state === 'starting') &&
                         !lastOut.queues && (
-                        <Answering
-                          teammate={answering}
-                          phase={lastOut.state === 'starting' ? 'starting' : 'reading'}
-                          {...(lastOut.sentAt !== undefined ? { since: lastOut.sentAt } : {})}
-                        />
-                      )}
+                          <Answering
+                            teammate={answering}
+                            phase={lastOut.state === 'starting' ? 'starting' : 'reading'}
+                            {...(lastOut.sentAt !== undefined ? { since: lastOut.sentAt } : {})}
+                          />
+                        )}
                     </div>
                   )}
                   {t.mayPrompt && !t.controlledByMemberId && (

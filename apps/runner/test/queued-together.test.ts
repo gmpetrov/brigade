@@ -144,7 +144,7 @@ test('messages queued during a turn go into the next turn together', async () =>
   assert.equal(turns('t1'), 2, 'no turn of their own after it')
 })
 
-test("a message for another teammate keeps its place: the ones after it wait for its turn", async () => {
+test('a message for another teammate keeps its place: the ones after it wait for its turn', async () => {
   message('t2', 'Start')
   await until(() => turns('t2') === 1, 'the first turn starts')
   message('t2', 'One')
