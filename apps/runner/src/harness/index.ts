@@ -222,6 +222,11 @@ type SavedState = {
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
   recoveries?: number
   /**
+   * The person's message given to the running turn last (steer), by its messageId: what an
+   * answer_message call answers, after a restart or a hand-over too. Cleared when a turn starts.
+   */
+  steered?: string
+  /**
    * The calls the last turn stopped on, waiting for a person (a ticket, a question): their
    * answer still reads right if the process stops without parking, which keeps no turn.
    */
@@ -495,8 +500,6 @@ export class HarnessThread {
   private handingOver = false
   /** What the person has read of the turn: a turn without a reply is asked for one. */
   private readonly replies = new ReplyWatch()
-  /** The person's message given to the running turn last (steer): what answer_message answers. */
-  private steeredId: string | undefined
   /** What the running turn runs in the background now (background.ts): a report waits on its agents. */
   private background: BackgroundWork[] = []
   /**
@@ -549,10 +552,8 @@ export class HarnessThread {
     if (retry && input.kind === 'prompt' && this.saved?.asked)
       input = { kind: 'prompt', text: `${ASKED}\n\n${this.saved.asked}\n\n${input.text}` }
     // An approval, an answer or a ticket goes on with the turn it paused.
-    if (input.kind === 'prompt') {
-      this.replies.start()
-      this.steeredId = undefined
-    } else if (input.kind === 'resume') this.replies.resume()
+    if (input.kind === 'prompt') this.replies.start()
+    else if (input.kind === 'resume') this.replies.resume()
     if (spec.moved && this.saved?.movedAt !== spec.moved.at) await this.arrive(spec.moved)
     let handoff: string | undefined
     // The first turn here since the thread moved: a new session, told the thread so far.
@@ -587,6 +588,8 @@ export class HarnessThread {
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Kept whole, as the transcript keeps its latest message: a request often comes after its context.
     if (input.kind === 'prompt' && !retry) this.saved.asked = input.text
+    // A new turn answers no message given to the one before.
+    if (input.kind === 'prompt') this.saved.steered = undefined
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
     if (input.kind !== 'resume') this.saved.recoveries = 0
     // Found on disk after a stop without warning, this says the turn did not finish.
@@ -1022,7 +1025,16 @@ export class HarnessThread {
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
     this.replies.steered()
-    this.steeredId = messageId
+    // Saved now: the turn may answer it after a restart, or in the runner it is handed over to.
+    this.saved!.steered = messageId
+    await this.persist().catch((error) =>
+      console.warn(`could not save thread state: ${errorMessage(error)}`),
+    )
+  }
+
+  /** The person's message an answer_message call answers now, if any (steer). */
+  answering() {
+    return this.saved?.steered
   }
 
   /**
@@ -1312,7 +1324,7 @@ export class HarnessThread {
       this.toolCalls,
       this.texts,
       this.reasoning,
-      () => this.steeredId,
+      () => this.answering(),
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the

@@ -160,7 +160,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   - A question the turn can answer at once gets its answer at once: a person's message steered in tells the teammate
     to answer it in a line with `answer_message`, then go on (`steeredText`). On Nov 4, "what's my name?" waited 36 s
     for research to end. The runner records the call as the teammate's message, word for word, which answers the
-    message given to the turn last (`message.done`'s `answers`, `EventMapper`); the call shows no step. That answer
+    message given to the turn last (`message.done`'s `answers`, `EventMapper`), kept in the thread's saved state so a
+    restart or a hand-over before the answer keeps it (`SavedState.steered`); the call shows no step. That answer
     stays in sight once the turn ends (`quickReplies`), wherever it falls among the steps. At first it was the text
     right after the message, before the next step: the teammate reads a message only at its next step, so a step it
     had already started came between the two ("Searched once" between "comment je m'appelle ?" and its answer, on Nov 4) and the answer folded away with the work; text written between steps can also reach the person only as the
