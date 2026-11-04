@@ -90,6 +90,7 @@ import { fetchFar, keepFar, latestOnly } from '@/lib/far-threads'
 import { latestSave } from '@/lib/latest-save'
 import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
 import { groupOf, groupWith, holds, subThreadRows, type Group } from '@/lib/sub-threads'
+import { useFlip } from '@/lib/use-flip'
 import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
@@ -1116,6 +1117,9 @@ export function SidebarWork({
   const opened = inView
     ? undefined
     : (loaded ?? (fetched && holds(fetched, openId!) ? fetched : undefined))
+  // A thread moving in the list slides to its place; another filter is another list, shown at once.
+  const listRef = useRef<HTMLUListElement>(null)
+  useFlip(listRef, JSON.stringify([filter, !!archived, later]))
 
   function changed() {
     void reloadThreads()
@@ -1266,47 +1270,43 @@ export function SidebarWork({
 
   // The list, here and folded in the panel beside the rail: its first threads and its
   // "+N more", which grows it in both.
-  const list = (
-    <>
-      {threads && shown.length === 0 && !opened && (instead || !pinned.length) && (
-        <li className="text-muted-foreground px-2 py-1.5 text-xs">
-          {archived
-            ? 'No archived threads.'
-            : later
-              ? 'Nothing put away for later.'
-              : filtered
-                ? 'No threads match.'
-                : 'No threads yet.'}
-        </li>
-      )}
-      {opened && row(opened, undefined, true)}
-      {waitingShown.map((t) => row(t))}
-      {/* No dot: a control, not a thread; its text lines up with the titles. */}
-      {waitingShown.length < waitingRows.length && (
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            size="sm"
-            className="text-muted-foreground pl-8"
-            onClick={() => setAllWaiting(true)}
-          >
-            <span>{`+${waitingRows.length - waitingShown.length} waiting on you`}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      )}
-      {ordered.slice(0, visible).map((t) => row(t))}
-      {more && (
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            size="sm"
-            className="text-muted-foreground pl-8"
-            onClick={more.onSelect}
-          >
-            <span>{more.label}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      )}
-    </>
-  )
+  // One keyed array, so a thread moving between them (waiting, then done) keeps its row, which
+  // the expanded list slides to its new place (useFlip).
+  const list = [
+    threads && shown.length === 0 && !opened && (instead || !pinned.length) && (
+      <li key="empty" className="text-muted-foreground px-2 py-1.5 text-xs">
+        {archived
+          ? 'No archived threads.'
+          : later
+            ? 'Nothing put away for later.'
+            : filtered
+              ? 'No threads match.'
+              : 'No threads yet.'}
+      </li>
+    ),
+    opened && row(opened, undefined, true),
+    ...waitingShown.map((t) => row(t)),
+    // No dot: a control, not a thread; its text lines up with the titles.
+    waitingShown.length < waitingRows.length && (
+      <SidebarMenuItem key="more-waiting">
+        <SidebarMenuButton
+          size="sm"
+          className="text-muted-foreground pl-8"
+          onClick={() => setAllWaiting(true)}
+        >
+          <span>{`+${waitingRows.length - waitingShown.length} waiting on you`}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ),
+    ...ordered.slice(0, visible).map((t) => row(t)),
+    more && (
+      <SidebarMenuItem key="more">
+        <SidebarMenuButton size="sm" className="text-muted-foreground pl-8" onClick={more.onSelect}>
+          <span>{more.label}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ),
+  ]
 
   return (
     <>
@@ -1583,7 +1583,7 @@ export function SidebarWork({
         )}
         {!folded.threads && (
           <SidebarGroupContent>
-            <SidebarMenu>{list}</SidebarMenu>
+            <SidebarMenu ref={listRef}>{list}</SidebarMenu>
           </SidebarGroupContent>
         )}
       </SidebarGroup>
