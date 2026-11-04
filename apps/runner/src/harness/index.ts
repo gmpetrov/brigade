@@ -13,7 +13,6 @@ import { createCodex } from '@ai-sdk/harness-codex'
 import {
   ATTACHMENT_MAX,
   CODEX_DEFAULT_MODEL,
-  COMPLETE_THREAD_TOOL,
   LIBRARY_FILE_MAX,
   type AccountRef,
   type AgentEvent,
@@ -88,6 +87,7 @@ import {
   answered,
   askUserQuestions,
   askUserResult,
+  declaredDone,
   errorMessage,
   EventMapper,
   generatedImage,
@@ -100,6 +100,7 @@ import { SIDE_REPLY_ENV } from './side-reply-env.js'
 import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
+import { declareDone, Outbox } from './outbox.js'
 import { callFiles } from './call-files.js'
 import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
@@ -267,7 +268,6 @@ const INSTRUCTIONS_MAX_BYTES = 256 * 1024
  * and used in most turns. A name the thread has no tool of is ignored.
  */
 const ALWAYS_LOADED = [
-  COMPLETE_THREAD_TOOL,
   OPEN_TICKET_TOOL,
   SHOW_WIDGET_TOOL,
   WIDGET_GUIDE_TOOL,
@@ -508,6 +508,11 @@ export class HarnessThread {
   private prompts = 0
   /** Writes of the state file, in order. */
   private saving: Promise<void> = Promise.resolve()
+  /**
+   * The turn's events on their way out: after a done block's call, what follows waits for
+   * Brigade's answer (outbox.ts).
+   */
+  private readonly outbox: Outbox
 
   constructor(
     private spec: ThreadSpec,
@@ -524,6 +529,7 @@ export class HarnessThread {
   ) {
     this.key = spec.starter ? spec.sessionId : `${spec.sessionId}-${spec.teammate.id}`
     this.stateFile = join(stateDir, `${this.key}.json`)
+    this.outbox = new Outbox((event) => this.emitEvent(event))
   }
 
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
@@ -634,6 +640,9 @@ export class HarnessThread {
         input = { kind: 'prompt', text: handoff }
       }
     } finally {
+      // Its events out first, its end with them (a done block's answer holds it): the thread
+      // hears the turn ended before its next turn can start.
+      await this.outbox.flushed()
       if (this.saved) {
         // The new session has the transcript now: later turns resume it. One that failed or
         // never started (no usage) may have kept nothing: the next starts from it again.
@@ -1292,15 +1301,23 @@ export class HarnessThread {
         this.noteBackground(event)
         // A turn's usage says whose account spent it: the stream's own, which after running out
         // of usage (switchTo) is the next account's, not the one the turn started on.
-        this.emitEvent(
+        this.outbox.send(
           event.type === 'usage.updated' && !event.accountId
             ? { ...event, accountId: (attached ?? this.live)?.account.id ?? this.spec.account.id }
             : event,
         )
+        // Declared done at the end of the reply: Brigade is asked now, and the turn's end waits
+        // for its answer, as it waited for complete_thread's.
+        if (declaredDone(event))
+          this.outbox.hold(
+            declareDone(this.context.callSchedule, event).then((finished) => [finished]),
+          )
       },
       this.toolCalls,
       this.texts,
       this.reasoning,
+      // A child reports, a playbook's run ends with its report, a schedule's run with its turn.
+      !this.spec.parent && !this.spec.playbook && this.spec.origin !== 'schedule',
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
@@ -2139,7 +2156,7 @@ export class HarnessThread {
   private emit(event: DistributiveOmit<AgentEvent, 'at'>) {
     const stamped = { ...event, at: new Date().toISOString() } as AgentEvent
     this.noteBackground(stamped)
-    this.emitEvent(stamped)
+    this.outbox.send(stamped)
   }
 
   /** What the turn runs in the background now, from its events (background.ts). */

@@ -99,10 +99,15 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 A thread's done is a fact someone declares, never one read from its silence (`Session.doneAt`,
 `doneSummary`, `doneByType`, `doneById`; `apps/api/src/thread-done.ts`).
 
-- **Its teammate declares it** with `complete_thread({ summary })`, one line on what was
-  delivered, in the turn that delivers it. Only in a top-level thread a person or a trigger
-  started: a child reports, a playbook's run ends with `playbook_report`, a schedule's run with
-  its turn. Audited as `thread.done`.
+- **Its teammate declares it** with a `done` block at the end of the reply that delivers it, one
+  line on what was delivered (2026-11-04, `replyCard`). Its runner sends it as
+  `complete_thread({ summary })` as the reply ends, and the turn's end waits for the answer
+  (`apps/runner/src/harness/outbox.ts`): the reply stays the turn's last text, and nobody waits
+  on a model round trip just to close. A refusal shows under the reply ("Not marked done", and
+  what is open); the teammate learns of it only when what blocked it wakes it again. The
+  `complete_thread` tool stays, no longer loaded up front, for a teammate used to it. Only in a
+  top-level thread a person or a trigger started: a child reports, a playbook's run ends with
+  `playbook_report`, a schedule's run with its turn. Audited as `thread.done`.
 - **A question is done once answered** (2026-11-02). The teammate closes it in the turn that
   answers, even when its reply ends on suggested replies: they are a next step a person may
   leave, not pending work, and a click is a message that reopens the thread. A change that was

@@ -1,7 +1,8 @@
 // Cards a teammate writes at the end of its reply: buttons to answer with one
-// click, or alternatives to pick from. Written in the reply rather than called
-// as tools, the reply stays the last thing in the turn: nothing after it to
-// summarize or to ask for again, and no request spent on a tool's result.
+// click, or alternatives to pick from, and the thread declared done. Written in
+// the reply rather than called as tools, the reply stays the last thing in the
+// turn: nothing after it to summarize or to ask for again, and no request spent
+// on a tool's result.
 import { designFolderOf, designOptionsOf } from './design.js'
 import { Choices, REPLY_ACTIONS, SUGGESTED_REPLY_MAX, SuggestedReplies } from './events.js'
 
@@ -9,23 +10,39 @@ import { Choices, REPLY_ACTIONS, SUGGESTED_REPLY_MAX, SuggestedReplies } from '.
 export const REPLIES_BLOCK = 'replies'
 /** A fenced block of alternatives, as JSON (Choices). */
 export const CHOICES_BLOCK = 'choices'
+/**
+ * A fenced block that declares the thread done, with one line on what was delivered
+ * (docs/board.md): Brigade declares it as the turn ends, with no call to wait on.
+ */
+export const DONE_BLOCK = 'done'
 
 const BLOCK = /```(replies|choices)[ \t]*\r?\n([\s\S]*?)```[ \t]*(?:\r?\n|$)/g
+const DONE = /```done[ \t]*\r?\n([\s\S]*?)```[ \t]*(?:\r?\n|$)/g
 /** From a block's opening fence to the end of the text, while it is still being written. */
-const OPENED = /\n?```(?:replies|choices)\b[\s\S]*$/
+const OPENED = /\n?```(?:replies|choices|done)\b[\s\S]*$/
 
 /**
  * A reply with its card taken out: the last replies or choices block it has,
  * wherever it is. A block that does not read is dropped all the same, so the
  * person never sees its markup. Replies too long for a button are cut at a word,
  * and a button whose click could do more than send its words is left out (buttonText).
- * A tool call the teammate wrote out as text, at the end, is cut off too.
+ * A tool call the teammate wrote out as text, at the end, is cut off too. A done block
+ * comes out as `done`, its line (empty when it has none: doneLine finds one).
  */
 export function replyCard(text: string): {
   text: string
   replies?: SuggestedReplies
   choices?: Choices
+  done?: string
 } {
+  const dones = [...text.matchAll(DONE)]
+  if (dones.length === 0) return cardOf(text)
+  const done = dones.at(-1)![1]!.replace(/\s+/g, ' ').trim()
+  return { ...cardOf(text.replace(DONE, '').trim()), done }
+}
+
+/** The reply and its replies or choices card, a done block already taken out. */
+function cardOf(text: string): { text: string; replies?: SuggestedReplies; choices?: Choices } {
   const blocks = [...text.matchAll(BLOCK)]
   const last = blocks.at(-1)
   if (!last) return { text: withoutWrittenCall(text) }
@@ -127,7 +144,7 @@ export function withoutCard(text: string) {
   const last = shown.slice(shown.lastIndexOf('\n') + 1)
   const fence =
     last.startsWith('```') &&
-    [REPLIES_BLOCK, CHOICES_BLOCK].some((block) => `\`\`\`${block}`.startsWith(last))
+    [REPLIES_BLOCK, CHOICES_BLOCK, DONE_BLOCK].some((block) => `\`\`\`${block}`.startsWith(last))
   return (fence ? shown.slice(0, shown.length - last.length) : shown).trimEnd()
 }
 

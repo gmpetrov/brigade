@@ -1,6 +1,7 @@
 // A thread's done (docs/board.md): a fact someone declares, never one read from its silence.
-// Its teammate declares it (complete_thread), refused while anything is still open in the
-// thread; a person marks it (Mark done). A person's new message, or new work in it, reopens it.
+// Its teammate declares it (a done block at the end of its reply, which its runner sends as
+// complete_thread), refused while anything is still open in the thread; a person marks it (Mark
+// done). A person's new message, or new work in it, reopens it.
 import { z } from 'zod'
 
 /** The longest line a thread's done says. */
@@ -16,6 +17,23 @@ export const DoneSummary = z
 
 /** The teammate's tool, by name: the work asked in the thread is delivered. */
 export const COMPLETE_THREAD_TOOL = 'complete_thread'
+
+/**
+ * The line a done block declares the thread done with (replyCard's `done`): its own, else the
+ * reply's first line, as one line cut at a word to fit, so the API never refuses it for its
+ * length. A teammate that wrote neither still gets its thread declared done.
+ */
+export function doneLine(block: string, reply: string): string {
+  const first = reply
+    .split('\n')
+    .map((line) => line.replace(/^\s*(?:#+|[-*>•]|\d+[.)])\s*/, '').replace(/[*_`]/g, '').trim())
+    .find(Boolean)
+  const line = (block || first || 'Delivered').replace(/\s+/g, ' ').trim()
+  if (line.length <= DONE_SUMMARY_MAX) return line
+  const cut = line.slice(0, DONE_SUMMARY_MAX)
+  const space = cut.lastIndexOf(' ')
+  return (space > DONE_SUMMARY_MAX / 2 ? cut.slice(0, space) : cut).trim()
+}
 
 /** Its operation among a teammate's schedule tools (ScheduleOperation). */
 export const DoneOperations = [

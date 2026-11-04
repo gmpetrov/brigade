@@ -2,6 +2,8 @@
 // this module sees an AI SDK type.
 import {
   Ask,
+  COMPLETE_THREAD_TOOL,
+  doneLine,
   hasVisibleText,
   OFFER_CHOICES_TOOL,
   Question,
@@ -17,6 +19,18 @@ import { ASK_USER_TOOL, OPEN_TICKET_TOOL } from './tools.js'
 
 /** The AI SDK's name for a harness's built-in question tool. */
 export const QUESTION_TOOL = 'askUserQuestions'
+
+/**
+ * The call a done block at the end of a reply stands for (EventMapper, with `closes`): the
+ * thread's runner sends it to Brigade as the turn ends (HarnessThread), rather than the teammate
+ * call complete_thread and wait for its answer before it writes its reply.
+ */
+export const declaredDone = (
+  event: AgentEvent,
+): event is Extract<AgentEvent, { type: 'tool.started' }> =>
+  event.type === 'tool.started' &&
+  event.toolName === COMPLETE_THREAD_TOOL &&
+  event.toolCallId.endsWith(`:${COMPLETE_THREAD_TOOL}`)
 
 type AskUserInput = {
   id?: string
@@ -379,6 +393,12 @@ export class EventMapper {
      */
     private readonly texts = new Map<string, string>(),
     private readonly reasoning = new Map<string, string>(),
+    /**
+     * Whether a done block declares the thread done (declaredDone): in the turn of a thread a
+     * person talks to, not in a child, a playbook's or a schedule's run, nor in a run beside it.
+     * Elsewhere the block is only taken out of the reply.
+     */
+    private readonly closes = false,
   ) {}
 
   map(part: Part) {
@@ -389,7 +409,7 @@ export class EventMapper {
         return this.emit({ at, type: 'message.delta', id: part.id, text: part.text })
       }
       case 'text-end': {
-        const { text, replies, choices } = replyCard(this.texts.get(part.id) ?? '')
+        const { text, replies, choices, done } = replyCard(this.texts.get(part.id) ?? '')
         this.texts.delete(part.id)
         this.emit({ at, type: 'message.done', id: part.id, text })
         // A card written at the end of the reply, recorded as the card tools recorded one: threads read it as before.
@@ -400,23 +420,35 @@ export class EventMapper {
               input: choices,
               shown: choices.options.length,
             }
-        if (!card) return
-        const toolCallId = `${part.id}:${card.toolName}`
-        this.emit({
-          at,
-          type: 'tool.started',
-          toolCallId,
-          toolName: card.toolName,
-          input: card.input,
-        })
-        return this.emit({
-          at,
-          type: 'tool.finished',
-          toolCallId,
-          toolName: card.toolName,
-          output: { shown: card.shown },
-          isError: false,
-        })
+        if (card) {
+          const toolCallId = `${part.id}:${card.toolName}`
+          this.emit({
+            at,
+            type: 'tool.started',
+            toolCallId,
+            toolName: card.toolName,
+            input: card.input,
+          })
+          this.emit({
+            at,
+            type: 'tool.finished',
+            toolCallId,
+            toolName: card.toolName,
+            output: { shown: card.shown },
+            isError: false,
+          })
+        }
+        // Declared done, after the reply and its card: recorded as complete_thread was, its
+        // result to come from Brigade (declaredDone).
+        if (done !== undefined && this.closes)
+          this.emit({
+            at,
+            type: 'tool.started',
+            toolCallId: `${part.id}:${COMPLETE_THREAD_TOOL}`,
+            toolName: COMPLETE_THREAD_TOOL,
+            input: { summary: doneLine(done, text) },
+          })
+        return
       }
       case 'reasoning-delta':
         return void this.reasoning.set(part.id, (this.reasoning.get(part.id) ?? '') + part.text)
