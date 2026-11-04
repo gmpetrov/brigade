@@ -654,9 +654,25 @@ UNIT
 # (folders.ts, disk.ts): it cannot free this. Made at each boot: a resume brings back neither
 # files at the root nor fstab lines, so it costs nothing at stop or resume, and a new size takes
 # effect at the next one. Used before the image's own /swapfile.
+# Swapping goes through zswap first: pages compressed in memory (about a third of their size),
+# read back at memory speed, and written to the swap files only once they are cold, as a frozen
+# preview's are. Without it, every page swapped waited on the disk: on an 8 GB computer with
+# turns, previews and the provider's own services swapping together, everything waited on the
+# disk a quarter of the time, and the runner's memory guard stopped preview after preview.
+# Kernel settings, reset at each boot: set here, before anything else.
 sudo tee /usr/local/sbin/brigade-swap >/dev/null <<'SWAP'
 #!/bin/sh
 set -eu
+# zswap_on <its parameters' folder>: on, with what packs best; a kernel without one keeps its own.
+zswap_on() {
+  [ -w "$1/enabled" ] || return 0
+  echo zstd >"$1/compressor" 2>/dev/null || true
+  echo zsmalloc >"$1/zpool" 2>/dev/null || true
+  echo 20 >"$1/max_pool_percent" 2>/dev/null || true
+  echo Y >"$1/shrinker_enabled" 2>/dev/null || true
+  echo Y >"$1/enabled" 2>/dev/null || true
+}
+zswap_on /sys/module/zswap/parameters
 F=/brigade.swap
 # swap_gib <memory KiB> <disk GiB> <free GiB>: the swap file's size in GiB.
 swap_gib() {
@@ -679,7 +695,8 @@ if [ "$HAD" -ne $((GIB * 1073741824)) ]; then
 fi
 chmod 600 "$F"
 mkswap "$F" >/dev/null
-swapon --priority 10 "$F"
+# A resumed computer may have it on already (the provider brings its swap back): then it is.
+swapon --priority 10 "$F" || swapon --show=NAME --noheadings | grep -qx "$F"
 SWAP
 sudo chmod 755 /usr/local/sbin/brigade-swap
 sudo tee /etc/systemd/system/brigade-swap.service >/dev/null <<'UNIT'
