@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import {
   bootstrapScript,
+  DESKTOP_WALLPAPER,
   GIVE_HOMES_BACK,
   setupScript,
   TEAMMATE_HELPER,
@@ -449,4 +450,75 @@ test("each thread's containers publish on a loopback address of its own", () => 
     '127.231.1.1',
     '127.231.63.254',
   ])
+})
+
+test("a teammate's Chrome starts dark, unless its profile chose its colors already", () => {
+  const chromeDark = /^CHROME_DARK='$[\s\S]*?^'$/m.exec(TEAMMATE_HELPER)?.[0]
+  assert.ok(chromeDark)
+  assert.match(TEAMMATE_HELPER, /python3 -I -c "\$CHROME_DARK"/)
+  const dir = mkdtempSync(join(tmpdir(), 'chrome-dark-'))
+  const prefs = join(dir, 'Default', 'Preferences')
+  const run = () =>
+    spawnSync('sh', ['-c', `${chromeDark}\npython3 -I -c "$CHROME_DARK" "$1"`, 'sh', prefs], {
+      encoding: 'utf8',
+    })
+  const read = () => JSON.parse(readFileSync(prefs, 'utf8'))
+  try {
+    // A new profile.
+    assert.equal(run().status, 0)
+    assert.equal(read().browser.theme.color_scheme2, 2)
+    // A profile with settings of its own: they stay.
+    writeFileSync(prefs, JSON.stringify({ profile: { name: 'Riley' }, browser: { a: 1 } }))
+    assert.equal(run().status, 0)
+    assert.deepEqual(read(), {
+      profile: { name: 'Riley' },
+      browser: { a: 1, theme: { color_scheme2: 2 } },
+    })
+    // Light, chosen in Chrome's settings: kept.
+    writeFileSync(prefs, JSON.stringify({ browser: { theme: { color_scheme2: 1 } } }))
+    assert.equal(run().status, 0)
+    assert.equal(read().browser.theme.color_scheme2, 1)
+    // A file Chrome left broken: left as it is (the helper ignores the failure).
+    writeFileSync(prefs, '{"browser":')
+    assert.notEqual(run().status, 0)
+    assert.equal(readFileSync(prefs, 'utf8'), '{"browser":')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("Brigade's wallpaper goes on the desktop, unless someone put another there", () => {
+  const setup = setupScript()
+  assert.ok(setup.includes(`${DESKTOP_WALLPAPER.url} -o`))
+  assert.equal(setup.split(DESKTOP_WALLPAPER.sha256).length - 1, 3)
+  const copy = /sudo -H -u user sh -c '([\s\S]*?)' sh "\$WALL" "\$PUT"/.exec(setup)?.[1]
+  assert.ok(copy)
+  const dir = mkdtempSync(join(tmpdir(), 'wallpaper-'))
+  const ours = join(dir, 'ours.png')
+  writeFileSync(ours, 'brigade v2')
+  const target = join(dir, 'home', '.config', 'boat', 'wallpaper.png')
+  const sha = (text: string) =>
+    spawnSync('sh', ['-c', 'printf %s "$1" | sha256sum | cut -d" " -f1', 'sh', text], {
+      encoding: 'utf8',
+    }).stdout.trim()
+  const put = (lastPut: string) =>
+    spawnSync('sh', ['-c', copy!, 'sh', ours, lastPut], {
+      encoding: 'utf8',
+      env: { ...process.env, HOME: join(dir, 'home') },
+    })
+  try {
+    // None yet: Brigade's.
+    assert.equal(put('').status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade v2')
+    // The one Brigade put last time: replaced by the new one.
+    writeFileSync(target, 'brigade v1')
+    assert.equal(put(sha('brigade v1')).status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'brigade v2')
+    // Someone else's: kept.
+    writeFileSync(target, 'their own')
+    assert.equal(put(sha('brigade v1')).status, 0)
+    assert.equal(readFileSync(target, 'utf8'), 'their own')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
