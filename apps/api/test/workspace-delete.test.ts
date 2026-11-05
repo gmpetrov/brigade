@@ -713,6 +713,31 @@ test('a workspace goes only with the code mailed to its owner for it', { skip },
   const last = await remove(ada.cookie, wrong)
   assert.match(await last.text(), /Too many wrong codes/)
   assert.equal((await remove(ada.cookie, code)).status, 400)
+  // Spent, it still holds back a new one until the wait from the last mail is over.
+  await assert.rejects(
+    workspaceCode(ada.userId, kept!),
+    (e: { status?: number }) => e.status === 429,
+  )
+  assert.equal((await ask(ada.cookie, 'Kept')).status, 429)
+  await still()
+
+  // Many asks at once: one code is mailed, and only it works, even once spent.
+  await prisma.verification.deleteMany({ where: { identifier: { contains: kept!.id } } })
+  const asked = await Promise.allSettled(
+    Array.from({ length: 10 }, () => workspaceCode(ada.userId, kept!)),
+  )
+  const issued = asked.filter((a) => a.status === 'fulfilled').map((a) => a.value)
+  assert.equal(issued.length, 1)
+  for (const a of asked)
+    if (a.status === 'rejected') assert.equal((a.reason as { status?: number }).status, 429)
+  assert.equal(
+    await prisma.verification.count({ where: { identifier: { contains: kept!.id } } }),
+    1,
+  )
+  const only = issued[0]!
+  const miss = only === '000000' ? '111111' : '000000'
+  for (let i = 0; i < TRIES; i++) await remove(ada.cookie, miss)
+  assert.equal((await remove(ada.cookie, only)).status, 400)
   await still()
 
   // An expired one too.
