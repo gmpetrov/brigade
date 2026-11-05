@@ -793,8 +793,10 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   then a ticket. What the author pushed must leave its review's approval standing (`resolverDone`): when the lines
   the pull request itself adds and removes are as the approval read them (GitHub's compare of its base with each
   head, without the lines around them, which merging its base in moves), and what changed since the approval is,
-  line for line, what its base brought between the commits each head starts from (a line of its own moved
-  elsewhere shows there), the approval holds for the new head (`PullRequest.approvalCarriedTo`, shown as kept). A
+  line for line, what its base brought between the commits each head starts from, in the same places of its base's
+  lines (`changedSinceApproval`: a line of its own moved elsewhere, or a change its base also made applied
+  elsewhere, shows there), and its base brought no lines where its own go (in an order only a look can judge),
+  the approval holds for the new head (`PullRequest.approvalCarriedTo`, shown as kept). A
   file GitHub shows no patch for (binary, too big) counts by its blob; one it cannot list (300 files or more), a
   rewritten branch or GitHub failing to answer count as changed. Else Brigade asks the reviewer to look at what was pushed, in
   its review's thread as `message_thread` would (one of its looks), and the merge waits for that verdict: an

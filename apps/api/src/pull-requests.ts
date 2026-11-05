@@ -1370,9 +1370,9 @@ type ApprovalAfter =
 
 /**
  * Whether its latest review's approval still stands for its head, now that its author pushed
- * to get it merged: what the pull request itself adds and removes (ownChanges) is as the
- * approval read it, and nothing changed since the approval but what its base brought
- * (changesBetween). GitHub failing to say counts as changed: its reviewer looks.
+ * to get it merged: nothing changed since the approval but what its base brought, where its
+ * base brought it (changedSinceApproval). GitHub failing to say counts as changed: its reviewer
+ * looks.
  */
 async function approvalAfter(
   db: ScopedDb,
@@ -1390,34 +1390,10 @@ async function approvalAfter(
     holdsFor(last, reviewed!.approvalCarriedTo, p.head.sha)
   )
     return { kind: 'holds', carried: false }
-  // GitHub's answers one at a time, each kept only as small digests: a compare can be large.
-  const read = <T>(what: string, work: () => Promise<T>) =>
-    work().catch((error: unknown) => {
-      console.warn(`${ref(row)}: ${what} not read: ${String(error)}`)
-      return null
-    })
-  const own = (sha: string) =>
-    read(`its changes at ${sha}`, () => ownChanges(gh, row.repository, p.base.ref, sha))
-  const approved = await own(last.sha)
-  const now = await own(p.head.sha)
-  let files = changedFiles(approved?.changes ?? null, now?.changes ?? null)
-  if (files?.length === 0) {
-    // The same lines of its own: still, none may have moved, nor gone where its base had the
-    // same (a guard put back in the wrong function adds and removes the same lines). What changed
-    // since the approval must be what its base brought between the commits each head starts
-    // from, line for line and in the same places of its base's lines (changesBetween).
-    const from = approved?.mergeBase
-    const to = now?.mergeBase
-    const brought =
-      from && to
-        ? await read('what its base brought', () => changesBetween(gh, row.repository, from, to))
-        : null
-    const since = await read('what changed since its approval', () =>
-      changesBetween(gh, row.repository, last.sha, p.head.sha, approved?.hunks),
-    )
-    files = changedFiles(brought, since)
-    if (files?.length === 0) return { kind: 'holds', carried: true }
-  }
+  const files = await changedSinceApproval(gh, row.repository, p.base.ref, last.sha, p.head.sha, {
+    warn: (what, error) => console.warn(`${ref(row)}: ${what} not read: ${String(error)}`),
+  })
+  if (files?.length === 0) return { kind: 'holds', carried: true }
   return {
     kind: 'look',
     reviewer: last.teammate?.name ?? 'Its reviewer',
@@ -1425,6 +1401,49 @@ async function approvalAfter(
     approved: last.sha,
     files,
   }
+}
+
+/**
+ * Where what was pushed to a pull request since an approval (`approved` → `head`) is more than
+ * what its base branch (`base`) brought: [] when it is not, so that the approval holds for
+ * `head`; the files where it is; null when GitHub cannot tell, which is to be taken as more.
+ *
+ * Its own lines must be the same (ownChanges, in their order, without their places). Still, none
+ * may have moved, nor gone where its base had the same (a guard put back in the wrong function
+ * adds and removes the same lines): what changed since the approval must be what its base brought
+ * between the commits each head starts from, line for line and in the same places of its base's
+ * lines (changesBetween). And its base may not have brought lines where its own go, in an order
+ * only a look can judge (ownGaps). GitHub's answers are read one at a time, each kept only as
+ * small digests: a compare can be large.
+ */
+export async function changedSinceApproval(
+  gh: GitHub,
+  repo: string,
+  base: string,
+  approved: string,
+  head: string,
+  options: { warn?: (what: string, error: unknown) => void } = {},
+) {
+  const read = <T>(what: string, work: () => Promise<T>) =>
+    work().catch((error: unknown) => {
+      options.warn?.(what, error)
+      return null
+    })
+  const before = await read(`its changes at ${approved}`, () =>
+    ownChanges(gh, repo, base, approved),
+  )
+  const after = await read(`its changes at ${head}`, () => ownChanges(gh, repo, base, head))
+  const files = changedFiles(before?.changes ?? null, after?.changes ?? null)
+  if (!before || !after || files?.length !== 0) return files
+  const [from, to] = [before.mergeBase, after.mergeBase]
+  if (!from || !to) return null
+  const brought = await read('what its base brought', () =>
+    changesBetween(gh, repo, from, to, { crowded: ownGaps(before.hunks) }),
+  )
+  const since = await read('what changed since its approval', () =>
+    changesBetween(gh, repo, approved, head, { own: before.hunks }),
+  )
+  return changedFiles(brought, since)
 }
 
 /** Files GitHub's compare lists at most: past them, what changed is not known whole. */
@@ -1593,18 +1612,44 @@ export async function ownChanges(gh: GitHub, repo: string, base: string, sha: st
 }
 
 /**
+ * After which lines of its base a pull request's own lines go, by file (as its own hunks say):
+ * lines its base brought there too sit in an order its resolution chose, before or after its
+ * own, which nothing but a look can judge (a deletion before or after its guard).
+ */
+function ownGaps(own: Map<string, Hunk[] | null>) {
+  const gaps = new Map<string, Set<number>>()
+  for (const [file, hunks] of own) {
+    const after = new Set<number>()
+    for (const hunk of hunks ?? []) {
+      let old = hunk.fromLines ? hunk.from : hunk.from + 1
+      for (const kind of hunk.lines.map((l) => l[0])) {
+        if (kind === '+') after.add(old - 1)
+        else old++
+      }
+    }
+    gaps.set(file, after)
+  }
+  return gaps
+}
+
+/** What a file is when its base brought lines where the pull request's own go: never the same. */
+const CROWDED = 'crowded'
+
+/**
  * The lines each file gains and loses from a commit to a later one, each with its place (as
- * placedLines), in any order: one value per file. Given `own`, the hunks of the pull request's own
- * changes at `from` (ownChanges), places are said in its base's lines, as they are in what its
- * base brought. A file GitHub shows no patch for counts by its blob. Null when `to` does not
- * descend from `from` (a branch rewritten), or GitHub cannot show it whole or it cannot be placed.
+ * placedLines), in any order: one value per file. `own`: the hunks of the pull request's own
+ * changes at `from` (ownChanges), so that places are said in its base's lines, as they are in
+ * what its base brought. `crowded`: places of its base where its own lines go (ownGaps); a file
+ * that gains lines at one of them is CROWDED. A file GitHub shows no patch for counts by its
+ * blob. Null when `to` does not descend from `from` (a branch rewritten), or GitHub cannot show
+ * it whole or it cannot be placed.
  */
 export async function changesBetween(
   gh: GitHub,
   repo: string,
   from: string,
   to: string,
-  own?: Map<string, Hunk[] | null>,
+  options: { own?: Map<string, Hunk[] | null>; crowded?: Map<string, Set<number>> } = {},
 ) {
   if (from === to) return new Map<string, string>()
   const compared = await compareOf(gh, repo, from, to)
@@ -1618,11 +1663,13 @@ export async function changesBetween(
       changes.set(f.filename, `${what} blob ${f.sha}`)
       continue
     }
-    const hunks = own?.get(f.filename)
+    const hunks = options.own?.get(f.filename)
     // A file of its own GitHub showed no patch for: where its lines were is not known.
     if (hunks === null) return null
-    const placed = placedLines(hunksOf(f.patch), hunks).sort()
-    changes.set(f.filename, `${what} ${digest(placed.join('\n'))}`)
+    const placed = placedLines(hunksOf(f.patch), hunks)
+    const own = options.crowded?.get(f.filename)
+    const crowded = own && placed.some((l) => own.has(Number(/^\+after (\d+) /.exec(l)?.[1])))
+    changes.set(f.filename, crowded ? CROWDED : `${what} ${digest(placed.sort().join('\n'))}`)
   }
   return changes
 }
@@ -1673,7 +1720,8 @@ async function askLook(
   const text = [
     `To get #${p.number} merged, ${author} ${fixed}. ` +
       (look.files
-        ? `What it pushed ${since} changes more than ${brought}: in ${listed.join(', ')}${more}.`
+        ? `What it pushed ${since} changes more than ${brought}, or puts it among the pull ` +
+          `request's own lines in an order to check: in ${listed.join(', ')}${more}.`
         : `Brigade could not tell whether what it pushed ${since} changes more than ${brought}.`),
     `Look at what was pushed (\`git log ${short(look.approved)}..${short(p.head.sha)}\` on a ` +
       'checkout of its branch; `git show --remerge-diff` on a merge commit shows what its ' +

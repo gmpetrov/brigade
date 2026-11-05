@@ -156,12 +156,11 @@ describe('what a pull request itself changes', () => {
 
   /**
    * A Git repository where `pr` and `main` both change auth.js from `baseline`, so that merging
-   * main conflicts; and, for a resolution, what Brigade compares (approvalAfter): the files whose
-   * own lines differ from the approved commit's, and those where what changed since it is not
-   * what main brought, in the same places.
+   * main conflicts, with GitHub's compare answered from it; and, for a resolution, what Brigade
+   * finds changed since the approval (changedSinceApproval): [] keeps it.
    */
   async function scenario(baseline: string, pr: string, upstream: string) {
-    const { changedFiles, changesBetween, ownChanges } = await import('../src/pull-requests.js')
+    const { changedSinceApproval } = await import('../src/pull-requests.js')
     const { execFileSync } = await import('node:child_process')
     const { mkdtempSync, writeFileSync } = await import('node:fs')
     const { tmpdir } = await import('node:os')
@@ -187,15 +186,20 @@ describe('what a pull request itself changes', () => {
     git('checkout', '-q', 'main')
     write(upstream)
     git('commit', '-qam', 'upstream')
-    /** The files GitHub's compare of two commits lists, from Git's own diff. */
-    const files = (from: string, to: string) => {
-      const diff = git('diff', from, to, '--', 'auth.js')
-      const patch = diff.slice(diff.indexOf('@@'))
-      return diff ? [{ filename: 'auth.js', status: 'modified', changes: 1, patch }] : []
+    /** GitHub's compare of two commits, from where they meet, as Git says it. */
+    const github = {
+      fetch: async (path: string) => {
+        const [, from, to] = /\/compare\/(.+)\.\.\.([^?]+)/.exec(path)!
+        const base = git('merge-base', decodeURIComponent(from!), decodeURIComponent(to!))
+        const diff = git('diff', base, decodeURIComponent(to!), '--', 'auth.js')
+        const patch = diff.slice(diff.indexOf('@@'))
+        return Response.json({
+          status: base === git('rev-parse', decodeURIComponent(from!)) ? 'ahead' : 'diverged',
+          merge_base_commit: { sha: base },
+          files: diff ? [{ filename: 'auth.js', status: 'modified', patch }] : [],
+        })
+      },
     }
-    /** What the pull request changes at a commit, from where it meets main. */
-    const own = async (sha: string) =>
-      ownChanges(gh(files(git('merge-base', 'main', sha), sha)), 'o/r', 'main', sha)
     return {
       dir,
       /** Merge main into what was approved, resolving its conflict as `resolved`. */
@@ -204,26 +208,12 @@ describe('what a pull request itself changes', () => {
         assert.throws(() => git('merge', '-q', '--no-edit', 'main'), 'a real conflict')
         write(resolved)
         git('commit', '-qam', `resolve on ${branch}`)
-        const head = git('rev-parse', 'HEAD')
-        const [before, after] = [await own(approved), await own(head)]
-        const [from, to] = [git('merge-base', 'main', approved), git('merge-base', 'main', head)]
-        const brought = await changesBetween(gh(files(from, to)), 'o/r', from, to)
-        const since = await changesBetween(
-          gh(files(approved, head)),
-          'o/r',
-          approved,
-          head,
-          before.hunks,
-        )
-        return {
-          own: changedFiles(before.changes, after.changes),
-          since: changedFiles(brought, since),
-        }
+        return changedSinceApproval(github, 'o/r', 'main', approved, git('rev-parse', 'HEAD'))
       },
     }
   }
 
-  test('a line of its own moved elsewhere by a resolution shows in what changed since, as Git makes it', async () => {
+  test('a line of its own moved elsewhere by a resolution is found, as Git makes it', async () => {
     const { rmSync } = await import('node:fs')
     const baseline =
       'export function canDelete(user) {\n  return true;\n}\n\n' +
@@ -236,25 +226,25 @@ describe('what a pull request itself changes', () => {
       upstream,
     )
     try {
-      // Wrong: the guard put back in canRead. The same lines of its own, but more changed since
-      // the approval than main brought: the guard moved.
+      // The guard put back in canRead: the same lines of its own, but one moved.
       const wrong = await repo.resolve(
         'wrong',
         upstream.replace('canRead(user) {\n', `canRead(user) {\n${guard}`),
       )
-      assert.deepEqual(wrong, { own: [], since: ['auth.js'] })
-      // Right: both lines in canDelete. Only what main brought changed since: kept.
-      const right = await repo.resolve(
-        'right',
+      assert.deepEqual(wrong, ['auth.js'])
+      // Both lines in canDelete: main's went where the guard goes, in an order to check (a
+      // deletion logged before its guard, or after).
+      const both = await repo.resolve(
+        'both',
         upstream.replace('  log("delete");\n', `  log("delete");\n${guard}`),
       )
-      assert.deepEqual(right, { own: [], since: [] })
+      assert.deepEqual(both, ['auth.js'])
     } finally {
       rmSync(repo.dir, { recursive: true, force: true })
     }
   })
 
-  test('a change main also made, applied by a resolution where main had not, shows where it went', async () => {
+  test('a change main also made, applied by a resolution where main had not, is found', async () => {
     const { rmSync } = await import('node:fs')
     const baseline =
       'export function setup() {\n  return;\n}\n\n' +
@@ -268,21 +258,50 @@ describe('what a pull request itself changes', () => {
     const upstream = both('log("base");')
     const repo = await scenario(baseline, both('log("pr");'), upstream)
     try {
-      // Both logs kept, but deletes opened to everyone too: its own lines read the same, yet the
-      // line went where main had not put it.
+      // Both logs kept, but deletes opened to everyone too.
       const wrong = await repo.resolve(
         'wrong',
         upstream
           .replace('  log("base");', '  log("base");\n  log("pr");')
           .replace('  return user.admin;', '  return true;'),
       )
-      assert.deepEqual(wrong, { own: [], since: ['auth.js'] })
-      // Both logs kept, nothing else: its own lines are fewer now, as main made one of them.
-      const right = await repo.resolve(
-        'right',
-        upstream.replace('  log("base");', '  log("base");\n  log("pr");'),
+      assert.deepEqual(wrong, ['auth.js'])
+    } finally {
+      rmSync(repo.dir, { recursive: true, force: true })
+    }
+  })
+
+  test('lines main brought where its own go are found, in either order', async () => {
+    const { rmSync } = await import('node:fs')
+    const baseline = 'export function deleteItem(user) {\n  return true;\n}\n'
+    const guard = '  if (!user.admin) return false;\n'
+    const erase = '  eraseData();\n'
+    const at = (lines: string) => baseline.replace('  return true;', `${lines}  return true;`)
+    const repo = await scenario(baseline, at(guard), at(erase))
+    try {
+      // After the guard, nothing is erased for a non-admin; before it, it is: only a look can
+      // tell which was meant.
+      assert.deepEqual(await repo.resolve('guarded', at(guard + erase)), ['auth.js'])
+      assert.deepEqual(await repo.resolve('unguarded', at(erase + guard)), ['auth.js'])
+    } finally {
+      rmSync(repo.dir, { recursive: true, force: true })
+    }
+  })
+
+  test('changes on lines next to each other, both kept as they were, keep the approval', async () => {
+    const { rmSync } = await import('node:fs')
+    const baseline = 'export function f() {\n  const a = 1;\n  const b = 2;\n  return a + b;\n}\n'
+    const pr = baseline.replace('a = 1', 'a = 10')
+    const upstream = baseline.replace('b = 2', 'b = 20')
+    const repo = await scenario(baseline, pr, upstream)
+    try {
+      assert.deepEqual(await repo.resolve('both', pr.replace('b = 2', 'b = 20')), [])
+      // Main's change dropped, or the pull request's own changed: more than main brought.
+      assert.deepEqual(await repo.resolve('ours', pr), ['auth.js'])
+      assert.deepEqual(
+        await repo.resolve('rewritten', pr.replace('b = 2', 'b = 20').replace('a = 10', 'a = 11')),
+        ['auth.js'],
       )
-      assert.deepEqual(right.own, ['auth.js'])
     } finally {
       rmSync(repo.dir, { recursive: true, force: true })
     }
@@ -294,21 +313,32 @@ describe('what a pull request itself changes', () => {
     const own = new Map([
       ['src/a.ts', [{ from: 1, fromLines: 2, to: 1, toLines: 3, lines: [' ', '+', ' '] }]],
     ])
-    const at = (files: Change[], hunks?: typeof own) =>
-      changesBetween(gh(files), 'o/r', 'a', 'b', hunks)
-    // Main added base() after its line 1; since the approval, base() was added before or after
-    // fix(): both after base line 1.
-    const brought = await at([modified('src/a.ts', ['one', 'two'], ['base()'])])
-    const before = await at([modified('src/a.ts', ['one', 'fix()', 'two'], ['base()'])], own)
-    const after = await at([modified('src/a.ts', ['fix()', 'two'], ['base()'], 2)], own)
-    assert.deepEqual(changedFiles(brought, before), [])
-    assert.deepEqual(changedFiles(brought, after), [])
-    // Below its base's second line: another place.
-    const lower = await at([modified('src/a.ts', ['two', 'three'], ['base()'], 3)], own)
-    assert.deepEqual(changedFiles(brought, lower), ['src/a.ts'])
+    const at = (files: Change[], options = {}) =>
+      changesBetween(gh(files), 'o/r', 'a', 'b', options)
+    // Main added base() after its line 2; since the approval, base() went after the approved
+    // file's line 3, which is base line 2 (fix() is line 2): the same place.
+    const brought = await at([modified('src/a.ts', ['two', 'three'], ['base()'], 2)])
+    const since = await at([modified('src/a.ts', ['two', 'three'], ['base()'], 3)], { own })
+    assert.deepEqual(changedFiles(brought, since), [])
+    // After the approved file's line 2, fix(): base line 1, another place.
+    const higher = await at([modified('src/a.ts', ['fix()', 'two'], ['base()'], 2)], { own })
+    assert.deepEqual(changedFiles(brought, higher), ['src/a.ts'])
+    // Main adding lines where fix() goes (after base line 1): never the same.
+    const crowded = { crowded: new Map([['src/a.ts', new Set([1])]]) }
+    const there = await at([modified('src/a.ts', ['one', 'two'], ['base()'])], crowded)
+    assert.deepEqual(changedFiles(there, higher), ['src/a.ts'])
+    assert.deepEqual(
+      changedFiles(
+        brought,
+        await at([modified('src/a.ts', ['two', 'three'], ['base()'], 2)], crowded),
+      ),
+      [],
+    )
     // A file of its own GitHub showed no patch for: its places are not known.
     assert.equal(
-      await at([modified('src/a.ts', ['one', 'two'], ['base()'])], new Map([['src/a.ts', null]])),
+      await at([modified('src/a.ts', ['one', 'two'], ['base()'])], {
+        own: new Map([['src/a.ts', null]]),
+      }),
       null,
     )
   })
@@ -337,8 +367,12 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
   const bases = new Map<string, string>()
   /** What changed from one commit to a later one, by "from...to": nothing unless said. */
   const between = new Map<string, Change[]>()
-  /** What main brought from base0 to base1. */
-  const mainBrought = [modified('src/a.ts', ['one', 'two'], ['base()'])]
+  /**
+   * What main brought from base0 to base1: base() after its line 2, below where the pull
+   * request's fix() goes (after line 1); and the same, after the approved file's line 3.
+   */
+  const mainBrought = [modified('src/a.ts', ['two', 'three'], ['base()'], 2)]
+  const mainSince = [modified('src/a.ts', ['two', 'three'], ['base()'], 3)]
   between.set('base0...base1', mainBrought)
   /** Commits GitHub fails to compare. */
   const unreadable = new Set<string>()
@@ -614,7 +648,7 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     changes.set(sha, files)
     if (before) {
       bases.set(sha, 'base1')
-      between.set(`${before}...${sha}`, options.since ?? mainBrought)
+      between.set(`${before}...${sha}`, options.since ?? mainSince)
     }
     if (options.conflicts) dirty.add(number)
     else dirty.delete(number)
@@ -701,7 +735,7 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.match(look ?? '', /To get #2 merged, Riley resolved its conflicts with `main`/)
     assert.match(
       look ?? '',
-      /What it pushed since you approved `b1` changes more than what `main` brought: in `src\/a\.ts`\./,
+      /What it pushed since you approved `b1` changes more than what `main` brought, or puts it among the pull request's own lines in an order to check: in `src\/a\.ts`\./,
     )
     assert.match(look ?? '', /new verdict on its head `b2`/)
     assert.ok(!(await waiting()).includes(2), 'in review: nobody needs to do anything yet')
@@ -747,14 +781,14 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     await turnEnded(thread)
     // The same lines of its own, but fix() went elsewhere: more changed since than main brought.
     pushed(14, 'n2', kept, {
-      since: [...mainBrought, modified('src/b.ts', ['three', 'four'], ['fix()'])],
+      since: [...mainSince, modified('src/b.ts', ['three', 'four'], ['fix()'])],
     })
     await turnEnded(thread)
     assert.ok(!merged.has(14))
     assert.equal((await row(14)).approvalCarriedTo, null)
     assert.equal((await db.session.findFirstOrThrow({ where: { id: review } })).awaited, true)
     const [look] = await prompts(review)
-    assert.match(look ?? '', /changes more than what `main` brought: in `src\/b\.ts`\./)
+    assert.match(look ?? '', /changes more than what `main` brought.*: in `src\/b\.ts`\./)
   })
 
   test('what GitHub cannot compare is looked at too', async () => {
