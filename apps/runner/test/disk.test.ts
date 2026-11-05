@@ -252,7 +252,11 @@ test("a full disk names the largest entries of teammates' homes, hidden ones and
   )
   assert.ok(found[0]!.bytes >= 6 * MB)
   // Hidden entries count too; note.txt is under the minimum.
-  const more = await largestInHomes([undefined], { homeOf: () => join(homes, 'a'), count: 9, min: MB })
+  const more = await largestInHomes([undefined], {
+    homeOf: () => join(homes, 'a'),
+    count: 9,
+    min: MB,
+  })
   assert.deepEqual(
     more.map((e) => e.path.slice(homes.length + 1)),
     ['a/threads', 'a/work', 'a/.browser'],

@@ -56,6 +56,15 @@ export async function noteDisk(
   await prisma.computer.updateMany({ where, data: { disk: state as Prisma.InputJsonValue } })
 }
 
+/** The cloud computers whose disk stays full, for the disk: alert. */
+export const fullDisks = async () =>
+  (
+    await prisma.computer.findMany({
+      where: { kind: 'cloud', NOT: { disk: { equals: Prisma.DbNull } } },
+      select: { id: true, disk: true },
+    })
+  ).map((c) => ({ id: c.id, disk: c.disk as DiskState }))
+
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`
 
 /** What the disk: alert says of a computer's full disk. */

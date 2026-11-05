@@ -18,7 +18,8 @@ process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { prisma, scoped } = await import('../src/db.js')
-const { noteDisk, diskDetail } = await import('../src/computer-disk.js')
+const { noteDisk, diskDetail, fullDisks } = await import('../src/computer-disk.js')
+const { diskProblems } = await import('../src/ops/checks.js')
 const database = await Promise.race([
   prisma.$queryRaw`select 1`.then(() => true),
   new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
@@ -35,7 +36,10 @@ test("the alert says how full, since when and what takes room in teammates' home
     ],
   })
   assert.match(detail, /89% full since 2026-11-05T11:21Z/)
-  assert.match(detail, /Largest in teammates' homes: \/home\/bt-1\/threads 12\.0 GB, \/home\/bt-1\/work 2\.7 GB\./)
+  assert.match(
+    detail,
+    /Largest in teammates' homes: \/home\/bt-1\/threads 12\.0 GB, \/home\/bt-1\/work 2\.7 GB\./,
+  )
   assert.match(detail, /Members are not asked/)
   // An older runner says nothing of what takes room.
   assert.doesNotMatch(
@@ -62,9 +66,8 @@ describe('a full disk', { skip: !database && 'no database answers' }, () => {
       .id
     const db = scoped({ organizationId: org, workspaceId })
     cloud = (await db.computer.create({ data: { kind: 'cloud', name: 'Cloud' } } as never)).id
-    machine = (
-      await db.computer.create({ data: { kind: 'member_machine', name: 'Mac' } } as never)
-    ).id
+    machine = (await db.computer.create({ data: { kind: 'member_machine', name: 'Mac' } } as never))
+      .id
     runner = { organizationId: org, workspaceId, computerId: cloud }
   })
   after(async () => {
@@ -103,13 +106,20 @@ describe('a full disk', { skip: !database && 'no database answers' }, () => {
       since: at(0).toISOString(),
       at: at(10).toISOString(),
     })
+    // What the operators' check finds: this computer, and not the member's machine.
+    const full = (await fullDisks()).filter((c) => [cloud, machine].includes(c.id))
+    assert.deepEqual(
+      diskProblems(full).map((a) => [a.key, a.severity]),
+      [[`disk:${cloud}`, 'warning']],
+    )
     assert.equal(await db.ticket.count({ where: { type: 'disk_full', status: 'open' } }), 0)
 
     await noteDisk(runner, { full: false, used: 0.7 }, at(20))
     assert.equal(await diskOf(cloud), null)
+    assert.equal((await fullDisks()).filter((c) => c.id === cloud).length, 0)
     // Full again: a new since.
     await noteDisk(runner, { full: true, used: 0.81 }, at(30))
-    assert.equal((await diskOf(cloud) as { since: string }).since, at(30).toISOString())
+    assert.equal(((await diskOf(cloud)) as { since: string }).since, at(30).toISOString())
     await noteDisk(runner, { full: false, used: 0.7 }, at(40))
   })
 

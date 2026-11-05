@@ -747,6 +747,14 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   a few MB per turn that the adapters never remove: 1.8 GB in a week for one teammate), except those of threads in
   use, and the packages npx installed and has not run for 14 days (`~/.npm/_npx`), except those a process runs from.
   Playwright's browsers stay: a project pinned to an older Playwright would find its browser gone.
+  A disk still full once all this ran (from 80% until back under 75%) is kept on the computer for Brigade's
+  operators (`Computer.disk`, the `disk:` alert, docs/monitoring.md), with the largest entries of teammates' homes;
+  members are no longer asked to act (until Nov 5 a ticket asked them to delete threads or get a larger disk):
+  deleting threads frees no more than archiving their folders did, and a larger disk is not theirs to choose. On
+  Nov 5 the disk reached 98%, and about 5 GB of it were files a teammate had left outside its thread folders (raw
+  video frames, a clone), which nothing frees on its own. Those are not removed automatically,
+  as a teammate's cron jobs, services and tools may run from its home; teammates are told instead to keep what they
+  make in their thread's folder (`## Your files` in their instructions, cloud computers only).
 - **Containers by thread** (`apps/runner/src/containers.ts`, cloud computers). Each teammate's rootless Docker is shared
   by its threads, so each thread gets its own Compose project (`COMPOSE_PROJECT_NAME=t<thread id>`, for the harness,
   previews and takeover terminals): two threads on one repository no longer share containers or a database volume. A
