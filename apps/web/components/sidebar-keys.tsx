@@ -46,6 +46,13 @@ export function useSidebarKeys() {
     // opened takes the focus (its composer) and marks its row active a moment later. Any other
     // key or a pointer ends the run; then the focus in the sidebar, else the active row, says.
     let held: Element | null = null
+    // The row the walk is on, marked (`data-nav-at`) so a folded one shows where the walk is
+    // even when the page it opened took the focus (globals.css).
+    function hold(row: Element | null) {
+      if (held !== row) held?.removeAttribute('data-nav-at')
+      held = row
+      held?.setAttribute('data-nav-at', '')
+    }
 
     function from(stops: HTMLElement[]): Element | null {
       if (held?.isConnected) return held
@@ -58,7 +65,7 @@ export function useSidebarKeys() {
       if (stop.dataset.navStop === 'link') stop.click()
       stop.focus({ preventScroll: true })
       stop.scrollIntoView({ block: 'nearest' })
-      held = stop
+      hold(stop)
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -66,7 +73,7 @@ export function useSidebarKeys() {
       const focus = document.activeElement
       const dir = walkKey(e)
       if (dir) {
-        held = held?.isConnected ? held : null
+        if (!held?.isConnected) hold(null)
         if (e.defaultPrevented || e.isComposing || elsewhere(focus)) return
         const stops = shownStops()
         if (!stops.length) return
@@ -80,38 +87,40 @@ export function useSidebarKeys() {
         return
       }
       const plain = !e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey
-      if (
-        e.key === 'Enter' &&
-        plain &&
-        !e.repeat &&
-        !e.defaultPrevented &&
-        focus instanceof HTMLElement &&
-        focus.matches(STOPS)
-      ) {
+      // Enter acts on the row focused in the sidebar, else on the row the walk is on when it
+      // folds others: the page the walk opened may have taken the focus since (its composer,
+      // which Safari and the Mac app give it back to), and no key was typed there since.
+      const row =
+        focus instanceof HTMLElement && focus.matches(STOPS)
+          ? focus
+          : held instanceof HTMLElement && held.isConnected && folds(held) && !elsewhere(focus)
+            ? held
+            : null
+      if (e.key === 'Enter' && plain && !e.repeat && !e.defaultPrevented && !e.isComposing && row) {
         // A folded row unfolds; the next ⌥↓ goes to the first row it showed, which comes right
         // after the stop above it.
-        if (focus.dataset.navStop === 'toggle') {
+        if (row.dataset.navStop === 'toggle') {
           e.preventDefault()
-          const above = stepTo(shownStops(), (s) => relation(s, focus), -1)
-          focus.click()
-          held = above ?? null
+          e.stopPropagation()
+          const above = stepTo(shownStops(), (s) => relation(s, row), -1)
+          row.click()
+          hold(above ?? null)
           return
         }
         // The row open, with a caret: what is under it folds or unfolds, and the next ⌥↓ goes
         // to the first row it showed. Another row's Enter opens it, as a link's does.
-        const caret = caretOf(focus)
-        if (caret && (focus === held || focus.getAttribute('data-active') === 'true')) {
+        const caret = caretOf(row)
+        if (caret && (row === held || row.getAttribute('data-active') === 'true')) {
           e.preventDefault()
+          e.stopPropagation()
           caret.click()
-          held = focus
+          hold(row)
           return
         }
       }
-      held = null
+      hold(null)
     }
-    const onPointerDown = () => {
-      held = null
-    }
+    const onPointerDown = () => hold(null)
     // A page the walk opened focuses its composer once it has loaded: on a row Enter folds or
     // unfolds (a folded row, or the one it opened with a caret), the focus goes back to that
     // row, so Enter does that rather than going to the composer. Typing ends the run first
