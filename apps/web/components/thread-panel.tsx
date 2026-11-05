@@ -62,6 +62,7 @@ import {
 } from '@/lib/api'
 import { PendingThread } from '@/components/pending-thread'
 import {
+  LISTED_WITHIN_MS,
   pendingThreads,
   usePendingThread,
   useUnlistedThreads,
@@ -376,7 +377,12 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   }, [threads.data])
   const startedUnlisted = unlisted.flatMap((u) => (u.startedAt ? [u.row.id] : [])).join(' ')
   useEffect(() => {
-    if (startedUnlisted) void reloadThreads()
+    if (!startedUnlisted) return
+    void reloadThreads()
+    // Asked again past the deadline, should nothing else load it: a thread already gone (deleted
+    // from another tab) then leaves too, rather than starting in the list for good.
+    const late = setTimeout(() => void reloadThreads(), LISTED_WITHIN_MS + 1_000)
+    return () => clearTimeout(late)
   }, [startedUnlisted, reloadThreads])
   const { activity, waiting } = useMemo(() => {
     const activity: Record<string, TeammateActivity> = {}
