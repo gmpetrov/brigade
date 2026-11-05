@@ -56,6 +56,45 @@ export type ListLine = {
   marker: string | null
   /** The heading it is under, as written. */
   section: string | null
+  /**
+   * The files put under it: uploads of the document, each on a row of its own indented under its
+   * text, as the editor writes them. They go with it when it is handed over.
+   */
+  files: LineFile[]
+  /** Its last row with anything of it on it: its text, and the lines and files under it. */
+  last: number
+}
+
+/** A file under a line: an upload of the document (`asset:<id>`), by its id. */
+export type LineFile = { id: string; name: string; kind: 'image' | 'video' | 'audio' | 'file' }
+
+/**
+ * A row holding only a file of the document, as the editor writes one (@brigade/editor): an image
+ * `![name](asset:id "caption")`, or `[name](asset:id "video")` for the others.
+ */
+const FILE_ROW =
+  /^\s*(!?)\[([^\]\n]*)\]\(asset:([A-Za-z0-9_-]{1,64})(?:\s+"((image|video|audio|file)(?::[^"\n]*)?|[^"\n]*)")?\)\s*$/
+/** Any list item's first row: where its text starts is what rows under it are indented by. */
+const ITEM_ROW = /^(\s*)([*+-]|\d+[.)])( +|$)/
+
+const widthOf = (spaces: string) => spaces.replace(/\t/g, '    ').length
+
+/** Where a list item's text starts, by its first row (CommonMark: past its bullet and a space or more). */
+function contentColumn(raw: string) {
+  const m = raw.match(ITEM_ROW)
+  if (!m) return widthOf(raw.match(/^\s*/)![0])
+  const gap = m[3]!.length
+  return widthOf(m[1]!) + m[2]!.length + (gap === 0 || gap > 4 ? 1 : gap)
+}
+
+/** The file a row holds, if it holds only one, as a line's file. */
+function fileOf(raw: string): LineFile | null {
+  const m = raw.match(FILE_ROW)
+  if (!m) return null
+  const kind = m[1] ? 'image' : (m[5] as LineFile['kind'] | undefined)
+  // A link to an upload with no kind is a link in the text, not a file block.
+  if (!kind) return null
+  return { id: m[3]!, name: m[2]!.trim(), kind }
 }
 
 export type ParsedList = {
@@ -90,18 +129,40 @@ export function parseList(markdown: string): ParsedList {
       .join(' ')
     open = null
   }
+  // The list items the rows below may be under, deepest last (any list item, a checklist line or
+  // not): where its text starts, past which a row is still its own (CommonMark), and its line.
+  const under: { column: number; item: ListLine | null }[] = []
+  /** The items a row less indented than their text, after a blank row or as a block of its own, is out of. */
+  const leave = (indent: number) => {
+    while (under.length && under.at(-1)!.column > indent) under.pop()
+  }
+  /** A row the items still open hold: their last one so far. */
+  const holds = (row: number) => {
+    for (const u of under) if (u.item) u.item.last = row
+  }
+  let blank = true
   rows.forEach((raw, line) => {
+    const indent = widthOf(raw.match(/^\s*/)![0])
     const fenced = raw.match(FENCE)
     if (fenced) {
       close()
-      if (!fence) fence = fenced[1]!
-      else if (fenced[1]!.startsWith(fence[0]!) && fenced[1]!.length >= fence.length) fence = null
+      if (!fence) {
+        leave(indent)
+        fence = fenced[1]!
+      } else if (fenced[1]!.startsWith(fence[0]!) && fenced[1]!.length >= fence.length) fence = null
+      holds(line)
+      blank = false
       return
     }
-    if (fence) return
+    if (fence) {
+      if (raw.trim()) holds(line)
+      return
+    }
     const heading = raw.match(HEADING)
     if (heading) {
       close()
+      under.length = 0
+      blank = false
       const text = heading[2]!.replace(/\\(.)/g, '$1')
       if (heading[1] === '#' && title === null) title = text
       else section = text
@@ -109,26 +170,61 @@ export function parseList(markdown: string): ParsedList {
     }
     const check = raw.match(CHECK)
     if (!check) {
+      if (!raw.trim()) {
+        close()
+        blank = true
+        return
+      }
+      // A file on a row of its own: the file of the line it is indented under, never its text.
+      const file = fileOf(raw)
+      if (file) {
+        close()
+        leave(indent)
+        under.at(-1)?.item?.files.push(file)
+        holds(line)
+        blank = false
+        return
+      }
+      // A list item that is no checklist line: what is indented under it is its own.
+      if (BULLET.test(raw)) {
+        close()
+        leave(indent)
+        holds(line)
+        under.push({ column: contentColumn(raw), item: null })
+        blank = false
+        return
+      }
       // Its text going on (a paragraph's next row), unless a blank row or another block ends it.
-      if (open && raw.trim() && !BULLET.test(raw) && (MARKER_ROW.test(raw) || !BLOCK.test(raw))) {
+      if (open && (MARKER_ROW.test(raw) || !BLOCK.test(raw))) {
         open.parts.push(raw.trim())
         open.item.end = line
-      } else close()
+      } else {
+        close()
+        if (blank || BLOCK.test(raw)) leave(indent)
+      }
+      holds(line)
+      blank = false
       return
     }
     close()
+    leave(indent)
     const item: ListLine = {
       line,
       end: line,
-      indent: check[1]!.replace(/\t/g, '    ').length,
+      indent: widthOf(check[1]!),
       done: check[3] !== ' ',
       text: '',
       id: null,
       marker: null,
       section,
+      files: [],
+      last: line,
     }
     lines.push(item)
+    holds(line)
+    under.push({ column: contentColumn(raw), item })
     open = { item, parts: [check[4] ?? ''] }
+    blank = false
   })
   close()
   return { title, lines }
@@ -259,15 +355,9 @@ export function insertLine(
   if (at.after) {
     const after = at.after
     indent = after.indent + (at.nested ? 2 : 0)
-    // After the lines nested under it (and the text continuing it), unless going under it first.
-    index = after.end + 1
-    if (!at.nested) {
-      const nextSibling = list.lines.find((l) => l.line > after.line && l.indent <= after.indent)
-      const lastNested = [...list.lines]
-        .filter((l) => l.line > after.line && (!nextSibling || l.line < nextSibling.line))
-        .pop()
-      if (lastNested) index = lastNested.end + 1
-    }
+    // Under it: first, right after its text. Beside it: after all that is under it, the lines
+    // nested under it and its files, which would else be under the new line.
+    index = (at.nested ? after.end : after.last) + 1
   } else if (at.section) {
     const want = normal(at.section)
     const start = rows.findIndex((r) => {
@@ -277,9 +367,9 @@ export function insertLine(
     if (start >= 0) {
       const end = rows.findIndex((r, i) => i > start && HEADING.test(r))
       const inSection = list.lines.filter((l) => l.line > start && (end < 0 || l.line < end))
-      const last = inSection.at(-1)
-      index = last ? last.end + 1 : start + 1
-      if (!last) rows.splice(index++, 0, '')
+      // After the last of its lines, and of what is under them (a line's files).
+      index = inSection.length ? Math.max(...inSection.map((l) => l.last)) + 1 : start + 1
+      if (!inSection.length) rows.splice(index++, 0, '')
     }
   }
   // Keep a list's lines together: no blank line between the new one and those above.
@@ -370,9 +460,21 @@ export const ThreadListItems = z.array(
 )
 export type ThreadListItems = z.infer<typeof ThreadListItems>
 
-/** Lines picked in the editor: the id each was given there, and its text. */
+/** An upload of a document (`asset:<id>`), by its id. */
+export const DocumentFileId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/)
+
+/**
+ * Lines picked in the editor: the id each was given there, its text, and the files under it
+ * there (by id), which go with it. Without `files`, those under it in the saved file go.
+ */
 const PickedLines = z
-  .array(z.object({ id: ListItemId, text: z.string().trim().min(1).max(2_000) }))
+  .array(
+    z.object({
+      id: ListItemId,
+      text: z.string().trim().min(1).max(2_000),
+      files: z.array(DocumentFileId).max(20).optional(),
+    }),
+  )
   .min(1)
   .max(50)
 
@@ -402,44 +504,59 @@ export const LinkItems = z.object({
 })
 export type LinkItems = z.infer<typeof LinkItems>
 
+/** A line handed over: its text, and the library paths of the files under it (documentFilePath). */
+export type HandedLine = string | { text: string; files?: string[] }
+
+/** Before each file of a line in a hand-off message, under the line. */
+const HANDED_FILE = '  - File in the library: '
+
 /**
  * The message that hands lines to a teammate, in a new thread or one that runs already: the
- * person's note, or a request naming the list, then the lines.
+ * person's note, or a request naming the list, then the lines, each with the files under it.
  */
 export function handOffMessage(
   file: { id: string; path: string },
-  texts: string[],
+  lines: HandedLine[],
   note?: string | null,
 ) {
   const mention = formatMention({ kind: 'document', id: file.id, label: file.path })
   return [
     note?.trim() ||
-      (texts.length > 1
+      (lines.length > 1
         ? `Please take these items of ${mention}:`
         : `Please take this item of ${mention}:`),
-    texts.map((t) => `- ${plainItemText(t)}`).join('\n'),
+    lines
+      .map((line) => {
+        const { text, files = [] } = typeof line === 'string' ? { text: line } : line
+        return [
+          `- ${plainItemText(text)}`,
+          ...files.map((path) => `${HANDED_FILE}${path.replace(/\s*\n\s*/g, ' ')}`),
+        ].join('\n')
+      })
+      .join('\n'),
   ].join('\n\n')
 }
 
 const HAND_OFF =
-  /^Please take (?:this item|these items) of @\[([^\]]*)\]\(document:([^)\s]+)\):\n\n((?:- .*(?:\n|$))+)$/
+  /^Please take (?:this item|these items) of @\[([^\]]*)\]\(document:([^)\s]+)\):\n\n((?:- .*(?:\n|$)(?: {2}- File in the library: .+(?:\n|$))*)+)$/
 
 /**
- * A hand-off message as handOffMessage writes it with no note of the person's: the list's file
- * and the lines, so people see what was handed over rather than the request it is worded as.
- * Null for any other message, one with a note included: the person wrote that.
+ * A hand-off message as handOffMessage writes it with no note of the person's: the list's file,
+ * the lines and the files that went with them, so people see what was handed over rather than
+ * the request it is worded as. Null for any other message, one with a note included: the person
+ * wrote that.
  */
 export function handOffParts(
   text: string,
-): { file: { id: string; path: string }; items: string[] } | null {
+): { file: { id: string; path: string }; items: string[]; files?: string[] } | null {
   const m = HAND_OFF.exec(text.trim())
   if (!m) return null
+  const rows = m[3]!.trim().split('\n')
+  const files = rows.filter((row) => row.startsWith(HANDED_FILE)).map((row) => row.slice(HANDED_FILE.length))
   return {
     file: { id: m[2]!, path: m[1]! },
-    items: m[3]!
-      .trim()
-      .split('\n')
-      .map((line) => line.slice(2)),
+    items: rows.filter((row) => row.startsWith('- ')).map((row) => row.slice(2)),
+    ...(files.length ? { files } : {}),
   }
 }
 

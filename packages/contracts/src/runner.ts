@@ -216,9 +216,20 @@ export const ThreadSpec = z.object({
   attachments: z.array(ThreadAttachmentRef).default([]),
   /** The task this thread works on, if it is one. */
   task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
-  /** The list items it works on (docs/lists.md): lines of library files, by id. */
+  /**
+   * The list items it works on (docs/lists.md): lines of library files, by id, with the library
+   * paths of the files under each (documentFilePath).
+   */
   items: z
-    .array(z.object({ id: z.string(), path: z.string(), text: z.string(), done: z.boolean() }))
+    .array(
+      z.object({
+        id: z.string(),
+        path: z.string(),
+        text: z.string(),
+        done: z.boolean(),
+        files: z.array(z.string()).optional(),
+      }),
+    )
     .nullish(),
   /** The workspace's design systems, for designs the teammate makes. */
   designSystems: z.array(ThreadDesignSystem).default([]),

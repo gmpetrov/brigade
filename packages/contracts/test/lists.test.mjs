@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   GETTING_STARTED,
+  documentFileId,
+  documentFilePath,
   findLine,
   newListPath,
   newListText,
@@ -222,6 +224,141 @@ test('a hand-off with no note of the person’s reads back as its file and lines
   // The person's own words stay theirs, as does anything else.
   assert.equal(handOffParts(handOffMessage(file, ['Pricing'], 'Start with this one.')), null)
   assert.equal(handOffParts('Please take this item of the list: pricing'), null)
+})
+
+// A line's files (docs/lists.md): uploads of the document on rows of their own, indented under the
+// line's text as the editor writes them (@brigade/editor).
+const withFiles = [
+  '# Launch',
+  '',
+  '* [ ] Voice: Cartesia or Georges <!-- item:aaaaaaaaaaaaaaaa -->',
+  '',
+  '  ![Screenshot 2026-11-05 at 16.34.14.png](asset:cmw3pp1mb000spsp71tl0omrb)',
+  '',
+  '  [brief.pdf](asset:cmfile00000000000000000001 "file: Q3")',
+  '',
+  '* [ ] References <!-- item:bbbbbbbbbbbbbbbb -->',
+  '  * [ ] Two films <!-- item:cccccccccccccccc -->',
+  '',
+  '    [clip.mp4](asset:cmclip00000000000000000001 "video")',
+  '',
+  '  ![poster.png](asset:cmposter000000000000000001)',
+  '* [ ] Not this one',
+  '',
+  '![Loose screenshot.png](asset:cmloose00000000000000000001)',
+  '',
+  '- A plain bullet',
+  '',
+  '  ![its own.png](asset:cmbullet0000000000000000001)',
+  '',
+  '* [ ] Its text [links to a file](asset:cmlink000000000000000000001)',
+].join('\n')
+
+test('the files indented under a line are its own, and never its text', () => {
+  const lines = parseList(withFiles).lines
+  assert.deepEqual(
+    lines.map((l) => [l.text, l.files.map((f) => [f.id, f.name, f.kind]), l.last]),
+    [
+      [
+        'Voice: Cartesia or Georges',
+        [
+          ['cmw3pp1mb000spsp71tl0omrb', 'Screenshot 2026-11-05 at 16.34.14.png', 'image'],
+          ['cmfile00000000000000000001', 'brief.pdf', 'file'],
+        ],
+        6,
+      ],
+      // Under the nested line: its own file; less indented, after it: the line above's.
+      ['References', [['cmposter000000000000000001', 'poster.png', 'image']], 13],
+      ['Two films', [['cmclip00000000000000000001', 'clip.mp4', 'video']], 11],
+      // A file at the margin is the document's own, as is one under a plain bullet.
+      ['Not this one', [], 14],
+      // A link to a file in a line's text stays its text.
+      ['Its text [links to a file](asset:cmlink000000000000000000001)', [], 22],
+    ],
+  )
+})
+
+test('a file under a line whose text goes on below its box is still its own', () => {
+  const text = ['* [ ] Its text goes on\\', 'on a second row', '', '  ![a.png](asset:cma)', '* [ ] Next'].join('\n')
+  assert.deepEqual(
+    parseList(text).lines.map((l) => [l.text, l.files.map((f) => f.id), l.end, l.last]),
+    [
+      ['Its text goes on on a second row', ['cma'], 1, 3],
+      ['Next', [], 4, 4],
+    ],
+  )
+})
+
+test('a line added beside one with files goes after them, and one under it right under its text', () => {
+  const list = parseList(withFiles)
+  const beside = insertLine(withFiles, list, { after: list.lines[0] }, 'Music', 'dddddddddddddddd')
+  const after = parseList(beside).lines
+  assert.equal(beside.split('\n')[7], '* [ ] Music <!-- item:dddddddddddddddd -->')
+  assert.deepEqual(
+    after.slice(0, 2).map((l) => [l.text, l.files.length]),
+    [
+      ['Voice: Cartesia or Georges', 2],
+      ['Music', 0],
+    ],
+  )
+  // Beside a line with lines and files under it: after them all.
+  const second = insertLine(withFiles, list, { after: list.lines[1] }, 'Credits', 'eeeeeeeeeeeeeeee')
+  assert.equal(second.split('\n')[14], '* [ ] Credits <!-- item:eeeeeeeeeeeeeeee -->')
+  assert.deepEqual(
+    parseList(second).lines.map((l) => [l.text, l.files.length]).slice(1, 4),
+    [
+      ['References', 1],
+      ['Two films', 1],
+      ['Credits', 0],
+    ],
+  )
+  // Under it: right under its text; its files stay its own.
+  const under = insertLine(
+    withFiles,
+    list,
+    { after: list.lines[0], nested: true },
+    'Ask Georges',
+    'ffffffffffffffff',
+  )
+  assert.equal(under.split('\n')[3], '  * [ ] Ask Georges <!-- item:ffffffffffffffff -->')
+  assert.deepEqual(
+    parseList(under).lines.slice(0, 2).map((l) => [l.text, l.files.length]),
+    [
+      ['Voice: Cartesia or Georges', 2],
+      ['Ask Georges', 0],
+    ],
+  )
+  // At the end of a section whose last line has files: after them.
+  const sectioned = ['## Sound', '', '* [ ] Voice', '', '  ![a.png](asset:cma)', '', '## Next'].join('\n')
+  const added = insertLine(sectioned, parseList(sectioned), { section: 'Sound' }, 'Music', 'gggggggggggggggg')
+  assert.equal(added.split('\n')[5], '* [ ] Music <!-- item:gggggggggggggggg -->')
+  assert.deepEqual(
+    parseList(added).lines.map((l) => [l.text, l.files.length]),
+    [
+      ['Voice', 1],
+      ['Music', 0],
+    ],
+  )
+})
+
+test('a line handed over takes the paths of its files, which read back with it', () => {
+  const file = { id: 'doc1', path: 'Projects/Acme/launch.md' }
+  const path = documentFilePath(file.path, { id: 'cmw3pp1mb000spsp71tl0omrb', name: 'Shot 1.png' })
+  assert.equal(path, 'Projects/Acme/launch.md.files/cmw3pp1mb000spsp71tl0omrb/Shot 1.png')
+  assert.equal(documentFileId(path), 'cmw3pp1mb000spsp71tl0omrb')
+  assert.equal(documentFileId('Projects/Acme/launch.md'), null)
+  const message = handOffMessage(file, [{ text: 'Voice', files: [path] }, 'Pricing'])
+  assert.equal(
+    message,
+    'Please take these items of @[Projects/Acme/launch.md](document:doc1):\n\n' +
+      `- Voice\n  - File in the library: ${path}\n- Pricing`,
+  )
+  assert.deepEqual(handOffParts(message), { file, items: ['Voice', 'Pricing'], files: [path] })
+  // With the person's note, the files still go under their line.
+  assert.equal(
+    handOffMessage(file, [{ text: 'Voice', files: [path] }], 'Look at the screenshot.'),
+    `Look at the screenshot.\n\n- Voice\n  - File in the library: ${path}`,
+  )
 })
 
 for (const block of [
