@@ -102,7 +102,10 @@ const recentKey = (workspaceId: string) => `brigade.search.recent.${workspaceId}
 function readRecent(workspaceId: string): Item[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(recentKey(workspaceId)) ?? '[]') as unknown
-    return Array.isArray(parsed) ? (parsed as Item[]).slice(0, RECENT_MAX) : []
+    // Only kinds there still are: a task, from before the Tasks board went, is left out.
+    return Array.isArray(parsed)
+      ? (parsed as Item[]).filter((r) => r.kind in ICON).slice(0, RECENT_MAX)
+      : []
   } catch {
     return []
   }

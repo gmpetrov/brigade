@@ -183,7 +183,7 @@ export const isAside = (
 
 /**
  * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
- * on Tasks and in the sidebar (columnOf): an open ticket, waiting, failed and waiting on a
+ * on the Board and in the sidebar: an open ticket, waiting, failed and waiting on a
  * person (`failing`: src/failed.ts, failedWaitingAmong), stopped at a pull request a person
  * merges, or on choices nobody picked (`choosing`: src/choices-waiting.ts). A failed thread's
  * pull requests wait with it, not on their own. A thread the member reading put away for later

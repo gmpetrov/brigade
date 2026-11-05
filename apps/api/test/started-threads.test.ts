@@ -373,6 +373,58 @@ describe('threads a teammate starts', { skip: !database && 'no database answers'
     assert.equal(other.doneById, ids.riley)
   })
 
+  test('a thread its teammate declared done is pushed as finished work, once', async () => {
+    const { workspaceItems } = await import('../src/notifications.js')
+    const now = new Date()
+    const thread = (title: string, doneByType: 'teammate' | 'member') =>
+      db.session.create({
+        data: {
+          teammateId: ids.riley,
+          startedByMemberId: ids.member,
+          computerId: ids.computer,
+          title,
+          status: 'idle',
+          doneAt: now,
+          doneSummary: `${title}: delivered`,
+          doneByType,
+          doneById: doneByType === 'teammate' ? ids.riley : ids.member,
+        } as never,
+      })
+    const done = await thread('Ship the FAQ', 'teammate')
+    // A person who marked it done knows it.
+    const marked = await thread('Tidy the docs', 'member')
+    // The reply its teammate declared it done in.
+    await db.sessionEvent.create({
+      data: { sessionId: done.id, seq: 1, type: 'turn.completed', data: {}, at: now } as never,
+    })
+    const items = async (notify: 'needed' | 'finished' | 'everything') =>
+      (
+        await workspaceItems(
+          scope,
+          [{ id: ids.member, role: 'owner', notify }],
+          new Date(now.getTime() + 1000),
+        )
+      ).items.get(ids.member)!
+    const finished = await items('finished')
+    assert.deepEqual(
+      finished.filter((i) => i.tag === done.id).map((i) => [i.title, i.body, i.needs]),
+      [['Riley finished', 'Ship the FAQ: delivered', false]],
+    )
+    assert.equal(
+      finished.some((i) => i.tag === marked.id),
+      false,
+    )
+    // With everything: the done says it, not its reply as well.
+    assert.deepEqual(
+      (await items('everything')).filter((i) => i.tag === done.id).map((i) => i.title),
+      ['Riley finished'],
+    )
+    assert.equal(
+      (await items('needed')).some((i) => i.tag === done.id),
+      false,
+    )
+  })
+
   test('the migration declares done the threads of tasks done, by whoever completed them', async () => {
     const thread = async (title: string, done?: Date) =>
       (

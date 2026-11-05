@@ -489,6 +489,8 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
     for (const id of new Set([s.startedByMemberId, askers.get(s.id)])) {
       const m = members.find((r) => r.id === id && r.notify === 'everything')
       if (!m || counted.get(m.id)!.has(`needs:${s.id}`)) continue
+      // Its teammate declared it done in that reply: the done says it.
+      if (items.get(m.id)!.some((i) => i.key.startsWith(`done:${s.id}:`))) continue
       // Read since: they saw it.
       const seen = s.reads.find((r) => r.memberId === m.id)?.seenAt
       if (seen && seen >= turn.at) continue
