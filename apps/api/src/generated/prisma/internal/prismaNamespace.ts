@@ -422,6 +422,7 @@ export const ModelName = {
   Task: 'Task',
   Schedule: 'Schedule',
   ChiefDecision: 'ChiefDecision',
+  ChiefPass: 'ChiefPass',
   Wakeup: 'Wakeup',
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
@@ -514,7 +515,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2365,6 +2366,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ChiefDecisionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ChiefDecisionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChiefPass: {
+      payload: Prisma.$ChiefPassPayload<ExtArgs>
+      fields: Prisma.ChiefPassFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChiefPassFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChiefPassFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        findFirst: {
+          args: Prisma.ChiefPassFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChiefPassFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        findMany: {
+          args: Prisma.ChiefPassFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        create: {
+          args: Prisma.ChiefPassCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        createMany: {
+          args: Prisma.ChiefPassCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ChiefPassCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        delete: {
+          args: Prisma.ChiefPassDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        update: {
+          args: Prisma.ChiefPassUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        deleteMany: {
+          args: Prisma.ChiefPassDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChiefPassUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ChiefPassUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        upsert: {
+          args: Prisma.ChiefPassUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        aggregate: {
+          args: Prisma.ChiefPassAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChiefPass>
+        }
+        groupBy: {
+          args: Prisma.ChiefPassGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChiefPassGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChiefPassCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChiefPassCountAggregateOutputType> | number
         }
       }
     }
@@ -8241,7 +8316,11 @@ export const MemberScalarFieldEnum = {
   autoMerge: 'autoMerge',
   chiefAnswers: 'chiefAnswers',
   chiefAuto: 'chiefAuto',
-  chiefAutoChangedAt: 'chiefAutoChangedAt'
+  chiefAutoChangedAt: 'chiefAutoChangedAt',
+  chiefPass: 'chiefPass',
+  chiefRules: 'chiefRules',
+  chiefRulesRefused: 'chiefRulesRefused',
+  timezone: 'timezone'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -8447,6 +8526,7 @@ export const SessionScalarFieldEnum = {
   surfacedAt: 'surfacedAt',
   quiet: 'quiet',
   chiefDecisionId: 'chiefDecisionId',
+  chiefPassId: 'chiefPassId',
   chiefWordSeq: 'chiefWordSeq'
 } as const
 
@@ -8512,6 +8592,7 @@ export const ChiefDecisionScalarFieldEnum = {
   question: 'question',
   options: 'options',
   childSessionId: 'childSessionId',
+  passId: 'passId',
   status: 'status',
   verdict: 'verdict',
   kind: 'kind',
@@ -8528,6 +8609,24 @@ export const ChiefDecisionScalarFieldEnum = {
 } as const
 
 export type ChiefDecisionScalarFieldEnum = (typeof ChiefDecisionScalarFieldEnum)[keyof typeof ChiefDecisionScalarFieldEnum]
+
+
+export const ChiefPassScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  day: 'day',
+  sessionId: 'sessionId',
+  status: 'status',
+  items: 'items',
+  actions: 'actions',
+  report: 'report',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type ChiefPassScalarFieldEnum = (typeof ChiefPassScalarFieldEnum)[keyof typeof ChiefPassScalarFieldEnum]
 
 
 export const WakeupScalarFieldEnum = {
@@ -10172,6 +10271,20 @@ export type ListEnumChiefOutcomeFieldRefInput<$PrismaModel> = FieldRefInputType<
 
 
 /**
+ * Reference to a field of type 'ChiefPassStatus'
+ */
+export type EnumChiefPassStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChiefPassStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ChiefPassStatus[]'
+ */
+export type ListEnumChiefPassStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChiefPassStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'WakeupKind'
  */
 export type EnumWakeupKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupKind'>
@@ -10808,6 +10921,7 @@ export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit
   chiefDecision?: Prisma.ChiefDecisionOmit
+  chiefPass?: Prisma.ChiefPassOmit
   wakeup?: Prisma.WakeupOmit
   replyWatch?: Prisma.ReplyWatchOmit
   threadTeammate?: Prisma.ThreadTeammateOmit

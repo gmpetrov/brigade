@@ -510,22 +510,26 @@ export async function noteChildEvents(
     organizationId: string
     workspaceId: string
     parentId: string | null
-    /** Chief's thread deciding a question: no report, its decision goes its own way. */
+    /** Chief's thread deciding a question (#724): no report, nothing wakes its parent. */
     chiefDecisionId?: string | null
   },
   events: { event: { type: string; at: string; message?: string; retrying?: boolean } }[],
 ) {
   if (!session.parentId) return
   const scope: Scope = { organizationId: session.organizationId, workspaceId: session.workspaceId }
-  if (session.chiefDecisionId) {
-    const { noteDecisionEvents } = await import('./chief-answers.js')
-    return noteDecisionEvents(
-      scope,
-      { id: session.id, parentId: session.parentId, chiefDecisionId: session.chiefDecisionId },
-      events,
-    )
-  }
   const db = scoped(scope)
+  if (session.chiefDecisionId) {
+    // One still at work when Chief stopped deciding each question: settled as reporting nothing.
+    if (events.some(({ event }) => event.type === 'turn.completed' || event.type === 'error'))
+      await db.session.updateMany({
+        where: { id: session.id, reportDeliveredAt: null },
+        data: {
+          report: { status: 'nothing', summary: 'Decided.', at: new Date().toISOString() },
+          reportDeliveredAt: new Date(),
+        } as never,
+      })
+    return
+  }
   for (const { event } of events) {
     if (event.type === 'message.user') {
       const row = await db.session.findFirst({

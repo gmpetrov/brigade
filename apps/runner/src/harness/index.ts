@@ -333,8 +333,8 @@ function createAgent(
           [
             ...ALWAYS_LOADED,
             ...(chief ? [PROPOSE_TEAM_TOOL] : []),
-            // A decision thread's one way out, loaded with no tool search before it.
-            ...(spec.decision && chief ? ['chief_decide'] : []),
+            // A pass's ways out, loaded with no tool search before them.
+            ...(spec.pass && chief ? ['chief_answer', 'chief_retry', 'chief_report'] : []),
             // A big App's catalog (catalogTools): a few small tools, found then called, without a
             // tool search before them.
             ...Object.entries(apps)
@@ -343,15 +343,15 @@ function createAgent(
           ].map((name) => [name, { alwaysLoad: true }]),
         ),
       })
-  // Chief deciding a question for the person (docs/chief-answers.md): it reads and decides, and
-  // nothing else; the API gives it no App, and its only way out is chief_decide.
-  const deciding = !!spec.decision && chief
-  const tools = deciding
+  // Chief's daily pass for a person (docs/chief-answers.md): it reads and acts on its brief's items,
+  // and nothing else; the API gives it no App.
+  const passing = !!spec.pass && chief
+  const tools = passing
     ? {
         search_workspace: libraryTools({ ...library, access: 'read', folders: [] })
           .search_workspace!,
         list_items: listTools(callSchedule).list_items!,
-        ...chiefTools(callSchedule, { deciding: true }),
+        ...chiefTools(callSchedule, { pass: true }),
       }
     : {
         ...apps,
@@ -397,8 +397,8 @@ function createAgent(
         [ANSWER_MESSAGE_TOOL]: answerMessageTool,
         // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
         ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
-        // Chief, for a person who lets it answer for them: its look back at what it decided.
-        ...(chief && spec.chiefAnswers ? chiefTools(callSchedule, { deciding: false }) : {}),
+        // Chief writes people's rules with them.
+        ...(chief ? chiefTools(callSchedule, { pass: false }) : {}),
       }
   return {
     agent: new HarnessAgent({

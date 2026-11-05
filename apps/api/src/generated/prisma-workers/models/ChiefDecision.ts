@@ -47,6 +47,7 @@ export type ChiefDecisionMinAggregateOutputType = {
   askSeq: number | null
   question: string | null
   childSessionId: string | null
+  passId: string | null
   status: $Enums.ChiefDecisionStatus | null
   verdict: string | null
   kind: string | null
@@ -72,6 +73,7 @@ export type ChiefDecisionMaxAggregateOutputType = {
   askSeq: number | null
   question: string | null
   childSessionId: string | null
+  passId: string | null
   status: $Enums.ChiefDecisionStatus | null
   verdict: string | null
   kind: string | null
@@ -98,6 +100,7 @@ export type ChiefDecisionCountAggregateOutputType = {
   question: number
   options: number
   childSessionId: number
+  passId: number
   status: number
   verdict: number
   kind: number
@@ -135,6 +138,7 @@ export type ChiefDecisionMinAggregateInputType = {
   askSeq?: true
   question?: true
   childSessionId?: true
+  passId?: true
   status?: true
   verdict?: true
   kind?: true
@@ -160,6 +164,7 @@ export type ChiefDecisionMaxAggregateInputType = {
   askSeq?: true
   question?: true
   childSessionId?: true
+  passId?: true
   status?: true
   verdict?: true
   kind?: true
@@ -186,6 +191,7 @@ export type ChiefDecisionCountAggregateInputType = {
   question?: true
   options?: true
   childSessionId?: true
+  passId?: true
   status?: true
   verdict?: true
   kind?: true
@@ -298,7 +304,8 @@ export type ChiefDecisionGroupByOutputType = {
   askSeq: number
   question: string | null
   options: runtime.JsonValue
-  childSessionId: string
+  childSessionId: string | null
+  passId: string | null
   status: $Enums.ChiefDecisionStatus
   verdict: string | null
   kind: string | null
@@ -347,7 +354,8 @@ export type ChiefDecisionWhereInput = {
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
   question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
-  childSessionId?: Prisma.StringFilter<"ChiefDecision"> | string
+  childSessionId?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
+  passId?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
   verdict?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   kind?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
@@ -365,6 +373,7 @@ export type ChiefDecisionWhereInput = {
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   child?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  pass?: Prisma.XOR<Prisma.ChiefPassNullableScalarRelationFilter, Prisma.ChiefPassWhereInput> | null
 }
 
 export type ChiefDecisionOrderByWithRelationInput = {
@@ -377,7 +386,8 @@ export type ChiefDecisionOrderByWithRelationInput = {
   askSeq?: Prisma.SortOrder
   question?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
-  childSessionId?: Prisma.SortOrder
+  childSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  passId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -395,6 +405,7 @@ export type ChiefDecisionOrderByWithRelationInput = {
   session?: Prisma.SessionOrderByWithRelationInput
   member?: Prisma.MemberOrderByWithRelationInput
   child?: Prisma.SessionOrderByWithRelationInput
+  pass?: Prisma.ChiefPassOrderByWithRelationInput
 }
 
 export type ChiefDecisionWhereUniqueInput = Prisma.AtLeast<{
@@ -412,6 +423,7 @@ export type ChiefDecisionWhereUniqueInput = Prisma.AtLeast<{
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
   question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
+  passId?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
   verdict?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   kind?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
@@ -429,6 +441,7 @@ export type ChiefDecisionWhereUniqueInput = Prisma.AtLeast<{
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   child?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  pass?: Prisma.XOR<Prisma.ChiefPassNullableScalarRelationFilter, Prisma.ChiefPassWhereInput> | null
 }, "id" | "childSessionId" | "sessionId_askSeq">
 
 export type ChiefDecisionOrderByWithAggregationInput = {
@@ -441,7 +454,8 @@ export type ChiefDecisionOrderByWithAggregationInput = {
   askSeq?: Prisma.SortOrder
   question?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
-  childSessionId?: Prisma.SortOrder
+  childSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  passId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -475,7 +489,8 @@ export type ChiefDecisionScalarWhereWithAggregatesInput = {
   askSeq?: Prisma.IntWithAggregatesFilter<"ChiefDecision"> | number
   question?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonWithAggregatesFilter<"ChiefDecision">
-  childSessionId?: Prisma.StringWithAggregatesFilter<"ChiefDecision"> | string
+  childSessionId?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
+  passId?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   status?: Prisma.EnumChiefDecisionStatusWithAggregatesFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
   verdict?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   kind?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
@@ -498,7 +513,7 @@ export type ChiefDecisionCreateInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -516,6 +531,7 @@ export type ChiefDecisionCreateInput = {
   session: Prisma.SessionCreateNestedOneWithoutChiefDecisionsInput
   member: Prisma.MemberCreateNestedOneWithoutChiefDecisionsInput
   child?: Prisma.SessionCreateNestedOneWithoutChiefDecisionInput
+  pass?: Prisma.ChiefPassCreateNestedOneWithoutDecisionsInput
 }
 
 export type ChiefDecisionUncheckedCreateInput = {
@@ -528,7 +544,8 @@ export type ChiefDecisionUncheckedCreateInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -552,7 +569,7 @@ export type ChiefDecisionUpdateInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -570,6 +587,7 @@ export type ChiefDecisionUpdateInput = {
   session?: Prisma.SessionUpdateOneRequiredWithoutChiefDecisionsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutChiefDecisionsNestedInput
   child?: Prisma.SessionUpdateOneWithoutChiefDecisionNestedInput
+  pass?: Prisma.ChiefPassUpdateOneWithoutDecisionsNestedInput
 }
 
 export type ChiefDecisionUncheckedUpdateInput = {
@@ -582,7 +600,8 @@ export type ChiefDecisionUncheckedUpdateInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -609,7 +628,8 @@ export type ChiefDecisionCreateManyInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -632,7 +652,7 @@ export type ChiefDecisionUpdateManyMutationInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -658,7 +678,8 @@ export type ChiefDecisionUncheckedUpdateManyInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -705,6 +726,7 @@ export type ChiefDecisionCountOrderByAggregateInput = {
   question?: Prisma.SortOrder
   options?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
+  passId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrder
   kind?: Prisma.SortOrder
@@ -735,6 +757,7 @@ export type ChiefDecisionMaxOrderByAggregateInput = {
   askSeq?: Prisma.SortOrder
   question?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
+  passId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrder
   kind?: Prisma.SortOrder
@@ -760,6 +783,7 @@ export type ChiefDecisionMinOrderByAggregateInput = {
   askSeq?: Prisma.SortOrder
   question?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
+  passId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrder
   kind?: Prisma.SortOrder
@@ -930,6 +954,48 @@ export type NullableEnumChiefOutcomeFieldUpdateOperationsInput = {
   set?: $Enums.ChiefOutcome | null
 }
 
+export type ChiefDecisionCreateNestedManyWithoutPassInput = {
+  create?: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput> | Prisma.ChiefDecisionCreateWithoutPassInput[] | Prisma.ChiefDecisionUncheckedCreateWithoutPassInput[]
+  connectOrCreate?: Prisma.ChiefDecisionCreateOrConnectWithoutPassInput | Prisma.ChiefDecisionCreateOrConnectWithoutPassInput[]
+  createMany?: Prisma.ChiefDecisionCreateManyPassInputEnvelope
+  connect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+}
+
+export type ChiefDecisionUncheckedCreateNestedManyWithoutPassInput = {
+  create?: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput> | Prisma.ChiefDecisionCreateWithoutPassInput[] | Prisma.ChiefDecisionUncheckedCreateWithoutPassInput[]
+  connectOrCreate?: Prisma.ChiefDecisionCreateOrConnectWithoutPassInput | Prisma.ChiefDecisionCreateOrConnectWithoutPassInput[]
+  createMany?: Prisma.ChiefDecisionCreateManyPassInputEnvelope
+  connect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+}
+
+export type ChiefDecisionUpdateManyWithoutPassNestedInput = {
+  create?: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput> | Prisma.ChiefDecisionCreateWithoutPassInput[] | Prisma.ChiefDecisionUncheckedCreateWithoutPassInput[]
+  connectOrCreate?: Prisma.ChiefDecisionCreateOrConnectWithoutPassInput | Prisma.ChiefDecisionCreateOrConnectWithoutPassInput[]
+  upsert?: Prisma.ChiefDecisionUpsertWithWhereUniqueWithoutPassInput | Prisma.ChiefDecisionUpsertWithWhereUniqueWithoutPassInput[]
+  createMany?: Prisma.ChiefDecisionCreateManyPassInputEnvelope
+  set?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  disconnect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  delete?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  connect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  update?: Prisma.ChiefDecisionUpdateWithWhereUniqueWithoutPassInput | Prisma.ChiefDecisionUpdateWithWhereUniqueWithoutPassInput[]
+  updateMany?: Prisma.ChiefDecisionUpdateManyWithWhereWithoutPassInput | Prisma.ChiefDecisionUpdateManyWithWhereWithoutPassInput[]
+  deleteMany?: Prisma.ChiefDecisionScalarWhereInput | Prisma.ChiefDecisionScalarWhereInput[]
+}
+
+export type ChiefDecisionUncheckedUpdateManyWithoutPassNestedInput = {
+  create?: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput> | Prisma.ChiefDecisionCreateWithoutPassInput[] | Prisma.ChiefDecisionUncheckedCreateWithoutPassInput[]
+  connectOrCreate?: Prisma.ChiefDecisionCreateOrConnectWithoutPassInput | Prisma.ChiefDecisionCreateOrConnectWithoutPassInput[]
+  upsert?: Prisma.ChiefDecisionUpsertWithWhereUniqueWithoutPassInput | Prisma.ChiefDecisionUpsertWithWhereUniqueWithoutPassInput[]
+  createMany?: Prisma.ChiefDecisionCreateManyPassInputEnvelope
+  set?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  disconnect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  delete?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  connect?: Prisma.ChiefDecisionWhereUniqueInput | Prisma.ChiefDecisionWhereUniqueInput[]
+  update?: Prisma.ChiefDecisionUpdateWithWhereUniqueWithoutPassInput | Prisma.ChiefDecisionUpdateWithWhereUniqueWithoutPassInput[]
+  updateMany?: Prisma.ChiefDecisionUpdateManyWithWhereWithoutPassInput | Prisma.ChiefDecisionUpdateManyWithWhereWithoutPassInput[]
+  deleteMany?: Prisma.ChiefDecisionScalarWhereInput | Prisma.ChiefDecisionScalarWhereInput[]
+}
+
 export type ChiefDecisionCreateWithoutMemberInput = {
   id?: string
   organizationId: string
@@ -937,7 +1003,7 @@ export type ChiefDecisionCreateWithoutMemberInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -954,6 +1020,7 @@ export type ChiefDecisionCreateWithoutMemberInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutChiefDecisionsInput
   session: Prisma.SessionCreateNestedOneWithoutChiefDecisionsInput
   child?: Prisma.SessionCreateNestedOneWithoutChiefDecisionInput
+  pass?: Prisma.ChiefPassCreateNestedOneWithoutDecisionsInput
 }
 
 export type ChiefDecisionUncheckedCreateWithoutMemberInput = {
@@ -965,7 +1032,8 @@ export type ChiefDecisionUncheckedCreateWithoutMemberInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1021,7 +1089,8 @@ export type ChiefDecisionScalarWhereInput = {
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
   question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
-  childSessionId?: Prisma.StringFilter<"ChiefDecision"> | string
+  childSessionId?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
+  passId?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
   verdict?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   kind?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
@@ -1044,7 +1113,7 @@ export type ChiefDecisionCreateWithoutWorkspaceInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1061,6 +1130,7 @@ export type ChiefDecisionCreateWithoutWorkspaceInput = {
   session: Prisma.SessionCreateNestedOneWithoutChiefDecisionsInput
   member: Prisma.MemberCreateNestedOneWithoutChiefDecisionsInput
   child?: Prisma.SessionCreateNestedOneWithoutChiefDecisionInput
+  pass?: Prisma.ChiefPassCreateNestedOneWithoutDecisionsInput
 }
 
 export type ChiefDecisionUncheckedCreateWithoutWorkspaceInput = {
@@ -1072,7 +1142,8 @@ export type ChiefDecisionUncheckedCreateWithoutWorkspaceInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1122,7 +1193,7 @@ export type ChiefDecisionCreateWithoutSessionInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1139,6 +1210,7 @@ export type ChiefDecisionCreateWithoutSessionInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutChiefDecisionsInput
   member: Prisma.MemberCreateNestedOneWithoutChiefDecisionsInput
   child?: Prisma.SessionCreateNestedOneWithoutChiefDecisionInput
+  pass?: Prisma.ChiefPassCreateNestedOneWithoutDecisionsInput
 }
 
 export type ChiefDecisionUncheckedCreateWithoutSessionInput = {
@@ -1150,7 +1222,8 @@ export type ChiefDecisionUncheckedCreateWithoutSessionInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1184,7 +1257,7 @@ export type ChiefDecisionCreateWithoutChildInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1201,6 +1274,7 @@ export type ChiefDecisionCreateWithoutChildInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutChiefDecisionsInput
   session: Prisma.SessionCreateNestedOneWithoutChiefDecisionsInput
   member: Prisma.MemberCreateNestedOneWithoutChiefDecisionsInput
+  pass?: Prisma.ChiefPassCreateNestedOneWithoutDecisionsInput
 }
 
 export type ChiefDecisionUncheckedCreateWithoutChildInput = {
@@ -1213,7 +1287,8 @@ export type ChiefDecisionUncheckedCreateWithoutChildInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1268,7 +1343,7 @@ export type ChiefDecisionUpdateWithoutChildInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1285,6 +1360,7 @@ export type ChiefDecisionUpdateWithoutChildInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutChiefDecisionsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutChiefDecisionsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutChiefDecisionsNestedInput
+  pass?: Prisma.ChiefPassUpdateOneWithoutDecisionsNestedInput
 }
 
 export type ChiefDecisionUncheckedUpdateWithoutChildInput = {
@@ -1297,7 +1373,8 @@ export type ChiefDecisionUncheckedUpdateWithoutChildInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1313,6 +1390,86 @@ export type ChiefDecisionUncheckedUpdateWithoutChildInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type ChiefDecisionCreateWithoutPassInput = {
+  id?: string
+  organizationId: string
+  teammateId: string
+  askSeq: number
+  question?: string | null
+  options: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: string | null
+  status?: $Enums.ChiefDecisionStatus
+  verdict?: string | null
+  kind?: string | null
+  optionIndex?: number | null
+  reason?: string | null
+  basis?: string | null
+  parked?: string | null
+  decidedAt?: Date | string | null
+  sentAt?: Date | string | null
+  outcome?: $Enums.ChiefOutcome | null
+  outcomeAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutChiefDecisionsInput
+  session: Prisma.SessionCreateNestedOneWithoutChiefDecisionsInput
+  member: Prisma.MemberCreateNestedOneWithoutChiefDecisionsInput
+  child?: Prisma.SessionCreateNestedOneWithoutChiefDecisionInput
+}
+
+export type ChiefDecisionUncheckedCreateWithoutPassInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  sessionId: string
+  memberId: string
+  teammateId: string
+  askSeq: number
+  question?: string | null
+  options: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: string | null
+  status?: $Enums.ChiefDecisionStatus
+  verdict?: string | null
+  kind?: string | null
+  optionIndex?: number | null
+  reason?: string | null
+  basis?: string | null
+  parked?: string | null
+  decidedAt?: Date | string | null
+  sentAt?: Date | string | null
+  outcome?: $Enums.ChiefOutcome | null
+  outcomeAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  child?: Prisma.SessionUncheckedCreateNestedOneWithoutChiefDecisionInput
+}
+
+export type ChiefDecisionCreateOrConnectWithoutPassInput = {
+  where: Prisma.ChiefDecisionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput>
+}
+
+export type ChiefDecisionCreateManyPassInputEnvelope = {
+  data: Prisma.ChiefDecisionCreateManyPassInput | Prisma.ChiefDecisionCreateManyPassInput[]
+  skipDuplicates?: boolean
+}
+
+export type ChiefDecisionUpsertWithWhereUniqueWithoutPassInput = {
+  where: Prisma.ChiefDecisionWhereUniqueInput
+  update: Prisma.XOR<Prisma.ChiefDecisionUpdateWithoutPassInput, Prisma.ChiefDecisionUncheckedUpdateWithoutPassInput>
+  create: Prisma.XOR<Prisma.ChiefDecisionCreateWithoutPassInput, Prisma.ChiefDecisionUncheckedCreateWithoutPassInput>
+}
+
+export type ChiefDecisionUpdateWithWhereUniqueWithoutPassInput = {
+  where: Prisma.ChiefDecisionWhereUniqueInput
+  data: Prisma.XOR<Prisma.ChiefDecisionUpdateWithoutPassInput, Prisma.ChiefDecisionUncheckedUpdateWithoutPassInput>
+}
+
+export type ChiefDecisionUpdateManyWithWhereWithoutPassInput = {
+  where: Prisma.ChiefDecisionScalarWhereInput
+  data: Prisma.XOR<Prisma.ChiefDecisionUpdateManyMutationInput, Prisma.ChiefDecisionUncheckedUpdateManyWithoutPassInput>
+}
+
 export type ChiefDecisionCreateManyMemberInput = {
   id?: string
   organizationId: string
@@ -1322,7 +1479,8 @@ export type ChiefDecisionCreateManyMemberInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1345,7 +1503,7 @@ export type ChiefDecisionUpdateWithoutMemberInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1362,6 +1520,7 @@ export type ChiefDecisionUpdateWithoutMemberInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutChiefDecisionsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutChiefDecisionsNestedInput
   child?: Prisma.SessionUpdateOneWithoutChiefDecisionNestedInput
+  pass?: Prisma.ChiefPassUpdateOneWithoutDecisionsNestedInput
 }
 
 export type ChiefDecisionUncheckedUpdateWithoutMemberInput = {
@@ -1373,7 +1532,8 @@ export type ChiefDecisionUncheckedUpdateWithoutMemberInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1399,7 +1559,8 @@ export type ChiefDecisionUncheckedUpdateManyWithoutMemberInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1424,7 +1585,8 @@ export type ChiefDecisionCreateManyWorkspaceInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1447,7 +1609,7 @@ export type ChiefDecisionUpdateWithoutWorkspaceInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1464,6 +1626,7 @@ export type ChiefDecisionUpdateWithoutWorkspaceInput = {
   session?: Prisma.SessionUpdateOneRequiredWithoutChiefDecisionsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutChiefDecisionsNestedInput
   child?: Prisma.SessionUpdateOneWithoutChiefDecisionNestedInput
+  pass?: Prisma.ChiefPassUpdateOneWithoutDecisionsNestedInput
 }
 
 export type ChiefDecisionUncheckedUpdateWithoutWorkspaceInput = {
@@ -1475,7 +1638,8 @@ export type ChiefDecisionUncheckedUpdateWithoutWorkspaceInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1501,7 +1665,8 @@ export type ChiefDecisionUncheckedUpdateManyWithoutWorkspaceInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1526,7 +1691,8 @@ export type ChiefDecisionCreateManySessionInput = {
   askSeq: number
   question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId: string
+  childSessionId?: string | null
+  passId?: string | null
   status?: $Enums.ChiefDecisionStatus
   verdict?: string | null
   kind?: string | null
@@ -1549,7 +1715,7 @@ export type ChiefDecisionUpdateWithoutSessionInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1566,6 +1732,7 @@ export type ChiefDecisionUpdateWithoutSessionInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutChiefDecisionsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutChiefDecisionsNestedInput
   child?: Prisma.SessionUpdateOneWithoutChiefDecisionNestedInput
+  pass?: Prisma.ChiefPassUpdateOneWithoutDecisionsNestedInput
 }
 
 export type ChiefDecisionUncheckedUpdateWithoutSessionInput = {
@@ -1577,7 +1744,8 @@ export type ChiefDecisionUncheckedUpdateWithoutSessionInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1603,7 +1771,114 @@ export type ChiefDecisionUncheckedUpdateManyWithoutSessionInput = {
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
   question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
+  verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  optionIndex?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type ChiefDecisionCreateManyPassInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  sessionId: string
+  memberId: string
+  teammateId: string
+  askSeq: number
+  question?: string | null
+  options: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: string | null
+  status?: $Enums.ChiefDecisionStatus
+  verdict?: string | null
+  kind?: string | null
+  optionIndex?: number | null
+  reason?: string | null
+  basis?: string | null
+  parked?: string | null
+  decidedAt?: Date | string | null
+  sentAt?: Date | string | null
+  outcome?: $Enums.ChiefOutcome | null
+  outcomeAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ChiefDecisionUpdateWithoutPassInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
+  verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  optionIndex?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutChiefDecisionsNestedInput
+  session?: Prisma.SessionUpdateOneRequiredWithoutChiefDecisionsNestedInput
+  member?: Prisma.MemberUpdateOneRequiredWithoutChiefDecisionsNestedInput
+  child?: Prisma.SessionUpdateOneWithoutChiefDecisionNestedInput
+}
+
+export type ChiefDecisionUncheckedUpdateWithoutPassInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
+  verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  optionIndex?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  child?: Prisma.SessionUncheckedUpdateOneWithoutChiefDecisionNestedInput
+}
+
+export type ChiefDecisionUncheckedUpdateManyWithoutPassInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  childSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
   verdict?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1632,6 +1907,7 @@ export type ChiefDecisionSelect<ExtArgs extends runtime.Types.Extensions.Interna
   question?: boolean
   options?: boolean
   childSessionId?: boolean
+  passId?: boolean
   status?: boolean
   verdict?: boolean
   kind?: boolean
@@ -1649,6 +1925,7 @@ export type ChiefDecisionSelect<ExtArgs extends runtime.Types.Extensions.Interna
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   child?: boolean | Prisma.ChiefDecision$childArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }, ExtArgs["result"]["chiefDecision"]>
 
 export type ChiefDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1662,6 +1939,7 @@ export type ChiefDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   question?: boolean
   options?: boolean
   childSessionId?: boolean
+  passId?: boolean
   status?: boolean
   verdict?: boolean
   kind?: boolean
@@ -1678,6 +1956,7 @@ export type ChiefDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }, ExtArgs["result"]["chiefDecision"]>
 
 export type ChiefDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1691,6 +1970,7 @@ export type ChiefDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   question?: boolean
   options?: boolean
   childSessionId?: boolean
+  passId?: boolean
   status?: boolean
   verdict?: boolean
   kind?: boolean
@@ -1707,6 +1987,7 @@ export type ChiefDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }, ExtArgs["result"]["chiefDecision"]>
 
 export type ChiefDecisionSelectScalar = {
@@ -1720,6 +2001,7 @@ export type ChiefDecisionSelectScalar = {
   question?: boolean
   options?: boolean
   childSessionId?: boolean
+  passId?: boolean
   status?: boolean
   verdict?: boolean
   kind?: boolean
@@ -1735,22 +2017,25 @@ export type ChiefDecisionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "question" | "options" | "childSessionId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "sentAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
+export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "question" | "options" | "childSessionId" | "passId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "sentAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
 export type ChiefDecisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   child?: boolean | Prisma.ChiefDecision$childArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }
 export type ChiefDecisionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }
 export type ChiefDecisionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  pass?: boolean | Prisma.ChiefDecision$passArgs<ExtArgs>
 }
 
 export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1760,6 +2045,7 @@ export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inter
     session: Prisma.$SessionPayload<ExtArgs>
     member: Prisma.$MemberPayload<ExtArgs>
     child: Prisma.$SessionPayload<ExtArgs> | null
+    pass: Prisma.$ChiefPassPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1785,17 +2071,21 @@ export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inter
     question: string | null
     options: runtime.JsonValue
     /**
-     * Chief's decision thread, its id chosen with the decision: started again after a restart, it
-     * is the same one.
+     * Chief's decision thread (#724), its id chosen with the decision. Null for an answer of a
+     * daily pass (passId).
      */
-    childSessionId: string
+    childSessionId: string | null
+    /**
+     * The daily pass that answered it (docs/chief-answers.md).
+     */
+    passId: string | null
     status: $Enums.ChiefDecisionStatus
     /**
-     * answer, park or escalate (chief_decide).
+     * answer, park or escalate (#724's chief_decide); answer for a pass's.
      */
     verdict: string | null
     /**
-     * ChiefQuestionKind.
+     * #724's ChiefQuestionKind; null for a pass's.
      */
     kind: string | null
     /**
@@ -1803,6 +2093,9 @@ export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inter
      */
     optionIndex: number | null
     reason: string | null
+    /**
+     * The person's rule it goes by, in their words.
+     */
     basis: string | null
     /**
      * The work put off, as added to the person's list.
@@ -2215,6 +2508,7 @@ export interface Prisma__ChiefDecisionClient<T, Null = never, ExtArgs extends ru
   session<T extends Prisma.SessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SessionDefaultArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   member<T extends Prisma.MemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MemberDefaultArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   child<T extends Prisma.ChiefDecision$childArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ChiefDecision$childArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  pass<T extends Prisma.ChiefDecision$passArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ChiefDecision$passArgs<ExtArgs>>): Prisma.Prisma__ChiefPassClient<runtime.Types.Result.GetResult<Prisma.$ChiefPassPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2254,6 +2548,7 @@ export interface ChiefDecisionFieldRefs {
   readonly question: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly options: Prisma.FieldRef<"ChiefDecision", 'Json'>
   readonly childSessionId: Prisma.FieldRef<"ChiefDecision", 'String'>
+  readonly passId: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly status: Prisma.FieldRef<"ChiefDecision", 'ChiefDecisionStatus'>
   readonly verdict: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly kind: Prisma.FieldRef<"ChiefDecision", 'String'>
@@ -2684,6 +2979,25 @@ export type ChiefDecision$childArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.SessionInclude<ExtArgs> | null
   where?: Prisma.SessionWhereInput
+}
+
+/**
+ * ChiefDecision.pass
+ */
+export type ChiefDecision$passArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ChiefPass
+   */
+  select?: Prisma.ChiefPassSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ChiefPass
+   */
+  omit?: Prisma.ChiefPassOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ChiefPassInclude<ExtArgs> | null
+  where?: Prisma.ChiefPassWhereInput
 }
 
 /**

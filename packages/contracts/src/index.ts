@@ -117,16 +117,18 @@ export * from './usage.js'
  *     (thread.settle, SETTLE_PROTOCOL).
  * 50: a person's message sent during its teammate's turn gets a side reply (message.side), and
  *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
- * 51: Chief answers for the person (CHIEF_PROTOCOL): its decision threads (the spec's `decision`, and
- *     chief_decide and chief_decisions as schedule.call operations), and the spec's `chiefAnswers`.
+ * 51: Chief answered teammates' questions for the person in decision threads of its own (the spec's
+ *     `decision`), and the spec's `chiefAnswers`: no longer sent from 52 on.
+ * 52: Chief for the person (CHIEF_PASS_PROTOCOL, docs/chief-answers.md): its daily pass threads (the spec's
+ *     `pass`, with chief_answer, chief_retry and chief_report as schedule.call operations), the
+ *     person's rules in teammates' instructions (the spec's `rules`), and chief_rules.
  */
-export const PROTOCOL_VERSION = 51
+export const PROTOCOL_VERSION = 52
 /**
- * Runners from this version on run Chief's decision threads (ThreadSpec.decision) with its
- * chief_decide tool, and tell teammates what Chief's answers are (ThreadSpec.chiefAnswers). The API
- * starts no decision thread on an older one: the question waits for the person, as before.
+ * Runners from this version on run Chief's daily pass (ThreadSpec.pass) with its tools. The API
+ * starts no pass on an older one: what waits on the person waits, as before.
  */
-export const CHIEF_PROTOCOL = 51
+export const CHIEF_PASS_PROTOCOL = 52
 /**
  * Runners from this version on answer a person's message sent during its teammate's turn on
  * the side (message.side), and take keep and queue on it. The API refuses those actions to

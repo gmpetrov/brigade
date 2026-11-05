@@ -180,6 +180,12 @@ export type Schedule = Prisma.ScheduleModel
  */
 export type ChiefDecision = Prisma.ChiefDecisionModel
 /**
+ * Model ChiefPass
+ * Chief's daily pass for a member in a workspace (docs/chief-answers.md, src/chief-pass.ts): what
+ * waited on them that morning, what Chief did in their name, and what it left them on Today.
+ */
+export type ChiefPass = Prisma.ChiefPassModel
+/**
  * Model Wakeup
  * A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
  * The API's minute tick fires it into the same thread, with the conversation so far.

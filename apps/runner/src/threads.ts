@@ -2079,9 +2079,9 @@ export class Threads {
     const spec = thread?.lastSpec
     if (!thread || !spec || thread.takeover || [...thread.waiting.values()].some((n) => n > 0))
       return
-    // Chief's decision for the person (docs/chief-answers.md) teaches nothing of its own: Brigade
-    // keeps the decision, and what the person made of it, itself.
-    if (spec.decision) return
+    // Chief's daily pass for a person (docs/chief-answers.md) teaches nothing of its own: Brigade
+    // keeps what it did, and what the person made of it, itself.
+    if (spec.pass) return
     this.pending++
     thread.memorizing = true
     thread.queue = thread.queue.then(async () => {

@@ -201,16 +201,25 @@ model Member {
   /// Brigade merges the pull requests teammates open in their threads once they are ready: no
   /// review under way or asked for, and checks passed (src/auto-merge.ts). Owners and admins only.
   autoMerge             Boolean                @default(false)
-  /// Chief reads the buttons and choices their teammates end on before they do, and in their name
-  /// suggests an answer, or gives it on its own for the kinds in chiefAuto (docs/chief-answers.md).
-  /// Off: none of it, as before. Off for new members for now; members who had it keep theirs.
+  /// No longer read: Chief read each question their teammates ended on (#724), replaced by their
+  /// rules and daily pass (docs/chief-answers.md). Kept while an older API may still read it.
   chiefAnswers          Boolean                @default(false)
-  /// The kinds of question (ChiefKind) Chief answers on its own for them; it suggests the others.
+  /// No longer read (#724): the kinds of question Chief answered on its own for them.
   chiefAuto             String[]               @default([])
-  /// When they last changed chiefAuto themselves: the suggestions before it count no more toward
-  /// offering them to let Chief answer a kind on its own.
+  /// No longer read (#724).
   chiefAutoChangedAt    DateTime?
+  /// Chief's daily pass for them (docs/chief-answers.md): once a day, from CHIEF_PASS_HOUR in their
+  /// timezone, Chief goes through what waits on them and settles what their rules settle. Off: none.
+  chiefPass             Boolean                @default(false)
+  /// Their rules, in their words: every teammate working for them reads them, decides what they
+  /// settle and asks them only the rest. Null: none.
+  chiefRules            String?
+  /// Rules Chief proposed and they refused, the latest: never proposed again.
+  chiefRulesRefused     String[]               @default([])
+  /// Their timezone (IANA), as their browser said it: their pass runs in their morning.
+  timezone              String?
   chiefDecisions        ChiefDecision[]
+  chiefPasses           ChiefPass[]
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]
@@ -308,6 +317,7 @@ model Workspace {
   schedules             Schedule[]
   wakeups               Wakeup[]
   chiefDecisions        ChiefDecision[]
+  chiefPasses           ChiefPass[]
   replyWatches          ReplyWatch[]
   heldCalls             HeldCall[]
   runnerCommands        RunnerCommand[]
@@ -740,6 +750,10 @@ model Session {
   /// decision, not among its sub-threads.
   chiefDecisionId String?         @unique
   chiefDecision   ChiefDecision?  @relation("ChiefDecisionChild", fields: [chiefDecisionId], references: [id], onDelete: SetNull)
+  /// Set on Chief's thread going through what waits on a person (docs/chief-answers.md): its pass.
+  /// Quiet, it shows in no list; Today links it.
+  chiefPassId     String?         @unique
+  chiefPass       ChiefPass?      @relation(fields: [chiefPassId], references: [id], onDelete: SetNull)
   /// Its work goes on Chief's word from this event on (its seq): Chief answered in its person's
   /// name, or it was handed work while its giver did (a sub-thread, a task, a message). Only a
   /// person's message after it lifts it. Meanwhile its App writes ask a person, whatever its
@@ -916,18 +930,22 @@ model ChiefDecision {
   askSeq         Int
   question       String?
   options        Json
-  /// Chief's decision thread, its id chosen with the decision: started again after a restart, it
-  /// is the same one.
-  childSessionId String              @unique
+  /// Chief's decision thread (#724), its id chosen with the decision. Null for an answer of a
+  /// daily pass (passId).
+  childSessionId String?             @unique
   child          Session?            @relation("ChiefDecisionChild")
+  /// The daily pass that answered it (docs/chief-answers.md).
+  passId         String?
+  pass           ChiefPass?          @relation(fields: [passId], references: [id], onDelete: SetNull)
   status         ChiefDecisionStatus @default(pending)
-  /// answer, park or escalate (chief_decide).
+  /// answer, park or escalate (#724's chief_decide); answer for a pass's.
   verdict        String?
-  /// ChiefQuestionKind.
+  /// #724's ChiefQuestionKind; null for a pass's.
   kind           String?
   /// The answer picked, from 0.
   optionIndex    Int?
   reason         String?
+  /// The person's rule it goes by, in their words.
   basis          String?
   /// The work put off, as added to the person's list.
   parked         String?
@@ -941,6 +959,45 @@ model ChiefDecision {
 
   @@unique([sessionId, askSeq])
   @@index([memberId, kind, outcomeAt])
+  @@index([status, createdAt])
+  @@index([passId])
+}
+
+/// Where a daily pass stands. running: Chief is at it. done: it reported. failed: it stopped
+/// before reporting, or could not start. idle: nothing waited on the person.
+enum ChiefPassStatus {
+  running
+  done
+  failed
+  idle
+}
+
+/// Chief's daily pass for a member in a workspace (docs/chief-answers.md, src/chief-pass.ts): what
+/// waited on them that morning, what Chief did in their name, and what it left them on Today.
+model ChiefPass {
+  id             String          @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// Their day it ran for (YYYY-MM-DD, in their timezone): one pass a day.
+  day            String
+  /// Its thread, the id chosen with the pass: started again after a restart, it is the same one.
+  sessionId      String?         @unique
+  thread         Session?
+  status         ChiefPassStatus @default(running)
+  /// What waited on them, numbered as Chief's brief lists it (ChiefPassItem[]).
+  items          Json            @default("[]")
+  /// What Chief did in their name, in order: [{ kind: 'retried', item }]. Its answers are ChiefDecisions.
+  actions        Json            @default("[]")
+  /// What it left them (ChiefPassReport): decisions, notes, rules to add.
+  report         Json?
+  createdAt      DateTime        @default(now())
+  finishedAt     DateTime?
+  decisions      ChiefDecision[]
+
+  @@unique([memberId, workspaceId, day])
   @@index([status, createdAt])
 }
 

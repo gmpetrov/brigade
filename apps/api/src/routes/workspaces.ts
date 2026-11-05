@@ -5,6 +5,7 @@ import {
   DeleteWorkspace,
   OnboardingAnswers,
   SetAutoMerge,
+  ChiefRuleDecision,
   SetChief,
   SetSuggestions,
   SwitchOrganization,
@@ -17,7 +18,8 @@ import { HTTPException } from 'hono/http-exception'
 import { deleteAccount } from '../account-delete.js'
 import { usableBy } from '../account-sharing.js'
 import { audit } from '../audit.js'
-import { chiefSettings } from '../chief-answers.js'
+import { passView } from '../chief-pass.js'
+import { chiefSettings, decideRule, setChief } from '../chief-rules.js'
 import { auth } from '../auth.js'
 import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
@@ -149,8 +151,8 @@ export const workspaces = new Hono<AppEnv>()
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
       autoMerge: membership?.autoMerge ?? false,
-      // Chief answers their teammates' questions in their name (docs/chief-answers.md).
-      chiefAnswers: membership?.chiefAnswers ?? false,
+      // Chief's daily pass for them (docs/chief-answers.md): Today shows what it did.
+      chiefPass: membership?.chiefPass ?? false,
       // Features hidden until ready that this person has (src/features.ts).
       features: [
         ...(await featuresOf({ email: user.email, workspaceId: scope?.workspaceId ?? null })),
@@ -199,51 +201,31 @@ export const workspaces = new Hono<AppEnv>()
   })
 
   /**
-   * What Chief does in this member's name (docs/chief-answers.md): whether it reads their
-   * teammates' questions, which kinds it answers alone, how far it earned more, and its numbers.
+   * What this member set for Chief (docs/chief-answers.md): their daily pass, their rules, and the
+   * timezone their pass runs in.
    */
   .get('/me/chief', requireWorkspace, async (c) => {
     return c.json(await chiefSettings(c.var.db, c.var.scope.memberId))
   })
 
   /**
-   * Turn Chief's answers on or off for this member, or let it answer a kind alone or not. Theirs
-   * alone: it answers in their name. Off, Brigade is as before: questions wait for them.
+   * Turn this member's daily pass on or off, set their rules, or say their timezone. Theirs alone:
+   * Chief acts in their name. Off, with no rules, Brigade is as before.
    */
   .put('/me/chief', requireWorkspace, async (c) => {
     const input = await parseBody(c.req.raw, SetChief)
-    const { scope } = c.var
-    const member = await prisma.member.findUniqueOrThrow({
-      where: { id: scope.memberId },
-      select: { chiefAuto: true },
-    })
-    const auto = input.alone
-      ? input.alone.on
-        ? [...new Set([...member.chiefAuto, input.alone.kind])]
-        : member.chiefAuto.filter((k) => k !== input.alone!.kind)
-      : member.chiefAuto
-    await prisma.member.update({
-      where: { id: scope.memberId },
-      data: {
-        ...(input.on !== undefined ? { chiefAnswers: input.on } : {}),
-        ...(input.alone ? { chiefAuto: auto, chiefAutoChangedAt: new Date() } : {}),
-      },
-    })
-    await audit({
-      ...scope,
-      actor: { type: 'member', id: scope.memberId },
-      action:
-        input.on !== undefined
-          ? input.on
-            ? 'member.chief_on'
-            : 'member.chief_off'
-          : input.alone!.on
-            ? 'chief.alone_allowed'
-            : 'chief.alone_stopped',
-      target: { type: 'member', id: scope.memberId },
-      ...(input.alone ? { data: { kind: input.alone.kind } } : {}),
-    })
-    return c.json(await chiefSettings(c.var.db, scope.memberId))
+    return c.json(await setChief(c.var.db, c.var.scope, input))
+  })
+
+  /** Take a rule Chief's pass proposed into this member's rules, or refuse it. */
+  .post('/me/chief/rules', requireWorkspace, async (c) => {
+    const input = await parseBody(c.req.raw, ChiefRuleDecision)
+    return c.json(await decideRule(c.var.db, c.var.scope, input))
+  })
+
+  /** This member's latest daily pass here, as Today shows it; null when none ran lately. */
+  .get('/me/chief/pass', requireWorkspace, async (c) => {
+    return c.json({ pass: await passView(c.var.db, c.var.scope.memberId) })
   })
 
   /** The order this member dragged their sidebar's teammates and projects to, in this workspace. */

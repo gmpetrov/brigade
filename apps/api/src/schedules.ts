@@ -19,7 +19,8 @@ import { audit, type Actor } from './audit.js'
 import { outcomeOf } from './board.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
-import { handleChiefCall, onChiefsWord } from './chief-answers.js'
+import { onChiefsWord } from './chief-answers.js'
+import { handleChiefCall } from './chief-pass.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
 import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
@@ -545,8 +546,7 @@ export async function handleScheduleCall(
     const output = await handleReviewCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
-  // And Chief's decisions for the person (src/chief-answers.ts): its decision threads decide, and
-  // it looks back at what it decided.
+  // And Chief's calls (src/chief-pass.ts): its daily pass for a person, and their rules.
   if (isChiefOperation(op)) {
     const output = await handleChiefCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
