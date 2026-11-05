@@ -291,7 +291,8 @@ test('a request with the cookie goes to the provider with its token, without the
   assert.equal(seen[0]!.redirect, 'manual')
   assert.equal(response.headers.get('location'), `${origin}/next?x=1`)
 
-  // Each request reads its route, none is kept; a page's requests at the same time share one read.
+  // Each request reads its route, none is kept, and none shares another's read: in Workers,
+  // a read belongs to the request that started it and may never settle once that one ends.
   const before = reads()
   await call(env, `${origin}/other.css`, { headers: { cookie } })
   assert.equal(reads(), before + 1)
@@ -300,7 +301,37 @@ test('a request with the cookie goes to the provider with its token, without the
       call(env, `${origin}${path}`, { headers: { cookie } }),
     ),
   )
-  assert.equal(reads(), before + 2)
+  assert.equal(reads(), before + 4)
+})
+
+test('a request whose route read never settles holds up no other request', async () => {
+  const { db } = fakeDb()
+  const env = envWith(db)
+  const { origin } = await registered(env)
+  const cookie = await signIn(env, origin)
+  globalThis.fetch = (async () => new Response('ok')) as typeof fetch
+  // The read of a request that ended (its page closed): it never settles.
+  const prepare = db.prepare.bind(db)
+  let hang = true
+  ;(db as { prepare: unknown }).prepare = (sql: string) => {
+    const statement = prepare(sql)
+    if (!sql.startsWith('SELECT thread')) return statement
+    return {
+      bind: (...values: unknown[]) => {
+        const bound = statement.bind(...values)
+        if (!hang) return bound
+        hang = false
+        return { first: () => new Promise(() => {}) }
+      },
+    }
+  }
+  void call(env, `${origin}/`, { headers: { cookie } })
+  const next = await Promise.race([
+    call(env, `${origin}/`, { headers: { cookie } }),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 1_000)),
+  ])
+  assert.ok(next, "the next request waited on the first one's read")
+  assert.equal(next.status, 200)
 })
 
 test("where the browser drops the cookie (Safari's frame), a grant in the host lets it in", async () => {
