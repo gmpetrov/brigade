@@ -431,12 +431,19 @@ type Live = {
 
 /**
  * Which connector tools, effort and suggestions a spec gives: an agent made with others is out
- * of date (suggestions are its harness's environment, BRIGADE_PROMPT_SUGGESTIONS).
+ * of date (suggestions are its harness's environment, BRIGADE_PROMPT_SUGGESTIONS). An account
+ * the teammate cannot use (ConnectorGrant.unavailable) too, and why: its instructions say so, and
+ * are written only as a session starts. Left out of a usable account's key, as before it.
  */
-const agentKey = (spec: ThreadSpec) =>
+export const agentKey = (spec: ThreadSpec) =>
   JSON.stringify([
     spec.effort ?? null,
-    spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
+    spec.connectors.map((c) => [
+      c.connectionId,
+      c.scope,
+      c.operations.map((o) => o.name),
+      ...(c.unavailable ? [c.unavailable] : []),
+    ]),
     spec.suggestions,
   ])
 

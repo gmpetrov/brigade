@@ -1053,10 +1053,11 @@ export function unavailableApps(spec: Pick<ThreadSpec, 'connectors'>) {
     const name = grant.externalAccount ? `${grant.label}: ${account}` : grant.label
     if (grant.unavailable === 'unreachable')
       return [`- ${name}: its server did not answer, so its tools are missing in this turn.`]
-    // An MCP server added by its URL goes by its tools' prefix: a ticket names it as mcp.
+    // An MCP server added by its URL goes by its tools' prefix: a ticket names it as mcp, by its
+    // id. The account too, so that the ticket offers this one, not another of the same server.
     const app = (TICKET_APP_KINDS as readonly string[]).includes(grant.kind)
       ? `\`kind\` ${grant.kind}, \`account\` "${account}"`
-      : `\`kind\` mcp, \`server\` its id as \`list_apps\` gives it`
+      : `\`kind\` mcp, \`server\` its id as \`list_apps\` gives it, \`account\` "${account}"`
     return [
       `- ${name}: the provider refused its sign-in, so its tools are missing or fail. To reconnect it, ` +
         `the \`app\` of the access ask is ${app}, \`scope\` ${grant.scope}.`,

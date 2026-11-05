@@ -129,7 +129,7 @@ test('an account it cannot use now is named, with the ticket that reconnects it'
   )
   assert.match(
     section,
-    /- Team Notes: the provider refused.*`kind` mcp, `server` its id as `list_apps` gives it/,
+    /- Team Notes: the provider refused.*`kind` mcp, `server` its id as `list_apps` gives it, `account` "Team Notes"/,
   )
   assert.match(section, /- Linear: Acme: its server did not answer/)
   assert.doesNotMatch(section.split('## Credentials')[0]!, /Gmail/)
