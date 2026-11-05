@@ -7,6 +7,7 @@
 // The run never chooses where: what it read is untrusted, and a line in another list, or another
 // section, could be work a routine takes up.
 import { projectFolder, type PlaybookManifest } from '@brigade/contracts'
+import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import type { Scope, ScopedDb } from './db.js'
 import { teammateLibraryAccess } from './library-folders.js'
@@ -86,17 +87,29 @@ export async function fileIdea(
         'summary what was asked, for a person to keep it.',
     }
   const name = (run.installation.manifest as PlaybookManifest | null)?.name ?? 'This'
-  const id = await addListLine(
-    db,
-    scope,
-    { type: 'teammate', id: teammate.id },
-    {
-      path: place.path,
-      header: ideasHeader(name),
-      text: `${op.text} (from “${session.title}”)`,
-      ...(place.section ? { section: place.section } : {}),
-    },
-  )
+  let id: string
+  try {
+    id = await addListLine(
+      db,
+      scope,
+      { type: 'teammate', id: teammate.id },
+      {
+        path: place.path,
+        header: ideasHeader(name),
+        text: `${op.text} (from “${session.title}”)`,
+        ...(place.section ? { section: place.section } : {}),
+      },
+    )
+  } catch (error) {
+    // A setting naming no file that can be a list, say: the run says so, a person keeps the idea.
+    if (error instanceof HTTPException)
+      return {
+        error:
+          `The idea could not go to ${place.path}: ${error.message}. Say in playbook_report's ` +
+          'summary what was asked, for a person to keep it.',
+      }
+    throw error
+  }
   await audit({
     ...scope,
     actor: { type: 'teammate', id: teammate.id },
