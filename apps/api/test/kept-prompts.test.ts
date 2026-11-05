@@ -187,7 +187,7 @@ describe(
       }
     })
 
-    test('failing before it was kept: refused as before', async () => {
+    test('failing before it was kept: refused, and no thread of it stays', async () => {
       const { localHub } = await import('../src/hub/memory-host.js')
       const hub = localHub(ids.workspace)
       const dispatch = hub.dispatch.bind(hub)
@@ -198,7 +198,28 @@ describe(
       try {
         const res = await start('Not kept')
         assert.equal(res.status, 500)
-        assert.equal(await db.session.count({ where: { status: 'failed' } }), 1)
+        // The member has the message back: a failed thread of it would show beside it.
+        assert.equal(await db.session.count({ where: { status: 'failed' } }), 0)
+        assert.equal(await db.session.count(), before)
+      } finally {
+        hub.dispatch = dispatch
+      }
+    })
+
+    test('refused after it was kept: its thread stays, as its computer may still run it', async () => {
+      const { localHub } = await import('../src/hub/memory-host.js')
+      const { keepCommand } = await import('../src/runner-commands.js')
+      const { HTTPException } = await import('hono/http-exception')
+      const hub = localHub(ids.workspace)
+      const dispatch = hub.dispatch.bind(hub)
+      hub.dispatch = async (computer, message) => {
+        await keepCommand({ ...computer, ...scope }, message as never)
+        throw new HTTPException(409, { message: 'Refused late' })
+      }
+      const before = await db.session.count()
+      try {
+        const res = await start('Kept, then refused')
+        assert.equal(res.status, 409, await res.clone().text())
         assert.equal(await db.session.count(), before + 1)
       } finally {
         hub.dispatch = dispatch

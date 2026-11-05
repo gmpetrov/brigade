@@ -204,6 +204,8 @@ const DRAWING_MS = 15_000
 
 /** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
 export function preloadConversation(id: string) {
+  // Not started yet: nothing to ask for, and a refusal sent ahead would be what it opens on.
+  if (pendingThreads.has(id)) return
   preload(`/threads/${id}`)
   preloadThreadEvents(id)
 }

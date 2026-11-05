@@ -14,7 +14,11 @@ import { sessionStub } from './session-stub.js'
 //   write in another's thread, a private one too, by its id;
 // - an id not shaped as a thread's is refused before anything is made: it names storage folders;
 // - files sent with a thread that did not start (its computer offline) leave it, so that the
-//   message, given back to the member, can be sent again with them.
+//   message, given back to the member, can be sent again with them;
+// - a thread that did not start is not kept: the member has its message back, and a failed
+//   thread of it would come back in their sidebar (and what waits on them) once listed again;
+// - the dashboards hear of a thread as it is made, not once its runner first reports: the
+//   sidebar lists it at once.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL || undefined
@@ -239,6 +243,56 @@ describe('a thread id chosen by the browser', { skip: !database && 'no database 
       links.map((l) => l.sessionId),
       [id],
     )
+  })
+
+  test("a thread that did not start is not kept, and its files stay the member's", async () => {
+    const file = await db.attachment.create({
+      data: {
+        name: 'notes.txt',
+        contentType: 'text/plain',
+        size: 10,
+        status: 'ready',
+        source: 'upload',
+        uploadedByMemberId: ids.member,
+      },
+    } as never)
+    const id = newId()
+    close()
+    try {
+      const offline = await start({ id, text: 'Not today', attachmentIds: [file.id] })
+      assert.equal(offline.status, 409, await offline.clone().text())
+    } finally {
+      close = await connect()
+    }
+    assert.equal(await db.session.count({ where: { id } }), 0)
+    assert.equal(await db.attachment.count({ where: { id: file.id } }), 1)
+  })
+
+  test('the dashboards hear of a new thread as it is made, before its runner reports', async () => {
+    const { browserSocket } = await import('../src/hub.js')
+    const heard: Sent[] = []
+    const dashboard = browserSocket({
+      ...scope,
+      userId: ids.user,
+      memberId: ids.member,
+      role: 'owner',
+    })
+    dashboard.onOpen({
+      send: (raw: string) => heard.push(JSON.parse(raw)),
+      close: () => {},
+    } as never)
+    try {
+      const id = newId()
+      const res = await start({ id, text: 'Show it now' })
+      assert.equal(res.status, 201, await res.clone().text())
+      // The runner here never reports: what tells the dashboard is the thread being made.
+      await until(
+        () => heard.some((m) => m.type === 'thread.updated' && m.sessionId === id),
+        'the dashboard to hear of it',
+      )
+    } finally {
+      dashboard.onClose()
+    }
   })
 
   test('an id not shaped as a thread id is refused before anything is made', async () => {

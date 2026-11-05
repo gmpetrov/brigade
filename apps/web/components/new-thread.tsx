@@ -67,7 +67,7 @@ import {
 } from '@/lib/api'
 import { defaultAccount, pickAccount } from '@/lib/account-pick'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { newThreadId, pendingThreads } from '@/lib/pending-threads'
+import { newThreadId, pendingRow, pendingThreads } from '@/lib/pending-threads'
 import { preloadThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 import { captures } from '@/lib/brigade-app'
@@ -353,7 +353,7 @@ export function useThreadDraft() {
 export type ThreadDraft = ReturnType<typeof useThreadDraft>
 
 /**
- * A message out of a box (NewThread's `onSending`, or one set aside), with where and how it runs,
+ * A message out of a box while its thread starts (NewThread's), or one set aside, with where and how it runs,
  * as the box's draft holds them: unset, the box's default.
  */
 export type SentMessage = {
@@ -370,11 +370,12 @@ export type SentMessage = {
  * The box a new thread starts from: a message, files, where it runs and on which account.
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
- * With `onSending`, it does not wait for the thread either: the box empties at once, and what
- * was sent is the caller's to give back should the thread not start. With `openAtOnce`, the
- * thread opens before it exists (lib/pending-threads.ts), through `onStarted` if given; should it
- * not start, the message comes back here with `giveBackHere` (a page's own box, there again when
- * its page is), else it is kept aside for the new-thread dialog to take up.
+ * With `onSending` or `openAtOnce`, it does not wait for the thread either: the box empties at
+ * once, and the sidebar lists the thread before it exists (lib/pending-threads.ts). With
+ * `onSending`, the caller hears how it went; with `openAtOnce`, the thread opens at once, through
+ * `onStarted` if given. Should it not start, it leaves the sidebar and the message comes back here
+ * with `giveBackHere` (a page's own box, there again when its page is), else it is kept aside for
+ * the new-thread dialog to take up.
  */
 export function NewThread({
   teammate,
@@ -407,9 +408,10 @@ export function NewThread({
   onStarted?: (thread: { id: string }) => void
   /**
    * Sent, the thread still starting: it settles with the thread, or the reason it did not. What
-   * was sent is not put back in the box: another message may be written there meanwhile.
+   * was sent is not put back in the box (another message may be written there meanwhile): it is
+   * kept aside for the new-thread dialog.
    */
-  onSending?: (thread: Promise<{ id: string }>, sent: SentMessage) => void
+  onSending?: (thread: Promise<{ id: string }>) => void
   /** Opens the thread at once, before it exists. */
   openAtOnce?: boolean
   /**
@@ -544,31 +546,9 @@ export function NewThread({
   async function start(e?: FormEvent) {
     e?.preventDefault()
     if (busy || !ready) return
-    if (onSending) {
-      const sending = create(text, files.ids)
-      const taken = files.take()
-      setText('')
-      setEffortValue(null)
-      onSending(
-        sending.then((thread) => {
-          taken.done()
-          return thread
-        }),
-        // Where it was to run, as sent: given back, it runs there again.
-        {
-          teammateId: teammate.id,
-          text,
-          uploads: taken.uploads,
-          effort: effortValue,
-          projectId,
-          computerId: computer!.id,
-          accountId: account!.id,
-        },
-      )
-      return
-    }
-    if (openAtOnce) {
-      // Opened at once: it shows this message until it has started, then its conversation.
+    if (onSending || openAtOnce) {
+      // In the sidebar at once, under an id chosen here; opened at once too with `openAtOnce`,
+      // showing this message until it has started, then its conversation (lib/pending-threads.ts).
       const id = newThreadId()
       const sending = create(text, files.ids, id)
       const taken = files.take()
@@ -579,8 +559,9 @@ export function NewThread({
           text,
           files: taken.uploads,
           from: pathname,
-          giveBack: giveBackHere ? 'box' : 'dialog',
+          giveBack: openAtOnce && giveBackHere ? 'box' : 'dialog',
         },
+        // Where it was to run, as sent: given back, it runs there again.
         {
           teammateId: teammate.id,
           text,
@@ -590,12 +571,18 @@ export function NewThread({
           computerId: computer!.id,
           accountId: account!.id,
         },
+        pendingRow(id, {
+          teammate,
+          startedBy: { id: me.memberId ?? '', name: me.user.name },
+          computer: computer!,
+          projectId: projectId === 'none' ? null : projectId,
+          text,
+          files: taken.uploads,
+        }),
       )
       setText('')
       setEffortValue(null)
-      if (onStarted) onStarted({ id })
-      else router.push(`/app/threads/${id}`)
-      sending.then(
+      const started = sending.then(
         async () => {
           // Its conversation takes over once what it opens on is in: no blank in between.
           preload(`/threads/${id}`)
@@ -606,9 +593,19 @@ export function NewThread({
           ])
           // Its files' previews go once its conversation has the message (pendingThreads.delivered).
           pendingThreads.started(id)
+          return { id }
         },
-        (error: unknown) => pendingThreads.failed(id, (error as Error).message),
+        (error: unknown) => {
+          // Out of the sidebar; its message back to its box, or aside for the dialog.
+          pendingThreads.failed(id, (error as Error).message)
+          throw error
+        },
       )
+      if (onSending) return onSending(started)
+      // Its page says why, should it not start.
+      started.catch(() => {})
+      if (onStarted) onStarted({ id })
+      else router.push(`/app/threads/${id}`)
       return
     }
     setBusy(true)

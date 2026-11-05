@@ -3,10 +3,13 @@
 // at once under an id chosen here (POST /threads takes it), showing that message while the API
 // starts it. Once it has, the thread's own conversation takes over; should it not, the thread
 // says why and the message goes back to the box it came from.
+// The sidebar lists it from the send (`useUnlistedThreads`), until the list it loads has it; one
+// that did not start leaves it at once (the API keeps no thread of it: POST /threads).
+import { mentionsToText, messageCommand } from '@brigade/contracts'
 import { useSyncExternalStore } from 'react'
 import type { Upload } from '@/components/attachments'
 import type { SentMessage } from '@/components/new-thread'
-import type { Teammate } from '@/lib/api'
+import type { Teammate, ThreadSummary } from '@/lib/api'
 import { DEMO, DEMO_THREAD } from '@/lib/demo/flag'
 
 export type PendingThread = {
@@ -26,6 +29,13 @@ export type PendingThread = {
   error?: string
 }
 
+/** A thread not in the sidebar's list yet, as its row shows it. */
+export type Unlisted = {
+  row: ThreadSummary
+  /** When the API said it started; unset while it starts. */
+  startedAt?: number
+}
+
 /** A message on its way back to the box it came from, after its thread did not start. */
 export type ReturnedDraft = { from: string; message: SentMessage }
 
@@ -37,6 +47,10 @@ const pending = new Map<string, PendingThread>()
 const opened = new Map<string, PendingThread>()
 // As sent, with its files and where it was to run: what goes back to the box.
 const messages = new Map<string, SentMessage>()
+// The sidebar's rows for threads not in the list it loaded yet, newest first: from the send until
+// that list has them, or they did not start.
+const unlisted = new Map<string, Unlisted>()
+let unlistedRows: Unlisted[] = []
 let returned: ReturnedDraft | undefined
 // Newest last. Kept until taken up or dismissed: never put in a box that may hold another.
 let kept: KeptMessage[] = []
@@ -44,6 +58,11 @@ let takeUp: ((message: KeptMessage) => void) | undefined
 const listeners = new Set<() => void>()
 const changed = () => {
   for (const listener of listeners) listener()
+}
+/** The sidebar's rows changed: a new list, so what shows them renders again (and only then). */
+const rowsChanged = () => {
+  unlistedRows = [...unlisted.values()].reverse()
+  changed()
 }
 const subscribe = (listener: () => void) => {
   listeners.add(listener)
@@ -64,11 +83,57 @@ export function newThreadId() {
   return DEMO ? `${DEMO_THREAD}${id}` : id
 }
 
+/**
+ * The sidebar's row for a thread just sent, until its list has it: titled as the API titles it,
+ * near enough (POST /threads; the list's own row has the exact title), and starting.
+ */
+export function pendingRow(
+  id: string,
+  sent: {
+    teammate: Pick<Teammate, 'id' | 'name'>
+    startedBy: { id: string; name: string }
+    computer: { kind: string; name: string }
+    projectId: string | null
+    text: string
+    files: { name: string }[]
+  },
+  now = new Date(),
+): ThreadSummary {
+  const firstLine = mentionsToText(messageCommand(sent.text)?.rest ?? sent.text)
+    .split('\n')[0]!
+    .trim()
+  const at = now.toISOString()
+  const teammate = { id: sent.teammate.id, name: sent.teammate.name }
+  return {
+    id,
+    title: firstLine || sent.files.map((f) => f.name).join(', ') || 'New thread',
+    status: 'starting',
+    updatedAt: at,
+    createdAt: at,
+    teammate,
+    teammates: [{ teammate }],
+    startedBy: { id: sent.startedBy.id, user: { name: sent.startedBy.name } },
+    computer: { kind: sent.computer.kind, name: sent.computer.name },
+    projectId: sent.projectId,
+    replies: 0,
+    lastReplyAt: null,
+  }
+}
+
+/** How long after a thread started the sidebar's list has it, at the latest. */
+export const LISTED_WITHIN_MS = 15_000
+
 export const pendingThreads = {
-  add(id: string, thread: PendingThread, message: SentMessage) {
+  /** Not started (yet, or at all): nothing of it to ask the API for, nor to act on. */
+  has(id: string) {
+    return pending.has(id)
+  },
+  /** `row`: the sidebar's, until its list has the thread. */
+  add(id: string, thread: PendingThread, message: SentMessage, row: ThreadSummary) {
     pending.set(id, thread)
     messages.set(id, message)
-    changed()
+    unlisted.set(id, { row })
+    rowsChanged()
   },
   /** It started: its conversation shows from now on, with the message until it has it. */
   started(id: string) {
@@ -76,7 +141,22 @@ export const pendingThreads = {
     if (thread) opened.set(id, thread)
     pending.delete(id)
     messages.delete(id)
-    changed()
+    const row = unlisted.get(id)
+    if (row) {
+      unlisted.set(id, { ...row, startedAt: Date.now() })
+      rowsChanged()
+    } else changed()
+  },
+  /**
+   * The sidebar's list loaded, with these threads: their own rows take over. One it still lacks
+   * long after it started is gone already (deleted at once): its row goes too.
+   */
+  listed(ids: ReadonlySet<string>, now = Date.now()) {
+    let gone = false
+    for (const [id, { startedAt }] of unlisted)
+      if (ids.has(id) || (startedAt && now - startedAt > LISTED_WITHIN_MS))
+        gone = unlisted.delete(id) || gone
+    if (gone) rowsChanged()
   },
   /** Its conversation has the message: this browser's copy, and its files' previews, can go. */
   delivered(id: string) {
@@ -89,6 +169,8 @@ export const pendingThreads = {
   failed(id: string, error: string) {
     const thread = pending.get(id)
     if (!thread) return
+    // Out of the sidebar: the message is kept (here, or aside for the dialog), not the thread.
+    if (unlisted.delete(id)) unlistedRows = [...unlisted.values()].reverse()
     pending.set(id, { ...thread, error })
     const message = messages.get(id)
     if (thread.giveBack === 'dialog' && message) {
@@ -134,6 +216,28 @@ export function usePendingThread(id: string | null | undefined) {
     () => (id ? pending.get(id) : undefined),
     () => undefined,
   )
+}
+
+/**
+ * The sidebar's rows for threads not in its list yet, newest first; with `startedAt`, the API
+ * has them, and the list is to load again.
+ */
+export function useUnlistedThreads() {
+  return useSyncExternalStore(subscribe, unlistedThreads, () => NONE)
+}
+/** What `useUnlistedThreads` gives, now. */
+export const unlistedThreads = () => unlistedRows
+const NONE: Unlisted[] = []
+
+/**
+ * The list with the threads not in it yet first, as the sidebar shows them; the list itself
+ * while there are none.
+ */
+export function withUnlisted(list: ThreadSummary[] | undefined, rows: readonly Unlisted[]) {
+  if (!rows.length) return list
+  const ids = new Set(list?.map((t) => t.id))
+  const missing = rows.filter((r) => !ids.has(r.row.id)).map((r) => r.row)
+  return missing.length ? [...missing, ...(list ?? [])] : list
 }
 
 /** Messages kept aside, which the new-thread dialog (components/quick-thread.tsx) takes up. */

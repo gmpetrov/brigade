@@ -61,7 +61,13 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { PendingThread } from '@/components/pending-thread'
-import { usePendingThread } from '@/lib/pending-threads'
+import {
+  LISTED_WITHIN_MS,
+  pendingThreads,
+  usePendingThread,
+  useUnlistedThreads,
+  withUnlisted,
+} from '@/lib/pending-threads'
 import { isMac, isNarrow } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
@@ -362,10 +368,26 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     'lists.updated',
   ])
   const reloadThreads = threads.reload
+  // Threads just sent, listed before the API has them (lib/pending-threads.ts): first, until
+  // the list has them, which is asked for again once they have started.
+  const unlisted = useUnlistedThreads()
+  const threadList = useMemo(() => withUnlisted(threads.data, unlisted), [threads.data, unlisted])
+  useEffect(() => {
+    if (threads.data) pendingThreads.listed(new Set(threads.data.map((t) => t.id)))
+  }, [threads.data])
+  const startedUnlisted = unlisted.flatMap((u) => (u.startedAt ? [u.row.id] : [])).join(' ')
+  useEffect(() => {
+    if (!startedUnlisted) return
+    void reloadThreads()
+    // Asked again past the deadline, should nothing else load it: a thread already gone (deleted
+    // from another tab) then leaves too, rather than starting in the list for good.
+    const late = setTimeout(() => void reloadThreads(), LISTED_WITHIN_MS + 1_000)
+    return () => clearTimeout(late)
+  }, [startedUnlisted, reloadThreads])
   const { activity, waiting } = useMemo(() => {
     const activity: Record<string, TeammateActivity> = {}
     let waiting = 0
-    for (const t of threads.data ?? []) {
+    for (const t of threadList ?? []) {
       const state = t.status === 'waiting' ? 'waiting' : BUSY.has(t.status) ? 'busy' : undefined
       if (!state) continue
       if (state === 'waiting') waiting++
@@ -374,9 +396,8 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       for (const p of people) if (activity[p.id] !== 'waiting') activity[p.id] = state
     }
     return { activity, waiting }
-  }, [threads.data])
+  }, [threadList])
 
-  const threadList = threads.data
   // The thread shown here is read by this member: as it opens, and again each time a reply
   // comes in while it shows in a tab in front. The sidebar then shows it read.
   const [inFront, setInFront] = useState(true)
