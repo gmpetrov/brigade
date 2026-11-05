@@ -24,6 +24,8 @@ import type {
   MergeStatus,
   PlaybookHomeLine,
   PlaybookPromotionPayload,
+  ChiefDecisionView,
+  ChiefKind,
   PullReview,
   RunOutcome,
   ReviewPolicy,
@@ -340,6 +342,8 @@ export type Me = {
   suggestions: boolean
   /** Brigade merges what teammates open in their threads once it is ready (owners and admins). */
   autoMerge: boolean
+  /** Chief reads their teammates' buttons and choices first, and answers in their name (docs/chief-answers.md). */
+  chiefAnswers?: boolean
   /** Features hidden until ready that this person has (docs/feature-flags.md); absent in the demo. */
   features?: Feature[]
 }
@@ -577,6 +581,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   followers: { id: string; title: string }[]
   /** Its child threads, newest first. */
   children: ThreadChild[]
+  /** Chief's decisions on the questions its teammates ended on, each shown on its question. */
+  chiefDecisions?: ChiefDecisionView[]
   /** Schedules whose runs report here, as its children. */
   reportingSchedules: { id: string; title: string; pausedAt: string | null }[]
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
@@ -1085,6 +1091,8 @@ export type Ticket = {
     decidedInBulk?: boolean
     /** Brigade proposes a playbook's action act on its own: its owner, an owner or an admin decides. */
     playbookPromotion?: PlaybookPromotionPayload
+    /** Brigade offers to let Chief answer a kind of question alone: the person it answers for decides. */
+    chiefPromotion?: { memberId: string; kind: ChiefKind; agreed: number; decided: number }
     source?: 'harness'
     toolName?: string
     /** A harness ticket's teammate, and what it asks: a question's or a ticket's asks. */
@@ -1294,6 +1302,9 @@ export function waitsOn(t: Ticket, me: Me) {
   if (t.status !== 'open' || t.session?.archivedAt || t.session?.laterAt) return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
+  // Chief answering alone in someone's name: theirs alone to allow.
+  if (t.type === 'approval' && t.payload.chiefPromotion)
+    return t.payload.chiefPromotion.memberId === me.memberId
   // A skill shapes what every teammate does, and a playbook acts alone: an admin's call.
   // So does a trigger: outside events would start work on someone's accounts.
   if (

@@ -1,6 +1,6 @@
 ---
 title: 'Teammates'
-description: 'What a teammate is, how Chief sets up your team, and how to create, configure and archive teammates.'
+description: 'What a teammate is, how Chief sets up your team and answers for you, and how to create, configure and archive teammates.'
 ---
 
 A teammate is the real Claude Code or Codex, given a job. It has a name, role instructions, a model, and the Apps,
@@ -17,8 +17,35 @@ the first teammate you talk to. It has two jobs:
   instructions and the Apps it needs.
 - **Answer and route.** Chief answers simple questions itself. For real work, it hands off to the right teammate: it
   mentions them, starts a sub-thread, or creates a task. It doesn't do a teammate's job itself.
+- **Answer your teammates for you.** When a teammate ends its reply on buttons or choices, Chief reads the question
+  before you do, and suggests an answer or gives it in your name. See below.
 
 Chief's name can't change, and it can't be archived.
+
+### Chief answers for you
+
+When a teammate ends its reply on buttons or choices in one of your threads, Chief reads the question first:
+
+- **It suggests** the answer it would pick, under the question. Choose **Use it** to send it as yours, or answer as
+  you like.
+- **It leaves the question to you** when it's a matter of taste, anything that leaves Brigade (sending, publishing,
+  merging, paying), or nothing settles it, and says why.
+- **It answers on its own** only for the kinds of question you let it: next steps, approaches and priorities. Its
+  answer shows in the thread as **Chief answered for you**, with why. **Mark as wrong** tells the teammate to stop and
+  puts that kind back to suggestions. Three answers in a row in a thread without a word from you, and the next
+  question waits for you.
+
+Chief decides from your **mandate**, `chief/mandate.md` in the library: what you aim for, the decisions that hold, and
+what you always decide yourself. Chief writes it with you when it sets up your team, or from **Write it with Chief** in
+**Preferences**, and can look back with you each week.
+
+Once you took Chief's pick 9 of your last 10 times for a kind of question, a ticket offers to let it answer that kind
+on its own. Switch each kind yourself in **Preferences → Chief**, or turn Chief's answers off: then every question
+waits for you.
+
+Chief's answer is never your approval. While a teammate acts on it, its App actions ask you first, except opening a
+branch or a pull request. On its computer a teammate still runs commands without asking: it's told not to deploy,
+publish or send that way on Chief's word alone, but Brigade can't hold those back.
 
 ### The team proposal
 
