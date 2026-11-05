@@ -802,14 +802,24 @@ function RoundButton({
   label,
   onClick,
   children,
+  nav,
 }: {
   label: string
   onClick: () => void
   children: ReactNode
+  /** In the sidebar, a stop of ⌥↑ / ⌥↓ that opens as a click does (sidebar-keys.tsx). */
+  nav?: { active: boolean }
 }) {
   return (
     <Hint label={label}>
-      <button type="button" aria-label={label} onClick={onClick} className={roundButtonClass}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        data-nav-stop={nav && 'link'}
+        data-active={nav?.active}
+        className={roundButtonClass}
+      >
         {children}
       </button>
     </Hint>
@@ -818,11 +828,13 @@ function RoundButton({
 
 /** The round + that starts a thread: beside the workspace's name, and on a phone at the top of each page. */
 export function NewThreadButton() {
-  const { newThreadPage } = useThreadPanel()
+  const { newThreadPage, expanded, threadId } = useThreadPanel()
   // A viewer starts nothing.
   if (isViewer(useDashboard().me)) return null
   return (
-    <RoundButton label="New thread" onClick={newThreadPage}>
+    // The first stop of ⌥↑ / ⌥↓, above Today: it opens the new-thread page, where it stands
+    // while that page shows.
+    <RoundButton label="New thread" onClick={newThreadPage} nav={{ active: expanded && !threadId }}>
       <Plus />
     </RoundButton>
   )
@@ -833,7 +845,7 @@ function NewThreadRailItem() {
   if (isViewer(useDashboard().me)) return null
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton tooltip="New thread" onClick={newThreadPage}>
+      <SidebarMenuButton tooltip="New thread" onClick={newThreadPage} data-nav-stop="link">
         <Plus />
         <span>New thread</span>
       </SidebarMenuButton>
