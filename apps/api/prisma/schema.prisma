@@ -2442,11 +2442,13 @@ model PreviewMachine {
   @@index([status])
 }
 
-/// creating: being made. running: up, or being started again. stopped: its disk kept, costing
-/// nothing. destroying: being destroyed by the sweep, its row going next.
+/// creating: being made. running: up, or being started again. stopping: its stop asked for, not
+/// confirmed yet (still counted as up; the sweep takes it up if its process was lost). stopped: its
+/// disk kept, costing nothing. destroying: being destroyed by the sweep, its row going next.
 enum PreviewMachineStatus {
   creating
   running
+  stopping
   stopped
   destroying
 }

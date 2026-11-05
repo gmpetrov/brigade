@@ -2,7 +2,7 @@
 -- a member's preference, off by default, and a table of the machines.
 ALTER TABLE "Member" ADD COLUMN "previewMachines" BOOLEAN NOT NULL DEFAULT false;
 
-CREATE TYPE "PreviewMachineStatus" AS ENUM ('creating', 'running', 'stopped', 'destroying');
+CREATE TYPE "PreviewMachineStatus" AS ENUM ('creating', 'running', 'stopping', 'stopped', 'destroying');
 
 CREATE TABLE "PreviewMachine" (
     "id" TEXT NOT NULL,

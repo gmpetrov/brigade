@@ -17,10 +17,12 @@ import { sessionStub } from './session-stub.js'
 // - past the most a workspace runs at once, a preview runs on the computer, and says why;
 // - starts in several threads at once never run more than the most at once;
 // - sleep stops it; touch keeps it alive with the provider at most every ten minutes; a stop the
-//   provider failed leaves it running, and the next sweep stops it;
+//   provider failed leaves it running, and the next sweep stops it; a machine being stopped keeps
+//   its slot until the provider stopped it, and a stop its process lost is taken up by the sweep;
 // - the sweep destroys the machine of a deleted thread and one stopped twelve days, stops one
 //   its runner forgot, and undoes a making cut short; an `up` meanwhile never gets a machine being
-//   destroyed; rows with nothing due never hold back those that have;
+//   destroyed; it judges each row again as it acts, under the lock an up takes; rows with nothing
+//   due never hold back those that have;
 // - the preference is offered only to members with the feature (404 for the others), and /me
 //   says it.
 const envFile = new URL('../.env', import.meta.url)
@@ -33,11 +35,10 @@ process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { prisma, scoped } = await import('../src/db.js')
 const machinesModule = await import('../src/preview-machines.js')
 const {
-  destroyMachine,
   machineUp,
   machineSleep,
   machineTouch,
-  stopMachine,
+  sweepMachine,
   sweepPreviewMachines,
   MACHINES_RUNNING_MAX,
 } = machinesModule
@@ -62,6 +63,10 @@ class FakeMachines implements MachineProvider {
   failStops = 0
   /** Holds each destroy until it resolves: a destroy under way. */
   destroyGate?: Promise<void>
+  /** Holds each stop until it settles (a rejection fails it): a stop under way. */
+  stopGate?: Promise<void>
+  /** Called as a stop starts, before it waits on stopGate. */
+  onStop?: () => void
   /** Called as a destroy starts, before it waits on destroyGate. */
   onDestroy?: () => void
 
@@ -81,6 +86,8 @@ class FakeMachines implements MachineProvider {
     this.states.set(ref.id, 'running')
   }
   async stop(ref: ComputerRef) {
+    this.onStop?.()
+    await this.stopGate
     if (this.failStops > 0) {
       this.failStops--
       throw new Error('the provider did not answer')
@@ -446,26 +453,112 @@ describe('preview machines', { skip: !database && 'no database answers' }, () =>
     await prisma.previewMachine.deleteMany({ where: { sessionId } })
   })
 
-  test('work planned from an older read never acts on a machine an up took since', async () => {
+  test('the sweep judges a row again as it acts: an up since it listed it wins', async () => {
     const machines = new FakeMachines()
     const sessionId = await thread('ada')
     await machineUp(machines, runner(), sessionId, KEY)
+    const { id } = await row(sessionId)
+    // Listed as stopped long enough to destroy; the thread's preview starts again meanwhile.
     await prisma.previewMachine.update({
-      where: { sessionId },
+      where: { id },
       data: { status: 'stopped', stoppedAt: new Date(Date.now() - 13 * 24 * 3600_000) },
     })
-    // What a sweep read: a machine stopped long enough to destroy. Then the thread's preview
-    // starts again, before the sweep acts on what it read.
-    const read = await row(sessionId)
     await machineUp(machines, runner(), sessionId, KEY)
-    await destroyMachine(machines, read, new Date())
-    assert.deepEqual(machines.destroyed, [], 'the running machine is left alone')
-    assert.equal((await row(sessionId)).status, 'running')
-    // Nor stopped from an older read of it running.
-    const before = await row(sessionId)
+    assert.equal(await sweepMachine(machines, id, ids.workspace, new Date()), null)
+    // Listed as running unused for an hour; used meanwhile.
+    await prisma.previewMachine.update({
+      where: { id },
+      data: { usedAt: new Date(Date.now() - 3600_000) },
+    })
     await machineTouch(machines, runner(), sessionId)
-    assert.equal(await stopMachine(machines, before, new Date()), false)
+    assert.equal(await sweepMachine(machines, id, ids.workspace, new Date()), null)
+    assert.deepEqual(machines.destroyed, [])
     assert.deepEqual(machines.stopped, [])
+    assert.equal((await row(sessionId)).status, 'running')
+    await prisma.previewMachine.deleteMany({ where: { sessionId } })
+  })
+
+  test('a stop or a destroy is decided under the lock an up takes', async () => {
+    const machines = new FakeMachines()
+    const sessionId = await thread('ada')
+    await machineUp(machines, runner(), sessionId, KEY)
+    const { id } = await row(sessionId)
+    await prisma.previewMachine.update({
+      where: { id },
+      data: { status: 'stopped', stoppedAt: new Date(Date.now() - 13 * 24 * 3600_000) },
+    })
+    // The workspace's lock, held as an up's reserve holds it.
+    let release!: () => void
+    let locked!: () => void
+    const holding = new Promise<void>((done) => (locked = done))
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`preview-machines:${ids.workspace}`}))`
+        locked()
+        await new Promise<void>((done) => (release = done))
+      },
+      { timeout: 20_000 },
+    )
+    await holding
+    let finished = false
+    const sweep = sweepMachine(machines, id, ids.workspace, new Date()).then((due) => {
+      finished = true
+      return due
+    })
+    await new Promise((done) => setTimeout(done, 500))
+    assert.equal(finished, false, 'it waits for the lock')
+    assert.deepEqual(machines.destroyed, [])
+    release()
+    await holder
+    assert.equal(await sweep, 'destroy')
+    await prisma.previewMachine.deleteMany({ where: { sessionId } })
+  })
+
+  test('a machine being stopped keeps its slot until the provider stopped it', async () => {
+    await prisma.previewMachine.deleteMany({ where: { workspaceId: ids.workspace } })
+    const machines = new FakeMachines()
+    const threads: string[] = []
+    for (let i = 0; i < MACHINES_RUNNING_MAX; i++) {
+      threads.push(await thread('ada'))
+      assert.ok((await machineUp(machines, runner(), threads[i]!, KEY)).machine)
+    }
+    // One goes to sleep; its provider's stop is slow, then fails.
+    let settle!: (failed: boolean) => void
+    machines.stopGate = new Promise<void>((done, fail) => {
+      settle = (failed) => (failed ? fail(new Error('the provider did not answer')) : done())
+    })
+    machines.stopGate.catch(() => undefined)
+    const stopping = new Promise<void>((done) => (machines.onStop = done))
+    const sleeping = machineSleep(machines, runner(), threads[0]!).catch((e: Error) => e)
+    await stopping
+    const sixth = await machineUp(machines, runner(), await thread('ada'), KEY)
+    assert.equal(sixth.machine, null, 'its slot is still taken')
+    settle(true)
+    assert.match(String(await sleeping), /did not answer/)
+    assert.equal((await row(threads[0]!)).status, 'running')
+    assert.equal(
+      await prisma.previewMachine.count({
+        where: { workspaceId: ids.workspace, status: { in: ['creating', 'running', 'stopping'] } },
+      }),
+      MACHINES_RUNNING_MAX,
+    )
+    machines.stopGate = undefined
+    machines.onStop = undefined
+    await prisma.previewMachine.deleteMany({ where: { workspaceId: ids.workspace } })
+  })
+
+  test('a stop its process lost is taken up by the sweep', async () => {
+    const machines = new FakeMachines()
+    const sessionId = await thread('ada')
+    await machineUp(machines, runner(), sessionId, KEY)
+    // Its stop was asked for, then the process went (its claim ran out, the provider never told).
+    await prisma.previewMachine.update({
+      where: { sessionId },
+      data: { status: 'stopping', claimedUntil: new Date(Date.now() - 60_000) },
+    })
+    await sweepPreviewMachines(new Date(), machines)
+    assert.equal(machines.stopped.length, 1)
+    assert.equal((await row(sessionId)).status, 'stopped')
     await prisma.previewMachine.deleteMany({ where: { sessionId } })
   })
 
