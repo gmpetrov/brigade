@@ -83,6 +83,19 @@ test('a teammate told the report of its own sub-thread hears it is its own', () 
   // Not to the teammate it was written to, nor about another's sub-thread.
   assert.equal(ownReports([note], { id: 'mark', name: 'Mark' }), '')
   assert.equal(ownReports([note], { id: 'olga', name: 'Olga' }), '')
+  // Nor about one of its sub-threads still at work: it has no report yet.
+  const batch = batchNote(
+    [
+      {
+        id: 'kid2',
+        title: 'Check the deploy',
+        teammate: 'Mark',
+        report: { status: 'report', summary: 'Deployed.', at: '2026-11-05T10:00:00Z' },
+      },
+    ],
+    [{ id: 'kid3', title: 'Review #711', teammate: 'Nina' }],
+  )
+  assert.equal(ownReports([{ ...note, text: batch }], { id: 'nina', name: 'Nina' }), '')
   // Nor from what a person wrote, even word for word.
   assert.equal(
     ownReports([{ by: null, name: 'A member', text: report }], { id: 'nina', name: 'Nina' }),

@@ -74,7 +74,10 @@ export function missedLines(unseen: Indexed[], budget: number, ask?: Indexed): s
 export function ownReports(unseen: LogEntry[], teammate: { id: string; name: string }) {
   const own = unseen.flatMap((e) =>
     e.note && e.to && e.to !== teammate.id
-      ? (noteThreads(e.text)?.threads ?? []).filter((t) => t.teammate === teammate.name)
+      ? // One still working (status null) has no report yet.
+        (noteThreads(e.text)?.threads ?? []).filter(
+          (t) => t.teammate === teammate.name && t.status !== null,
+        )
       : [],
   )
   if (!own.length) return ''
