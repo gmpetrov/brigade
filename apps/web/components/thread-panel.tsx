@@ -62,7 +62,7 @@ import {
 } from '@/lib/api'
 import { PendingThread } from '@/components/pending-thread'
 import { usePendingThread } from '@/lib/pending-threads'
-import { isMac } from '@/lib/platform'
+import { isMac, isNarrow } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
 import { openInPlace } from '@/lib/thread-address'
@@ -232,7 +232,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     (teammate: string, options: { threadId?: string; shell?: boolean } = {}) => {
       if (!options.threadId) chooseTeammate(teammate)
       setDocked(options.threadId ?? null)
-      setOpen(true)
+      // On a phone the panel covers the whole page: the screen comes first, and the
+      // conversation from its toolbar.
+      setOpen(!isNarrow())
       raisePanel(PANEL)
       setShell(!!options.shell)
       router.push(`/app/teammates/${teammate}/computer`)
@@ -254,11 +256,11 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   }, [open, docked])
 
   // A computer's page has the threads beside it: opening it opens them, on the teammate's
-  // list unless a thread is open there.
+  // list unless a thread is open there. Not on a phone, where they would cover the screen.
   useEffect(() => {
     if (!computerPage) return
     chooseTeammate(computerPage)
-    setOpen(true)
+    setOpen(!isNarrow())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [computerPage])
 

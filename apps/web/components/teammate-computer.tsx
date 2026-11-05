@@ -9,6 +9,7 @@ import { ComputerScreen } from '@/components/computer-panel'
 import { useDashboard } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
 import { useThreadPanel } from '@/components/thread-panel'
+import { isNarrow } from '@/lib/platform'
 import { useApi, type Teammate, type Thread, type ThreadSummary } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 
@@ -55,7 +56,9 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
           onChange={() => {
             void reloadBeside()
             void reloadThread()
-            // The conversation beside the screen, for the hand back.
+            // The conversation beside the screen, for the hand back; on a phone it would
+            // cover the screen just taken, and the hand back is in its toolbar.
+            if (isNarrow()) return
             if (!panel.visible || beside !== t.id) panel.openThread(t.id)
           }}
           onCollapse={reopen}
