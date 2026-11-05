@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto'
 import {
   findLine,
   GETTING_STARTED,
+  hasHeading,
   insertLine,
   ListItemId,
   listCounts,
@@ -832,9 +833,10 @@ export async function seedGettingStarted(scope: Scope) {
 
 /**
  * A line added to a list for someone (Chief's work put off in a person's name, a customer's idea a
- * playbook filed): the file is made with `header` when missing, and the line goes at the end of
- * `section` when the file has that heading, else at its end, linked to no thread. Its row with it,
- * under the file's lock, as add_item's.
+ * playbook filed): the file is made with `header` when missing, and the line goes at its end, or
+ * at the end of `section`, a heading added at the end of the file when it has none by that name:
+ * never under another heading, which may be work a routine takes up. Linked to no thread. Its row
+ * with it, under the file's lock, as add_item's.
  */
 export async function addListLine(
   db: ScopedDb,
@@ -870,11 +872,21 @@ export async function addListLine(
     documentId,
     {},
     async (text, list) => {
+      // The section, read under the lock: made when the file has no heading by that name.
+      const section = input.section?.trim()
+      const markdown =
+        section && !hasHeading(text, section) ? `${text.trimEnd()}\n\n## ${section}\n` : text
       await db.listItem.create({
         data: { id, documentId, text: plainItemText(input.text).slice(0, 2_000) } as never,
       })
       made = true
-      return insertLine(text, list, input.section ? { section: input.section } : {}, input.text, id)
+      return insertLine(
+        markdown,
+        markdown === text ? list : parseList(markdown),
+        section ? { section } : {},
+        input.text,
+        id,
+      )
     },
     async () => {
       if (made) await db.listItem.deleteMany({ where: { id } })

@@ -235,7 +235,7 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
             number: true,
             title: true,
             requestedByMemberId: true,
-            session: { select: { ...thread.select, doneAt: true } },
+            session: thread,
           },
         })
       : [],
@@ -464,10 +464,11 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
     })
   }
   for (const pr of merged) {
-    // Its thread is done with it: that says it.
-    if (pr.session?.doneAt && pr.session.doneAt > fresh) continue
     const who = pr.requestedByMemberId ?? pr.session?.startedByMemberId
     if (!who || !finishedFor(who)) continue
+    // Its thread's done, told to them in this same push, says it.
+    const s = pr.session
+    if (s && items.get(who)!.some((i) => i.key.startsWith(`done:${s.id}:`))) continue
     add(who, {
       key: `merged:${pr.id}`,
       workspaceId,

@@ -4,8 +4,9 @@
 // a task in the Tasks board's Backlog (docs/hand-offs.md). The list is the playbook's `ideas`
 // setting when it has one (a library path, with the heading of a section after #), else ideas.md
 // in its project's folder or at the library's root, made when missing as Chief's parked list is.
-// The run never chooses where: what it read is untrusted, and a line in another list, or another
-// section, could be work a routine takes up.
+// The line goes under that heading, else under "Ideas", added at the end of the file when it has
+// none by that name. The run never chooses where: what it read is untrusted, and a line in another
+// list, or under another heading, could be work a routine takes up.
 import { projectFolder, type PlaybookManifest } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
@@ -16,6 +17,9 @@ import { addListLine } from './lists.js'
 /** The file a playbook's ideas go to when its settings name none. */
 export const IDEAS_FILE = 'ideas.md'
 
+/** The heading they go under when its settings name none: the file's own title, made so. */
+export const IDEAS_SECTION = 'Ideas'
+
 /** What an ideas list made for a playbook starts with. */
 export const ideasHeader = (playbook: string) =>
   `# Ideas\n\nIdeas the ${playbook} playbook kept for the team. Move a line to your backlog, hand it ` +
@@ -23,27 +27,25 @@ export const ideasHeader = (playbook: string) =>
 
 /**
  * Where a playbook's ideas go: its `ideas` setting (`path` or `path#Section`, a Markdown file of
- * the library), else ideas.md in its project's folder, else at the library's root.
+ * the library), else ideas.md in its project's folder, else at the library's root; under the
+ * section it names, else under "Ideas".
  */
 export function ideasPlace(
   setting: unknown,
   project: { name: string; folder: string | null } | null,
-): { path: string; section?: string } {
+): { path: string; section: string } {
   const value = typeof setting === 'string' ? setting.trim() : ''
   const hash = value.indexOf('#')
   const path = (hash >= 0 ? value.slice(0, hash) : value).trim().replace(/^\/+/, '')
-  const section = hash >= 0 ? value.slice(hash + 1).trim() : ''
-  if (path)
-    return {
-      path: /\.md$/i.test(path) ? path : `${path}.md`,
-      ...(section ? { section } : {}),
-    }
+  const section = (hash >= 0 ? value.slice(hash + 1).trim() : '') || IDEAS_SECTION
+  if (path) return { path: /\.md$/i.test(path) ? path : `${path}.md`, section }
   return {
     path: project ? `${project.folder ?? projectFolder(project.name)}/${IDEAS_FILE}` : IDEAS_FILE,
+    section: IDEAS_SECTION,
   }
 }
 
-/** file_idea, from a playbook's run: a line at the end of its ideas list (or of its section). */
+/** file_idea, from a playbook's run: a line at the end of its section of its ideas list. */
 export async function fileIdea(
   db: ScopedDb,
   scope: Scope,
@@ -76,7 +78,7 @@ export async function fileIdea(
   if (run.dryRun)
     return {
       simulated: true,
-      wouldFile: { path: place.path, text: op.text },
+      wouldFile: { path: place.path, section: place.section, text: op.text },
       note: 'A dry run files nothing: in a live run, this line would go to that list.',
     }
   // Only where its teammate may save: a folder people closed to it stays closed.
@@ -97,7 +99,7 @@ export async function fileIdea(
         path: place.path,
         header: ideasHeader(name),
         text: `${op.text} (from “${session.title}”)`,
-        ...(place.section ? { section: place.section } : {}),
+        section: place.section,
       },
     )
   } catch (error) {

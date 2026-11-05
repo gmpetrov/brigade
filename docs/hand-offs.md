@@ -26,12 +26,16 @@ hands out. It replaced the Tasks board (below).
 - **Not from a playbook's run.** What started the run is untrusted, and a thread outside it has
   none of its limits: a run starts no thread outside it and writes only in its own children.
 - **A customer's idea goes to a list.** A live playbook run keeps one with `file_idea`
-  (`apps/api/src/playbook-ideas.ts`): one line at the end of the playbook's ideas list, linked to
-  no thread, which starts nothing. The list is the playbook's `ideas` setting (a library path, with
-  a section's heading after `#`), else `ideas.md` in its project's folder, or at the library's
-  root, made when missing as Chief's parked list is. The run never picks where: a line written in
-  another list or section could be work a routine takes up. Only where its teammate may save. A dry
-  run says where the line would go and writes nothing.
+  (`apps/api/src/playbook-ideas.ts`): one line in the playbook's ideas list, linked to no thread,
+  which starts nothing. The list is the playbook's `ideas` setting (a library path, with a
+  section's heading after `#`), else `ideas.md` in its project's folder, or at the library's root,
+  made when missing as Chief's parked list is. The line goes at the end of its section: the one
+  the setting names, else "Ideas", a heading added at the end of the file when it has none by that
+  name (`addListLine`), never the end of whatever section comes last. The run never picks where: a
+  line written in another list or section could be work a routine takes up, such as a "To Do" a
+  builder takes lines from. Its words are the customer's: no comment of theirs is written
+  (`insertLine`), so none takes over another line's marker. Only where its teammate may save. A
+  dry run says where the line would go and writes nothing.
 - **One goal, one deliverable.** A person's attention is what is scarce: a goal of days or several
   pull requests reaches them as one finished, checked result (for code, one pull request), with no
   plan to approve and no steps to review; they are asked only for what the work cannot go on

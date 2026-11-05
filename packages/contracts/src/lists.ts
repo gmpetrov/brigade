@@ -309,6 +309,22 @@ function splitBreak(raw: string, goesOn: boolean) {
   return { head, brk: brk ? (brk[1]!.includes('\\') ? ' \\' : '  ') : '' }
 }
 
+/**
+ * Text Brigade writes into a list (a line, a note): no HTML comment in it, so never a marker it was
+ * not given. A marker in a teammate's or a customer's words would take over another line's id, and
+ * an open comment would hide the lines below it.
+ */
+const noComments = (text: string) => text.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<!--|-->/g, ' ')
+
+/** Whether the file has a heading named `section`, as insertLine finds one (case, spaces and Markdown aside). */
+export function hasHeading(markdown: string, section: string) {
+  const want = normal(section)
+  return markdown.split('\n').some((row) => {
+    const h = row.match(HEADING)
+    return !!h && normal(h[2]!) === want
+  })
+}
+
 /** A link in a note: italics around it come back from the editor broken, a little more each save. */
 const LINKISH = /(https?:\/\/|www\.|\]\()/i
 
@@ -320,7 +336,7 @@ const LINKISH = /(https?:\/\/|www\.|\]\()/i
 export function setLineDone(markdown: string, line: ListLine, done: boolean, note?: string) {
   return withLine(markdown, line.line, (raw) => {
     let next = raw.replace(/\[( |x|X)\]/, done ? '[x]' : '[ ]')
-    const clean = note
+    const clean = (note === undefined ? undefined : noComments(note))
       ?.replace(/[*_`\n]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
@@ -349,7 +365,10 @@ export function insertLine(
   id: string,
 ) {
   const rows = markdown.split('\n')
-  const clean = text.replace(/\s*\n\s*/g, ' ').trim()
+  const clean = noComments(text)
+    .replace(/\s*\n\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   let index = rows.length
   let indent = 0
   if (at.after) {

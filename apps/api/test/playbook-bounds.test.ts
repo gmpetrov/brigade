@@ -397,7 +397,7 @@ describe('the bounds of a playbook run', { skip: !database && 'no database answe
     assert.equal(heard.ok, true, heard.error)
     assert.deepEqual(heard.output, {
       simulated: true,
-      wouldFile: { path: 'ideas.md', text: 'Export to CSV' },
+      wouldFile: { path: 'ideas.md', section: 'Ideas', text: 'Export to CSV' },
       note: 'A dry run files nothing: in a live run, this line would go to that list.',
     })
     assert.equal(await db.listItem.count(), before)

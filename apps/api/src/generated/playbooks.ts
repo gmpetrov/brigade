@@ -85,7 +85,7 @@ export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Reco
           "key": "ideas",
           "type": "text",
           "optional": true,
-          "ask": "Which list in the library should keep customers' ideas, e.g. Projects/Acme/backlog.md#To approve? Leave it empty for an ideas list of its own."
+          "ask": "Which list in the library should keep customers' ideas, and under which heading, e.g. Projects/Acme/backlog.md#To approve? Without a heading they go under Ideas. Leave it empty for an ideas list of its own."
         }
       ],
       "entries": [

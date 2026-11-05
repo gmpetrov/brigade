@@ -29,13 +29,14 @@ settings:
       optional: true,
       ask: "Which analytics tool should be checked for a customer's account?",
     }
-  # Where customers' ideas go (file_idea): a list of the library, with a section's heading after #.
-  # Unset: ideas.md in the playbook's project folder.
+  # Where customers' ideas go (file_idea): a list of the library, with a section's heading after #
+  # (else "Ideas"), added at the end of the file when it has none. Unset: ideas.md in the
+  # playbook's project folder.
   - {
       key: ideas,
       type: text,
       optional: true,
-      ask: "Which list in the library should keep customers' ideas, e.g. Projects/Acme/backlog.md#To approve? Leave it empty for an ideas list of its own.",
+      ask: "Which list in the library should keep customers' ideas, and under which heading, e.g. Projects/Acme/backlog.md#To approve? Without a heading they go under Ideas. Leave it empty for an ideas list of its own.",
     }
 
 entries:
