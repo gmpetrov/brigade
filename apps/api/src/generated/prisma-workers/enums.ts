@@ -135,6 +135,16 @@ export const ChiefOutcome = {
 export type ChiefOutcome = (typeof ChiefOutcome)[keyof typeof ChiefOutcome]
 
 
+export const ChiefPassStatus = {
+  running: 'running',
+  done: 'done',
+  failed: 'failed',
+  idle: 'idle'
+} as const
+
+export type ChiefPassStatus = (typeof ChiefPassStatus)[keyof typeof ChiefPassStatus]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',

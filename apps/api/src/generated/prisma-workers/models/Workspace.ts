@@ -249,6 +249,7 @@ export type WorkspaceWhereInput = {
   schedules?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
   chiefDecisions?: Prisma.ChiefDecisionListRelationFilter
+  chiefPasses?: Prisma.ChiefPassListRelationFilter
   replyWatches?: Prisma.ReplyWatchListRelationFilter
   heldCalls?: Prisma.HeldCallListRelationFilter
   runnerCommands?: Prisma.RunnerCommandListRelationFilter
@@ -331,6 +332,7 @@ export type WorkspaceOrderByWithRelationInput = {
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   wakeups?: Prisma.WakeupOrderByRelationAggregateInput
   chiefDecisions?: Prisma.ChiefDecisionOrderByRelationAggregateInput
+  chiefPasses?: Prisma.ChiefPassOrderByRelationAggregateInput
   replyWatches?: Prisma.ReplyWatchOrderByRelationAggregateInput
   heldCalls?: Prisma.HeldCallOrderByRelationAggregateInput
   runnerCommands?: Prisma.RunnerCommandOrderByRelationAggregateInput
@@ -416,6 +418,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   schedules?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
   chiefDecisions?: Prisma.ChiefDecisionListRelationFilter
+  chiefPasses?: Prisma.ChiefPassListRelationFilter
   replyWatches?: Prisma.ReplyWatchListRelationFilter
   heldCalls?: Prisma.HeldCallListRelationFilter
   runnerCommands?: Prisma.RunnerCommandListRelationFilter
@@ -529,6 +532,7 @@ export type WorkspaceCreateInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -610,6 +614,7 @@ export type WorkspaceUncheckedCreateInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -691,6 +696,7 @@ export type WorkspaceUpdateInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -772,6 +778,7 @@ export type WorkspaceUncheckedUpdateInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1142,6 +1149,20 @@ export type WorkspaceUpdateOneRequiredWithoutChiefDecisionsNestedInput = {
   upsert?: Prisma.WorkspaceUpsertWithoutChiefDecisionsInput
   connect?: Prisma.WorkspaceWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutChiefDecisionsInput, Prisma.WorkspaceUpdateWithoutChiefDecisionsInput>, Prisma.WorkspaceUncheckedUpdateWithoutChiefDecisionsInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutChiefPassesInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedCreateWithoutChiefPassesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutChiefPassesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutChiefPassesNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedCreateWithoutChiefPassesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutChiefPassesInput
+  upsert?: Prisma.WorkspaceUpsertWithoutChiefPassesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutChiefPassesInput, Prisma.WorkspaceUpdateWithoutChiefPassesInput>, Prisma.WorkspaceUncheckedUpdateWithoutChiefPassesInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutWakeupsInput = {
@@ -1957,6 +1978,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -2037,6 +2059,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2133,6 +2156,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -2213,6 +2237,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2292,6 +2317,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -2372,6 +2398,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2494,6 +2521,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -2574,6 +2602,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2670,6 +2699,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -2750,6 +2780,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2830,6 +2861,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -2910,6 +2942,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3006,6 +3039,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -3086,6 +3120,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3166,6 +3201,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -3246,6 +3282,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3342,6 +3379,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -3422,6 +3460,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3503,6 +3542,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -3583,6 +3623,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3679,6 +3720,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -3759,6 +3801,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3839,6 +3882,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -3919,6 +3963,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4015,6 +4060,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -4095,6 +4141,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4175,6 +4222,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -4255,6 +4303,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4351,6 +4400,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -4431,6 +4481,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4511,6 +4562,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -4591,6 +4643,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4687,6 +4740,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -4767,6 +4821,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4847,6 +4902,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -4927,6 +4983,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5023,6 +5080,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -5103,6 +5161,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5182,6 +5241,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -5262,6 +5322,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5358,6 +5419,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -5438,6 +5500,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5518,6 +5581,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -5598,6 +5662,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5694,6 +5759,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -5774,6 +5840,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5854,6 +5921,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -5934,6 +6002,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6030,6 +6099,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -6110,6 +6180,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6190,6 +6261,7 @@ export type WorkspaceCreateWithoutChiefDecisionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -6270,6 +6342,7 @@ export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6366,6 +6439,7 @@ export type WorkspaceUpdateWithoutChiefDecisionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -6446,6 +6520,347 @@ export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutChiefPassesInput = {
+  id?: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutChiefPassesInput = {
+  id?: string
+  organizationId: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainUncheckedCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactUncheckedCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutChiefPassesInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedCreateWithoutChiefPassesInput>
+}
+
+export type WorkspaceUpsertWithoutChiefPassesInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedUpdateWithoutChiefPassesInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedCreateWithoutChiefPassesInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutChiefPassesInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutChiefPassesInput, Prisma.WorkspaceUncheckedUpdateWithoutChiefPassesInput>
+}
+
+export type WorkspaceUpdateWithoutChiefPassesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutChiefPassesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6526,6 +6941,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -6606,6 +7022,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6702,6 +7119,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -6782,6 +7200,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6863,6 +7282,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
@@ -6943,6 +7363,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7039,6 +7460,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
@@ -7119,6 +7541,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7198,6 +7621,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -7278,6 +7702,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7374,6 +7799,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -7454,6 +7880,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7534,6 +7961,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -7614,6 +8042,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7710,6 +8139,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -7790,6 +8220,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7871,6 +8302,7 @@ export type WorkspaceCreateWithoutEventDaysInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -7951,6 +8383,7 @@ export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8047,6 +8480,7 @@ export type WorkspaceUpdateWithoutEventDaysInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -8127,6 +8561,7 @@ export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8206,6 +8641,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -8286,6 +8722,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8382,6 +8819,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -8462,6 +8900,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8542,6 +8981,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -8622,6 +9062,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8718,6 +9159,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -8798,6 +9240,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8878,6 +9321,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -8958,6 +9402,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9054,6 +9499,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -9134,6 +9580,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9214,6 +9661,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -9294,6 +9742,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9390,6 +9839,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -9470,6 +9920,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9550,6 +10001,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -9630,6 +10082,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9726,6 +10179,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -9806,6 +10260,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9886,6 +10341,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -9966,6 +10422,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10062,6 +10519,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -10142,6 +10600,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10222,6 +10681,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -10302,6 +10762,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10398,6 +10859,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -10478,6 +10940,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10558,6 +11021,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -10638,6 +11102,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10734,6 +11199,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -10814,6 +11280,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10894,6 +11361,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -10974,6 +11442,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11070,6 +11539,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -11150,6 +11620,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11230,6 +11701,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -11310,6 +11782,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11406,6 +11879,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -11486,6 +11960,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11566,6 +12041,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -11646,6 +12122,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11742,6 +12219,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -11822,6 +12300,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11902,6 +12381,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -11982,6 +12462,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12078,6 +12559,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -12158,6 +12640,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12238,6 +12721,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -12318,6 +12802,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12414,6 +12899,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -12494,6 +12980,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12574,6 +13061,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -12654,6 +13142,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12750,6 +13239,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -12830,6 +13320,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12910,6 +13401,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -12990,6 +13482,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13086,6 +13579,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -13166,6 +13660,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13246,6 +13741,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -13326,6 +13822,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13422,6 +13919,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -13502,6 +14000,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13583,6 +14082,7 @@ export type WorkspaceCreateWithoutListItemsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -13663,6 +14163,7 @@ export type WorkspaceUncheckedCreateWithoutListItemsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13759,6 +14260,7 @@ export type WorkspaceUpdateWithoutListItemsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -13839,6 +14341,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13919,6 +14422,7 @@ export type WorkspaceCreateWithoutListItemThreadsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -13999,6 +14503,7 @@ export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14095,6 +14600,7 @@ export type WorkspaceUpdateWithoutListItemThreadsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -14175,6 +14681,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14255,6 +14762,7 @@ export type WorkspaceCreateWithoutListItemPullsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -14335,6 +14843,7 @@ export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14431,6 +14940,7 @@ export type WorkspaceUpdateWithoutListItemPullsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -14511,6 +15021,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14591,6 +15102,7 @@ export type WorkspaceCreateWithoutListPinsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -14671,6 +15183,7 @@ export type WorkspaceUncheckedCreateWithoutListPinsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14767,6 +15280,7 @@ export type WorkspaceUpdateWithoutListPinsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -14847,6 +15361,7 @@ export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14927,6 +15442,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -15007,6 +15523,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15103,6 +15620,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -15183,6 +15701,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15262,6 +15781,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -15342,6 +15862,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15438,6 +15959,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -15518,6 +16040,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15598,6 +16121,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -15678,6 +16202,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15774,6 +16299,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -15854,6 +16380,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15935,6 +16462,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -16015,6 +16543,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16111,6 +16640,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -16191,6 +16721,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16270,6 +16801,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -16350,6 +16882,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16446,6 +16979,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -16526,6 +17060,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16606,6 +17141,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -16686,6 +17222,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16782,6 +17319,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -16862,6 +17400,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16943,6 +17482,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -17023,6 +17563,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17119,6 +17660,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -17199,6 +17741,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17279,6 +17822,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -17359,6 +17903,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17455,6 +18000,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -17535,6 +18081,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17615,6 +18162,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -17695,6 +18243,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17791,6 +18340,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -17871,6 +18421,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17951,6 +18502,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -18031,6 +18583,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18127,6 +18680,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -18207,6 +18761,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18287,6 +18842,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -18367,6 +18923,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18463,6 +19020,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -18543,6 +19101,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18623,6 +19182,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -18703,6 +19263,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18799,6 +19360,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -18879,6 +19441,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18959,6 +19522,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -19039,6 +19603,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19135,6 +19700,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -19215,6 +19781,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19295,6 +19862,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -19375,6 +19943,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19471,6 +20040,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -19551,6 +20121,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19631,6 +20202,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -19711,6 +20283,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19807,6 +20380,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -19887,6 +20461,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19967,6 +20542,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -20047,6 +20623,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20143,6 +20720,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -20223,6 +20801,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20303,6 +20882,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -20383,6 +20963,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20479,6 +21060,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -20559,6 +21141,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20639,6 +21222,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -20719,6 +21303,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20815,6 +21400,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -20895,6 +21481,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20975,6 +21562,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -21055,6 +21643,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21151,6 +21740,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -21231,6 +21821,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21311,6 +21902,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -21391,6 +21983,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21487,6 +22080,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -21567,6 +22161,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21647,6 +22242,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -21727,6 +22323,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21823,6 +22420,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -21903,6 +22501,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21983,6 +22582,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -22063,6 +22663,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22159,6 +22760,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -22239,6 +22841,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22319,6 +22922,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -22399,6 +23003,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22495,6 +23100,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -22575,6 +23181,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22655,6 +23262,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -22735,6 +23343,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22831,6 +23440,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -22911,6 +23521,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22991,6 +23602,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -23071,6 +23683,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23167,6 +23780,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -23247,6 +23861,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23327,6 +23942,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
@@ -23407,6 +24023,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23503,6 +24120,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
@@ -23583,6 +24201,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23663,6 +24282,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
@@ -23743,6 +24363,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23839,6 +24460,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
@@ -23919,6 +24541,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23999,6 +24622,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -24079,6 +24703,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24175,6 +24800,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -24255,6 +24881,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24335,6 +24962,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -24415,6 +25043,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24511,6 +25140,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -24591,6 +25221,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24671,6 +25302,7 @@ export type WorkspaceCreateWithoutSpecPullsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
@@ -24751,6 +25383,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPullsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24847,6 +25480,7 @@ export type WorkspaceUpdateWithoutSpecPullsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -24927,6 +25561,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPullsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -25018,6 +25653,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
@@ -25098,6 +25734,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -25186,6 +25823,7 @@ export type WorkspaceCountOutputType = {
   schedules: number
   wakeups: number
   chiefDecisions: number
+  chiefPasses: number
   replyWatches: number
   heldCalls: number
   runnerCommands: number
@@ -25257,6 +25895,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   schedules?: boolean | WorkspaceCountOutputTypeCountSchedulesArgs
   wakeups?: boolean | WorkspaceCountOutputTypeCountWakeupsArgs
   chiefDecisions?: boolean | WorkspaceCountOutputTypeCountChiefDecisionsArgs
+  chiefPasses?: boolean | WorkspaceCountOutputTypeCountChiefPassesArgs
   replyWatches?: boolean | WorkspaceCountOutputTypeCountReplyWatchesArgs
   heldCalls?: boolean | WorkspaceCountOutputTypeCountHeldCallsArgs
   runnerCommands?: boolean | WorkspaceCountOutputTypeCountRunnerCommandsArgs
@@ -25515,6 +26154,13 @@ export type WorkspaceCountOutputTypeCountWakeupsArgs<ExtArgs extends runtime.Typ
  */
 export type WorkspaceCountOutputTypeCountChiefDecisionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ChiefDecisionWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountChiefPassesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ChiefPassWhereInput
 }
 
 /**
@@ -25826,6 +26472,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   schedules?: boolean | Prisma.Workspace$schedulesArgs<ExtArgs>
   wakeups?: boolean | Prisma.Workspace$wakeupsArgs<ExtArgs>
   chiefDecisions?: boolean | Prisma.Workspace$chiefDecisionsArgs<ExtArgs>
+  chiefPasses?: boolean | Prisma.Workspace$chiefPassesArgs<ExtArgs>
   replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   heldCalls?: boolean | Prisma.Workspace$heldCallsArgs<ExtArgs>
   runnerCommands?: boolean | Prisma.Workspace$runnerCommandsArgs<ExtArgs>
@@ -25941,6 +26588,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   schedules?: boolean | Prisma.Workspace$schedulesArgs<ExtArgs>
   wakeups?: boolean | Prisma.Workspace$wakeupsArgs<ExtArgs>
   chiefDecisions?: boolean | Prisma.Workspace$chiefDecisionsArgs<ExtArgs>
+  chiefPasses?: boolean | Prisma.Workspace$chiefPassesArgs<ExtArgs>
   replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   heldCalls?: boolean | Prisma.Workspace$heldCallsArgs<ExtArgs>
   runnerCommands?: boolean | Prisma.Workspace$runnerCommandsArgs<ExtArgs>
@@ -26022,6 +26670,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     wakeups: Prisma.$WakeupPayload<ExtArgs>[]
     chiefDecisions: Prisma.$ChiefDecisionPayload<ExtArgs>[]
+    chiefPasses: Prisma.$ChiefPassPayload<ExtArgs>[]
     replyWatches: Prisma.$ReplyWatchPayload<ExtArgs>[]
     heldCalls: Prisma.$HeldCallPayload<ExtArgs>[]
     runnerCommands: Prisma.$RunnerCommandPayload<ExtArgs>[]
@@ -26517,6 +27166,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   schedules<T extends Prisma.Workspace$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   wakeups<T extends Prisma.Workspace$wakeupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$wakeupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WakeupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   chiefDecisions<T extends Prisma.Workspace$chiefDecisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$chiefDecisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ChiefDecisionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  chiefPasses<T extends Prisma.Workspace$chiefPassesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$chiefPassesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ChiefPassPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   replyWatches<T extends Prisma.Workspace$replyWatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$replyWatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReplyWatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   heldCalls<T extends Prisma.Workspace$heldCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$heldCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HeldCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   runnerCommands<T extends Prisma.Workspace$runnerCommandsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$runnerCommandsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RunnerCommandPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -27712,6 +28362,30 @@ export type Workspace$chiefDecisionsArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.ChiefDecisionScalarFieldEnum | Prisma.ChiefDecisionScalarFieldEnum[]
+}
+
+/**
+ * Workspace.chiefPasses
+ */
+export type Workspace$chiefPassesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ChiefPass
+   */
+  select?: Prisma.ChiefPassSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ChiefPass
+   */
+  omit?: Prisma.ChiefPassOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ChiefPassInclude<ExtArgs> | null
+  where?: Prisma.ChiefPassWhereInput
+  orderBy?: Prisma.ChiefPassOrderByWithRelationInput | Prisma.ChiefPassOrderByWithRelationInput[]
+  cursor?: Prisma.ChiefPassWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ChiefPassScalarFieldEnum | Prisma.ChiefPassScalarFieldEnum[]
 }
 
 /**

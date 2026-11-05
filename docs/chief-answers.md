@@ -1,58 +1,77 @@
-# Chief answers for the person
+# Chief for the person
 
-The work goes down straight from a person to their teammates; the questions come back up
-through Chief. When a teammate ends its reply on buttons (`replies`) or a choices card in a
-member's thread, Chief reads the question before the person does and, in their name, picks the
-answer their mandate settles, says "not now" to work outside their priorities, or leaves the
-question to them with why. People call it **Chief answers for you** (Preferences → Chief).
+Chief no longer reads each question a teammate ends on (#724 did, in a decision thread of its own
+per question: noisy, and mostly "it's your call", since it knew less than the teammate asking).
+It works for the person in two ways that take no turn on each question:
 
-Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
-`packages/contracts/src/chief-answers.ts`, the runner's `decisionInstructions` and `chiefTools`, and
-`apps/web/components/chief-take.tsx`.
+- **Their rules**, which every teammate working for them reads, so fewer questions are asked.
+- **A daily pass**: once a day, Chief goes through what waits on them, settles what their rules
+  settle, and leaves them the rest, prepared, on Today.
+
+People call them **Your rules** and **Daily pass** (Preferences → Chief).
+
+Code: `apps/api/src/chief-rules.ts`, `apps/api/src/chief-pass.ts`,
+`apps/api/src/chief-answers.ts` (answers in the person's name), `apps/api/src/chief-order.ts`,
+`packages/contracts/src/chief-answers.ts`, the runner's `rules`, `passInstructions`, `CHIEF_ANSWERS`
+and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
 
 ## Decisions
 
-- **Off is Brigade as before.** It is a member's preference (`Member.chiefAnswers`, off for
-  every member since `20261105233000_chief_answers_off_for_all`, turned on in Preferences;
-  `PUT /me/chief`). Off, no decision starts, the spec says nothing of it
-  (`ThreadSpec.chiefAnswers` false, no `decision`), so every teammate's instructions are as they
-  were, and questions wait for the person.
-- **Where it reads.** A member's own top-level thread (origin `member`, no parent, no playbook,
-  routine, trigger or mailbox rule, not archived or done, nobody in control), asked by its
-  starter alone (`askedBy`), whose last turn ended idle on a card nobody answered or dismissed
-  (`openAsk`). Never Chief's own questions, a sub-thread's (it reports), nor a question only in
-  prose. A button that does Brigade's own action (merge, preview) is never one of the answers.
-- **A decision is a sub-thread of Chief's** (`startDecision`), on the thread's computer and
-  account, with a brief of its own (`chiefDecisionBrief`): the answers offered, the teammate's
-  reply ending on them, the person's first request in the thread, their mandate
-  (`chief/mandate.md`, only while Chief may read it there) and Chief's earlier decisions there. A
-  choices card's question and its options' descriptions go in with the labels (the reply text
-  alone may not say what is decided, nor that "Route A" deploys to production). Its id is fixed
-  with the decision (`ChiefDecision.childSessionId`), so a start tried again after a restart takes
-  up the same thread, and its prompt (`chief:<decision>`) reaches it once. It runs at low effort,
-  with no App, repository, roster or tool but `search_workspace`, `list_items` and `chief_decide`
-  (`ThreadSpec.decision`); it is shown on the question, not among the thread's sub-threads
-  (`Session.chiefDecisionId`), and it reports nothing: `noteChildEvents` hands its events to
-  `noteDecisionEvents`, which settles it delivered and fails a decision it did not make. Runners
-  older than `CHIEF_PROTOCOL` get none: the question waits for the person.
-- **`chief_decide`**: a verdict (`answer`, `park`, `escalate`), the kind of question
-  (`next_step`, `approach`, `priority`, or `taste` and `outside`, always the person's), the
-  answer by its number, a reason, the mandate line or decision it goes by, and for `park` the
-  work put off. Under the asking thread's lock (`applyDecision`): superseded when a message came
-  in after the question; escalated; **answered** when the person lets Chief answer that kind on
-  its own (`Member.chiefAuto`) and it has not answered `CHIEF_ANSWERS_IN_A_ROW` (3) times in the
-  thread since the person last wrote; else **suggested**. A decision not made in
-  `DECISION_MINUTES` (15) fails, each minute (`settleStaleDecisions`).
-- **An answer reaches the teammate as a report's wake-up** (stored with the decision, fired at
-  once, tried until it goes), its text the very words a click would send, with why and the
-  mandate line (`chiefAnswerMessage`). People see it as Brigade's note, "Chief answered for you",
-  never as their own message, with **Mark as wrong** (`POST /threads/:id/chief/:decision/wrong`):
-  the teammate is told to stop and undo (`chiefOverruledMessage`, steered into a running turn),
-  and the kind goes back to suggesting. A parked proposal's line goes to `chief/parked.md`, where
-  Chief may save, once the answer is given, or once the person takes the suggestion. The list is
-  made when missing (`addListLine`), never over one made meanwhile: the save only creates
-  (`saveLibraryFile`'s `createOnly`), one at the very same time loses on the path's uniqueness, and
-  nothing is held open meanwhile (a hub's pool has three connections).
+- **Off is Brigade as before.** Both are a member's (`Member.chiefRules`, `Member.chiefPass`, off
+  and empty by default; `PUT /me/chief`). With no rules, the spec has none (`ThreadSpec.rules`);
+  with the pass off, nothing runs and teammates are told nothing of Chief's answers
+  (`ThreadSpec.chiefAnswers` false). Turned off, a pass at work stops: `setChief` marks theirs
+  `failed` as it changes their row, in every workspace, every call of a pass checks it is still on
+  (`passOn`), and an answer reads it under their row's lock, so one being kept as they turn it off
+  is kept first or not at all; a retry's command too (`keepForPass`, by its commandId). `Member.chiefAnswers` and `chiefAuto` of #724 are no longer read,
+  kept while an older API may (migrations only add), and were turned off for everyone first
+  (`20261105233000_chief_answers_off_for_all`, #739).
+- **Rules are a text in the person's words, not a library file.** `Member.chiefRules`, at most
+  `CHIEF_RULES_MAX` characters, private to them and their teammates: one per person, whatever the
+  workspace's folders. The person writes them in Preferences, with Chief in a thread (**Write them
+  with Chief**, then `chief_rules` once they agree: only in a member's own thread of theirs, right
+  after they wrote, never from what a routine, a trigger or an email brought in, as rules give
+  their teammates leave to act), or takes the lines a pass proposes (`POST /me/chief/rules`; a
+  refused line is kept in `chiefRulesRefused` and never proposed again). Each is taken or refused
+  under their row's lock (`decideRule`): several at once all stay.
+- **Every teammate working for the person reads them** (`specFor`): the thread's person is its
+  asker (`askedBy`), or its starter when nobody asked (a routine's, a trigger's run); none in a
+  thread several people ask in, a playbook's run, or a pass. The runner puts them in the
+  instructions (`rules`): decide what they settle, say so in a line, ask the person only the rest;
+  never their approval for what leaves Brigade. Instructions are written when a session starts:
+  new rules reach a teammate from its next session.
+- **The pass runs once a day per person and workspace, only when something waits.** From
+  `CHIEF_PASS_HOUR` (7:00) in their timezone (`Member.timezone`, sent by their browser when they
+  turn it on; UTC else), the minute's job (`chief-pass` in `jobs.ts`) claims their day
+  (`ChiefPass`, unique by member, workspace and day), then lists what waits on them
+  (`passItems`): the cards their teammates ended on in their own threads (top-level, theirs,
+  idle, active in the last week, not put away, not Chief's own, not answered before), their failed
+  threads, their tickets and pull requests, numbered, at most 30. Nothing waits: the pass is
+  `idle`, and no turn is spent.
+- **A pass is a thread of Chief's that no list shows** (`Session.chiefPassId`, quiet, archived once
+  the pass is over, at medium effort on the person's account and the workspace's cloud computer,
+  else their own machine; runners older than `CHIEF_PASS_PROTOCOL` get none). Its brief
+  (`chiefPassBrief`) has their rules, the numbered items and their recent answers to cards
+  (`recentAnswers`, the last two weeks), and what they refused. The brief is Brigade's, not the
+  person's word: it summons none of the teammates the replies it quotes mention (`startThread`
+  reads no mention in it), shows as Brigade's note, and only Chief answers it.
+  Its only tools are `search_workspace`, `list_items` and its three calls, which act only on the
+  brief's items, by number:
+  - `chief_answer`: answers a question item in their name, citing the rule that settles it. Refused
+    with no rules, on a design (always theirs), or once the pass reported.
+  - `chief_retry`: tries a failed item's turn again (`retryThread`, as **Try again** does).
+  - `chief_report`, once, last: what is still theirs with what Chief would do, notes across their
+    threads, and at most a few rules to add. A pass that ends without it, or runs past 30 minutes,
+    is `failed`: what it did stays.
+- **An answer reaches the teammate as a report's wake-up** (`answerInTheirName`: a
+  `ChiefDecision` of the pass kept with where it goes and its wake-up, in one transaction under the
+  thread's lock, so never half made; one #724 left `pending` or `suggested` on the card is the
+  pass's to settle, and the card is listed for it): superseded when the thread moved on
+  since the question; left to the person after `CHIEF_ANSWERS_IN_A_ROW` (3) answers of Chief's
+  there with no word from them; else fired at once, its text the very words a click would send,
+  with why and the rule (`chiefAnswerMessage`). People see it as Brigade's note, "Chief answered for
+  you", with **Mark as wrong** (`POST /threads/:id/chief/:decision/wrong`): the teammate is told to
+  stop and undo (`chiefOverruledMessage`, steered into a running turn).
 - **It is not the person's approval.** An answer puts its thread on Chief's word from an event
   on (`Session.chiefWordSeq`): from its question when Chief answers, under the thread's lock, and
   from the answer's own note once it reaches the teammate. Only a person's message after that
@@ -72,7 +91,7 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
   computer as commands kept before they are sent (`RunnerCommand`), and which comes first is
   settled as each is kept, in the transaction that keeps it, under the thread's lock
   (`chief-order.ts`, `keepInOrder`). The person's word (their message, taking the thread in hand,
-  handing it back) supersedes Chief's decisions still being made and withdraws its answers that have
+  handing it back) supersedes Chief's answers still being made and withdraws those that have
   not gone to the computer: not kept yet, or kept while it was away and not sent since
   (`withdrawAnswers`). An answer of Chief's is kept only while its question is open, nobody has the
   thread in hand, and no word of the person's waits to be taken by the computer (`answerMayGo`);
@@ -87,22 +106,8 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
   answer is kept once (its command's id is the wake-up's). A dismissed card is a closed question
   (`questionClosed`), and dismissing settles Chief's decisions on it and withdraws its answers the
   same way (`noteChiefDismissed`).
-- **Suggestions earn autonomy, as playbooks' actions do.** A person's message after a suggested
-  question measures it (`noteChiefAnswered`): their pick was Chief's (`agreed`: the same message,
-  the same choice, or the option's words), or another (`disagreed`); only the person Chief answers
-  for counts. Once `CHIEF_PROMOTION.agreed` (9) of their latest `CHIEF_PROMOTION.decisions` (10)
-  answers to suggestions of a kind agreed, since they last refused, marked one wrong or changed the
-  kinds themselves (`trustSince`), one ticket in that thread offers to let Chief answer that kind
-  alone (`chiefPromotion`). Only that person decides it, and only they see it waiting on them
-  (`waitsOn`). They can also switch a kind on or off themselves in Preferences.
-- **The mandate is a library file Chief keeps with the person**, `chief/mandate.md`: what they
-  aim for by project, the decisions that hold, what they always decide themselves. Chief may save
-  in `chief/` wherever it may read (`teammateLibraryAccess`), unless a folder rule closes it. Chief
-  writes the first one with the team on day 0 when it is on, offers a weekly look back
-  (`create_schedule`, then `chief_decisions`), and Preferences offers **Write it with Chief** while
-  there is none. Without a mandate, Chief answers only what the person's own words or remembered
-  decisions settle.
-- **What people see on a question** (`ChiefTake`): "Chief is reading this for you" while it
-  decides; "Chief would pick …" with **Use it**, which sends that answer as theirs (not on a
-  design, picked on its card); or "Chief leaves this one to you", with why and the answer it leans
-  to. Each opens to the reason, the mandate line and Chief's decision thread.
+- **Today shows the latest pass** (`GET /me/chief/pass`, `passView`, for 36 hours): what Chief
+  settled in their name (each answer with where it stands and **Mark as wrong**), what is still
+  theirs with what it would do (**Use it** sends its pick as theirs while the question is open,
+  not a design's), what it noticed, and the rules it proposes (**Add to my rules**, **Not this
+  one**). Its thread opens from **How Chief worked**.

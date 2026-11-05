@@ -7,7 +7,7 @@ import {
   chiefAnswerNote,
   chiefOverruledNote,
   documentFileId,
-  isChiefDecisionBrief,
+  isChiefPassBrief,
   forPeople,
   fromStartedThreadBrief,
   fromTaskBrief,
@@ -66,7 +66,7 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
     return {
       icon: Crown,
       label: `Chief answered for you · “${answer.answer}”`,
-      body: answer.reason + (answer.basis ? `\n\nFrom your mandate: ${answer.basis}` : ''),
+      body: answer.reason + (answer.basis ? `\n\nBy your rule: ${answer.basis}` : ''),
       chief: { decisionId: answer.decisionId },
     }
   const overruled = chiefOverruledNote(text)
@@ -74,10 +74,10 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
     return {
       icon: Crown,
       label: `You marked Chief’s answer as wrong · “${overruled.answer}”`,
-      body: 'Its teammate was told to stop what it started on it, and Chief suggests that kind of question to you again.',
+      body: 'Its teammate was told to stop what it started on it and undo what it can.',
     }
-  if (isChiefDecisionBrief(text))
-    return { icon: Crown, label: 'The question Chief decided for you', body: text }
+  if (isChiefPassBrief(text))
+    return { icon: Crown, label: 'What waited on you, as Chief read it', body: text }
   const run = scheduledRunNote(text)
   if (run)
     return {

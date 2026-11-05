@@ -8,7 +8,7 @@
 // opens a ticket. A runner too old to acknowledge takes each command once, as before.
 import { OUTBOX_PROTOCOL, type ApiToRunner } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { chiefGateOf, chiefOpenIn, keepInOrder } from './chief-order.js'
+import { chiefGateOf, chiefOpenIn, keepForPass, keepInOrder, passOfCommand } from './chief-order.js'
 import { prisma, scoped } from './db.js'
 import { noteFailure } from './ops/failures.js'
 import { movedOf } from './thread-spec.js'
@@ -96,7 +96,10 @@ export async function keepCommand(
     message: message as never,
   }
   const gate = sessionId ? chiefGateOf(message) : null
+  // A retry of Chief's pass in the person's name: kept only while their pass is on.
+  const pass = passOfCommand(message.commandId)
   try {
+    if (pass) return await keepForPass(row, pass)
     if (gate && sessionId && ('answer' in gate || (await chiefOpenIn(sessionId))))
       return await keepInOrder({ ...row, sessionId }, gate, (tx, createdAt) =>
         tx.runnerCommand.create({ data: { ...row, createdAt } }),

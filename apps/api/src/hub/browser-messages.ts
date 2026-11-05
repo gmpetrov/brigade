@@ -98,7 +98,7 @@ async function openTerminal(
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       parent: { select: { id: true, title: true } },
-      startedBy: { select: { suggestions: true, chiefAnswers: true } },
+      startedBy: { select: { suggestions: true } },
     },
   })
   const fail = (text: string) => {

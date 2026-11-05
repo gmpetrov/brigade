@@ -218,13 +218,18 @@ export const ThreadSpec = z.object({
   /** Set in a child thread: the thread it was started from, which its report goes to. */
   parent: z.object({ id: z.string(), title: z.string() }).nullish(),
   /**
-   * CHIEF_PROTOCOL: the person of the thread lets Chief answer their teammates' buttons and choices
-   * (docs/chief-answers.md). Teammates are told what Chief's answers are; Chief, that it keeps the
-   * person's mandate. Unset: nothing of it, as before.
+   * The person of the thread has Chief's daily pass on (docs/chief-answers.md): Chief may answer their
+   * teammates' questions in their name, by their rules. Teammates are told what such an answer is.
+   * Unset: nothing of it, as before.
    */
   chiefAnswers: z.boolean().default(false),
-  /** CHIEF_PROTOCOL: Chief's thread deciding one question for the person, by its decision's id. */
-  decision: z.object({ id: z.string() }).nullish(),
+  /**
+   * The rules of the person the thread works for (docs/chief-answers.md), in their words: the teammate
+   * decides what they settle, and asks them only the rest. Unset: none, as before.
+   */
+  rules: z.object({ person: z.string(), text: z.string() }).nullish(),
+  /** CHIEF_PASS_PROTOCOL: Chief's thread going through what waits on its person, by its pass's id. */
+  pass: z.object({ id: z.string() }).nullish(),
   /**
    * What started the thread: a person, a trigger's event, a schedule's run or another thread.
    * Schedules, triggers and wake-ups are set up only where a person started it, and a merge wakes

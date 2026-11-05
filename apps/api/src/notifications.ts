@@ -97,19 +97,11 @@ const managedOnly = (t: OpenTicket) =>
 const adminsOnly = (t: OpenTicket) =>
   t.type === 'approval' && (!!payloadOf(t).skillAction || payloadOf(t).playbookActivation === true)
 
-/** Brigade's offer to let Chief answer a kind alone: the person it answers for, nobody else, decides. */
-const chiefOffer = (t: OpenTicket) =>
-  t.type === 'approval'
-    ? (payloadOf(t).chiefPromotion as { memberId?: string } | undefined)?.memberId
-    : undefined
-
 /** Whether a ticket waits on this member: apps/web/lib/api.ts's waitsOn, which the sidebar counts. */
 function waitsOn(t: OpenTicket, m: Recipient) {
   const admin = isAdmin(m)
   const starter = t.session?.startedByMemberId === m.id
   const p = payloadOf(t)
-  const offer = chiefOffer(t)
-  if (offer) return offer === m.id
   if (adminsOnly(t)) return admin
   if (t.type === 'approval')
     return managedOnly(t) ? admin || p.credentialOwnerId === m.id : admin || starter
@@ -126,8 +118,6 @@ function waitsOn(t: OpenTicket, m: Recipient) {
 function isFor(t: OpenTicket, m: Recipient) {
   const p = payloadOf(t)
   const starter = t.session?.startedByMemberId
-  const offer = chiefOffer(t)
-  if (offer) return offer === m.id
   if (t.type === 'cap' || adminsOnly(t)) return isAdmin(m)
   if (t.type === 'approval' && managedOnly(t))
     return p.credentialOwnerId ? p.credentialOwnerId === m.id : isAdmin(m)

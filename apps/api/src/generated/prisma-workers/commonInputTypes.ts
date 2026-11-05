@@ -552,6 +552,23 @@ export type EnumChiefOutcomeNullableWithAggregatesFilter<$PrismaModel = never> =
   _max?: Prisma.NestedEnumChiefOutcomeNullableFilter<$PrismaModel>
 }
 
+export type EnumChiefPassStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChiefPassStatus | Prisma.EnumChiefPassStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel> | $Enums.ChiefPassStatus
+}
+
+export type EnumChiefPassStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChiefPassStatus | Prisma.EnumChiefPassStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChiefPassStatusWithAggregatesFilter<$PrismaModel> | $Enums.ChiefPassStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel>
+}
+
 export type EnumWakeupKindFilter<$PrismaModel = never> = {
   equals?: $Enums.WakeupKind | Prisma.EnumWakeupKindFieldRefInput<$PrismaModel>
   in?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
@@ -1608,6 +1625,23 @@ export type NestedEnumChiefOutcomeNullableWithAggregatesFilter<$PrismaModel = ne
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedEnumChiefOutcomeNullableFilter<$PrismaModel>
   _max?: Prisma.NestedEnumChiefOutcomeNullableFilter<$PrismaModel>
+}
+
+export type NestedEnumChiefPassStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChiefPassStatus | Prisma.EnumChiefPassStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel> | $Enums.ChiefPassStatus
+}
+
+export type NestedEnumChiefPassStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChiefPassStatus | Prisma.EnumChiefPassStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChiefPassStatus[] | Prisma.ListEnumChiefPassStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChiefPassStatusWithAggregatesFilter<$PrismaModel> | $Enums.ChiefPassStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumChiefPassStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumWakeupKindFilter<$PrismaModel = never> = {

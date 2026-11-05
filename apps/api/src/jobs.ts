@@ -10,6 +10,7 @@
 //   workspace's failing job is tried again, then dead-lettered, without holding back any other's.
 //
 // A job's message carries ids only, never what it works on: a message is at most 128 KB.
+import { duePasses, runDuePasses } from './chief-pass.js'
 import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { cloudMinute, dueCloud } from './cloud.js'
@@ -60,6 +61,8 @@ export const JOBS = {
   // Each workspace's, each minute.
   schedules: { every: 60, due: dueSchedules, run: (key) => fireDueSchedules(ws(key)) },
   wakeups: { every: 60, due: dueWakeups, run: (key) => fireDueWakeups(ws(key)) },
+  // Chief's daily pass for the members who have it on, in their morning (src/chief-pass.ts).
+  'chief-pass': { every: 60, due: duePasses, run: (key, now) => runDuePasses(ws(key), now) },
   subscriptions: { every: 60, due: dueSubscriptions, run: (key) => readSubscriptions(ws(key)) },
   merges: { every: 60, due: dueMerges, run: (key) => advanceMerges(ws(key)) },
   // Its cloud computer: shut down without a plan, stopped once idle, kept alive meanwhile.

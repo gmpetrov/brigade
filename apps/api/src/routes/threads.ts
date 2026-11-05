@@ -94,6 +94,7 @@ import {
 import { movePublic, requestMove } from '../move.js'
 import {
   handBack,
+  retryThread,
   joinThread,
   mentionedTeammates,
   promptWithAttachments,
@@ -433,10 +434,16 @@ export const threads = new Hono<AppEnv>()
         })
       : []
     // Its child threads, out of lists: the sidebar shows them under it, folded. Those a
-    // teammate started (start_child), not a schedule's runs, which would fill it.
+    // teammate started (start_child), not a schedule's runs, which would fill it, nor Chief's
+    // decision threads of #724, which were never meant to show.
     const children = rows.length
       ? await c.var.db.session.findMany({
-          where: { parentId: { in: rows.map((r) => r.id) }, origin: 'child', archivedAt: null },
+          where: {
+            parentId: { in: rows.map((r) => r.id) },
+            origin: 'child',
+            archivedAt: null,
+            chiefDecisionId: null,
+          },
           select: {
             id: true,
             title: true,
@@ -589,8 +596,8 @@ export const threads = new Hono<AppEnv>()
         trigger: { select: { id: true, label: true, event: true } },
         schedule: { select: { id: true, title: true } },
         parent: { select: { id: true, title: true } },
-        // Shown in it, newest first: each a line that opens it. Not Chief's decision threads,
-        // which show as their decision on the question (chiefDecisions).
+        // Shown in it, newest first: each a line that opens it. Not Chief's decision threads of
+        // #724, which were never meant to show.
         children: {
           where: { chiefDecisionId: null },
           select: {
@@ -1619,39 +1626,7 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
-    const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computer.id)
-    if (protocol !== undefined && protocol < RETRY_PROTOCOL)
-      throw new HTTPException(409, {
-        message: "This computer's Brigade is too old to try a turn again. Send a message instead.",
-      })
-    // The thread's latest turn event: an error, with the turn it ended before it.
-    const [last, started] = await Promise.all([
-      db.sessionEvent.findFirst({
-        where: {
-          sessionId: thread.id,
-          type: { in: ['turn.started', 'turn.completed', 'error', 'message.user'] },
-        },
-        orderBy: { seq: 'desc' },
-        select: { data: true },
-      }),
-      db.sessionEvent.findFirst({
-        where: { sessionId: thread.id, type: 'turn.started' },
-        orderBy: { seq: 'desc' },
-        select: { data: true },
-      }),
-    ])
-    const error = last?.data as AgentEvent | undefined
-    if (error?.type !== 'error')
-      throw new HTTPException(409, { message: 'There is nothing to try again: no turn failed.' })
-    const turn = started?.data as AgentEvent | undefined
-    const teammate = teammateIn(thread, turn?.type === 'turn.started' ? turn.teammateId : undefined)
-    await deliver(thread.computer, {
-      type: 'thread.retry',
-      commandId: randomUUID(),
-      thread: await specFor(db, thread, { teammate }),
-      error: error.message.slice(0, 10_000),
-      memberId: scope.memberId,
-    })
+    await retryThread(db, scope, thread, scope.memberId)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
