@@ -58,6 +58,7 @@ const { hubs, runnerSocket } = await import('../src/hub.js')
 const { PROTOCOL_VERSION } = await import('@brigade/contracts')
 const { promptThread, startThread } = await import('../src/work.js')
 const { cloudAvailable } = await import('../src/cloud.js')
+const { issueDeletionCode, TRIES } = await import('../src/deletion-code.js')
 
 // --- Stripe, faked -------------------------------------------------------------------------
 
@@ -157,12 +158,18 @@ async function thread(
   return { sessionId: session.id, key }
 }
 
-const call = (path: string, cookie: string, body: unknown) =>
+const call = (path: string, cookie: string, body: unknown, method = 'DELETE') =>
   workspaces.request(path, {
-    method: 'DELETE',
+    method,
     headers: { cookie, 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
+
+/** The code mailed to delete the workspace, as its owner would read it. */
+const workspaceCode = (userId: string, workspace: { id: string; name: string }) =>
+  issueDeletionCode({ kind: 'workspace', userId, workspaceId: workspace.id, name: workspace.name })
+/** The code mailed to delete the account. */
+const accountCode = (userId: string) => issueDeletionCode({ kind: 'account', userId })
 
 after(async () => {
   if (skip) return
@@ -192,11 +199,12 @@ test('only an owner deletes a workspace, typing its name', { skip }, async () =>
   await enter(ada.userId, org.organizationId, first!.id)
   await enter(bob.userId, org.organizationId, first!.id)
 
-  assert.equal((await call('/workspace', bob.cookie, { name: 'First' })).status, 403)
-  assert.equal((await call('/workspace', ada.cookie, { name: 'Second' })).status, 400)
+  const code = await workspaceCode(ada.userId, first!)
+  assert.equal((await call('/workspace', bob.cookie, { name: 'First', code })).status, 403)
+  assert.equal((await call('/workspace', ada.cookie, { name: 'Second', code })).status, 400)
   assert.ok(await prisma.workspace.findUnique({ where: { id: first!.id } }))
 
-  const deleted = await call('/workspace', ada.cookie, { name: 'First' })
+  const deleted = await call('/workspace', ada.cookie, { name: 'First', code })
   assert.equal(deleted.status, 200)
   deletedWorkspaces.push(first!.id)
   assert.deepEqual(await deleted.json(), { activeWorkspaceId: second!.id, organizationGone: false })
@@ -570,8 +578,12 @@ test(
       ['Shared'],
     )
     await enter(ada.userId, org.organizationId, org.workspaces[0]!.id)
-    assert.equal((await call('/me', ada.cookie, { email: 'someone@example.com' })).status, 400)
-    const refused = await call('/me', ada.cookie, { email: ada.email })
+    const code = await accountCode(ada.userId)
+    assert.equal(
+      (await call('/me', ada.cookie, { email: 'someone@example.com', code })).status,
+      400,
+    )
+    const refused = await call('/me', ada.cookie, { email: ada.email, code })
     assert.equal(refused.status, 409)
     assert.match(await refused.text(), /Make someone else an owner of/)
     assert.ok(await prisma.user.findUnique({ where: { id: ada.userId } }))
@@ -591,7 +603,8 @@ test(
       { organizationId: org.organizationId, workspaceId: one!.id },
       org.members[carol.userId]!,
     )
-    const response = await call('/me', carol.cookie, { email: carol.email.toUpperCase() })
+    const code = await accountCode(carol.userId)
+    const response = await call('/me', carol.cookie, { email: carol.email.toUpperCase(), code })
     assert.equal(response.status, 204)
     deletedWorkspaces.push(one!.id, two!.id)
     // Signed out in the same answer.
@@ -629,10 +642,12 @@ test(
     const adas = await thread(scope, org.members[ada.userId]!)
     // Not while one of theirs is at work.
     await prisma.session.update({ where: { id: bobs.sessionId }, data: { status: 'running' } })
-    assert.equal((await call('/me', bob.cookie, { email: bob.email })).status, 409)
+    // The code stays good after a refusal, for another try.
+    const code = await accountCode(bob.userId)
+    assert.equal((await call('/me', bob.cookie, { email: bob.email, code })).status, 409)
     await prisma.session.update({ where: { id: bobs.sessionId }, data: { status: 'idle' } })
 
-    assert.equal((await call('/me', bob.cookie, { email: bob.email })).status, 204)
+    assert.equal((await call('/me', bob.cookie, { email: bob.email, code })).status, 204)
     assert.equal(await prisma.user.findUnique({ where: { id: bob.userId } }), null)
     assert.equal(await prisma.member.findUnique({ where: { id: org.members[bob.userId]! } }), null)
     assert.equal(await prisma.session.findUnique({ where: { id: bobs.sessionId } }), null)
@@ -644,6 +659,118 @@ test(
     await prisma.bucketCleanup.deleteMany({ where: { sessionId: bobs.sessionId } })
   },
 )
+
+// --- The code mailed first ----------------------------------------------------------------
+
+test('a workspace goes only with the code mailed to its owner for it', { skip }, async () => {
+  const ada = await person('Ada11')
+  const bob = await person('Bob11')
+  const org = await organization(
+    [
+      { userId: ada.userId, role: 'owner' },
+      { userId: bob.userId, role: 'owner' },
+    ],
+    ['Kept', 'Other'],
+  )
+  const [kept, other] = org.workspaces
+  await enter(ada.userId, org.organizationId, kept!.id)
+  const still = async () =>
+    assert.ok(await prisma.workspace.findUnique({ where: { id: kept!.id } }))
+
+  // Asked for over HTTP: only by an owner who typed its name, and not twice in a row.
+  await enter(bob.userId, org.organizationId, kept!.id)
+  await prisma.member.update({ where: { id: org.members[bob.userId]! }, data: { role: 'admin' } })
+  const ask = (cookie: string, name: string) =>
+    call('/workspace/deletion-code', cookie, { name }, 'POST')
+  assert.equal((await ask(bob.cookie, 'Kept')).status, 403)
+  assert.equal((await ask(ada.cookie, 'Other')).status, 400)
+  assert.equal((await ask(ada.cookie, 'Kept')).status, 204)
+  assert.equal((await ask(ada.cookie, 'Kept')).status, 429)
+  await prisma.member.update({ where: { id: org.members[bob.userId]! }, data: { role: 'owner' } })
+
+  // No code, one never sent, one for another workspace, one of another owner's.
+  const remove = (cookie: string, code: string) =>
+    call('/workspace', cookie, { name: 'Kept', code })
+  await prisma.verification.deleteMany({
+    where: { identifier: { contains: kept!.id } },
+  })
+  assert.equal((await remove(ada.cookie, '')).status, 400)
+  assert.equal((await remove(ada.cookie, '123456')).status, 400)
+  const otherCode = await workspaceCode(ada.userId, other!)
+  assert.equal((await remove(ada.cookie, otherCode)).status, 400)
+  const bobsCode = await workspaceCode(bob.userId, kept!)
+  assert.equal((await remove(ada.cookie, bobsCode)).status, 400)
+  await still()
+
+  // Wrong guesses use it up: after them, even the right code needs asking again.
+  const code = await workspaceCode(ada.userId, kept!)
+  const wrong = code === '000000' ? '111111' : '000000'
+  for (let i = 1; i < TRIES; i++) {
+    const response = await remove(ada.cookie, wrong)
+    assert.equal(response.status, 400)
+    assert.match(await response.text(), /not the right one/)
+  }
+  const last = await remove(ada.cookie, wrong)
+  assert.match(await last.text(), /Too many wrong codes/)
+  assert.equal((await remove(ada.cookie, code)).status, 400)
+  await still()
+
+  // An expired one too.
+  await prisma.verification.deleteMany({ where: { identifier: { contains: kept!.id } } })
+  const late = await workspaceCode(ada.userId, kept!)
+  await prisma.verification.updateMany({
+    where: { identifier: { contains: kept!.id } },
+    data: { expiresAt: new Date(Date.now() - 1000) },
+  })
+  assert.equal((await remove(ada.cookie, late)).status, 400)
+  await still()
+
+  // The right one, fresh: deleted, and the code is used up.
+  await prisma.verification.deleteMany({ where: { identifier: { contains: kept!.id } } })
+  const fresh = await workspaceCode(ada.userId, kept!)
+  assert.equal((await remove(ada.cookie, fresh)).status, 200)
+  deletedWorkspaces.push(kept!.id)
+  assert.equal(await prisma.workspace.findUnique({ where: { id: kept!.id } }), null)
+  assert.equal(
+    await prisma.verification.count({
+      where: { identifier: `deletion:workspace:${kept!.id}:${ada.userId}` },
+    }),
+    0,
+  )
+  await prisma.verification.deleteMany({
+    where: { OR: [kept!.id, other!.id].map((w) => ({ identifier: { contains: w } })) },
+  })
+})
+
+test('an account goes only with the code mailed for it', { skip }, async () => {
+  const dan = await person('Dan')
+  await organization([{ userId: dan.userId, role: 'owner' }], ['Solo'])
+  const ask = (email: string) => call('/me/deletion-code', dan.cookie, { email }, 'POST')
+  assert.equal((await ask('someone@example.com')).status, 400)
+  assert.equal((await ask(dan.email)).status, 204)
+  assert.equal((await call('/me', dan.cookie, { email: dan.email, code: '' })).status, 400)
+  // A workspace's code is not an account's.
+  const org = await prisma.member.findFirstOrThrow({ where: { userId: dan.userId } })
+  const solo = await prisma.workspace.findFirstOrThrow({
+    where: { organizationId: org.organizationId },
+  })
+  const wrongKind = await workspaceCode(dan.userId, solo)
+  assert.equal((await call('/me', dan.cookie, { email: dan.email, code: wrongKind })).status, 400)
+  assert.ok(await prisma.user.findUnique({ where: { id: dan.userId } }))
+
+  await prisma.verification.deleteMany({ where: { identifier: `deletion:account:${dan.userId}` } })
+  const code = await accountCode(dan.userId)
+  assert.equal((await call('/me', dan.cookie, { email: dan.email, code })).status, 204)
+  deletedWorkspaces.push(solo.id)
+  assert.equal(await prisma.user.findUnique({ where: { id: dan.userId } }), null)
+  assert.equal(
+    await prisma.verification.count({ where: { identifier: `deletion:account:${dan.userId}` } }),
+    0,
+  )
+  await prisma.verification.deleteMany({
+    where: { identifier: `deletion:workspace:${solo.id}:${dan.userId}` },
+  })
+})
 
 /** A byte for a key, so each file differs. */
 function i(key: string) {

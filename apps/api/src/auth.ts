@@ -260,9 +260,12 @@ export type AuthSession = typeof auth.$Infer.Session
  * and joins through src/routes/members.ts, which keeps the sending budget
  * (src/invitation-budget.ts) and calls them with auth.api, and changes roles and removes members
  * there too, where a removed member's threads and files go with them (src/member-remove.ts).
+ * Deleting an organization too: the dashboard deletes its workspaces (and the last one takes it
+ * with it) through src/routes/workspaces.ts, which asks for the code mailed to the owner
+ * (src/deletion-code.ts).
  */
 const CLOSED_ROUTES =
-  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation|update-member-role|remove-member|leave)\/?$/
+  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation|update-member-role|remove-member|leave|delete)\/?$/
 
 export const authRouteClosed = (request: Request) =>
   CLOSED_ROUTES.test(new URL(request.url).pathname)
