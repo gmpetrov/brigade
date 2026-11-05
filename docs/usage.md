@@ -68,3 +68,22 @@ Not counted: what Claude Code spends outside its transcript (the guess at a
 person's next message, its own small calls), about 2 to 3% of a thread's tokens.
 Usage counts from 25 October 2026; when a runner first reads its computer's logs,
 it sends what they still hold, which replaces the stream's totals of those turns.
+
+## Sharing it
+
+Share, beside the period, opens the period's card: a 1200×630 PNG drawn in the
+browser (`apps/web/lib/usage-card-image.ts`, in the page's theme), with the total,
+the providers it was spent on, how much it rose from the period before, and a
+GitHub-like grid of when the tokens went, in the person's own hours
+(`lib/usage-card.ts`). 24 hours is 24 hours by quarter hour; 7 days, 7 stretches
+of 24 hours by hour; 30 days, 30 stretches of 24 hours by 3 hours, each ending
+with the hour now falls in. A cell's shade is its rank among the cells that spent
+anything, as GitHub's. Download, Copy image, or Post on X, which copies the image
+and opens a post with a line of text, for the person to paste it in. Nothing
+leaves the browser until they do; the card shows counts only.
+
+The report gives the grid's tokens by quarter hour in UTC (`quarters`), and the
+totals of the stretch of the same length before (`previous`), only when Usage
+counted all of it the way it counts now (from 1 November 2026,
+`COUNTED_ALIKE_SINCE`) and the workspace, or the member's accounts, spent tokens
+before it began. The card shows the rise only when usage went up.
