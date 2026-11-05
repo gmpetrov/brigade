@@ -614,71 +614,426 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     )
   })
 
-  test('App writes made on Chief’s word ask the person; their own word lifts it', async () => {
-    const { handleConnectorCall } = await import('../src/connector-calls.js')
-    const id = await thread()
-    const gmailApp = await db.app.create({
-      data: { key: 'gmail', createdByMemberId: member('ada') },
-    } as never)
+  /** A Gmail account Riley may write to, its writes allowed without asking. */
+  async function gmailFor(teammateId: string) {
+    // The workspace's Gmail App: one per workspace.
+    const gmailApp =
+      (await db.app.findFirst({ where: { key: 'gmail' } })) ??
+      (await db.app.create({ data: { key: 'gmail', createdByMemberId: member('ada') } } as never))
     const gmail = await db.connection.create({
       data: {
         appId: gmailApp.id,
         kind: 'gmail',
-        label: 'team@example.com',
+        label: `team-${randomUUID().slice(0, 4)}@example.com`,
         status: 'active',
         createdByMemberId: member('ada'),
       },
     } as never)
     await db.grant.create({
-      data: { teammateId: riley, connectionId: gmail.id, scope: 'read_write' },
+      data: { teammateId, connectionId: gmail.id, scope: 'read_write' },
     } as never)
-    const label = async () => {
-      const replies: { ok?: boolean; error?: string }[] = []
-      await handleConnectorCall(
-        { computerId: cloud, organizationId: org, workspaceId },
-        {
-          type: 'connector.call',
-          callId: `call-${randomUUID()}`,
-          sessionId: id,
-          teammateId: riley,
-          connectionId: gmail.id,
-          operation: 'gmail_modify_labels',
-          input: { messageId: 'm1', addLabelIds: ['STARRED'] },
-        },
-        (message) => void replies.push(message as never),
-      )
-      return replies
+    return gmail.id
+  }
+
+  /** A write of Riley's in a thread: the approval tickets it opened there. */
+  async function labels(sessionId: string, connectionId: string) {
+    const { handleConnectorCall } = await import('../src/connector-calls.js')
+    await handleConnectorCall(
+      { computerId: cloud, organizationId: org, workspaceId },
+      {
+        type: 'connector.call',
+        callId: `call-${randomUUID()}`,
+        sessionId,
+        teammateId: riley,
+        connectionId,
+        operation: 'gmail_modify_labels',
+        input: { messageId: 'm1', addLabelIds: ['STARRED'] },
+      },
+      () => {},
+    )
+    return db.ticket.findMany({ where: { sessionId, type: 'approval', status: 'open' } })
+  }
+
+  /** Chief answered in the thread, in Ada's name: its work goes on Chief's word. */
+  async function answered(id: string) {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const made = await pending(id, await asks(id))
+    const conn = await runner()
+    try {
+      assert.equal((await decide(made, { option: 1 })).status, 'answered')
+    } finally {
+      conn.close()
     }
-    const asked = () =>
-      db.ticket.findMany({ where: { sessionId: id, type: 'approval', status: 'open' } })
+    return made
+  }
 
-    await person(id, 'Star the mail from Acme.')
-    assert.equal(await chiefAnswers.actingOnChiefsWord(db, id), false)
+  const answer = (id: string, text: string) =>
+    person(id, text).then((seq) =>
+      chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
+        { seq, event: { type: 'message.user', memberId: member('ada'), text } },
+      ]),
+    )
+
+  test('App writes made on Chief’s word ask the person, whatever comes in meanwhile, until they write', async () => {
+    const id = await thread()
+    const gmail = await gmailFor(riley)
     // Riley's access lets it write: it goes ahead (and fails here, with no Google token).
-    await label()
-    assert.equal((await asked()).length, 0)
+    await person(id, 'Star the mail from Acme.')
+    assert.equal((await labels(id, gmail)).length, 0)
 
-    await say(id, {
-      type: 'message.user',
-      memberId: null,
-      text: contracts.chiefAnswerMessage({ decisionId: 'd1', answer: 'Star it', reason: 'r' }),
-    })
-    // A wake-up's note after it: still on Chief's word.
-    await say(id, { type: 'message.user', memberId: null, text: 'Wake-up you set at …' })
-    assert.equal(await chiefAnswers.actingOnChiefsWord(db, id), true)
-    await label()
-    const tickets = await asked()
+    await answered(id)
+    const session = await db.session.findFirstOrThrow({ where: { id } })
+    assert.ok(chiefAnswers.onChiefsWord(session))
+    // Brigade's notes meanwhile, as many as they come (reports, wake-ups): still Chief's word.
+    for (let i = 0; i < 55; i++)
+      await say(id, { type: 'message.user', memberId: null, text: `A sub-thread's report ${i}` })
+    const tickets = await labels(id, gmail)
     assert.equal(tickets.length, 1)
     assert.match(
       (tickets[0]!.payload as { reason: string }).reason,
       /acts on Chief's answer in your name/,
     )
-    // Opening a pull request stays as its access says.
+    // Opening a pull request stays as its access says; merging does not.
     assert.ok(chiefAnswers.UNDOABLE_WRITES.has('github_create_pull_request'))
     assert.ok(!chiefAnswers.UNDOABLE_WRITES.has('github_merge_pull_request'))
 
-    await person(id, 'Go on.')
-    assert.equal(await chiefAnswers.actingOnChiefsWord(db, id), false)
+    // Ada writes: her word again.
+    await answer(id, 'Go on.')
+    assert.equal(
+      chiefAnswers.onChiefsWord(await db.session.findFirstOrThrow({ where: { id } })),
+      false,
+    )
+  })
+
+  test('work handed on from Chief’s word goes on it too: a sub-thread, a task, a message', async () => {
+    const { loadThread } = await import('../src/thread-spec.js')
+    const { handleChildCall } = await import('../src/children.js')
+    const id = await thread()
+    const gmail = await gmailFor(riley)
+    await answered(id)
+    const conn = await runner()
+    try {
+      const parent = await loadThread(db, id)
+      const started = (await handleChildCall(db, scope, parent, parent.teammate, {
+        name: 'start_child',
+        title: 'Process the mailbox',
+        instructions: 'Star the mail from Acme.',
+        wait: true,
+      })) as { threadId?: string; error?: string }
+      assert.ok(started.threadId, JSON.stringify(started))
+      const child = await db.session.findFirstOrThrow({ where: { id: started.threadId } })
+      assert.ok(chiefAnswers.onChiefsWord(child))
+      // Its write asks, though no Chief answer is in its own events.
+      assert.equal((await labels(child.id, gmail)).length, 1)
+
+      // A message to a sub-thread started before carries it there too.
+      await db.session.updateMany({ where: { id: child.id }, data: { chiefWordAt: null } })
+      const { messageChild } = await import('../src/children.js')
+      const sent = await messageChild(
+        db,
+        scope,
+        await db.session.findFirstOrThrow({ where: { id } }),
+        { id: riley, name: 'Riley' },
+        child.id,
+        'Archive them too.',
+      )
+      assert.ok('ok' in sent, JSON.stringify(sent))
+      assert.ok(
+        chiefAnswers.onChiefsWord(await db.session.findFirstOrThrow({ where: { id: child.id } })),
+      )
+
+      // A task it starts for a teammate: its thread goes on Chief's word too.
+      const { handleTaskCall } = await import('../src/tasks.js')
+      const replies: { ok: boolean; error?: string; output?: { threadId?: string } }[] = []
+      await handleTaskCall(
+        { computerId: cloud, organizationId: org, workspaceId } as never,
+        {
+          type: 'task.call',
+          callId: `call-${randomUUID()}`,
+          sessionId: id,
+          teammateId: riley,
+          operation: {
+            name: 'create',
+            title: 'Archive the old mail',
+            description: '',
+            priority: 'medium',
+            assignee: riley,
+          },
+        } as never,
+        (m) => void replies.push(m as never),
+      )
+      assert.equal(replies[0]?.ok, true, JSON.stringify(replies))
+      const task = await db.session.findFirstOrThrow({
+        where: { task: { title: 'Archive the old mail' } },
+      })
+      assert.ok(chiefAnswers.onChiefsWord(task))
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('on Chief’s word no routine is set up, and a credential that goes without asking asks', async () => {
+    const { handleScheduleCall } = await import('../src/schedules.js')
+    const { handleCredentialRequest } = await import('../src/credentials.js')
+    const { sealSecret } = await import('../src/vault.js')
+    const id = await thread()
+    await answered(id)
+    const replies: { ok: boolean; error?: string }[] = []
+    await handleScheduleCall(
+      { computerId: cloud, organizationId: org, workspaceId } as never,
+      {
+        type: 'schedule.call',
+        callId: `call-${randomUUID()}`,
+        sessionId: id,
+        teammateId: riley,
+        operation: {
+          name: 'create',
+          title: 'Daily mail',
+          instructions: 'Send the digest.',
+          cron: '0 9 * * *',
+          timezone: 'Europe/Paris',
+        },
+      } as never,
+      (m) => void replies.push(m as never),
+    )
+    assert.equal(replies[0]?.ok, false)
+    assert.match(replies[0]?.error ?? '', /a routine waits for them/)
+    assert.equal(await db.schedule.count({ where: { teammateId: riley } }), 0)
+
+    const credential = await db.credential.create({
+      data: {
+        kind: 'api_key',
+        name: 'Deploy key',
+        vaultSecretId: await sealSecret(db, scope, { apiKey: 'secret-value' }),
+        createdByMemberId: member('ada'),
+      },
+    } as never)
+    await db.credentialGrant.create({
+      data: { credentialId: credential.id, teammateId: riley, withoutAsking: true },
+    } as never)
+    const use = async (sessionId: string) => {
+      const out: { ok?: boolean }[] = []
+      await handleCredentialRequest(
+        { computerId: cloud, organizationId: org, workspaceId },
+        {
+          type: 'credential.request',
+          callId: `call-${randomUUID()}`,
+          sessionId,
+          teammateId: riley,
+          action: 'release',
+          credentialId: credential.id,
+          use: 'env',
+        },
+        (m) => void out.push(m as never),
+      )
+      return out
+    }
+    // On Chief's word: it asks Ada, and nothing is released meanwhile.
+    assert.ok(!(await use(id)).some((m) => m.ok === true))
+    const asked = await db.ticket.findMany({
+      where: { sessionId: id, type: 'approval', status: 'open' },
+    })
+    assert.equal(asked.length, 1)
+    assert.match((asked[0]!.payload as { reason: string }).reason, /acts on Chief's answer/)
+    // In a thread of Ada's own word, as its grant says: no ticket.
+    const plain = await thread()
+    await person(plain, 'Deploy it.')
+    assert.equal((await use(plain))[0]?.ok, true)
+    assert.equal(await db.ticket.count({ where: { sessionId: plain } }), 0)
+  })
+
+  test('an answer the person overtook while its computer was offline never goes', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    // Offline: Ada's Mac, not the cloud computer, which would start.
+    await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'member_machine' } })
+    try {
+      assert.equal((await decide(made, { option: 1 })).status, 'answered')
+      const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
+      assert.equal(wakeup.status, 'pending')
+      const conn = await runner()
+      try {
+        await answer(id, 'Not yet')
+        assert.equal(
+          (await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status,
+          'cancelled',
+        )
+        assert.equal((await row(made.decision.id)).status, 'superseded')
+        // Fired anyway (a tick that read it before): it goes nowhere.
+        await db.wakeup.updateMany({ where: { id: wakeup.id }, data: { status: 'pending' } })
+        await db.chiefDecision.updateMany({
+          where: { id: made.decision.id },
+          data: { status: 'answered' },
+        })
+        const { fireNow } = await import('../src/wakeups.js')
+        await fireNow(wakeup.id)
+        assert.equal(
+          conn.sent.filter(
+            (m) =>
+              m.type === 'thread.prompt' &&
+              (m.thread as { sessionId?: string }).sessionId === id &&
+              contracts.chiefAnswerNote(m.text as string),
+          ).length,
+          0,
+        )
+        assert.equal(
+          (await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status,
+          'cancelled',
+        )
+      } finally {
+        conn.close()
+      }
+    } finally {
+      await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'cloud' } })
+    }
+  })
+
+  test('a card the person dismissed is not answered', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['approach'] })
+    const id = await thread()
+    const labels = ['Sequential processing', 'Concurrent processing']
+    const card = await asks(id, labels, { choices: true })
+    const made = await pending(id, card, labels)
+    await db.chiefDecision.updateMany({
+      where: { id: made.decision.id },
+      data: {
+        options: labels.map((label) => ({ label, message: contracts.choiceMessage({ label }) })),
+      },
+    })
+    const response = await call('ada', `/${id}/choices/dismiss`, { body: { seq: card } })
+    assert.equal(response.status, 200, await response.clone().text())
+    assert.equal((await row(made.decision.id)).status, 'superseded')
+    // Its decision arriving after it: nothing goes.
+    await db.chiefDecision.updateMany({
+      where: { id: made.decision.id },
+      data: { status: 'pending' },
+    })
+    assert.equal((await decide(made, { option: 1, kind: 'approach' })).status, 'superseded')
+    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
+  })
+
+  test('the brief has the card’s question and its options’ descriptions, and no mandate Chief may not read', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: [] })
+    const { saveLibraryFile } = await import('../src/library.js')
+    await saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: member('ada') },
+      {
+        path: contracts.MANDATE_PATH,
+        bytes: new TextEncoder().encode('# Mandate\n\nThis week: MANDATE_SENTINEL_724\n'),
+      },
+    )
+    const prompts = async () => {
+      const id = await thread()
+      await person(id, 'Prepare the rollout.')
+      await say(id, { type: 'turn.started', teammateId: riley, accountId: account })
+      await say(id, {
+        type: 'message.done',
+        id: `m-${randomUUID()}`,
+        text: 'Here are the two routes.',
+      })
+      await say(id, {
+        type: 'tool.started',
+        toolCallId: `c-${randomUUID()}`,
+        toolName: 'offer_choices',
+        input: {
+          question: 'Where should I deploy the release?',
+          options: [
+            { id: 'a', label: 'Route A', description: 'Deploy to production now' },
+            { id: 'b', label: 'Route B', description: 'Deploy to staging only' },
+          ],
+        },
+      })
+      await say(id, { type: 'turn.completed', finishReason: 'stop' })
+      const conn = await runner()
+      try {
+        await ended(id)
+        await until(
+          () =>
+            conn.sent.some(
+              (m) =>
+                m.type === 'thread.prompt' &&
+                (m.thread as { parent?: { id: string } }).parent?.id === id,
+            ),
+          'the decision thread',
+        )
+        return conn.sent.find(
+          (m) =>
+            m.type === 'thread.prompt' &&
+            (m.thread as { parent?: { id: string } }).parent?.id === id,
+        )!.text as string
+      } finally {
+        conn.close()
+      }
+    }
+    const open = await prompts()
+    assert.match(open, /## The question\nWhere should I deploy the release\?/)
+    assert.match(open, /1\. Route A: Deploy to production now\n2\. Route B: Deploy to staging only/)
+    assert.match(open, /MANDATE_SENTINEL_724/)
+    // A person closes chief/ to Chief: its mandate stays out of the brief.
+    const folder = await db.libraryFolder.create({
+      data: { path: 'chief', restricted: true },
+    } as never)
+    try {
+      const closed = await prompts()
+      assert.ok(!closed.includes('MANDATE_SENTINEL_724'))
+      assert.match(closed, /\(None yet:/)
+    } finally {
+      await db.libraryFolder.deleteMany({ where: { id: folder.id } })
+    }
+  })
+
+  test('two first lines of a list made at once both stay', async () => {
+    const { addListLine } = await import('../src/lists.js')
+    const { documentText } = await import('../src/library.js')
+    const path = `chief/race-${randomUUID().slice(0, 6)}.md`
+    let announce!: () => void
+    let release!: () => void
+    const reached = new Promise<void>((r) => (announce = r))
+    const held = new Promise<void>((r) => (release = r))
+    let first = true
+    // The first call stops right after seeing no file, while the second makes it and adds its line.
+    const slow = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'document') return Reflect.get(target, key)
+        return new Proxy(db.document, {
+          get(doc, method) {
+            if (method !== 'findFirst') return Reflect.get(doc, method)
+            return async (...args: unknown[]) => {
+              const found = await (doc.findFirst as (...a: unknown[]) => Promise<unknown>)(...args)
+              if (first) {
+                first = false
+                assert.equal(found, null)
+                announce()
+                await held
+              }
+              return found
+            }
+          },
+        })
+      },
+    })
+    const actor = { type: 'teammate' as const, id: chief }
+    const a = addListLine(slow, scope, actor, {
+      path,
+      header: '# Parked\n',
+      text: 'First proposal',
+    })
+    await reached
+    try {
+      await addListLine(db, scope, actor, { path, header: '# Parked\n', text: 'Second proposal' })
+    } finally {
+      release()
+    }
+    await a
+    const file = await db.document.findFirstOrThrow({
+      where: { path, kind: 'library', deletedAt: null },
+    })
+    const text = await documentText(scope, file)
+    assert.match(text, /First proposal/)
+    assert.match(text, /Second proposal/)
   })
 
   test('marked wrong: the teammate is told, and the kind goes back to suggestions', async () => {

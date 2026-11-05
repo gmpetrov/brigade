@@ -35,6 +35,7 @@ import { attachToThread } from './attachments.js'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
+import { markOnChiefsWord } from './chief-answers.js'
 import { looksTaken } from './review-state.js'
 import { askedBy, loadThread } from './thread-spec.js'
 import { fireNow, firedInARow } from './wakeups.js'
@@ -76,6 +77,8 @@ type Session = {
   playbookRunId: string | null
   /** In a playbook's run: the teammate setting it works as; null, the one its runs start with. */
   playbookTeammate?: string | null
+  /** Its work goes on Chief's word (src/chief-answers.ts): a child it starts goes on it too. */
+  chiefWordAt?: Date | null
 }
 
 /** A report as stored, or null when there is none (or it is not one Brigade wrote). */
@@ -904,7 +907,7 @@ async function followThread(
 export async function messageChild(
   db: ScopedDb,
   scope: Scope,
-  parent: { id: string; title: string },
+  parent: { id: string; title: string; chiefWordAt?: Date | null },
   teammate: { id: string; name: string },
   childId: string,
   text: string,
@@ -953,6 +956,8 @@ export async function messageChild(
       archivedAt: null,
     },
   })
+  // Work handed on Chief's word goes on it there too; a review stays the review it is.
+  if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordAt: parent.chiefWordAt ?? null })
   const outcome = await promptThread(db, scope, thread, {
     text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
     memberId: null,
@@ -1182,6 +1187,8 @@ export async function handleChildCall(
       },
       projectId: session.projectId,
       effort: (parent.effort as never) ?? null,
+      // Started on Chief's word: the child's work goes on it too (src/chief-answers.ts).
+      chiefWord: !!session.chiefWordAt,
     })
     if (outcome === 'offline')
       return { error: 'This computer is offline; the child could not start.' }

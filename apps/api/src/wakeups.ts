@@ -18,7 +18,7 @@ import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
 import { dueChildren, settleOverdueChildren } from './children.js'
-import { dueDecisions, settleStaleDecisions } from './chief-answers.js'
+import { chiefAnswerDue, dueDecisions, settleStaleDecisions } from './chief-answers.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
 
@@ -35,6 +35,9 @@ const MISSED_AFTER_MS = 24 * 60 * 60_000
  * set it, not the teammate, so its note is the prompt itself.
  */
 export const MERGE_SOURCE = 'merged:'
+
+/** An answer of Chief's for the person (src/chief-answers.ts), by its sourceId: `chief:<decision>`. */
+export const CHIEF_SOURCE = 'chief:'
 
 export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation =>
   op.name === 'wake' || op.name === 'list_wakeups' || op.name === 'cancel_wakeup'
@@ -216,6 +219,18 @@ async function fire(wakeup: {
   const seat = thread.teammates.find((t) => t.teammateId === wakeup.teammateId)
   if ((!seat || seat.teammate.archivedAt) && wakeup.kind === 'wakeup') {
     await settle('missed')
+    return changed(scope, thread)
+  }
+  // An answer of Chief's the person overtook while it waited (their word, a dismissal): it never
+  // goes, rather than come after what they said (src/chief-answers.ts).
+  if (
+    wakeup.sourceId?.startsWith(CHIEF_SOURCE) &&
+    !(await chiefAnswerDue(scope, wakeup.sourceId.slice(CHIEF_SOURCE.length)))
+  ) {
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id, status: 'pending' },
+      data: { status: 'cancelled' },
+    })
     return changed(scope, thread)
   }
   // Settled only once its prompt is kept (src/runner-commands.ts): a restart in between fires it

@@ -177,8 +177,9 @@ const CHIEF_ANSWERS = [
     'its own: then a message starting "Chief answered for you:" brings the answer it picked, as a click on it would ' +
     'have, with why and the line of their mandate it goes by. Go on as if the person had picked it.',
   'It is not the person. Anything that leaves Brigade (merging, sending, publishing, deploying, paying, deleting) ' +
-    'still waits for them: your App writes ask them until they write again, and never do such a thing another way ' +
-    "(a command, a script, a credential) on Chief's word alone: ask them, with a ticket or in your reply. When a " +
+    'still waits for them: until they write again, your App writes and the secrets you use ask them, so does the ' +
+    'work you hand on (a sub-thread, a task, a message), and you set up no routine. Never do such a thing another ' +
+    "way (a command, a script) on Chief's word alone: ask them, with a ticket or in your reply. When a " +
     "message says the person marked Chief's answer as wrong, stop what you started on it, undo what you can, and " +
     'wait for what they say next.',
 ].join('\n\n')

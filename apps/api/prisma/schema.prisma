@@ -731,6 +731,10 @@ model Session {
   /// decision, not among its sub-threads.
   chiefDecisionId String?         @unique
   chiefDecision   ChiefDecision?  @relation("ChiefDecisionChild", fields: [chiefDecisionId], references: [id], onDelete: SetNull)
+  /// Its work goes on Chief's word: Chief answered in its person's name and they have not written
+  /// in it since, or it was handed work while its giver was (a sub-thread, a task, a message).
+  /// Meanwhile its App writes ask a person, whatever its teammate's access (connector-calls.ts).
+  chiefWordAt     DateTime?
 
   @@index([workspaceId, createdAt])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
@@ -897,8 +901,10 @@ model ChiefDecision {
   member         Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
   /// The teammate whose question it is: an answer wakes it.
   teammateId     String
-  /// The question's card (its tool.started seq) and the answers it offers ([{ label, message }]).
+  /// The question's card (its tool.started seq), what it asks (a choices card's question), and
+  /// the answers it offers ([{ label, message, description? }]).
   askSeq         Int
+  question       String?
   options        Json
   /// Chief's decision thread, its id chosen with the decision: started again after a restart, it
   /// is the same one.

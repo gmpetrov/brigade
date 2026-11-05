@@ -45,6 +45,7 @@ export type ChiefDecisionMinAggregateOutputType = {
   memberId: string | null
   teammateId: string | null
   askSeq: number | null
+  question: string | null
   childSessionId: string | null
   status: $Enums.ChiefDecisionStatus | null
   verdict: string | null
@@ -68,6 +69,7 @@ export type ChiefDecisionMaxAggregateOutputType = {
   memberId: string | null
   teammateId: string | null
   askSeq: number | null
+  question: string | null
   childSessionId: string | null
   status: $Enums.ChiefDecisionStatus | null
   verdict: string | null
@@ -91,6 +93,7 @@ export type ChiefDecisionCountAggregateOutputType = {
   memberId: number
   teammateId: number
   askSeq: number
+  question: number
   options: number
   childSessionId: number
   status: number
@@ -127,6 +130,7 @@ export type ChiefDecisionMinAggregateInputType = {
   memberId?: true
   teammateId?: true
   askSeq?: true
+  question?: true
   childSessionId?: true
   status?: true
   verdict?: true
@@ -150,6 +154,7 @@ export type ChiefDecisionMaxAggregateInputType = {
   memberId?: true
   teammateId?: true
   askSeq?: true
+  question?: true
   childSessionId?: true
   status?: true
   verdict?: true
@@ -173,6 +178,7 @@ export type ChiefDecisionCountAggregateInputType = {
   memberId?: true
   teammateId?: true
   askSeq?: true
+  question?: true
   options?: true
   childSessionId?: true
   status?: true
@@ -284,6 +290,7 @@ export type ChiefDecisionGroupByOutputType = {
   memberId: string
   teammateId: string
   askSeq: number
+  question: string | null
   options: runtime.JsonValue
   childSessionId: string
   status: $Enums.ChiefDecisionStatus
@@ -331,6 +338,7 @@ export type ChiefDecisionWhereInput = {
   memberId?: Prisma.StringFilter<"ChiefDecision"> | string
   teammateId?: Prisma.StringFilter<"ChiefDecision"> | string
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
+  question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
   childSessionId?: Prisma.StringFilter<"ChiefDecision"> | string
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
@@ -359,6 +367,7 @@ export type ChiefDecisionOrderByWithRelationInput = {
   memberId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   askSeq?: Prisma.SortOrder
+  question?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -392,6 +401,7 @@ export type ChiefDecisionWhereUniqueInput = Prisma.AtLeast<{
   memberId?: Prisma.StringFilter<"ChiefDecision"> | string
   teammateId?: Prisma.StringFilter<"ChiefDecision"> | string
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
+  question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
   verdict?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
@@ -419,6 +429,7 @@ export type ChiefDecisionOrderByWithAggregationInput = {
   memberId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   askSeq?: Prisma.SortOrder
+  question?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -451,6 +462,7 @@ export type ChiefDecisionScalarWhereWithAggregatesInput = {
   memberId?: Prisma.StringWithAggregatesFilter<"ChiefDecision"> | string
   teammateId?: Prisma.StringWithAggregatesFilter<"ChiefDecision"> | string
   askSeq?: Prisma.IntWithAggregatesFilter<"ChiefDecision"> | number
+  question?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonWithAggregatesFilter<"ChiefDecision">
   childSessionId?: Prisma.StringWithAggregatesFilter<"ChiefDecision"> | string
   status?: Prisma.EnumChiefDecisionStatusWithAggregatesFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
@@ -472,6 +484,7 @@ export type ChiefDecisionCreateInput = {
   organizationId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -500,6 +513,7 @@ export type ChiefDecisionUncheckedCreateInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -522,6 +536,7 @@ export type ChiefDecisionUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -550,6 +565,7 @@ export type ChiefDecisionUncheckedUpdateInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -575,6 +591,7 @@ export type ChiefDecisionCreateManyInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -596,6 +613,7 @@ export type ChiefDecisionUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -620,6 +638,7 @@ export type ChiefDecisionUncheckedUpdateManyInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -664,6 +683,7 @@ export type ChiefDecisionCountOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   askSeq?: Prisma.SortOrder
+  question?: Prisma.SortOrder
   options?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -693,6 +713,7 @@ export type ChiefDecisionMaxOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   askSeq?: Prisma.SortOrder
+  question?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrder
@@ -716,6 +737,7 @@ export type ChiefDecisionMinOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   askSeq?: Prisma.SortOrder
+  question?: Prisma.SortOrder
   childSessionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   verdict?: Prisma.SortOrder
@@ -891,6 +913,7 @@ export type ChiefDecisionCreateWithoutMemberInput = {
   organizationId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -917,6 +940,7 @@ export type ChiefDecisionUncheckedCreateWithoutMemberInput = {
   sessionId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -971,6 +995,7 @@ export type ChiefDecisionScalarWhereInput = {
   memberId?: Prisma.StringFilter<"ChiefDecision"> | string
   teammateId?: Prisma.StringFilter<"ChiefDecision"> | string
   askSeq?: Prisma.IntFilter<"ChiefDecision"> | number
+  question?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   options?: Prisma.JsonFilter<"ChiefDecision">
   childSessionId?: Prisma.StringFilter<"ChiefDecision"> | string
   status?: Prisma.EnumChiefDecisionStatusFilter<"ChiefDecision"> | $Enums.ChiefDecisionStatus
@@ -992,6 +1017,7 @@ export type ChiefDecisionCreateWithoutWorkspaceInput = {
   organizationId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1018,6 +1044,7 @@ export type ChiefDecisionUncheckedCreateWithoutWorkspaceInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1066,6 +1093,7 @@ export type ChiefDecisionCreateWithoutSessionInput = {
   organizationId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1092,6 +1120,7 @@ export type ChiefDecisionUncheckedCreateWithoutSessionInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1124,6 +1153,7 @@ export type ChiefDecisionCreateWithoutChildInput = {
   organizationId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1151,6 +1181,7 @@ export type ChiefDecisionUncheckedCreateWithoutChildInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1204,6 +1235,7 @@ export type ChiefDecisionUpdateWithoutChildInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1231,6 +1263,7 @@ export type ChiefDecisionUncheckedUpdateWithoutChildInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1254,6 +1287,7 @@ export type ChiefDecisionCreateManyMemberInput = {
   sessionId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1275,6 +1309,7 @@ export type ChiefDecisionUpdateWithoutMemberInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1301,6 +1336,7 @@ export type ChiefDecisionUncheckedUpdateWithoutMemberInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1325,6 +1361,7 @@ export type ChiefDecisionUncheckedUpdateManyWithoutMemberInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1348,6 +1385,7 @@ export type ChiefDecisionCreateManyWorkspaceInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1369,6 +1407,7 @@ export type ChiefDecisionUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1395,6 +1434,7 @@ export type ChiefDecisionUncheckedUpdateWithoutWorkspaceInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1419,6 +1459,7 @@ export type ChiefDecisionUncheckedUpdateManyWithoutWorkspaceInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1442,6 +1483,7 @@ export type ChiefDecisionCreateManySessionInput = {
   memberId: string
   teammateId: string
   askSeq: number
+  question?: string | null
   options: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId: string
   status?: $Enums.ChiefDecisionStatus
@@ -1463,6 +1505,7 @@ export type ChiefDecisionUpdateWithoutSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1489,6 +1532,7 @@ export type ChiefDecisionUncheckedUpdateWithoutSessionInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1513,6 +1557,7 @@ export type ChiefDecisionUncheckedUpdateManyWithoutSessionInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   askSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  question?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   childSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumChiefDecisionStatusFieldUpdateOperationsInput | $Enums.ChiefDecisionStatus
@@ -1539,6 +1584,7 @@ export type ChiefDecisionSelect<ExtArgs extends runtime.Types.Extensions.Interna
   memberId?: boolean
   teammateId?: boolean
   askSeq?: boolean
+  question?: boolean
   options?: boolean
   childSessionId?: boolean
   status?: boolean
@@ -1567,6 +1613,7 @@ export type ChiefDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   memberId?: boolean
   teammateId?: boolean
   askSeq?: boolean
+  question?: boolean
   options?: boolean
   childSessionId?: boolean
   status?: boolean
@@ -1594,6 +1641,7 @@ export type ChiefDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   memberId?: boolean
   teammateId?: boolean
   askSeq?: boolean
+  question?: boolean
   options?: boolean
   childSessionId?: boolean
   status?: boolean
@@ -1621,6 +1669,7 @@ export type ChiefDecisionSelectScalar = {
   memberId?: boolean
   teammateId?: boolean
   askSeq?: boolean
+  question?: boolean
   options?: boolean
   childSessionId?: boolean
   status?: boolean
@@ -1637,7 +1686,7 @@ export type ChiefDecisionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "options" | "childSessionId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
+export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "question" | "options" | "childSessionId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
 export type ChiefDecisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1680,9 +1729,11 @@ export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inter
      */
     teammateId: string
     /**
-     * The question's card (its tool.started seq) and the answers it offers ([{ label, message }]).
+     * The question's card (its tool.started seq), what it asks (a choices card's question), and
+     * the answers it offers ([{ label, message, description? }]).
      */
     askSeq: number
+    question: string | null
     options: runtime.JsonValue
     /**
      * Chief's decision thread, its id chosen with the decision: started again after a restart, it
@@ -2147,6 +2198,7 @@ export interface ChiefDecisionFieldRefs {
   readonly memberId: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly teammateId: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly askSeq: Prisma.FieldRef<"ChiefDecision", 'Int'>
+  readonly question: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly options: Prisma.FieldRef<"ChiefDecision", 'Json'>
   readonly childSessionId: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly status: Prisma.FieldRef<"ChiefDecision", 'ChiefDecisionStatus'>

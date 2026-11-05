@@ -6,8 +6,8 @@
 // its answer reaches the teammate on its own (a Brigade note, as a wake-up's), or it shows on the
 // question as Chief's suggestion for the person to take or not. The person's own answers measure
 // how often they agree; once they agree enough on a kind, a ticket offers to let Chief answer that
-// kind on its own. Chief's answer is never the person's approval: App writes made on its word ask
-// them (connector-calls.ts, actingOnChiefsWord).
+// kind on its own. Chief's answer is never the person's approval: the work done on its word, and
+// what is handed on from it, asks them before App writes and credentials (onChiefsWord).
 //
 // A member with it off gets nothing of this: no decision starts, the spec says nothing of Chief's
 // answers, and the thread waits on them as before.
@@ -41,6 +41,7 @@ import { audit } from './audit.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { documentText } from './library.js'
+import { teammateLibraryAccess } from './library-folders.js'
 import { askedBy, loadThread, type LoadedThread } from './thread-spec.js'
 
 /** A decision Chief has not made in this long is given up: the question is the person's. */
@@ -86,6 +87,8 @@ type Ask = {
   options: ChiefOption[]
   /** The reply ending on it. */
   question: string
+  /** What a choices card asks; buttons ask in the reply. */
+  cardQuestion: string | null
 }
 
 /**
@@ -121,9 +124,16 @@ export async function openAsk(
     const data = card.data as { toolName?: string; input?: unknown }
     const tool = bareToolName(data.toolName ?? '')
     let options: ChiefOption[] = []
+    let cardQuestion: string | null = null
     if (tool === OFFER_CHOICES_TOOL) {
       const choices = safeChoices(data.input)
-      options = (choices?.options ?? []).map((o) => ({ label: o.label, message: choiceMessage(o) }))
+      cardQuestion = choices?.question ?? null
+      // What each option says of itself counts as much as its label ("Route A": deploy to production).
+      options = (choices?.options ?? []).map((o) => ({
+        label: o.label,
+        message: choiceMessage(o),
+        ...(o.description ? { description: o.description } : {}),
+      }))
     } else if (tool === SUGGEST_REPLIES_TOOL) {
       const replies = safeReplies(data.input)
       options = (replies?.replies ?? []).map((r) => ({ label: r, message: r }))
@@ -139,18 +149,28 @@ export async function openAsk(
       teammateId: (turn?.data as { teammateId?: string } | null)?.teammateId ?? thread.teammateId,
       options,
       question: (reply?.data as { text?: string } | null)?.text ?? '',
+      cardQuestion,
     }
   }
   return null
 }
 
-/** A message came in the thread after the question: a person answered it, or Brigade moved it on. */
-async function movedOnSince(db: Pick<ScopedDb, 'sessionEvent'>, sessionId: string, seq: number) {
-  return (
-    (await db.sessionEvent.count({
+/**
+ * The question is no longer open: a message came in the thread after it (a person answered it,
+ * or Brigade moved the thread on), or a person dismissed its card without picking.
+ */
+async function questionClosed(
+  db: Pick<ScopedDb, 'sessionEvent' | 'session'>,
+  sessionId: string,
+  seq: number,
+) {
+  const [after, thread] = await Promise.all([
+    db.sessionEvent.count({
       where: { sessionId, type: { in: ['message.user', 'message.queued'] }, seq: { gt: seq } },
-    })) > 0
-  )
+    }),
+    db.session.findFirst({ where: { id: sessionId }, select: { choicesDismissedSeq: true } }),
+  ])
+  return after > 0 || (thread?.choicesDismissedSeq ?? -1) >= seq
 }
 
 /** When the person last wrote in the thread, by their message's seq; -1 when they never did. */
@@ -237,6 +257,7 @@ export async function noteChiefAsks(
         memberId: thread.startedByMemberId,
         teammateId: ask.teammateId,
         askSeq: ask.seq,
+        question: ask.cardQuestion,
         options: ask.options as unknown as Prisma.InputJsonValue,
         // Fixed now: started again after a restart, Chief's thread is the same one.
         childSessionId: `c${randomUUID().replace(/-/g, '').slice(0, 24)}`,
@@ -324,7 +345,7 @@ export async function startDecision(scope: Scope, decisionId: string) {
   } catch {
     return fail()
   }
-  if (await movedOnSince(db, parent.id, decision.askSeq)) {
+  if (await questionClosed(db, parent.id, decision.askSeq)) {
     await db.chiefDecision.updateMany({
       where: { id: decision.id, status: 'pending' },
       data: { status: 'superseded' },
@@ -334,9 +355,11 @@ export async function startDecision(scope: Scope, decisionId: string) {
   const chief = await db.teammate.findFirst({ where: { kind: 'chief', archivedAt: null } })
   const asking = parent.teammates.find((t) => t.teammateId === decision.teammateId)?.teammate
   if (!chief || !asking) return fail()
+  // Only what Chief may read of the library: a folder people closed to it stays closed here too.
+  const readsMandate = (await teammateLibraryAccess(db, chief)).of(MANDATE_PATH) !== 'none'
   const [request, mandate, earlier] = await Promise.all([
     firstRequest(db, parent.id),
-    mandateText(scope),
+    readsMandate ? mandateText(scope) : null,
     earlierDecisions(db, parent.id, decision.id),
   ])
   const ask = await openAsk(db, parent)
@@ -346,6 +369,7 @@ export async function startDecision(scope: Scope, decisionId: string) {
     teammate: asking.name,
     threadTitle: parent.title,
     request: clipStart(request, REQUEST_CHARS),
+    cardQuestion: decision.question,
     question: clipEnd(ask?.seq === decision.askSeq ? ask.question : '', QUESTION_CHARS),
     options,
     mandate: mandate && clipStart(mandate, MANDATE_CHARS),
@@ -528,10 +552,10 @@ async function applyDecision(scope: Scope, decisionId: string) {
       include: { member: { select: { chiefAnswers: true, chiefAuto: true } } },
     })
     if (!row || row.status !== 'pending') return null
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`chief:${row.sessionId}`}, 0))`
+    await lockThread(tx, row.sessionId)
     const set = (status: 'superseded' | 'answered' | 'suggested' | 'escalated') =>
       tx.chiefDecision.updateMany({ where: { id: row.id, status: 'pending' }, data: { status } })
-    if (await movedOnSince(tx, row.sessionId, row.askSeq)) {
+    if (await questionClosed(tx, row.sessionId, row.askSeq)) {
       await set('superseded')
       return { status: 'superseded' as const, row, wakeupId: null }
     }
@@ -551,6 +575,11 @@ async function applyDecision(scope: Scope, decisionId: string) {
       return { status: 'suggested' as const, row, wakeupId: null }
     }
     await set('answered')
+    // Its work goes on Chief's word until the person writes there: App writes ask them.
+    await tx.session.updateMany({
+      where: { id: row.sessionId },
+      data: { chiefWordAt: new Date() },
+    })
     // As a report's wake-up: stored with the decision, tried until it reaches the thread.
     const wakeup = await tx.wakeup.create({
       data: {
@@ -597,13 +626,90 @@ async function applyDecision(scope: Scope, decisionId: string) {
 const chiefId = async (db: ScopedDb) =>
   (await db.teammate.findFirst({ where: { kind: 'chief' }, select: { id: true } }))?.id
 
+/** One thread's decisions, one change at a time: applyDecision, a person's answer, a dismissal. */
+const lockThread = (tx: Pick<ScopedDb, '$executeRaw'>, sessionId: string) =>
+  tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`chief:${sessionId}`}, 0))`
+
+/**
+ * Chief's answers not delivered yet (their wake-up waits for the computer), on questions up to
+ * `seq`: the person's word, or their dismissal, came first. Their wake-ups are cancelled, so a
+ * computer back online never brings an answer the person overtook, and the decisions superseded.
+ */
+async function cancelUndelivered(
+  tx: Pick<ScopedDb, 'wakeup' | 'chiefDecision'>,
+  sessionId: string,
+  seq: number,
+) {
+  const waiting = await tx.wakeup.findMany({
+    where: { sessionId, status: 'pending', sourceId: { startsWith: 'chief:' } },
+    select: { id: true, sourceId: true },
+  })
+  const ids = waiting.map((w) => w.sourceId!.slice('chief:'.length))
+  const stale = await tx.chiefDecision.findMany({
+    where: { id: { in: ids }, sessionId, status: 'answered', askSeq: { lte: seq } },
+    select: { id: true },
+  })
+  for (const d of stale) {
+    await tx.wakeup.updateMany({
+      where: { sessionId, sourceId: `chief:${d.id}`, status: 'pending' },
+      data: { status: 'cancelled' },
+    })
+    await tx.chiefDecision.updateMany({
+      where: { id: d.id, status: 'answered' },
+      data: { status: 'superseded' },
+    })
+  }
+  return stale.length
+}
+
+/**
+ * Whether one of Chief's answers may still reach its thread, as its wake-up fires (src/wakeups.ts):
+ * still answered, and its question still open. A computer that was offline brings none the
+ * person overtook meanwhile.
+ */
+export async function chiefAnswerDue(scope: Scope, decisionId: string) {
+  const db = scoped(scope)
+  const decision = await db.chiefDecision.findFirst({
+    where: { id: decisionId },
+    select: { status: true, sessionId: true, askSeq: true },
+  })
+  if (!decision || decision.status !== 'answered') return false
+  if (!(await questionClosed(db, decision.sessionId, decision.askSeq))) return true
+  await db.chiefDecision.updateMany({
+    where: { id: decisionId, status: 'answered' },
+    data: { status: 'superseded' },
+  })
+  return false
+}
+
+/**
+ * A person dismissed a choices card without picking (POST /threads/:id/choices/dismiss): Chief's
+ * decisions on it and before it are moot, an answer not delivered yet included.
+ */
+export async function noteChiefDismissed(scope: Scope, sessionId: string, seq: number) {
+  const db = scoped(scope)
+  const changed = await db.$transaction(async (tx) => {
+    await lockThread(tx, sessionId)
+    const { count } = await tx.chiefDecision.updateMany({
+      where: { sessionId, askSeq: { lte: seq }, status: { in: ['pending', 'suggested'] } },
+      data: { status: 'superseded' },
+    })
+    return count + (await cancelUndelivered(tx, sessionId, seq))
+  })
+  if (changed) await threadChanged(scope, sessionId)
+}
+
 /** Work Chief put off in the person's name: a line of their list of it, made when missing. */
 async function parkLine(scope: Scope, sessionId: string, text: string) {
   const db = scoped(scope)
-  const [thread, id] = await Promise.all([
+  const [thread, chief] = await Promise.all([
     db.session.findFirst({ where: { id: sessionId }, select: { title: true } }),
-    chiefId(db),
+    db.teammate.findFirst({ where: { kind: 'chief' } }),
   ])
+  // Only where Chief may save: a folder people closed to it stays closed, and the decision keeps
+  // what was put off (chief_decisions lists it).
+  if (!chief || (await teammateLibraryAccess(db, chief)).of(PARKED_PATH) !== 'read_write') return
+  const id = chief.id
   try {
     const { addListLine } = await import('./lists.js')
     await addListLine(
@@ -646,35 +752,60 @@ export async function noteChiefAnswered(
   if (!message) return
   const scope: Scope = { organizationId: session.organizationId, workspaceId: session.workspaceId }
   const db = scoped(scope)
-  const open = await db.chiefDecision.findMany({
+  // Nothing of Chief's in the thread: nothing to settle (most threads, most messages).
+  const involved = await db.session.count({
     where: {
-      sessionId: session.id,
-      askSeq: { lt: message.seq },
-      status: { in: ['pending', 'suggested'] },
-      outcome: null,
+      id: session.id,
+      OR: [
+        { chiefWordAt: { not: null } },
+        { chiefDecisions: { some: { status: { in: ['pending', 'suggested', 'answered'] } } } },
+      ],
     },
   })
-  if (!open.length) return
-  for (const d of open) {
-    if (d.status === 'pending') {
-      await db.chiefDecision.updateMany({
-        where: { id: d.id, status: 'pending' },
-        data: { status: 'superseded' },
-      })
-      continue
-    }
-    const option = d.optionIndex != null ? optionsOf(d.options)[d.optionIndex] : undefined
-    // Only the person Chief answers for measures it.
-    if (!option || message.event.memberId !== d.memberId) continue
-    const text = message.event.text ?? ''
-    const agreed =
-      text === option.message || !!pickedChoice([option], text) || text.trim() === option.label
-    const { count } = await db.chiefDecision.updateMany({
-      where: { id: d.id, outcome: null },
-      data: { outcome: agreed ? 'agreed' : 'disagreed', outcomeAt: new Date() },
+  if (!involved) return
+  const measured = await db.$transaction(async (tx) => {
+    await lockThread(tx, session.id)
+    // The person wrote: the thread no longer goes on Chief's word.
+    await tx.session.updateMany({
+      where: { id: session.id, chiefWordAt: { not: null } },
+      data: { chiefWordAt: null },
     })
-    if (!count) continue
-    if (agreed && d.verdict === 'park' && d.parked) await parkLine(scope, d.sessionId, d.parked)
+    // Their word came before an answer of Chief's reached the thread: that answer never goes.
+    await cancelUndelivered(tx, session.id, message.seq)
+    const open = await tx.chiefDecision.findMany({
+      where: {
+        sessionId: session.id,
+        askSeq: { lt: message.seq },
+        status: { in: ['pending', 'suggested'] },
+        outcome: null,
+      },
+    })
+    const counted: typeof open = []
+    for (const d of open) {
+      if (d.status === 'pending') {
+        await tx.chiefDecision.updateMany({
+          where: { id: d.id, status: 'pending' },
+          data: { status: 'superseded' },
+        })
+        continue
+      }
+      const option = d.optionIndex != null ? optionsOf(d.options)[d.optionIndex] : undefined
+      // Only the person Chief answers for measures it.
+      if (!option || message.event.memberId !== d.memberId) continue
+      const text = message.event.text ?? ''
+      const agreed =
+        text === option.message || !!pickedChoice([option], text) || text.trim() === option.label
+      const { count } = await tx.chiefDecision.updateMany({
+        where: { id: d.id, outcome: null },
+        data: { outcome: agreed ? 'agreed' : 'disagreed', outcomeAt: new Date() },
+      })
+      if (count) counted.push({ ...d, outcome: agreed ? 'agreed' : 'disagreed' })
+    }
+    return counted
+  })
+  for (const d of measured) {
+    if (d.outcome === 'agreed' && d.verdict === 'park' && d.parked)
+      await parkLine(scope, d.sessionId, d.parked)
     if (isKind(d.kind)) await offerAlone(db, scope, d.memberId, d.kind, d.sessionId)
   }
   await threadChanged(scope, session.id)
@@ -896,23 +1027,28 @@ export const UNDOABLE_WRITES = new Set([
 ])
 
 /**
- * The teammate acts on Chief's word: an answer of Chief's reached the thread since the person last
- * wrote. Its App writes then ask the person (src/connector-calls.ts), whatever its access allows.
+ * The thread's work goes on Chief's word (Session.chiefWordAt): Chief answered there in its
+ * person's name and they have not written since, or it was handed work while its giver was. Its
+ * App writes then ask a person (src/connector-calls.ts), its credentials too (src/credentials.ts),
+ * and it sets up no routine. The work it hands on carries the mark (onChiefsWordFrom).
  */
-export async function actingOnChiefsWord(db: ScopedDb, sessionId: string) {
-  const rows = await db.sessionEvent.findMany({
-    where: { sessionId, type: 'message.user' },
-    orderBy: { seq: 'desc' },
-    take: 50,
-    select: { data: true },
+export const onChiefsWord = (session: { chiefWordAt: Date | null }) => !!session.chiefWordAt
+
+/** For work a thread hands on (a sub-thread, a task, a message): it goes on Chief's word too. */
+export const chiefWordFrom = (session: { chiefWordAt: Date | null }) =>
+  session.chiefWordAt ? { chiefWordAt: new Date() } : {}
+
+/** A thread that went on Chief's word hands this work on: the thread receiving it does too. */
+export async function markOnChiefsWord(
+  db: ScopedDb,
+  sessionId: string,
+  from: { chiefWordAt: Date | null },
+) {
+  if (!from.chiefWordAt) return
+  await db.session.updateMany({
+    where: { id: sessionId, chiefWordAt: null },
+    data: { chiefWordAt: new Date() },
   })
-  const { chiefAnswerNote } = await import('@brigade/contracts')
-  for (const row of rows) {
-    const event = row.data as { memberId?: string | null; text?: string }
-    if (event.memberId) return false
-    if (event.text && chiefAnswerNote(event.text)) return true
-  }
-  return false
 }
 
 // ---------------------------------------------------------------------------

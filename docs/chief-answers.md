@@ -23,7 +23,9 @@ Code: `apps/api/src/chief-answers.ts`, `packages/contracts/src/chief-answers.ts`
 - **A decision is a sub-thread of Chief's** (`startDecision`), on the thread's computer and
   account, with a brief of its own (`chiefDecisionBrief`): the answers offered, the teammate's
   reply ending on them, the person's first request in the thread, their mandate
-  (`chief/mandate.md`) and Chief's earlier decisions there. Its id is fixed with the decision
+  (`chief/mandate.md`, only while Chief may read it there) and Chief's earlier decisions there. A
+  choices card's question and its options' descriptions go in with the labels (the reply text
+  alone may not say what is decided, nor that "Route A" deploys to production). Its id is fixed with the decision
   (`ChiefDecision.childSessionId`), so a start tried again after a restart takes up the same
   thread, and its prompt (`chief:<decision>`) reaches it once. It runs at low effort, with no
   App, repository, roster or tool but `search_workspace`, `list_items` and `chief_decide`
@@ -44,14 +46,27 @@ Code: `apps/api/src/chief-answers.ts`, `packages/contracts/src/chief-answers.ts`
   mandate line (`chiefAnswerMessage`). People see it as Brigade's note, "Chief answered for you",
   never as their own message, with **Mark as wrong** (`POST /threads/:id/chief/:decision/wrong`):
   the teammate is told to stop and undo (`chiefOverruledMessage`, steered into a running turn),
-  and the kind goes back to suggesting. A parked proposal's line goes to `chief/parked.md`, made
-  when missing (`addListLine`), once the answer is given, or once the person takes the suggestion.
-- **It is not the person's approval.** Once an answer of Chief's came in the thread, until the
-  person writes there again (`actingOnChiefsWord`), every App write asks the person,
-  whatever the teammate's access, except those that leave nothing outside and can be undone
-  (`UNDOABLE_WRITES`: a branch, a pull request, marking one ready). Teammates are told the same of
-  what Brigade cannot hold back: never deploy, publish, send, pay or delete another way (a
-  command, a script, a credential) on Chief's word alone. That part is instructions, not a guard.
+  and the kind goes back to suggesting. A parked proposal's line goes to `chief/parked.md`, where
+  Chief may save, once the answer is given, or once the person takes the suggestion. The list is
+  made when missing (`addListLine`), never over one made meanwhile: creators take turns on the
+  path, and the save only creates (`saveLibraryFile`'s `createOnly`).
+- **It is not the person's approval.** An answer marks its thread as going on Chief's word
+  (`Session.chiefWordAt`, set with the answer, under the thread's lock), until the person writes
+  there again (`noteChiefAnswered`), however many of Brigade's notes come meanwhile. While it
+  holds (`onChiefsWord`), every App write asks the person whatever the teammate's access, except
+  those that leave nothing outside and can be undone (`UNDOABLE_WRITES`: a branch, a pull request,
+  marking one ready); a vault credential that would go without asking asks too
+  (`credentials.ts`), with what the person mentioned or allowed in the thread still holding; and
+  no routine is set up or changed (`schedules.ts`). The work handed on carries the mark: a
+  sub-thread it starts (`startThread`'s `chiefWord`), a task it starts for a teammate, a message to
+  a sub-thread or a task's thread (`markOnChiefsWord`); not a review, which Brigade starts. Teammates
+  are told the same of what Brigade cannot hold back: never deploy, publish, send, pay or delete
+  another way (a command, a script) on Chief's word alone. That part is instructions, not a guard.
+- **An answer the person overtook never goes.** One whose wake-up has not reached the thread yet
+  (its computer offline) is cancelled when the person writes or dismisses the card
+  (`cancelUndelivered`), and checked again as it fires (`chiefAnswerDue`, `wakeups.ts`). A dismissed
+  card is a closed question (`questionClosed`), and dismissing settles Chief's decisions on it
+  (`noteChiefDismissed`).
 - **Suggestions earn autonomy, as playbooks' actions do.** A person's message after a suggested
   question measures it (`noteChiefAnswered`): their pick was Chief's (`agreed`: the same message,
   the same choice, or the option's words), or another (`disagreed`); only the person Chief answers

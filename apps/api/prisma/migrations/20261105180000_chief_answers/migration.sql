@@ -11,7 +11,8 @@ ADD COLUMN     "chiefAuto" TEXT[] DEFAULT ARRAY[]::TEXT[],
 ADD COLUMN     "chiefAutoChangedAt" TIMESTAMP(3);
 
 -- AlterTable
-ALTER TABLE "Session" ADD COLUMN     "chiefDecisionId" TEXT;
+ALTER TABLE "Session" ADD COLUMN     "chiefDecisionId" TEXT,
+ADD COLUMN     "chiefWordAt" TIMESTAMP(3);
 
 -- CreateTable
 CREATE TABLE "ChiefDecision" (
@@ -22,6 +23,7 @@ CREATE TABLE "ChiefDecision" (
     "memberId" TEXT NOT NULL,
     "teammateId" TEXT NOT NULL,
     "askSeq" INTEGER NOT NULL,
+    "question" TEXT,
     "options" JSONB NOT NULL,
     "childSessionId" TEXT NOT NULL,
     "status" "ChiefDecisionStatus" NOT NULL DEFAULT 'pending',

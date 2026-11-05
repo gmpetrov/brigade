@@ -509,7 +509,8 @@ export const SessionScalarFieldEnum = {
   playbookTeammate: 'playbookTeammate',
   surfacedAt: 'surfacedAt',
   quiet: 'quiet',
-  chiefDecisionId: 'chiefDecisionId'
+  chiefDecisionId: 'chiefDecisionId',
+  chiefWordAt: 'chiefWordAt'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -571,6 +572,7 @@ export const ChiefDecisionScalarFieldEnum = {
   memberId: 'memberId',
   teammateId: 'teammateId',
   askSeq: 'askSeq',
+  question: 'question',
   options: 'options',
   childSessionId: 'childSessionId',
   status: 'status',

@@ -19,7 +19,7 @@ import { audit, type Actor } from './audit.js'
 import { outcomeOf } from './board.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
-import { handleChiefCall } from './chief-answers.js'
+import { handleChiefCall, onChiefsWord } from './chief-answers.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
 import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
@@ -611,6 +611,11 @@ export async function handleScheduleCall(
     return fail("A playbook's run sets up no schedule. Just do the work here.")
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
+  // A routine set up on Chief's word would act later with nobody asked (src/chief-answers.ts).
+  if ((op.name === 'create' || op.name === 'update') && onChiefsWord(session))
+    return fail(
+      "You act on Chief's answer, not the person's: a routine waits for them. Ask them first, in your reply or with a ticket.",
+    )
   const actor: Actor = { type: 'teammate', id: teammate.id }
   // Whose schedules the thread works on: its starter's while nobody else asks in it; nobody's once
   // another member does, as a schedule's runs follow its instructions on its owner's accounts.

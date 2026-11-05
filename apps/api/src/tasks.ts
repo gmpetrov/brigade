@@ -22,6 +22,7 @@ import { choicesWaitingAmong } from './choices-waiting.js'
 import { failedWaitingAmong } from './failed.js'
 import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
+import { markOnChiefsWord } from './chief-answers.js'
 import { hubs, taskUpdated } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
 import { projectRefusal } from './task-project.js'
@@ -600,6 +601,15 @@ async function startTask(
       ...(by.from ? { askedByMemberId: await askedBy(db, by.from.sessionId) } : {}),
       taskId: task.id,
       projectId: task.projectId,
+      // Started from a thread on Chief's word: the task's work goes on it too.
+      chiefWord:
+        !!by.from &&
+        !!(
+          await db.session.findFirst({
+            where: { id: by.from.sessionId },
+            select: { chiefWordAt: true },
+          })
+        )?.chiefWordAt,
     })
     if (outcome === 'offline') {
       // The failed thread is left as a plain one.
@@ -1356,6 +1366,8 @@ export async function handleTaskCall(
         await requireMayAct(db, by, taskId)
         if (target.controlledByMemberId)
           return fail('A person has control of that thread right now. Try again later.')
+        // Written on Chief's word: the work it asks for there goes on it too.
+        await markOnChiefsWord(db, target.id, session)
         const outcome = await promptThread(db, scope, target, {
           text: taskComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
           memberId: null,

@@ -108,7 +108,7 @@ import { markDone, markReopened, reopenThread } from '../thread-done.js'
 import { actorNames } from '../library-history.js'
 import { latersOf, setLater } from '../later.js'
 import { descendants, reportConversation, reportOf } from '../children.js'
-import { overruleDecision, threadDecisions } from '../chief-answers.js'
+import { noteChiefDismissed, overruleDecision, threadDecisions } from '../chief-answers.js'
 import { deleteThread } from '../thread-delete.js'
 import { stopWatching } from '../replies.js'
 import { cancelWakeup } from '../wakeups.js'
@@ -2093,6 +2093,8 @@ export const threads = new Hono<AppEnv>()
       UPDATE "Session" SET "choicesDismissedSeq" = ${seq}, "updatedAt" = now()
       WHERE id = ${thread.id} AND "workspaceId" = ${scope.workspaceId}
         AND ("choicesDismissedSeq" IS NULL OR "choicesDismissedSeq" < ${seq})`
+    // Chief's decisions on it are moot, an answer it has not delivered yet included.
+    await noteChiefDismissed(scope, thread.id, seq)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

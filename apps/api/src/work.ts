@@ -448,6 +448,11 @@ export async function startThread(
     dropUnstarted?: boolean
     /** Chief's thread deciding a question for the person (src/chief-answers.ts): its decision. */
     chiefDecisionId?: string
+    /**
+     * Handed on by a thread whose work goes on Chief's word (Session.chiefWordAt): this one's
+     * does too, and its App writes ask a person.
+     */
+    chiefWord?: boolean
   },
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
@@ -492,6 +497,7 @@ export async function startThread(
         ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
         ...(input.quiet ? { quiet: true } : {}),
         ...(input.chiefDecisionId ? { chiefDecisionId: input.chiefDecisionId } : {}),
+        ...(input.chiefWord ? { chiefWordAt: new Date() } : {}),
         ...(input.origin?.kind === 'trigger'
           ? {
               origin: 'trigger',

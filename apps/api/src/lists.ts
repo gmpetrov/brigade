@@ -781,11 +781,26 @@ export async function addListLine(
 ) {
   let file = await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })
   if (!file) {
-    // Made by another call meanwhile: that one stands, and the line goes in it.
-    await saveLibraryFile(db, scope, actor, {
-      path: input.path,
-      bytes: new TextEncoder().encode(input.header),
-    }).catch(() => {})
+    // Made once: never over a file another call (or a person) made meanwhile, which then stands
+    // and takes the line. Two calls take turns making it; one made by someone else in between
+    // is kept (createOnly), and one made at the very same time loses on the path's uniqueness.
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`list-file:${scope.workspaceId}:${input.path}`}, 0))`
+        if (await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })) return
+        await saveLibraryFile(
+          db,
+          scope,
+          actor,
+          { path: input.path, bytes: new TextEncoder().encode(input.header) },
+          {},
+          { createOnly: true },
+        ).catch((error: unknown) => {
+          if ((error as { code?: string }).code !== 'P2002') throw error
+        })
+      },
+      { timeout: 30_000 },
+    )
     file = await listFile(db, { path: input.path })
   }
   const documentId = file.id

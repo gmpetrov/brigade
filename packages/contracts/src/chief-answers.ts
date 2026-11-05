@@ -49,7 +49,12 @@ export const MANDATE_PATH = `${CHIEF_FOLDER}/mandate.md`
 export const PARKED_PATH = `${CHIEF_FOLDER}/parked.md`
 
 /** One answer a question offers: its button's words, and the message a click on it sends. */
-export const ChiefOption = z.object({ label: z.string(), message: z.string() })
+export const ChiefOption = z.object({
+  label: z.string(),
+  message: z.string(),
+  /** What a choices card's option says of itself, beside its label. */
+  description: z.string().optional(),
+})
 export type ChiefOption = z.infer<typeof ChiefOption>
 
 /**
@@ -222,6 +227,8 @@ export function chiefDecisionBrief(b: {
   teammate: string
   threadTitle: string
   request: string
+  /** What a choices card asks, as it asks it; buttons ask in the reply itself. */
+  cardQuestion?: string | null
   question: string
   options: ChiefOption[]
   mandate: string | null
@@ -233,8 +240,11 @@ export function chiefDecisionBrief(b: {
     `${b.teammate} ended its reply in a thread of ${b.person}'s on a question with these answers. ` +
       `Read it as ${b.person}'s chief of staff, then call chief_decide once and end your turn.`,
     '',
+    ...(b.cardQuestion?.trim() ? ['## The question', b.cardQuestion.trim(), ''] : []),
     '## The answers it offers',
-    ...b.options.map((o, i) => `${i + 1}. ${o.label}`),
+    ...b.options.map(
+      (o, i) => `${i + 1}. ${o.label}${o.description?.trim() ? `: ${oneLine(o.description)}` : ''}`,
+    ),
     '',
     `## ${b.teammate}'s reply, ending on the question`,
     b.question,
