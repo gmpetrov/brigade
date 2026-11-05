@@ -1402,10 +1402,10 @@ async function approvalAfter(
   const now = await own(p.head.sha)
   let files = changedFiles(approved?.changes ?? null, now?.changes ?? null)
   if (files?.length === 0) {
-    // The same lines of its own: still, none may have moved (a guard put back in the wrong
-    // function adds and removes the same lines). What changed since the approval must be what
-    // its base brought between the commits of it each started from, line for line: all a moved
-    // line shows as, there.
+    // The same lines of its own: still, none may have moved, nor gone where its base had the
+    // same (a guard put back in the wrong function adds and removes the same lines). What changed
+    // since the approval must be what its base brought between the commits each head starts
+    // from, line for line and in the same places of its base's lines (changesBetween).
     const from = approved?.mergeBase
     const to = now?.mergeBase
     const brought =
@@ -1413,7 +1413,7 @@ async function approvalAfter(
         ? await read('what its base brought', () => changesBetween(gh, row.repository, from, to))
         : null
     const since = await read('what changed since its approval', () =>
-      changesBetween(gh, row.repository, last.sha, p.head.sha),
+      changesBetween(gh, row.repository, last.sha, p.head.sha, approved?.hunks),
     )
     files = changedFiles(brought, since)
     if (files?.length === 0) return { kind: 'holds', carried: true }
@@ -1458,12 +1458,12 @@ const compareOf = (gh: GitHub, repo: string, from: string, to: string) =>
 const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /**
- * The lines each file of a compare adds and removes, one value per file: in their order, or as
- * a set whatever their order and place (`anyOrder`). Without the lines around them nor where
- * they are. A file GitHub shows no patch for (binary, too big) counts by its contents, its blob.
- * Null when GitHub cannot list them all: as many files as it lists at most, or one with neither.
+ * The lines each file of a compare adds and removes, in their order, one value per file:
+ * without the lines around them nor where they are. A file GitHub shows no patch for (binary,
+ * too big) counts by its contents, its blob. Null when GitHub cannot list them all: as many
+ * files as it lists at most, or one with neither.
  */
-function linesOf(files: GhChange[], anyOrder = false) {
+function linesOf(files: GhChange[]) {
   if (files.length >= COMPARE_FILES_MAX) return null
   const changes = new Map<string, string>()
   for (const f of files) {
@@ -1474,40 +1474,160 @@ function linesOf(files: GhChange[], anyOrder = false) {
       continue
     }
     const lines = f.patch.split('\n')
-    const these = (sign: string) => {
-      const picked = lines.filter((line) => line.startsWith(sign))
-      return digest((anyOrder ? picked.sort() : picked).join('\n'))
-    }
+    const these = (sign: string) => digest(lines.filter((line) => line.startsWith(sign)).join('\n'))
     changes.set(f.filename, `${what} ${these('+')} ${these('-')}`)
   }
   return changes
 }
 
 /**
+ * A hunk of a file's patch: where it starts in the older file and the newer one, how many lines
+ * of each it covers, and its lines (` ` kept, `-` removed, `+` added), or only their kinds.
+ */
+type Hunk = { from: number; fromLines: number; to: number; toLines: number; lines: string[] }
+
+/** The hunks of a file's patch, as GitHub gives it (unified, without the file's header). */
+function hunksOf(patch: string) {
+  const hunks: Hunk[] = []
+  let old = 0
+  let now = 0
+  for (const line of patch.split('\n')) {
+    const head = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line)
+    if (head) {
+      const [from, fromLines, to, toLines] = [head[1], head[2] ?? '1', head[3], head[4] ?? '1']
+      hunks.push({
+        from: Number(from),
+        fromLines: Number(fromLines),
+        to: Number(to),
+        toLines: Number(toLines),
+        lines: [],
+      })
+      old = Number(fromLines)
+      now = Number(toLines)
+      continue
+    }
+    // What its counts still expect, each line once: not "\ No newline at end of file".
+    const kind = line[0] ?? ' '
+    if (!hunks.length || (kind === '-' ? !old : kind === '+' ? !now : !old || !now)) continue
+    if (!'-+ '.includes(kind)) continue
+    if (kind !== '+') old--
+    if (kind !== '-') now--
+    hunks.at(-1)!.lines.push(kind === ' ' ? ` ${line.slice(1)}` : line)
+  }
+  return hunks
+}
+
+/**
+ * Where a line of the newer file of a patch was in the older one: that same line, or after which
+ * line of it the patch added it (0: at the top).
+ */
+function placeIn(hunks: Hunk[], line: number): { line: number } | { after: number } {
+  let shift = 0
+  for (const hunk of hunks) {
+    let old = hunk.fromLines ? hunk.from : hunk.from + 1
+    let now = hunk.toLines ? hunk.to : hunk.to + 1
+    if (line < now) break
+    for (const kind of hunk.lines.map((l) => l[0])) {
+      if (kind === '-') {
+        old++
+        continue
+      }
+      if (now === line) return kind === '+' ? { after: old - 1 } : { line: old }
+      if (kind !== '+') old++
+      now++
+    }
+    shift = now - old
+  }
+  return { line: line - shift }
+}
+
+/**
+ * The lines a file's patch removes and adds, each with its place in the older file: the line it
+ * removes, or the line it adds after. Given `own`, the patch that made that older file from its
+ * base (what a pull request changed there), places are said in its base's lines, and a line of the
+ * pull request's own that the patch removes as such: none of what a base brings.
+ */
+function placedLines(hunks: Hunk[], own?: Hunk[]) {
+  const place = (line: number) => {
+    if (!own) return { line }
+    return placeIn(own, line)
+  }
+  const placed: string[] = []
+  for (const hunk of hunks) {
+    let old = hunk.fromLines ? hunk.from : hunk.from + 1
+    for (const l of hunk.lines) {
+      if (l[0] === '-') {
+        const at = place(old++)
+        placed.push(`-${'line' in at ? at.line : `own after ${at.after}`} ${l.slice(1)}`)
+      } else if (l[0] === '+') {
+        const at = old > 1 ? place(old - 1) : { line: 0 }
+        placed.push(`+after ${'line' in at ? at.line : at.after} ${l.slice(1)}`)
+      } else old++
+    }
+  }
+  return placed
+}
+
+/**
  * What a pull request changes at a commit, as its Files changed shows it then (GitHub's compare
  * of its base branch with that commit, from where they meet): for each file, the lines it adds
  * and removes, in their order, without the lines around them nor where they are, which merging
- * its base in moves (linesOf); and the commit of its base it starts from.
+ * its base in moves (linesOf); the commit of its base it starts from; and each file's hunks, by
+ * their kinds of lines, to place what changes later in its base's lines (changesBetween).
  */
 export async function ownChanges(gh: GitHub, repo: string, base: string, sha: string) {
   const compared = await compareOf(gh, repo, base, sha)
+  const files = compared.files ?? []
   return {
-    changes: linesOf(compared.files ?? []),
+    changes: linesOf(files),
     mergeBase: compared.merge_base_commit?.sha ?? null,
+    hunks: new Map(
+      files.map((f) => [
+        f.filename,
+        f.patch === undefined
+          ? null
+          : hunksOf(f.patch).map((h) => ({ ...h, lines: h.lines.map((l) => l[0]!) })),
+      ]),
+    ),
   }
 }
 
 /**
- * The lines each file gains and loses from a commit to a later one, in any order (linesOf). Null
- * when `to` does not descend from `from` (a branch rewritten), or GitHub cannot show it whole.
+ * The lines each file gains and loses from a commit to a later one, each with its place (as
+ * placedLines), in any order: one value per file. Given `own`, the hunks of the pull request's own
+ * changes at `from` (ownChanges), places are said in its base's lines, as they are in what its
+ * base brought. A file GitHub shows no patch for counts by its blob. Null when `to` does not
+ * descend from `from` (a branch rewritten), or GitHub cannot show it whole or it cannot be placed.
  */
-export async function changesBetween(gh: GitHub, repo: string, from: string, to: string) {
+export async function changesBetween(
+  gh: GitHub,
+  repo: string,
+  from: string,
+  to: string,
+  own?: Map<string, Hunk[] | null>,
+) {
   if (from === to) return new Map<string, string>()
   const compared = await compareOf(gh, repo, from, to)
-  return compared.status === 'ahead' ? linesOf(compared.files ?? [], true) : null
+  const files = compared.files ?? []
+  if (compared.status !== 'ahead' || files.length >= COMPARE_FILES_MAX) return null
+  const changes = new Map<string, string>()
+  for (const f of files) {
+    const what = `${f.status} ${f.previous_filename ?? ''}`
+    if (f.patch === undefined) {
+      if (!f.sha) return null
+      changes.set(f.filename, `${what} blob ${f.sha}`)
+      continue
+    }
+    const hunks = own?.get(f.filename)
+    // A file of its own GitHub showed no patch for: where its lines were is not known.
+    if (hunks === null) return null
+    const placed = placedLines(hunksOf(f.patch), hunks).sort()
+    changes.set(f.filename, `${what} ${digest(placed.join('\n'))}`)
+  }
+  return changes
 }
 
-/** The files whose lines differ between two reads (linesOf); null when either is not whole. */
+/** The files whose lines differ between two reads; null when either is not whole. */
 export function changedFiles(a: Map<string, string> | null, b: Map<string, string> | null) {
   if (!a || !b) return null
   return [...new Set([...a.keys(), ...b.keys()])].filter((f) => a.get(f) !== b.get(f)).sort()
