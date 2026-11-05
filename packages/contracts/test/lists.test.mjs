@@ -257,7 +257,7 @@ test('a note with a link is not put in italics, which the editor breaks a little
   )
 })
 
-test('handing lines over is a request naming the list, or the person’s note, then the lines', () => {
+test('handing lines over is the person’s note if any, a request naming the list, then the lines', () => {
   const file = { id: 'doc1', path: 'Projects/Acme/launch.md' }
   assert.equal(
     handOffMessage(file, ['**Docs**: FAQ', 'Pricing']),
@@ -265,11 +265,11 @@ test('handing lines over is a request naming the list, or the person’s note, t
   )
   assert.equal(
     handOffMessage(file, ['Pricing'], '  Start with this one. '),
-    'Start with this one.\n\n- Pricing',
+    'Start with this one.\n\nPlease take this item of @[Projects/Acme/launch.md](document:doc1):\n\n- Pricing',
   )
 })
 
-test('a hand-off with no note of the person’s reads back as its file and lines', () => {
+test('a hand-off reads back as the person’s note, its file and lines', () => {
   const file = { id: 'doc1', path: 'Projects/Acme/launch.md' }
   assert.deepEqual(handOffParts(handOffMessage(file, ['**Docs**: FAQ', 'Pricing'])), {
     file,
@@ -279,8 +279,14 @@ test('a hand-off with no note of the person’s reads back as its file and lines
     file,
     items: ['🔴 Invite: « Invite them » (PR #531).'],
   })
-  // The person's own words stay theirs, as does anything else.
-  assert.equal(handOffParts(handOffMessage(file, ['Pricing'], 'Start with this one.')), null)
+  // The person's own words come back apart from the lines.
+  assert.deepEqual(
+    handOffParts(handOffMessage(file, ['Pricing'], 'Start with this one.\n\n- Then the FAQ')),
+    { note: 'Start with this one.\n\n- Then the FAQ', file, items: ['Pricing'] },
+  )
+  // A note with the lines right under it, as before, stays the person's message; so does
+  // anything else.
+  assert.equal(handOffParts('Start with this one.\n\n- Pricing'), null)
   assert.equal(handOffParts('Please take this item of the list: pricing'), null)
 })
 
@@ -445,7 +451,8 @@ test('a line handed over takes the paths of its files, which read back with it',
   // With the person's note, the files still go under their line.
   assert.equal(
     handOffMessage(file, [{ text: 'Voice', files: [path] }], 'Look at the screenshot.'),
-    `Look at the screenshot.\n\n- Voice\n  - File in the library: ${path}`,
+    'Look at the screenshot.\n\nPlease take this item of @[Projects/Acme/launch.md](document:doc1):\n\n' +
+      `- Voice\n  - File in the library: ${path}`,
   )
 })
 

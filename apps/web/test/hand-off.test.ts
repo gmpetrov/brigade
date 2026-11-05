@@ -20,7 +20,10 @@ test('lines handed to a running thread are attached quietly, then sent as the pe
     ['/lists/doc1/link', '/threads/thread1/messages'],
   )
   assert.equal(calls[0]!.body.quiet, true)
-  assert.equal(calls[1]!.body.text, `${note}\n\n- Write public docs`)
+  assert.equal(
+    calls[1]!.body.text,
+    `${note}\n\nPlease take this item of @[Projects/Acme/launch.md](document:doc1):\n\n- Write public docs`,
+  )
 })
 
 test('when the message can’t go, the note that stands in keeps what the person added', async () => {

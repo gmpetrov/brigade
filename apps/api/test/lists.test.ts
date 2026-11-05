@@ -747,7 +747,8 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     })
     assert.equal(
       linked.message,
-      `Look at the screenshot.\n\n- Voice: Cartesia or Georges\n  - File in the library: ${path(shot)}`,
+      `Look at the screenshot.\n\nPlease take this item of @[Projects/Acme/sound.md](document:${sound.id}):\n\n` +
+        `- Voice: Cartesia or Georges\n  - File in the library: ${path(shot)}`,
     )
     // A teammate reading the list sees them too.
     const read = (await lists.handleListCall(db, scope, { id: thread }, riley, {

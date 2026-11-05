@@ -127,12 +127,11 @@ export function QueuedMessages({
   }
   const preview = (m: QueuedMessage) => {
     const files = m.attachments.length
+    const handOff = m.memberId === null ? null : handOffNote(m.text)
+    // The person's note, when they wrote one with the lines: their words, not the lines.
+    if (handOff?.said) return mentionsToText(forPeople(handOff.said))
     const note =
-      m.memberId === null
-        ? childNote(m.text)
-          ? null
-          : brigadeNote(m.text, true)
-        : handOffNote(m.text)
+      m.memberId === null ? (childNote(m.text) ? null : brigadeNote(m.text, true)) : handOff?.note
     if (note) return notePreview(note)
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
