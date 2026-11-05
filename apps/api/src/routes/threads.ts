@@ -628,6 +628,8 @@ export const threads = new Hono<AppEnv>()
           orderBy: { createdAt: 'asc' },
         },
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
+        // The thread a teammate started it from (start_thread).
+        startedFrom: { select: { id: true, title: true } },
         project: { select: { id: true, name: true, icon: true, logo: true, archivedAt: true } },
         wakeups: {
           where: { status: 'pending', kind: 'wakeup' },

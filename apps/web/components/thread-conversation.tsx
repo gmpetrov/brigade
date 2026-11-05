@@ -15,7 +15,7 @@ import {
   Laptop,
   Reply,
   LoaderCircle,
-  SquareKanban,
+  Split,
   UserRound,
   UsersRound,
   X,
@@ -1248,7 +1248,7 @@ export function ThreadConversation({
   // computer (with Preview), its details, then what it made.
   // Its name first, on one line that opens when it is cut, as the pill is out of sight on a
   // phone. Then one row per fact, an icon for its kind: who is in it, where it runs, its project,
-  // its task, who started it. Not its teammate and the cloud computer: the panel's header says them.
+  // the thread a teammate started it from, who started it. Not its teammate and the cloud computer: the panel's header says them.
   const fact = 'flex min-w-0 items-center gap-2.5'
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
@@ -1288,12 +1288,15 @@ export function ThreadConversation({
           {projectMenu}
         </div>
       )}
-      {t.task && (
+      {t.startedFrom && (
         <div className={fact}>
-          <SquareKanban aria-label="Task" className={factIcon} />
-          <Link href={`/app/tasks?task=${t.task.id}`} className="truncate hover:underline">
-            {t.task.title}
-          </Link>
+          <Split aria-label="Started from" className={factIcon} />
+          <span className="min-w-0 truncate">
+            From{' '}
+            <Link href={`/app/threads/${t.startedFrom.id}`} className="hover:underline">
+              {t.startedFrom.title}
+            </Link>
+          </span>
         </div>
       )}
       <div className={cn(fact, 'text-muted-foreground')}>

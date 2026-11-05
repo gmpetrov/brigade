@@ -50,7 +50,6 @@ const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
   { kind: 'page', label: 'Pages', icon: ArrowRight },
   { kind: 'teammate', label: 'AI teammates', icon: Bot },
   { kind: 'thread', label: 'Threads', icon: MessagesSquare },
-  { kind: 'task', label: 'Tasks', icon: SquareKanban },
   { kind: 'pull_request', label: 'Pull requests', icon: GitPullRequest },
   { kind: 'ticket', label: 'Tickets', icon: Inbox },
   { kind: 'automation', label: 'Routines', icon: CalendarClock },
@@ -74,8 +73,6 @@ function hrefOf(r: SearchResult) {
       return `/app/threads/${r.id}`
     case 'teammate':
       return `/app/teammates/${r.id}`
-    case 'task':
-      return `/app/tasks?task=${r.id}`
     case 'pull_request':
       return r.pull ? pullHref(r.pull.repository, r.pull.number) : '/app/pulls'
     case 'ticket':

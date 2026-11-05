@@ -114,8 +114,10 @@ mission; threads stay where the work happens.
   with Chief", is the one the onboarding's setup thread with the chief starts on (StartThread's
   `listLines`), so the list shows it in progress at once. It is an ordinary list: people edit it,
   hand its lines over or delete it, and nothing brings it back.
-- **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
-  stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
+- **Lists are the backlog.** A line nobody has started is the backlog, planned in its file, where
+  the order of the lines and their sections matter; the Board has no "To do" column. Lists replaced
+  the Tasks board, gone since (docs/hand-offs.md). A teammate hands lines to a teammate in a thread
+  of its own with `start_thread` (its `list` and `items`), as a person's Hand to does.
 - **The Board shows the lines that move** (docs/board.md): every list's lines with work on them,
   across Needs you, In progress and Done, with the threads on no list and the routines. A list's
   page links to the Board on that list. Its lines are planned here, in the file.

@@ -1,15 +1,16 @@
 'use client'
 // Messages Brigade wrote to a teammate rather than a person (a wake-up, a schedule's run, a
-// task comment or brief, a trigger's event, a pull request's nudge), as people read them: a quiet line
-// saying what it is, with what the teammate got folded under it, not a person's bubble. What
-// the teammate receives stays the same.
+// message or brief from another thread, a trigger's event, a pull request's nudge), as people
+// read them: a quiet line saying what it is, with what the teammate got folded under it, not a
+// person's bubble. What the teammate receives stays the same.
 import {
   chiefAnswerNote,
   chiefOverruledNote,
   isChiefDecisionBrief,
   forPeople,
+  fromStartedThreadBrief,
   fromTaskBrief,
-  fromTaskComment,
+  fromThreadComment,
   handOffParts,
   mentionsToText,
   resolveConflictsNote,
@@ -84,13 +85,21 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
         (wakeup.lateMinutes ? ` · ${wakeup.lateMinutes} min late, the computer was offline` : ''),
       body: wakeup.note,
     }
-  const comment = fromTaskComment(text)
+  const comment = fromThreadComment(text)
   if (comment)
     return {
       icon: MessageSquare,
       label: `${comment.from} commented from “${comment.threadTitle}”`,
       body: comment.text,
     }
+  const started = fromStartedThreadBrief(text)
+  if (started)
+    return {
+      icon: ListTodo,
+      label: `${started.from} started this thread from “${started.threadTitle}”`,
+      body: started.text,
+    }
+  // An old task thread's brief, from the Tasks board's days.
   const brief = fromTaskBrief(text)
   if (brief)
     return {
