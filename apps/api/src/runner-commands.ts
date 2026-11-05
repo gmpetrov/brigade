@@ -138,6 +138,22 @@ async function checkCaps(computerId: string, sessionId: string | null, message: 
   })
 }
 
+/**
+ * The thread's commands kept before this one that go in order with it (orderedThread) and still
+ * wait for the runner's acknowledgement, oldest first: a connection that has not had them gets
+ * them before it (WorkspaceHub.sendOrdered).
+ */
+export async function keptBefore(computerId: string, sessionId: string, commandId: string) {
+  const rows = await prisma.$queryRaw<{ id: string; type: string }[]>`
+    SELECT c.id, c.type FROM "RunnerCommand" c
+    JOIN "RunnerCommand" me ON me.id = ${commandId}
+    WHERE c."computerId" = ${computerId} AND c.status = 'pending' AND c."sessionId" = ${sessionId}
+      AND c.id <> me.id AND c."createdAt" < me."createdAt"
+      AND c.type IN ('thread.prompt', 'thread.takeover', 'thread.handback')
+    ORDER BY c."createdAt" ASC`
+  return rows.map((r) => r.id)
+}
+
 /** A command with this id is kept. */
 export async function isKept(id: string) {
   return (await prisma.runnerCommand.count({ where: { id } })) > 0

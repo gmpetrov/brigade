@@ -24,6 +24,7 @@ import {
   commandMessage,
   isDurable,
   keepCommand,
+  keptBefore,
   noteSent,
   orderedThread,
   pendingCommands,
@@ -124,6 +125,8 @@ export class WorkspaceHub {
    * answers), being kept or sent: the next waits for it.
    */
   private readonly inOrder = new Map<string, Promise<void>>()
+  /** The commands that go in order each connection was sent (sendOrdered), by commandId. */
+  private readonly sentOn = new WeakMap<RunnerConn, Set<string>>()
 
   constructor(
     readonly workspaceId: string,
@@ -386,6 +389,8 @@ export class WorkspaceHub {
       message = await packCommand(this.workspaceId, message)
     if (isDurable(message)) {
       const kept = message
+      // The person's word and Chief's answers: kept and sent in the order the thread reads them.
+      const thread = orderedThread(kept)
       const go = async () => {
         // Kept already (a stable id tried again after a restart): it goes, or went, from that row.
         // Moot (an answer of Chief's the person's word overtook): it never goes.
@@ -393,11 +398,10 @@ export class WorkspaceHub {
           return 'queued' as const
         const now = this.runners.get(computer.id)
         if (!now || this.isRestarting(computer.id)) return null
-        await this.sendKept(computer.id, now, kept)
+        if (thread) await this.sendOrdered(computer.id, now, thread, kept)
+        else await this.sendKept(computer.id, now, kept)
         return 'sent' as const
       }
-      // The person's word and Chief's answers: kept and sent in the order the thread reads them.
-      const thread = orderedThread(kept)
       const done = thread ? await this.inThreadOrder(thread, go) : await go()
       if (done) return done
     } else if (
@@ -453,8 +457,29 @@ export class WorkspaceHub {
   private sendInOrder(computerId: string, conn: RunnerConn, kept: DurableCommand) {
     const thread = orderedThread(kept)
     return thread
-      ? this.inThreadOrder(thread, () => this.sendKept(computerId, conn, kept))
+      ? this.inThreadOrder(thread, () => this.sendOrdered(computerId, conn, thread, kept))
       : this.sendKept(computerId, conn, kept)
+  }
+
+  /**
+   * Send a command that goes in order (orderedThread) after its thread's older ones still waiting
+   * for the runner that this connection has not had (keptBefore): a runner that came back gets an
+   * answer of Chief's sent before it went before the person's word sent since, whichever of the
+   * replay (flushQueue, resendCommands) and the new command comes first. The runner takes a
+   * command once, however often it is sent.
+   */
+  private async sendOrdered(
+    computerId: string,
+    conn: RunnerConn,
+    sessionId: string,
+    kept: DurableCommand,
+  ) {
+    for (const id of await keptBefore(computerId, sessionId, kept.commandId)) {
+      if (this.sentOn.get(conn)?.has(id)) continue
+      const older = await commandMessage(id)
+      if (older && orderedThread(older)) await this.sendKept(computerId, conn, older)
+    }
+    await this.sendKept(computerId, conn, kept)
   }
 
   /** Send a kept command on this connection, unless an older runner took it already. */
@@ -490,12 +515,18 @@ export class WorkspaceHub {
     if (this.runners.get(computerId) !== conn) return
     this.touch(computerId)
     this.send(conn, whole)
+    if (orderedThread(kept)) {
+      const sent = this.sentOn.get(conn) ?? new Set<string>()
+      this.sentOn.set(conn, sent.add(kept.commandId))
+    }
   }
 
   /** A runner said hello: what waited for it goes, the kept commands first, in order. */
   async flushQueue(computerId: string, conn: RunnerConn) {
     for (const command of await pendingCommands(computerId)) {
       if (this.runners.get(computerId) !== conn) return
+      // Sent on this connection already, before a command of its thread kept since (sendOrdered).
+      if (this.sentOn.get(conn)?.has(command.id)) continue
       const message = await commandMessage(command.id)
       if (message) await this.sendInOrder(computerId, conn, message)
     }

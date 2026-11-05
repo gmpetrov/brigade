@@ -285,17 +285,20 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     })
     const sent: Sent[] = []
     const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
-    handle.onMessage(
-      JSON.stringify({
-        type: 'hello',
-        protocolVersion: 99,
-        version: '0.0.0',
-        platform: 'linux-x64',
-      }),
-      ws as never,
+    // Its hello, done once what waited for it was sent (flushQueue).
+    const hello = Promise.resolve(
+      handle.onMessage(
+        JSON.stringify({
+          type: 'hello',
+          protocolVersion: 99,
+          version: '0.0.0',
+          platform: 'linux-x64',
+        }),
+        ws as never,
+      ),
     )
     await until(() => sent.some((m) => m.type === 'welcome'), 'the welcome')
-    return { sent, close: () => handle.onClose() }
+    return { sent, hello, close: () => handle.onClose() }
   }
 
   const call = (p: Person, path: string, init: { method?: string; body?: unknown } = {}) => {
@@ -896,7 +899,14 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     const base = newPrismaClient(process.env.DATABASE_URL!)
     let reached!: () => void
     let release!: () => void
-    const atStep = new Promise<void>((resolve) => (reached = resolve))
+    let isHeld = false
+    const atStep = new Promise<void>(
+      (resolve) =>
+        (reached = () => {
+          isHeld = true
+          resolve()
+        }),
+    )
     const held = new Promise<void>((resolve) => (release = resolve))
     const wrap = (delegate: object) =>
       new Proxy(delegate, {
@@ -930,6 +940,8 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     return {
       release,
       done,
+      /** It reached the step, and waits there until released. */
+      held: () => isHeld,
       close: async () => {
         release()
         await done.catch(() => {})
@@ -1137,6 +1149,59 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       assert.deepEqual(prompts(back.sent, id), ['chief', 'Not yet'])
     } finally {
       back.close()
+    }
+  })
+
+  test('a computer back gets an answer sent before the person’s word first, whatever replays it', async () => {
+    const { id, made, wakeup } = await answeredAway()
+    const first = await runner()
+    try {
+      await first.hello
+      await fireAgain(wakeup.id)
+      assert.deepEqual(prompts(first.sent, id), ['chief'])
+    } finally {
+      // Gone before it said it took it.
+      first.close()
+    }
+    // Back: its replay of what waits is held at its first read, after its welcome…
+    let back: Awaited<ReturnType<typeof runner>> | undefined
+    const flush = await holding('runnerCommand', 'findMany', async () => {
+      back = await runner()
+      await back.hello
+    })
+    // …and so is the minute's resend of what was sent a while ago.
+    await db.runnerCommand.updateMany({
+      where: { id: `wakeup:${wakeup.id}` },
+      data: { sentAt: new Date(Date.now() - 10 * 60_000) },
+    })
+    const { resendCommands } = await import('../src/runner-commands.js')
+    const resend = await holding('runnerCommand', 'findMany', () =>
+      resendCommands(Date.now(), workspaceId),
+    )
+    try {
+      await until(() => !!back, 'the runner back')
+      assert.ok(flush.held() && resend.held())
+      const response = await call('ada', `/${id}/messages`, { body: { text: 'Not yet' } })
+      assert.equal(response.status, 200, await response.clone().text())
+      resend.release()
+      await resend.done
+      flush.release()
+      await flush.done
+      // Each command as the runner takes it: once, the first time it comes.
+      const seen = new Set<string>()
+      const taken = back!.sent.filter((m) => {
+        const commandId = m.commandId as string | undefined
+        if (!commandId) return true
+        if (seen.has(commandId)) return false
+        seen.add(commandId)
+        return true
+      })
+      assert.deepEqual(prompts(taken, id), ['chief', 'Not yet'])
+      assert.equal((await row(made.decision.id)).status, 'answered')
+    } finally {
+      await resend.close()
+      await flush.close()
+      back?.close()
     }
   })
 

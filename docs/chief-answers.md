@@ -26,10 +26,10 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
   reply ending on them, the person's first request in the thread, their mandate
   (`chief/mandate.md`, only while Chief may read it there) and Chief's earlier decisions there. A
   choices card's question and its options' descriptions go in with the labels (the reply text
-  alone may not say what is decided, nor that "Route A" deploys to production). Its id is fixed with the decision
-  (`ChiefDecision.childSessionId`), so a start tried again after a restart takes up the same
-  thread, and its prompt (`chief:<decision>`) reaches it once. It runs at low effort, with no
-  App, repository, roster or tool but `search_workspace`, `list_items` and `chief_decide`
+  alone may not say what is decided, nor that "Route A" deploys to production). Its id is fixed
+  with the decision (`ChiefDecision.childSessionId`), so a start tried again after a restart takes
+  up the same thread, and its prompt (`chief:<decision>`) reaches it once. It runs at low effort,
+  with no App, repository, roster or tool but `search_workspace`, `list_items` and `chief_decide`
   (`ThreadSpec.decision`); it is shown on the question, not among the thread's sub-threads
   (`Session.chiefDecisionId`), and it reports nothing: `noteChildEvents` hands its events to
   `noteDecisionEvents`, which settles it delivered and fails a decision it did not make. Runners
@@ -78,9 +78,12 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
   else it never goes, and its wake-up is cancelled. The workspace's hub keeps and sends these
   commands of one thread one at a time (`orderedThread`, `WorkspaceHub.inThreadOrder`): a message
   sent while an answer is on its way to the computer waits for it. They are kept at distinct
-  instants, so a computer that comes back gets them in that order too. Nothing is claimed in
-  between: a process that stops at any point leaves the wake-up to fire again, and the answer is
-  kept once (its command's id is the wake-up's). A dismissed card is a closed question
+  instants, and before one goes on a connection, the thread's older ones still waiting for the
+  runner that this connection has not had go first (`sendOrdered`, `keptBefore`): a computer that
+  comes back gets an answer sent before the person's word first, whether its replay or their new
+  message comes first (the runner takes a command once, however often it comes). Nothing is
+  claimed in between: a process that stops at any point leaves the wake-up to fire again, and the
+  answer is kept once (its command's id is the wake-up's). A dismissed card is a closed question
   (`questionClosed`), and dismissing settles Chief's decisions on it and withdraws its answers the
   same way (`noteChiefDismissed`).
 - **Suggestions earn autonomy, as playbooks' actions do.** A person's message after a suggested
