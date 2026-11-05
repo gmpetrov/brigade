@@ -8,6 +8,7 @@
 // the store is pruned; and every version of every package ever installed stays
 // there otherwise.
 import { rm, stat, statfs } from 'node:fs/promises'
+import { uptime } from 'node:os'
 import { join } from 'node:path'
 import { run } from './repos.js'
 
@@ -69,6 +70,38 @@ const MINTLIFY_SITES = '.mintlify/previews'
  * Below FULL again, it closes.
  */
 export const STILL_FULL = 0.8
+
+/**
+ * Where boat's lazy restore keeps its state, readable by every user. A resumed computer runs
+ * before its disk is all there: boat copies the snapshot back in the background (it writes
+ * `mounted` once the computer boots, `hydration-done` once every file is back). Until then, a
+ * file removed is only noted (a tombstone) and leaves the disk at the end of the restore, while
+ * what is written goes to the disk at once. Measured on Nov 5: the disk read 88% full 16 minutes
+ * after a resume, the runner opened the disk_full ticket, and it closed 6 seconds after boat
+ * said the restore was done, nothing else having changed.
+ */
+export const RESTORE_DIR = '/var/lib/ascii-lazy'
+/** A restore said to run longer than this is taken as over: the API stops waiting for one then too. */
+export const RESTORE_MAX_MS = 3 * 60 * 60_000
+
+/**
+ * Whether boat is still restoring this computer's disk since it last booted: `mounted` written
+ * since the boot, and no `hydration-done` since. Neither file (not boat, or an older one), one
+ * from an earlier boot, or one older than RESTORE_MAX_MS: not restoring.
+ */
+export async function restoring(
+  dir = RESTORE_DIR,
+  now = Date.now(),
+  bootedAt = now - uptime() * 1000,
+) {
+  const [mounted, done] = await Promise.all(
+    ['mounted', 'hydration-done'].map((name) => stat(join(dir, name)).catch(() => null)),
+  )
+  // A minute's slack: the boot time is read from the uptime, to the second.
+  if (!mounted || mounted.mtimeMs < bootedAt - 60_000) return false
+  if (now - mounted.mtimeMs >= RESTORE_MAX_MS) return false
+  return !done || done.mtimeMs < mounted.mtimeMs
+}
 
 /** Package managers whose runs write into the caches cleared here, by the name their command has. */
 const MANAGERS = new Set([
