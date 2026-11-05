@@ -769,6 +769,7 @@ export const PullRequestScalarFieldEnum = {
   requestedByMemberId: 'requestedByMemberId',
   round: 'round',
   resolveFromSha: 'resolveFromSha',
+  approvalCarriedTo: 'approvalCarriedTo',
   note: 'note',
   autoMergeAt: 'autoMergeAt',
   state: 'state',

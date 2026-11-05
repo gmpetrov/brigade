@@ -4,8 +4,11 @@
 // verdict (github_review_pull_request) is kept here. A person merges, or asks a
 // teammate with write access to (github_merge_pull_request). A pull request that
 // conflicts goes back to the teammate that wrote it to resolve, and merges once
-// that is done. A member who turned Auto-merge on has Brigade merge what teammates open in
-// their threads once it is ready (autoMerge).
+// that is done: right away when its resolution left what it adds and removes as its
+// review approved it, else once its reviewer looked at the resolution (resolverDone).
+// A member who turned Auto-merge on has Brigade merge what teammates open in their
+// threads once it is ready (autoMerge), resolving its conflicts the same way.
+import { createHash } from 'node:crypto'
 import { mayWrite } from './account-sharing.js'
 import {
   MergeMethod,
@@ -26,7 +29,7 @@ import { HTTPException } from 'hono/http-exception'
 import { personOfThread, trackLater } from './analytics.js'
 import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
-import { reportOf, reportSource } from './children.js'
+import { messageChild, reportOf, reportSource } from './children.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
 import { captureError, markTracked } from './error-tracking.js'
@@ -249,11 +252,24 @@ export const reviewInclude = {
 type ReviewRow = Prisma.PullRequestGetPayload<{ include: typeof reviewInclude }>
 
 /**
+ * Whether a verdict holds for this head: the commit it read, or, for an approval, a head the
+ * author pushed to resolve its conflicts that left what it adds and removes as the approval read
+ * it (approvalCarriedTo, resolverDone).
+ */
+export const holdsFor = (
+  verdict: { verdict: string; sha: string },
+  carriedTo: string | null | undefined,
+  headSha: string,
+) => verdict.sha === headSha || (verdict.verdict === 'approve' && carriedTo === headSha)
+
+/**
  * Its review as the dashboard shows it: under way, its latest verdict, or why the teammate
  * that opened it asked for none. headSha, when GitHub was asked: whether commits came after.
  */
 export function reviewOf(
-  row: Pick<ReviewRow, 'reviewSession' | 'reviews' | 'noReviewReason'>,
+  row: Pick<ReviewRow, 'reviewSession' | 'reviews' | 'noReviewReason'> & {
+    approvalCarriedTo?: string | null
+  },
   headSha?: string,
 ): PullReview | null {
   const thread = row.reviewSession
@@ -266,7 +282,14 @@ export function reviewOf(
       reviewer: last.teammate,
       threadId: last.sessionId,
       at: last.createdAt.toISOString(),
-      ...(headSha ? { changed: last.sha !== headSha } : {}),
+      ...(headSha
+        ? {
+            changed: !holdsFor(last, row.approvalCarriedTo, headSha),
+            ...(last.sha !== headSha && holdsFor(last, row.approvalCarriedTo, headSha)
+              ? { kept: true }
+              : {}),
+          }
+        : {}),
     }
   return row.noReviewReason ? { state: 'skipped', reason: row.noReviewReason } : null
 }
@@ -1186,7 +1209,8 @@ export async function resolveTurnEnded(scope: Scope, sessionId: string, teammate
 
 /**
  * Back to the author before merging (failed checks, conflicts), or a stop when it cannot:
- * it comes back to merging when the author is done, each time a round.
+ * it comes back to merging when the author is done, each time a round. ask: what it is
+ * asked, worded for it by name.
  */
 async function sendBack(
   db: ScopedDb,
@@ -1194,7 +1218,7 @@ async function sendBack(
   row: MergeRow,
   head: string,
   note: string,
-  ask: string,
+  ask: (author: string) => string,
 ) {
   const author = row.authorTeammateId
     ? await db.teammate.findFirst({ where: { id: row.authorTeammateId, archivedAt: null } })
@@ -1209,20 +1233,24 @@ async function sendBack(
     }))
   )
     return
-  await nudge(
-    db,
-    scope,
-    { ...row, round: row.round + 1 },
-    author,
+  await nudge(db, scope, { ...row, round: row.round + 1 }, author, ask(author.name))
+}
+
+/** How Brigade merges it: as asked, squash when nobody said. */
+const methodOf = (row: { mergeMethod: string | null }) =>
+  MergeMethod.safeParse(row.mergeMethod).data ?? 'squash'
+
+/** The ask of a merge that cannot go on yet, for its author to fix (failed checks). */
+const fixAsk =
+  (row: MergeRow, note: string, ask: string) =>
+  (author: string): string =>
     [
       `Pull request #${row.number} in ${row.repository} was set to merge, but cannot merge yet: ${note}.`,
       '',
-      `${author.name}, ${ask} Push to \`${row.headRef}\`. ` +
+      `${author}, ${ask} Push to \`${row.headRef}\`. ` +
         'When you are done, Brigade merges it once GitHub allows it. ' +
         'Do not mention other teammates in your reply.',
-    ].join('\n'),
-  )
-}
+    ].join('\n')
 
 /** Waiting on GitHub, with a reason for the dashboard. GitHub refusing it also tells a person, once. */
 async function waiting(db: ScopedDb, row: MergeRow, note: string, ticket = false) {
@@ -1231,9 +1259,16 @@ async function waiting(db: ScopedDb, row: MergeRow, note: string, ticket = false
 }
 
 /**
- * The author's turn to resolve conflicts ended: now it merges, once GitHub allows it.
- * Nothing pushed means it could not, and said why in its reply: a person decides.
- * resolveFromSha holds the head it started from.
+ * The author's turn to resolve conflicts (or fix failed checks) ended: now it merges, once
+ * GitHub allows it. Nothing pushed means it could not, and said why in its reply: a person
+ * decides. resolveFromSha holds the head it started from.
+ *
+ * A review that approved it must still stand for what merges (approvalAfter): when what the
+ * author pushed left the lines the pull request itself adds and removes as the approval read
+ * them, the approval holds for the new head (approvalCarriedTo); else its reviewer looks at
+ * what was pushed first. A person's merge then waits for that look's verdict (advanceMerge); an
+ * auto-merge goes back to waiting on its review, as before it was set merging, and merges once
+ * the review approves its head (autoMergeTurnEnded).
  */
 async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
   const gh = await github(db, scope, row.repository)
@@ -1249,16 +1284,243 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
       row,
       'Nothing was pushed to resolve the conflicts: read the reply in the thread',
     )
-  if (
-    !(await claim(db, row, {
-      mergeStatus: 'merging',
-      resolveFromSha: p.head.sha,
-      note: 'Merging once GitHub allows it',
+  const auto = row.autoMergeAt !== null
+  const approval = await approvalAfter(db, gh, row, p)
+  const checked = (data: Prisma.InputJsonObject) =>
+    audit({
+      ...scope,
+      actor: { type: 'system', id: 'brigade' },
+      action: 'pull_request.resolution_checked',
+      target: { type: 'pull_request', id: row.id },
+      data: { repository: row.repository, number: row.number, head: p.head.sha, ...data },
+    })
+  if (approval.kind === 'holds') {
+    if (
+      !(await claim(db, row, {
+        mergeStatus: 'merging',
+        resolveFromSha: p.head.sha,
+        note: 'Merging once GitHub allows it',
+        ...(approval.carried ? { approvalCarriedTo: p.head.sha } : {}),
+        // An auto-merge's wait on GitHub starts again from here.
+        ...(auto ? { autoMergeAt: new Date() } : {}),
+      }))
+    )
+      return
+    if (approval.carried) await checked({ approvalKept: true })
+    void advanceMerge(scope, row.id).catch(console.error)
+    return
+  }
+  // Its reviewer reads what was pushed first: asked here, unless it is at it already (the
+  // author asked it in its turn, or this was asked once already). Asked before the merge moves
+  // on, so that a person's merge never finds the look not yet under way.
+  if (approval.kind === 'look') {
+    const asked = await askLook(db, scope, row, p, approval).catch((error: unknown) => ({
+      error: error instanceof Error ? error.message : String(error),
     }))
+    if ('error' in asked)
+      return stop(
+        db,
+        scope,
+        row,
+        `${approval.reviewer} approved it before what was pushed to merge it, and could not be ` +
+          `asked to look at that (${asked.error}): have it reviewed again, or merge it as it is`,
+      )
+  }
+  if (
+    !(await claim(
+      db,
+      row,
+      auto
+        ? { mergeStatus: 'none', autoMergeAt: null, resolveFromSha: p.head.sha, note: null }
+        : {
+            mergeStatus: 'merging',
+            resolveFromSha: p.head.sha,
+            note: `Waiting for ${approval.reviewer}'s review`,
+          },
+    ))
   )
     return
-  void advanceMerge(scope, row.id).catch(console.error)
+  await checked({
+    approvalKept: false,
+    lookAsked: approval.kind === 'look',
+    ...(approval.kind === 'look' ? { files: approval.files?.slice(0, 50) ?? null } : {}),
+  })
+  if (!auto) void advanceMerge(scope, row.id).catch(console.error)
 }
+
+/** Where a review that approved a pull request stands after its author pushed to merge it. */
+type ApprovalAfter =
+  /** Nothing to keep (no review, or one that asked for changes a person merges past), or kept. */
+  | { kind: 'holds'; carried: boolean }
+  /** A review of it is under way already. */
+  | { kind: 'reviewing'; reviewer: string }
+  /** What it adds or removes changed since the approval (in files), or could not be compared (null). */
+  | {
+      kind: 'look'
+      reviewer: string
+      /** The thread that approved it, which is asked to look (its latest review's, once gone). */
+      threadId: string | null
+      approved: string
+      files: string[] | null
+    }
+
+/**
+ * Whether its latest review's approval still stands for its head, now that its author pushed
+ * to get it merged: what the pull request itself adds and removes (ownChanges) is as the
+ * approval read it. GitHub failing to say counts as changed: its reviewer looks.
+ */
+async function approvalAfter(
+  db: ScopedDb,
+  gh: GitHub,
+  row: MergeRow,
+  p: GhPull,
+): Promise<ApprovalAfter> {
+  const reviewed = await db.pullRequest.findFirst({ where: { id: row.id }, include: reviewInclude })
+  const thread = reviewed?.reviewSession
+  if (thread && reviewUnderWay(thread)) return { kind: 'reviewing', reviewer: thread.teammate.name }
+  const last = reviewed?.reviews[0]
+  if (
+    !last ||
+    last.verdict !== 'approve' ||
+    holdsFor(last, reviewed!.approvalCarriedTo, p.head.sha)
+  )
+    return { kind: 'holds', carried: false }
+  const read = (sha: string) =>
+    ownChanges(gh, row.repository, p.base.ref, sha).catch((error: unknown) => {
+      console.warn(`${ref(row)}: its changes at ${sha} not read: ${String(error)}`)
+      return null
+    })
+  const [approved, now] = await Promise.all([read(last.sha), read(p.head.sha)])
+  const files = changedFiles(approved, now)
+  if (files?.length === 0) return { kind: 'holds', carried: true }
+  return {
+    kind: 'look',
+    reviewer: last.teammate?.name ?? 'Its reviewer',
+    threadId: last.sessionId ?? reviewed!.reviewSessionId,
+    approved: last.sha,
+    files,
+  }
+}
+
+/** Files GitHub's compare lists at most: past them, what a pull request changes is not known whole. */
+const COMPARE_FILES_MAX = 300
+
+/** A file a pull request changes, as GitHub's compare lists it. */
+type GhChange = {
+  filename: string
+  previous_filename?: string
+  status: string
+  changes: number
+  sha?: string | null
+  patch?: string
+}
+
+const digest = (text: string) => createHash('sha256').update(text).digest('hex')
+
+/**
+ * What a pull request changes at a commit, as its Files changed shows it then (GitHub's compare
+ * of its base branch with that commit, from where they meet): for each file, its status and the
+ * lines it adds and removes, without the lines around them nor where they are, which merging its
+ * base in moves. Null when GitHub cannot show it whole: as many files as it lists at most, or a
+ * changed file it shows no patch for (too big, or binary), unless it is a new one.
+ */
+export async function ownChanges(gh: GitHub, repo: string, base: string, sha: string) {
+  const range = `${base.split('/').map(encodeURIComponent).join('/')}...${encodeURIComponent(sha)}`
+  // One commit a page: its files come with the first, whatever their count.
+  const { files = [] } = await call<{ files?: GhChange[] }>(
+    gh,
+    `${repoPath(repo)}/compare/${range}?per_page=1`,
+  )
+  if (files.length >= COMPARE_FILES_MAX) return null
+  const changes = new Map<string, string>()
+  for (const f of files) {
+    const what = `${f.status} ${f.previous_filename ?? ''}`
+    if (f.patch === undefined) {
+      if (f.changes === 0) changes.set(f.filename, what)
+      else if (f.status === 'added' && f.sha) changes.set(f.filename, `${what} ${f.sha}`)
+      else return null
+      continue
+    }
+    const lines = f.patch.split('\n')
+    const added = lines.filter((l) => l.startsWith('+')).join('\n')
+    const removed = lines.filter((l) => l.startsWith('-')).join('\n')
+    changes.set(f.filename, `${what} ${digest(added)} ${digest(removed)}`)
+  }
+  return changes
+}
+
+/** The files whose own changes differ between two reads (ownChanges); null when either is not whole. */
+export function changedFiles(a: Map<string, string> | null, b: Map<string, string> | null) {
+  if (!a || !b) return null
+  return [...new Set([...a.keys(), ...b.keys()])].filter((f) => a.get(f) !== b.get(f)).sort()
+}
+
+/** Commits named in a message: short enough to read, long enough for git. */
+const short = (sha: string) => sha.slice(0, 10)
+
+/**
+ * Ask the reviewer that approved it to look at what its author pushed since, in its review's
+ * thread, as the author would (message_thread): its report wakes the author, as a look's does.
+ * The pull request's review follows that thread.
+ */
+async function askLook(
+  db: ScopedDb,
+  scope: Scope,
+  row: MergeRow,
+  p: GhPull,
+  look: Extract<ApprovalAfter, { kind: 'look' }>,
+): Promise<{ ok: true } | { error: string }> {
+  const review = look.threadId
+    ? await db.session.findFirst({
+        where: { id: look.threadId },
+        select: { id: true, parentId: true },
+      })
+    : null
+  if (!review?.parentId) return { error: 'its review has no thread to ask' }
+  const parent = await loadThread(db, review.parentId)
+  const asker =
+    parent.teammates.find((t) => t.teammateId === row.authorTeammateId)?.teammate ?? parent.teammate
+  const author =
+    (row.authorTeammateId &&
+      (await db.teammate.findFirst({ where: { id: row.authorTeammateId } }))?.name) ||
+    'Its author'
+  const fixed = row.note?.startsWith('checks failed')
+    ? 'fixed its failing checks'
+    : `resolved its conflicts with \`${p.base.ref}\``
+  const files = look.files ?? []
+  const listed = files.slice(0, 20).map((f) => `\`${f}\``)
+  const more = files.length > 20 ? `, and ${files.length - 20} more` : ''
+  const since = `since you approved \`${short(look.approved)}\``
+  const text = [
+    `To get #${p.number} merged, ${author} ${fixed}. ` +
+      (look.files
+        ? `What it pushed changed lines the pull request itself adds or removes ${since}: in ` +
+          `${listed.join(', ')}${more}.`
+        : 'Brigade could not tell whether what it pushed changed lines the pull request itself ' +
+          `adds or removes ${since}.`),
+    `Look at what was pushed (\`git log ${short(look.approved)}..${short(p.head.sha)}\` on a ` +
+      'checkout of its branch; `git show --remerge-diff` on a merge commit shows what its ' +
+      "resolution did beyond merging). Check that both sides' changes still work together, then " +
+      `give a new verdict on its head \`${short(p.head.sha)}\` with \`github_review_pull_request\` ` +
+      'and report, as before: Brigade merges it once you approve.',
+  ].join('\n\n')
+  const told = await messageChild(
+    db,
+    scope,
+    { id: parent.id, title: parent.title },
+    { id: asker.id, name: asker.name },
+    review.id,
+    text,
+  )
+  if ('error' in told) return told
+  if (look.threadId !== (await reviewThreadOf(db, row.id)))
+    await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewSessionId: review.id } })
+  return told
+}
+
+const reviewThreadOf = async (db: ScopedDb, id: string) =>
+  (await db.pullRequest.findFirst({ where: { id }, select: { reviewSessionId: true } }))
+    ?.reviewSessionId ?? null
 
 /**
  * An owner or admin asks the teammate that wrote a conflicting pull request to
@@ -1357,9 +1619,38 @@ export async function resolveConflicts(
 }
 
 /**
+ * What its review says of a person's merge now: wait while one is under way; stop when its
+ * latest verdict asked for changes on its head, or approved only commits before it (pushed since
+ * without a look, or a look that ended with no verdict: resolverDone asks one when the author
+ * pushed). Nothing when it has no review, its approval holds for its head, or it asked for
+ * changes before commits a person merges past.
+ */
+async function reviewHold(
+  db: ScopedDb,
+  id: string,
+  headSha: string,
+): Promise<{ wait: string } | { stop: string } | null> {
+  const row = await db.pullRequest.findFirst({ where: { id }, include: reviewInclude })
+  const review = row && reviewOf(row, headSha)
+  if (!review || review.state === 'skipped') return null
+  const who = review.reviewer?.name ?? 'Its reviewer'
+  if (review.state === 'reviewing') return { wait: `Waiting for ${who}'s review` }
+  if (!review.changed)
+    return review.state === 'changes_requested' ? { stop: `${who} asked for changes` } : null
+  return review.state === 'approved'
+    ? {
+        stop: `Commits came after ${who} approved it: have it reviewed again, or merge it as it is`,
+      }
+    : null
+}
+
+/**
  * Merge a pull request a person asked to merge, or Auto-merge set merging, as soon as GitHub
- * allows it. Checked when it is ready and every minute after. An auto-merge gives up, back to
- * waiting on a person, where a person's merge would send it back to its author or ask them.
+ * allows it. Checked when it is ready and every minute after. Conflicts go back to its author
+ * either way; otherwise an auto-merge gives up, back to waiting on a person, where a person's
+ * merge would send it back to its author (failed checks) or ask them. A person's merge also
+ * waits for a review under way, such as its reviewer's look at a conflict resolution, and stops
+ * when its review asked for changes on its head or approved only commits before it.
  */
 async function advanceMerge(scope: Scope, id: string, now = new Date()) {
   const db = scoped(scope)
@@ -1392,17 +1683,25 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
     return waiting(db, row, 'A draft: mark it ready for review on GitHub to merge', true)
   }
   if (p.mergeable == null) return // GitHub is still working it out.
-  if (auto && p.mergeable_state === 'dirty')
-    return autoMergeOff(db, scope, row, `it conflicts with \`${p.base.ref}\``)
   if (p.mergeable_state === 'dirty')
-    return sendBack(
-      db,
-      scope,
-      row,
-      p.head.sha,
-      `it conflicts with \`${p.base.ref}\``,
-      `merge \`${p.base.ref}\` into your branch and resolve the conflicts.`,
+    return sendBack(db, scope, row, p.head.sha, `it conflicts with \`${p.base.ref}\``, (author) =>
+      resolveConflictsMessage({
+        number: p.number,
+        title: p.title,
+        repository: row.repository,
+        url: p.html_url,
+        base: p.base.ref,
+        head: p.head.ref,
+        author,
+        method: methodOf(row),
+        by: auto ? 'auto-merge' : 'person',
+      }),
     )
+  if (!auto) {
+    const hold = await reviewHold(db, row.id, p.head.sha)
+    if (hold && 'wait' in hold) return waiting(db, row, hold.wait)
+    if (hold) return stop(db, scope, row, hold.stop)
+  }
   // GitHub failing to list them: an auto-merge tries again next minute. The app not allowed to
   // read check runs: it can never tell, and leaves it to a person.
   const checks = await checksOf(gh, row.repository, p.head.sha, { strict: auto }).catch(
@@ -1415,15 +1714,21 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
   const failed = checks.filter((c) => c.status === 'failure')
   if (auto && failed.length)
     return autoMergeOff(db, scope, row, `checks failed (${failed.map((c) => c.name).join(', ')})`)
-  if (failed.length)
+  if (failed.length) {
+    const note = `checks failed (${failed.map((c) => c.name).join(', ')})`
     return sendBack(
       db,
       scope,
       row,
       p.head.sha,
-      `checks failed (${failed.map((c) => c.name).join(', ')})`,
-      `find out why these checks fail and fix it:\n${failed.map((c) => `- ${c.name}${c.url ? `: ${c.url}` : ''}`).join('\n')}\n`,
+      note,
+      fixAsk(
+        row,
+        note,
+        `find out why these checks fail and fix it:\n${failed.map((c) => `- ${c.name}${c.url ? `: ${c.url}` : ''}`).join('\n')}\n`,
+      ),
     )
+  }
   const pending = checks.filter((c) => c.status === 'pending')
   if (pending.length)
     return waiting(db, row, `Waiting for checks: ${pending.map((c) => c.name).join(', ')}`)
@@ -1443,7 +1748,7 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
       'GitHub requires an approving review or another rule before merging. Approve it on GitHub, or let the Brigade app bypass the rule',
       true,
     )
-  const asked = MergeMethod.safeParse(row.mergeMethod).data ?? 'squash'
+  const asked = methodOf(row)
   // A branch GitHub cannot rebase, such as one whose conflicts were resolved by merging
   // its base in, still lands as one commit on the base: squashed.
   const method = asked === 'rebase' && p.rebaseable === false ? 'squash' : asked
@@ -1691,7 +1996,8 @@ async function reportUnread(
  * is done with nothing asked (a child's, once its report reached the thread that started it, done
  * too: that one decides whether it gets a review; a report that wakes it, a schedule's run's say,
  * once the turn that read it ended: reportUnread); no review of it is starting or under way, and
- * its latest one, if any, approved it. headSha, once GitHub was asked: that approval read it.
+ * its latest one, if any, approved it. headSha, once GitHub was asked: that approval holds for it
+ * (holdsFor: it read it, or a conflict resolution kept what it approved).
  */
 export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string | null {
   const thread = row.session
@@ -1715,7 +2021,8 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
   if (review?.state === 'reviewing') return 'a review of it is under way'
   if (review?.state === 'changes_requested') return 'its review asked for changes'
   const last = row.reviews[0]
-  if (last && headSha && last.sha !== headSha) return 'commits came after its review approved it'
+  if (last && headSha && !holdsFor(last, row.approvalCarriedTo, headSha))
+    return 'commits came after its review approved it'
   return null
 }
 
@@ -1743,8 +2050,9 @@ async function autoMergeOff(db: ScopedDb, scope: Scope, row: MergeRow, reason: s
 /**
  * Set a pull request merging on its own, for its thread's member's Auto-merge, when it is
  * ready: what Brigade knows holds it nowhere (autoMergeHold), and on GitHub it is open, no
- * draft, without conflicts or a failed check. Then it merges once its checks pass, as a merge a
- * person asked for does. Whether it was set merging.
+ * draft, without a failed check. Then it merges once its checks pass, as a merge a person asked
+ * for does; one that conflicts goes back to its author to resolve first (advanceMerge). Whether
+ * it was set merging.
  */
 export async function autoMerge(scope: Scope, id: string, now = new Date()) {
   const db = scoped(scope)
@@ -1753,7 +2061,7 @@ export async function autoMerge(scope: Scope, id: string, now = new Date()) {
   if (autoMergeHold(row, now)) return false
   const gh = await github(db, scope, row.repository)
   const p = await pullOf(gh, row.repository, row.number)
-  if (stateOf(p) !== 'open' || p.draft || p.mergeable_state === 'dirty') return false
+  if (stateOf(p) !== 'open' || p.draft) return false
   if (autoMergeHold(row, now, p.head.sha)) return false
   const checks = await checksOf(gh, row.repository, p.head.sha, { strict: true })
   if (checks.some((c) => c.status === 'failure')) return false
