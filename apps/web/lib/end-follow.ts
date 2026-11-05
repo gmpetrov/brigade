@@ -29,3 +29,17 @@ export function followIn(following: boolean, now: number, theirsAt: number, quie
 export function glides(distance: number, viewport: number, settled: boolean) {
   return settled && distance <= viewport
 }
+
+/** How fast the view catches up with the end it follows: what is left halves every ~70 ms. */
+const CHASE_S = 0.1
+
+/**
+ * How far to move the view down in `dt` seconds toward an end `distance` px below: a share of
+ * the way that does not depend on the frame rate, at least a pixel, 0 once there. Called each
+ * frame, it eases the view along with text growing beneath it, without starts and stops.
+ */
+export function chaseStep(distance: number, dt: number) {
+  if (distance <= 0.5) return 0
+  const share = 1 - Math.exp(-Math.max(0, Math.min(dt, 0.1)) / CHASE_S)
+  return Math.min(distance, Math.max(1, distance * share))
+}

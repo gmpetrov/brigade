@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { followIn, glides, leavesEnd } from '../lib/end-follow'
+import { chaseStep, followIn, glides, leavesEnd } from '../lib/end-follow'
 
 test('scrolling up, by wheel or keys, leaves the end; down or a touch does not on its own', () => {
   assert.equal(leavesEnd({ type: 'wheel', deltaY: -300 }), true)
@@ -30,4 +30,31 @@ test('a few lines glide to the end; a thread opening or a whole page jumps there
   assert.equal(glides(6_000, 800, true), false)
   // The thread still opening: jumped.
   assert.equal(glides(120, 800, false), false)
+})
+
+test('following text that grows, the view eases along it, never stalling nor jumping', () => {
+  // 300 px a second of text growing under the view, 60 frames a second, for two seconds.
+  let end = 0
+  let top = 0
+  let most = 0
+  let jump = 0
+  for (let frame = 0; frame < 120; frame++) {
+    end += 5
+    const step = chaseStep(end - top, 1 / 60)
+    top += step
+    jump = Math.max(jump, step)
+    most = Math.max(most, end - top)
+  }
+  // Never more than a line behind, and never more than a few pixels a frame.
+  assert.ok(most < 40, `${most}px behind`)
+  assert.ok(jump < 10, `${jump}px in a frame`)
+  // There, it stops.
+  assert.equal(chaseStep(0, 1 / 60), 0)
+  // The same pace at 30 frames a second.
+  assert.ok(
+    Math.abs(
+      chaseStep(100, 1 / 30) -
+        (chaseStep(100, 1 / 60) + chaseStep(100 - chaseStep(100, 1 / 60), 1 / 60)),
+    ) < 1,
+  )
 })

@@ -91,7 +91,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
-import { followIn, glides, leavesEnd } from '@/lib/end-follow'
+import { chaseStep, followIn, glides, leavesEnd } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
@@ -681,6 +681,13 @@ export function ThreadConversation({
   // What came while they scrolled, followed once they stop.
   const followLater = useRef<ReturnType<typeof setTimeout>>(undefined)
   const measured = useRef<() => void>(undefined)
+  // Following what grows at the end: one frame loop easing the view down to it (chaseStep), so
+  // a reply written line by line moves the view as it grows, not in starts and stops.
+  const chase = useRef<number>(undefined)
+  const stopChase = () => {
+    if (chase.current !== undefined) cancelAnimationFrame(chase.current)
+    chase.current = undefined
+  }
   useEffect(() => {
     const view = scroller.current
     if (!view) return
@@ -701,6 +708,7 @@ export function ThreadConversation({
       if (gliding.current) {
         gliding.current = false
         clearTimeout(glideTimer.current)
+        stopChase()
         view.scrollTo({ top: view.scrollTop, behavior: 'instant' })
       }
       if (
@@ -719,6 +727,7 @@ export function ThreadConversation({
     for (const type of ['wheel', 'touchstart', 'keydown'] as const)
       view.addEventListener(type, theirs, { passive: true })
     return () => {
+      stopChase()
       view.removeEventListener('scroll', measure)
       view.removeEventListener('click', afterClick)
       for (const type of ['wheel', 'touchstart', 'keydown'] as const)
@@ -740,6 +749,30 @@ export function ThreadConversation({
     }
     view.scrollTo({ top: view.scrollHeight, behavior })
   }
+  /** Eases the view down to the end, frame after frame, while it follows and the end moves on. */
+  const chaseEnd = () => {
+    following.current = true
+    gliding.current = true
+    if (chase.current !== undefined) return
+    let last = performance.now()
+    const frame = (now: number) => {
+      const view = scroller.current
+      if (!view || !gliding.current) return void (chase.current = undefined)
+      const distance = view.scrollHeight - view.clientHeight - view.scrollTop
+      const step = chaseStep(distance, (now - last) / 1000)
+      last = now
+      if (step === 0) {
+        // There: where it is is read again (the button back to the end goes).
+        chase.current = undefined
+        gliding.current = false
+        measured.current?.()
+        return
+      }
+      view.scrollTop += step
+      chase.current = requestAnimationFrame(frame)
+    }
+    chase.current = requestAnimationFrame(frame)
+  }
   const followEnd = () => {
     const wait = followIn(following.current, performance.now(), theirsAt.current, GLIDE_MS)
     if (wait === undefined) return
@@ -747,7 +780,12 @@ export function ThreadConversation({
     if (wait > 0) return void (followLater.current = setTimeout(followEnd, wait))
     const view = scroller.current
     const distance = view ? view.scrollHeight - view.clientHeight - view.scrollTop : 0
-    toEnd(glides(distance, view?.clientHeight ?? 0, followedIn.current) ? 'smooth' : 'instant')
+    if (glides(distance, view?.clientHeight ?? 0, followedIn.current)) chaseEnd()
+    else {
+      stopChase()
+      gliding.current = false
+      toEnd('instant')
+    }
   }
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
