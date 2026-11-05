@@ -28,18 +28,24 @@ import { ListChecks, MessageSquare } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  MENTION_GROUPS,
-  searchMentions,
-  useMentionOptions,
-  type MentionOption,
-} from '@/components/composer'
+import { findThreads, useMentionOptions } from '@/components/composer'
 import type { DocumentAsk } from '@/components/document-editor'
 import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
 import { ItemChips, ListItemsProvider, pickLines } from '@/components/list-items'
 import { MentionChip, MentionIcon } from '@/components/mention'
 import { Hint } from '@/components/ui/tooltip'
 import { documentFileUrl, uploadDocumentAsset } from '@/lib/api'
+import {
+  foundFor,
+  MENTION_GROUPS,
+  searchesThreads,
+  searchMentions,
+  stillFound,
+  THREAD_SEARCH_DELAY,
+  withFoundThreads,
+  type FoundThreads,
+  type MentionOption,
+} from '@/lib/mention-search'
 import { cn } from '@/lib/utils'
 
 /** A mention in a document: a chip that opens what it names. */
@@ -156,9 +162,33 @@ export function DocumentBlockNoteView({
     latest.current = mentionable
   }, [mentionable])
 
+  // The threads the workspace search found for what follows `@`: the options hold the latest only.
+  const [found, setFound] = useState<FoundThreads>()
+  const pause = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(pause.current), [])
+
   const getItems = useCallback(
-    async (query: string): Promise<MentionItem[]> =>
-      searchMentions(latest.current, query).map((o) => ({
+    async (query: string): Promise<MentionItem[]> => {
+      const matched = searchMentions(latest.current, query)
+      let threads = stillFound(found, query)
+      if (searchesThreads(query) && !foundFor(found, query)) {
+        clearTimeout(pause.current)
+        if (matched.length || threads.length)
+          // Once typing pauses. Its answer changes `found`, and so this function: BlockNote asks again.
+          pause.current = setTimeout(
+            () => void findThreads(query).then(setFound, () => {}),
+            THREAD_SEARCH_DELAY,
+          )
+        else {
+          // Nothing to show meanwhile: wait for it, as BlockNote closes a menu that stays empty.
+          const answer = await findThreads(query).catch(() => undefined)
+          if (answer) {
+            setFound(answer)
+            threads = answer.threads
+          }
+        }
+      }
+      return withFoundThreads(matched, threads, query).map((o) => ({
         key: `${o.kind}:${o.id}`,
         title: o.label,
         subtext: o.hint,
@@ -169,8 +199,9 @@ export function DocumentBlockNoteView({
             { type: 'mention', props: { kind: o.kind, id: o.id, label: o.label } } as never,
             ' ',
           ]),
-      })),
-    [editor],
+      }))
+    },
+    [editor, found],
   )
 
   const [dragging, setDragging] = useState(false)

@@ -176,3 +176,12 @@ test('a teammate calls child threads sub-threads, as people see them, in a paren
     assert.match(textFor(extra), /call them sub-threads when you write to people/)
   }
 })
+
+test('a teammate knows a thread mention, and names a thread by the one search_workspace gives', () => {
+  const text = textFor({})
+  assert.match(text, /A message mentions a thread as `@\[title\]\(thread:id\)`/)
+  assert.match(
+    text,
+    /Name a thread in your reply by its mention \(`search_workspace` gives it with its summary\), never by its id alone\./,
+  )
+})

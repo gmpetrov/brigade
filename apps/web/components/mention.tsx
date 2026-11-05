@@ -65,7 +65,7 @@ function useConnection(mention: Mention, known?: ConnectionKind) {
 
 /**
  * A teammate reads as a name; everything else as a chip with its icon. A library file opens in the
- * panel, an email its conversation in the Inbox.
+ * panel, an email its conversation in the Inbox, a thread and a project their page.
  */
 export function MentionChip({
   mention,
@@ -109,6 +109,20 @@ export function MentionChip({
           className={cn(chip, 'max-w-[40ch] hover:bg-accent', className)}
         >
           <MentionIcon kind="email" />
+          <span className="min-w-0 truncate">{mention.label}</span>
+        </Link>
+      </Hint>
+    )
+  // A thread opens, as from the sidebar.
+  if (mention.kind === 'thread')
+    return (
+      <Hint label={`Open ${mention.label}`}>
+        <Link
+          href={`/app/threads/${encodeURIComponent(mention.id)}`}
+          data-kind="thread"
+          className={cn(chip, 'hover:bg-accent', className)}
+        >
+          <MentionIcon kind="thread" />
           <span className="min-w-0 truncate">{mention.label}</span>
         </Link>
       </Hint>

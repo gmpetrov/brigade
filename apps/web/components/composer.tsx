@@ -9,8 +9,8 @@ import {
   type DesignSystem,
   parseMentions,
   type Mention,
-  type MentionKind,
   type MessageCommand,
+  type SearchResult,
 } from '@brigade/contracts'
 import { Extension, Node, type Editor, type JSONContent } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
@@ -39,10 +39,10 @@ import {
   credentialHint,
   MentionChip,
   MentionIcon,
-  type ConnectionKind,
 } from '@/components/mention'
 import { editable, OPEN_LAYER } from '@/components/side-panel'
 import {
+  api,
   computerName,
   useApi,
   type Account,
@@ -53,24 +53,29 @@ import {
   type RepositoryOption,
   type ThreadSummary,
 } from '@/lib/api'
+import {
+  foundThreads,
+  MENTION_GROUPS,
+  searchesThreads,
+  searchMentions,
+  stillFound,
+  THREAD_SEARCH_DELAY,
+  withFoundThreads,
+  type FoundThreads,
+  type MentionOption,
+} from '@/lib/mention-search'
 import { cn } from '@/lib/utils'
 
-/** Something to mention, with what the menu shows beside it. */
-export type MentionOption = Mention & { hint?: string; connectionKind?: ConnectionKind }
 type Option = MentionOption
 
-export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[] = [
-  { kind: 'teammate', title: 'Teammates', max: 5 },
-  { kind: 'project', title: 'Projects', max: 5 },
-  { kind: 'connection', title: 'Apps', max: 5 },
-  { kind: 'repository', title: 'Repositories', max: 5 },
-  { kind: 'design-system', title: 'Design systems', max: 5 },
-  { kind: 'design', title: 'Designs', max: 5 },
-  { kind: 'document', title: 'Library', max: 5 },
-  { kind: 'credential', title: 'Secrets', max: 5 },
-  { kind: 'thread', title: 'Threads', max: 4 },
-  { kind: 'computer', title: 'Computers', max: 3 },
-]
+/**
+ * The threads the workspace search finds for what follows `@`: every thread, where the menu's
+ * own list (useMentionOptions) has only the latest. Never `exclude`, the thread being replied in.
+ */
+export async function findThreads(query: string, exclude?: string): Promise<FoundThreads> {
+  const results = await api<SearchResult[]>(`/search?q=${encodeURIComponent(query.trim())}`)
+  return foundThreads(query, results, exclude)
+}
 
 /** Everything in the workspace a message can mention. */
 export function useMentionOptions(threadId?: string): Option[] {
@@ -166,27 +171,14 @@ export function useMentionOptions(threadId?: string): Option[] {
   )
 }
 
-/** Matches for a query, grouped by kind; names that start with it first. */
-export function searchMentions(options: Option[], query: string) {
-  const q = query.trim().toLowerCase()
-  return MENTION_GROUPS.flatMap((g) =>
-    options
-      .filter((o) => o.kind === g.kind && o.label.toLowerCase().includes(q))
-      .sort(
-        (a, b) =>
-          Number(!a.label.toLowerCase().startsWith(q)) -
-          Number(!b.label.toLowerCase().startsWith(q)),
-      )
-      .slice(0, g.max),
-  )
-}
-
 type MenuProps<T = Option> = {
   items: T[]
   selected: number
   query: string
   onPick: (option: T) => void
   onHover: (index: number) => void
+  /** More may come for this query: the workspace search has not answered yet. */
+  searching?: boolean
 }
 
 /** max-h-80, in px: whether the menu fits above the composer. */
@@ -195,13 +187,15 @@ const MENU_MAX_HEIGHT = 320
 const menuClass =
   'max-h-80 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg'
 
-function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
+function MentionMenu({ items, selected, query, onPick, onHover, searching }: MenuProps) {
   // Only a moving pointer selects: rows scrolling under a still one (arrow keys) do not.
   const pointer = useRef('')
   if (!items.length)
     return (
       <div className={menuClass}>
-        <p className="px-2 py-1.5 text-sm text-muted-foreground">Nothing matches “{query}”</p>
+        <p className="px-2 py-1.5 text-sm text-muted-foreground">
+          {searching ? 'Searching threads…' : `Nothing matches “${query}”`}
+        </p>
       </div>
     )
   return (
@@ -271,30 +265,77 @@ function MentionView({ node, selected }: ReactNodeViewProps) {
 /** Editors whose `@` or `/` menu is open with something to pick: Enter picks rather than sends. */
 const picking = new WeakSet<object>()
 
+/**
+ * What a menu finds once typing pauses, beyond what it matched at once (the threads the
+ * workspace search finds): `wants` says whether to look for a query, and `find` looks, then
+ * gives what the menu shows in place of what it shows.
+ */
+type Later<T> = {
+  wants: (query: string) => boolean
+  find: (query: string) => Promise<(shown: T[]) => T[]>
+}
+
 /** A suggestion menu (`@`, `/`): arrows move, Enter or Tab picks, Escape closes. */
 function renderMenu<T, P extends object>(
   Menu: ComponentType<MenuProps<T>>,
   pick: (props: SuggestionProps<T, P>, item: T) => void,
+  later?: Later<T>,
 ) {
   let component: ReactRenderer<unknown, MenuProps<T>> | undefined
   let unmount: (() => void) | undefined
   let current: SuggestionProps<T, P>
   let selected = 0
+  // The person moved the selection since the query changed: what comes later leaves it on its row.
+  let moved = false
+  // The query `later` looks for, until it answers.
+  let searching: string | undefined
+  let pause: ReturnType<typeof setTimeout> | undefined
   const menuProps = (): MenuProps<T> => ({
     items: current.items,
     selected,
     query: current.query,
+    searching: searching !== undefined,
     onPick: (item) => pick(current, item),
     onHover: (index) => {
       selected = index
+      moved = true
       component?.updateProps(menuProps())
     },
   })
+  /** What `later` finds for the query shown, once typing pauses, if the menu still shows it. */
+  const lookLater = () => {
+    clearTimeout(pause)
+    const { query } = current
+    searching = later?.wants(query) ? query : undefined
+    if (!later || searching === undefined) return
+    const answered = (add?: (shown: T[]) => T[]) => {
+      if (!component || current.query !== query) return
+      searching = undefined
+      if (add) {
+        const items = add(current.items)
+        const at = moved ? items.indexOf(current.items[selected]!) : 0
+        current = { ...current, items }
+        selected = Math.max(at, 0)
+        if (items.length) picking.add(current.editor)
+      }
+      component.updateProps(menuProps())
+    }
+    pause = setTimeout(
+      () =>
+        later.find(query).then(answered, () => {
+          // The menu keeps what it shows.
+          answered()
+        }),
+      THREAD_SEARCH_DELAY,
+    )
+  }
   return {
     onStart(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
+      moved = false
       if (props.items.length) picking.add(props.editor)
+      lookLater()
       component = new ReactRenderer(Menu, { props: menuProps(), editor: props.editor })
       // Like a chat app's command menu: docked to the composer's frame, full width, above
       // it (below when there's no room above), rather than floating at the caret.
@@ -312,8 +353,10 @@ function renderMenu<T, P extends object>(
     onUpdate(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
+      moved = false
       if (props.items.length) picking.add(props.editor)
       else picking.delete(props.editor)
+      lookLater()
       component?.updateProps(menuProps())
     },
     onKeyDown({ event }: { event: KeyboardEvent }) {
@@ -321,6 +364,7 @@ function renderMenu<T, P extends object>(
       if (!n) return false
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         selected = (selected + (event.key === 'ArrowDown' ? 1 : n - 1)) % n
+        moved = true
         component?.updateProps(menuProps())
         return true
       }
@@ -331,6 +375,8 @@ function renderMenu<T, P extends object>(
       return false
     },
     onExit() {
+      clearTimeout(pause)
+      searching = undefined
       if (current) picking.delete(current.editor)
       unmount?.()
       component?.destroy()
@@ -662,8 +708,32 @@ export function Composer({
   const commands = useCommandOptions()
   const skills = useSkillCommands()
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, commands, skills, onChange, onSubmit, placeholder, suggestion })
-  latest.current = { options, commands, skills, onChange, onSubmit, placeholder, suggestion }
+  const latest = useRef({
+    options,
+    commands,
+    skills,
+    onChange,
+    onSubmit,
+    placeholder,
+    suggestion,
+    threadId,
+  })
+  latest.current = {
+    options,
+    commands,
+    skills,
+    onChange,
+    onSubmit,
+    placeholder,
+    suggestion,
+    threadId,
+  }
+  // The threads the workspace search found for what follows `@`, which the menu adds to its own.
+  const found = useRef<FoundThreads | undefined>(undefined)
+  useEffect(() => {
+    // Found while replying in another thread: they may hold this one.
+    found.current = undefined
+  }, [threadId])
   const skillNames = () => latest.current.skills.map((s) => s.name)
   const text = useRef(value)
 
@@ -751,10 +821,25 @@ export function Composer({
         renderText: ({ node }) => formatMention(node.attrs as Mention),
         suggestion: {
           char: '@',
-          items: ({ query }) => searchMentions(latest.current.options, query),
+          items: ({ query }) =>
+            withFoundThreads(
+              searchMentions(latest.current.options, query),
+              stillFound(found.current, query),
+              query,
+            ),
           render: () =>
-            renderMenu<Option, Mention>(MentionMenu, (p, { kind, id, label }) =>
-              p.command({ kind, id, label }),
+            renderMenu<Option, Mention>(
+              MentionMenu,
+              (p, { kind, id, label }) => p.command({ kind, id, label }),
+              // The menu's own threads are the latest only: the search finds the others.
+              {
+                wants: searchesThreads,
+                find: async (query) => {
+                  const threads = await findThreads(query, latest.current.threadId)
+                  found.current = threads
+                  return (shown) => withFoundThreads(shown, threads.threads, query)
+                },
+              },
             ),
         },
       }),
