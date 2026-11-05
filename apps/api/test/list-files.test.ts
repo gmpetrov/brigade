@@ -10,7 +10,7 @@ import { blocksToMarkdown, documentSchema, markdownToBlocks } from '@brigade/edi
 process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-const { normalizeMarkdown } = await import('../src/collab.js')
+const { normalizeMarkdown, toMarkdown, updateFrom } = await import('../src/collab.js')
 
 type Block = {
   type: string
@@ -121,4 +121,31 @@ test('a file stays under its line through the edits Brigade makes to a list, and
     ],
   )
   assert.match(once, /\n!\[at the margin\.png\]\(asset:cmmargin\)/)
+})
+
+test('a line ticked by Brigade in a live document keeps the files under it', async () => {
+  const list = [
+    '* [ ] Voice <!-- item:aaaaaaaaaaaaaaaa -->',
+    '',
+    '  ![shot.png](asset:cmshot)',
+    '',
+    '* [ ] References',
+    '',
+  ].join('\n')
+  const base = await normalizeMarkdown(list)
+  // The live document as the collab server holds it: the stored text, as Yjs.
+  const Y = await import('yjs')
+  const doc = new Y.Doc()
+  Y.applyUpdate(doc, await updateFrom(Y.encodeStateAsUpdate(new Y.Doc()), base))
+  const ticked = base.replace('* [ ] Voice', '* [x] Voice')
+  Y.applyUpdate(doc, await updateFrom(Y.encodeStateAsUpdate(doc), ticked))
+  const live = await toMarkdown(Y.encodeStateAsUpdate(doc))
+  assert.equal(live, ticked)
+  assert.deepEqual(
+    parseList(live).lines.map((l) => [l.done, l.files.map((f) => f.id)]),
+    [
+      [true, ['cmshot']],
+      [false, []],
+    ],
+  )
 })
