@@ -2,7 +2,8 @@
 // Start a thread without leaving where you are: ⌘⇧K (Ctrl+Shift+K) opens the
 // new-thread box in a dialog. It is the threads panel's box: the same draft and
 // teammate, so closing it by mistake loses nothing. Sending closes it at once and
-// says so in the corner; Open there goes to the thread once it has started. A message
+// says so in the corner, and the sidebar lists the thread at once; Open there goes to the
+// thread once it has started. A message
 // whose thread did not start, here or from a box that opened its thread at once, is kept
 // aside (lib/pending-threads.ts), never mixed with what the box holds since: Back to message
 // swaps it with that, which is kept aside in its turn.
@@ -122,7 +123,7 @@ export function QuickThread() {
                 : undefined
             }
             placeholder={`Chat with ${teammate.name}`}
-            onSending={(thread, sent) => {
+            onSending={(thread) => {
               const send = ++last.current
               const name = teammate.name
               onOpenChange(false)
@@ -131,9 +132,9 @@ export function QuickThread() {
                 ({ id }) => {
                   if (send === last.current) setStarted({ id, teammate: name })
                 },
-                (error: Error) => {
+                // Its message is kept aside (lib/pending-threads.ts): the note offers it.
+                () => {
                   if (send === last.current) setStarted(undefined)
-                  keptMessages.keep({ ...sent, key: `quick-${send}`, error: error.message })
                 },
               )
             }}

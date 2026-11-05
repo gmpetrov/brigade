@@ -23,6 +23,7 @@ import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { preloadOnPoint } from '@/components/thread-conversation'
 import { useThreadPanel } from '@/components/thread-panel'
 import { type ThreadSummary } from '@/lib/api'
+import { usePendingThread } from '@/lib/pending-threads'
 import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +64,8 @@ export function ThreadRow({
 }) {
   const [renaming, setRenaming] = useState(false)
   const { openPreview } = useThreadPanel()
+  // Just sent, not started yet (lib/pending-threads.ts): no menu, as there is nothing to act on.
+  const starting = !!usePendingThread(thread.id)
   const { title, open, setOpen, busy, onMenuKey, content, mayRename } = useThreadMenu({
     thread,
     memberId,
@@ -121,11 +124,11 @@ export function ThreadRow({
           onClick={(e) => clickInPlace(e, href)}
           onContextMenu={(e) => {
             e.preventDefault()
-            setOpen(true)
+            if (!starting) setOpen(true)
           }}
           // The first click opened the thread; the second edits its title, as Rename does.
           onDoubleClick={(e) => {
-            if (!mayRename) return
+            if (!mayRename || starting) return
             e.preventDefault()
             setRenaming(true)
           }}
@@ -204,31 +207,33 @@ export function ThreadRow({
           </SidebarMenuAction>
         </Hint>
       )}
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        {/* Only on the hovered row, or while its menu is open: not left behind on a row that
-            keeps the focus after a click or a shortcut. Always there on a phone. */}
-        <Hint label="More">
-          <SidebarMenuAction asChild>
-            <DropdownMenuTrigger
-              aria-label={`${title}: more`}
-              className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
-            >
-              <EllipsisVertical />
-            </DropdownMenuTrigger>
-          </SidebarMenuAction>
-        </Hint>
-        <DropdownMenuContent
-          align="start"
-          side="right"
-          className="min-w-44"
-          onKeyDown={onMenuKey}
-          // Not back to ⋮: focused, it would stay shown once the pointer has left the row.
-          // Rename puts the focus in its field instead.
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
-          {content}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {!starting && (
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          {/* Only on the hovered row, or while its menu is open: not left behind on a row that
+              keeps the focus after a click or a shortcut. Always there on a phone. */}
+          <Hint label="More">
+            <SidebarMenuAction asChild>
+              <DropdownMenuTrigger
+                aria-label={`${title}: more`}
+                className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
+              >
+                <EllipsisVertical />
+              </DropdownMenuTrigger>
+            </SidebarMenuAction>
+          </Hint>
+          <DropdownMenuContent
+            align="start"
+            side="right"
+            className="min-w-44"
+            onKeyDown={onMenuKey}
+            // Not back to ⋮: focused, it would stay shown once the pointer has left the row.
+            // Rename puts the focus in its field instead.
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            {content}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </SidebarMenuItem>
   )
 }

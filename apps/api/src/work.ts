@@ -16,6 +16,7 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { refuseWhileDeleting } from './deletion-fence.js'
 import { describeError, hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
+import { deleteThread } from './thread-delete.js'
 import { usableAccounts } from './routes/accounts.js'
 import {
   askedBy,
@@ -439,6 +440,11 @@ export async function startThread(
      * trigger's is (else a member could write in a thread not theirs by its id): making it fails.
      */
     fresh?: boolean
+    /**
+     * A member's own start (POST /threads), whose message goes back to them should it not start:
+     * a thread made here that did not start is deleted rather than left failed.
+     */
+    dropUnstarted?: boolean
   },
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
@@ -514,89 +520,127 @@ export async function startThread(
               : {}),
       } as never,
     }))
-  // Each step below is a trip to the database: what does not wait on another goes with it.
-  const [, , { refs: attachments, created: links }] = await Promise.all([
-    joinThread(db, created.id, teammateIds),
-    input.listItemIds?.length
-      ? db.listItemThread.createMany({
-          data: input.listItemIds.map((itemId) => ({ itemId, sessionId: created.id })) as never,
-          skipDuplicates: true,
+  /**
+   * With `dropUnstarted`, a thread made here that did not start goes, rather than stay failed
+   * in the sidebar and what waits on the member: its message is given back to them. Not one
+   * whose prompt was kept for its computer, which may still run it. True once it has gone.
+   */
+  const dropUnstarted = async () => {
+    if (!input.dropUnstarted || made) return false
+    try {
+      if (await db.runnerCommand.count({ where: { sessionId: created.id } })) return false
+      // Its files were never its own: the member's still, to send again.
+      await db.threadAttachment.deleteMany({ where: { sessionId: created.id } })
+      // Not at work (deleteThread refuses a thread starting): it never was.
+      await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
+      await deleteThread(db, scope, { type: 'member', id: input.memberId }, created.id)
+      void hubs.get(scope.workspaceId).broadcast(threadUpdated(created.id, 'deleted'))
+      return true
+    } catch (error) {
+      // Left failed, as it was before: the member can delete it.
+      console.warn(`thread ${created.id}: did not start, nor go: ${describeError(error)}`)
+      return false
+    }
+  }
+  try {
+    // Each step below is a trip to the database: what does not wait on another goes with it,
+    // and each has settled before a failure is acted on (the thread may go: dropUnstarted).
+    const [joined, linked, attached] = await Promise.allSettled([
+      joinThread(db, created.id, teammateIds),
+      input.listItemIds?.length
+        ? db.listItemThread.createMany({
+            data: input.listItemIds.map((itemId) => ({ itemId, sessionId: created.id })) as never,
+            skipDuplicates: true,
+          })
+        : null,
+      attachToThread(
+        db,
+        scope,
+        created.id,
+        input.attachmentIds ?? [],
+        input.origin || input.connectorFiles ? null : { memberId: input.memberId },
+      ).catch(async (error: unknown) => {
+        await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
+        throw error
+      }),
+    ])
+    for (const step of [joined, linked]) if (step.status === 'rejected') throw step.reason
+    if (attached.status === 'rejected') throw attached.reason
+    const { refs: attachments, created: links } = attached.value
+    const started = made
+      ? Promise.resolve()
+      : audit({
+          ...scope,
+          actor: !input.origin
+            ? input.byTeammateId
+              ? { type: 'teammate', id: input.byTeammateId }
+              : { type: 'member', id: input.memberId }
+            : input.origin.kind === 'trigger'
+              ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
+              : input.origin.kind === 'schedule'
+                ? { type: 'system', id: `schedule:${input.origin.scheduleId}` }
+                : { type: 'teammate', id: input.origin.byTeammateId },
+          action: 'thread.started',
+          target: { type: 'thread', id: created.id },
+          track: {
+            origin:
+              input.origin?.kind ?? (input.quiet ? 'email' : input.byTeammateId ? 'task' : 'member'),
+            harness: input.teammate.harness,
+          },
+          data: {
+            teammateId: input.teammate.id,
+            computerId: input.computer.id,
+            accountId: account.id,
+            ...(input.origin?.kind === 'trigger' ? { triggerId: input.origin.triggerId } : {}),
+            ...(input.origin?.kind === 'schedule' ? { scheduleId: input.origin.scheduleId } : {}),
+            ...(input.origin && 'parent' in input.origin && input.origin.parent
+              ? { parentId: input.origin.parent.id }
+              : {}),
+          },
         })
-      : null,
-    attachToThread(
+    const [, thread] = await Promise.all([started, loadThread(db, created.id)])
+    const outcome = await promptThread(
       db,
       scope,
-      created.id,
-      input.attachmentIds ?? [],
-      input.origin || input.connectorFiles ? null : { memberId: input.memberId },
+      thread,
+      {
+        text: input.text,
+        memberId: input.origin || input.byTeammateId ? null : input.memberId,
+        teammateIds,
+        attachments,
+      },
+      // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
+      {
+        isNew: true,
+        ...(input.origin ? {} : { nameThread: created.title }),
+        ...(input.commandId ? { commandId: input.commandId } : {}),
+      },
     ).catch(async (error: unknown) => {
-      await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
+      // E.g. a mentioned teammate's harness has no account: the thread never ran. Its files leave
+      // it, as a message's do (promptWithAttachments): they can be sent again.
+      await Promise.all([
+        db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
+        detach(db, links),
+      ])
       throw error
-    }),
-  ])
-  const started = made
-    ? Promise.resolve()
-    : audit({
-        ...scope,
-        actor: !input.origin
-          ? input.byTeammateId
-            ? { type: 'teammate', id: input.byTeammateId }
-            : { type: 'member', id: input.memberId }
-          : input.origin.kind === 'trigger'
-            ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
-            : input.origin.kind === 'schedule'
-              ? { type: 'system', id: `schedule:${input.origin.scheduleId}` }
-              : { type: 'teammate', id: input.origin.byTeammateId },
-        action: 'thread.started',
-        target: { type: 'thread', id: created.id },
-        track: {
-          origin:
-            input.origin?.kind ?? (input.quiet ? 'email' : input.byTeammateId ? 'task' : 'member'),
-          harness: input.teammate.harness,
-        },
-        data: {
-          teammateId: input.teammate.id,
-          computerId: input.computer.id,
-          accountId: account.id,
-          ...(input.origin?.kind === 'trigger' ? { triggerId: input.origin.triggerId } : {}),
-          ...(input.origin?.kind === 'schedule' ? { scheduleId: input.origin.scheduleId } : {}),
-          ...(input.origin && 'parent' in input.origin && input.origin.parent
-            ? { parentId: input.origin.parent.id }
-            : {}),
-        },
-      })
-  const [, thread] = await Promise.all([started, loadThread(db, created.id)])
-  const outcome = await promptThread(
-    db,
-    scope,
-    thread,
-    {
-      text: input.text,
-      memberId: input.origin || input.byTeammateId ? null : input.memberId,
-      teammateIds,
-      attachments,
-    },
-    // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
-    {
-      isNew: true,
-      ...(input.origin ? {} : { nameThread: created.title }),
-      ...(input.commandId ? { commandId: input.commandId } : {}),
-    },
-  ).catch(async (error: unknown) => {
-    // E.g. a mentioned teammate's harness has no account: the thread never ran. Its files leave
-    // it, as a message's do (promptWithAttachments): they can be sent again.
-    await Promise.all([
-      db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
-      detach(db, links),
-    ])
+    })
+    if (outcome === 'offline') {
+      await Promise.all([
+        db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
+        detach(db, links),
+      ])
+      if (await dropUnstarted()) return { thread, outcome }
+    }
+    // Every dashboard lists it now, rather than once its runner first reports (seconds later, a
+    // session to start): the sidebar, its parent's sub-threads. As it is now: its runner may
+    // have reported already.
+    const now = await db.session.findFirst({ where: { id: thread.id }, select: { status: true } })
+    if (now) void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, now.status))
+    return { thread, outcome }
+  } catch (error) {
+    await dropUnstarted()
     throw error
-  })
-  if (outcome === 'offline')
-    await Promise.all([
-      db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
-      detach(db, links),
-    ])
-  return { thread, outcome }
+  }
 }
 
 /**

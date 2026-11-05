@@ -1179,6 +1179,8 @@ export const threads = new Hono<AppEnv>()
       projectId,
       effort: input.effort ?? null,
       ...(listItemIds ? { listItemIds } : {}),
+      // The member's box gets the message back: no failed thread of it is left.
+      dropUnstarted: true,
     }).catch((error: unknown) => idTaken(error, input.id))
     if (outcome === 'offline') {
       throw new HTTPException(409, {
