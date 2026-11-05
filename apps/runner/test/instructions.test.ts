@@ -198,3 +198,12 @@ test("brigade-library comes with the library's write access, unless an admin tur
   // An API from before leaves the field out: on.
   assert.ok(names(writer).includes('brigade-library'))
 })
+
+test('a teammate knows a thread mention, and names a thread by the one search_workspace gives', () => {
+  const text = textFor({})
+  assert.match(text, /A message mentions a thread as `@\[title\]\(thread:id\)`/)
+  assert.match(
+    text,
+    /Name a thread in your reply by its mention \(`search_workspace` gives it with its summary\), never by its id alone\./,
+  )
+})

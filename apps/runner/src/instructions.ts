@@ -114,7 +114,9 @@ export function instructions(
       "each of its viewports with the product's own components and conventions, and use the values in its " +
       `\`${DESIGN_KNOBS}\`. ` +
       'Name a library file in your reply by its mention (`save_to_library` returns it) or its whole library path, ' +
-      'never its bare file name.' +
+      'never its bare file name. A message mentions a thread as `@[title](thread:id)`: `search_workspace` finds its ' +
+      'summary by words of its title. Name a thread in your reply by its mention (`search_workspace` gives it with ' +
+      'its summary), never by its id alone.' +
       saving(spec),
     CLOUD && YOUR_FILES,
     spec.project && project(spec.project, libraryDir),
