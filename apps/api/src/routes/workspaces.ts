@@ -1,25 +1,30 @@
 import {
+  AccountDeletionCode,
   CreateWorkspace,
   DeleteAccount,
   DeleteWorkspace,
   OnboardingAnswers,
   SetAutoMerge,
+  SetChief,
   SetSuggestions,
   SwitchOrganization,
   SwitchWorkspace,
   UpdateWorkspace,
+  WorkspaceDeletionCode,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { deleteAccount } from '../account-delete.js'
 import { usableBy } from '../account-sharing.js'
 import { audit } from '../audit.js'
+import { chiefSettings } from '../chief-answers.js'
 import { auth } from '../auth.js'
 import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { recordOnboardingAnswers } from '../analytics.js'
 import { prisma, Prisma } from '../db.js'
+import { checkDeletionCode, sendDeletionCode, type DeletionTarget } from '../deletion-code.js'
 import { seedGettingStarted } from '../lists.js'
 import { placeNewHub } from '../platform/node.js'
 import { LOGO_HEADERS, readLogo } from '../logos.js'
@@ -30,6 +35,7 @@ import {
   requireWorkspace,
   resolveScope,
   type AppEnv,
+  type WorkspaceScope,
 } from '../scope.js'
 import { deleteWorkspace } from '../workspace-delete.js'
 import { updateWorkspace } from '../workspace-settings.js'
@@ -41,6 +47,29 @@ const SetSidebarOrder = z.object({
   ids: z.array(z.string().max(100)).max(500),
 })
 type SidebarList = z.infer<typeof SetSidebarOrder>['list']
+
+/** The active workspace, for its owner who typed its name: what a deletion code is for. */
+async function workspaceToDelete(scope: WorkspaceScope, userId: string, name: string) {
+  if (scope.role !== 'owner')
+    throw new HTTPException(403, { message: 'Only an owner can delete the workspace' })
+  const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+  if (name.trim() !== workspace.name.trim())
+    throw new HTTPException(400, { message: 'Type the workspace’s name to confirm' })
+  return {
+    kind: 'workspace',
+    userId,
+    workspaceId: workspace.id,
+    name: workspace.name,
+  } satisfies DeletionTarget
+}
+
+/** The signed-in person, who typed their email address. */
+async function accountToDelete(userId: string, email: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
+  if (email.trim().toLowerCase() !== user.email.toLowerCase())
+    throw new HTTPException(400, { message: 'Type your email address to confirm' })
+  return user
+}
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -120,6 +149,8 @@ export const workspaces = new Hono<AppEnv>()
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
       autoMerge: membership?.autoMerge ?? false,
+      // Chief answers their teammates' questions in their name (docs/chief-answers.md).
+      chiefAnswers: membership?.chiefAnswers ?? false,
       // Features hidden until ready that this person has (src/features.ts).
       features: [
         ...(await featuresOf({ email: user.email, workspaceId: scope?.workspaceId ?? null })),
@@ -165,6 +196,54 @@ export const workspaces = new Hono<AppEnv>()
       target: { type: 'member', id: scope.memberId },
     })
     return c.body(null, 204)
+  })
+
+  /**
+   * What Chief does in this member's name (docs/chief-answers.md): whether it reads their
+   * teammates' questions, which kinds it answers alone, how far it earned more, and its numbers.
+   */
+  .get('/me/chief', requireWorkspace, async (c) => {
+    return c.json(await chiefSettings(c.var.db, c.var.scope.memberId))
+  })
+
+  /**
+   * Turn Chief's answers on or off for this member, or let it answer a kind alone or not. Theirs
+   * alone: it answers in their name. Off, Brigade is as before: questions wait for them.
+   */
+  .put('/me/chief', requireWorkspace, async (c) => {
+    const input = await parseBody(c.req.raw, SetChief)
+    const { scope } = c.var
+    const member = await prisma.member.findUniqueOrThrow({
+      where: { id: scope.memberId },
+      select: { chiefAuto: true },
+    })
+    const auto = input.alone
+      ? input.alone.on
+        ? [...new Set([...member.chiefAuto, input.alone.kind])]
+        : member.chiefAuto.filter((k) => k !== input.alone!.kind)
+      : member.chiefAuto
+    await prisma.member.update({
+      where: { id: scope.memberId },
+      data: {
+        ...(input.on !== undefined ? { chiefAnswers: input.on } : {}),
+        ...(input.alone ? { chiefAuto: auto, chiefAutoChangedAt: new Date() } : {}),
+      },
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action:
+        input.on !== undefined
+          ? input.on
+            ? 'member.chief_on'
+            : 'member.chief_off'
+          : input.alone!.on
+            ? 'chief.alone_allowed'
+            : 'chief.alone_stopped',
+      target: { type: 'member', id: scope.memberId },
+      ...(input.alone ? { data: { kind: input.alone.kind } } : {}),
+    })
+    return c.json(await chiefSettings(c.var.db, scope.memberId))
   })
 
   /** The order this member dragged their sidebar's teammates and projects to, in this workspace. */
@@ -281,19 +360,29 @@ export const workspaces = new Hono<AppEnv>()
   })
 
   /**
-   * Delete the active workspace for good: owners only, typing its name to confirm. The session
-   * moves to another workspace of the organization, or to none (onboarding) when it was the last,
-   * which takes the organization with it.
+   * Mail the owner a code to delete the active workspace (src/deletion-code.ts), once they typed
+   * its name: the dialog asks for it next.
+   */
+  .post('/workspace/deletion-code', requireWorkspace, async (c) => {
+    const { name } = await parseBody(c.req.raw, WorkspaceDeletionCode)
+    const target = await workspaceToDelete(c.var.scope, c.var.userId, name)
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: c.var.userId } })
+    await sendDeletionCode(user.email, target)
+    return c.body(null, 204)
+  })
+
+  /**
+   * Delete the active workspace for good: owners only, typing its name and the code mailed to
+   * them to confirm. The session moves to another workspace of the organization, or to none
+   * (onboarding) when it was the last, which takes the organization with it.
    */
   .delete('/workspace', requireWorkspace, async (c) => {
     const scope = c.var.scope
-    if (scope.role !== 'owner')
-      throw new HTTPException(403, { message: 'Only an owner can delete the workspace' })
-    const { name } = await parseBody(c.req.raw, DeleteWorkspace)
-    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
-    if (name.trim() !== workspace.name.trim())
-      throw new HTTPException(400, { message: 'Type the workspace’s name to confirm' })
+    const { name, code } = await parseBody(c.req.raw, DeleteWorkspace)
+    const target = await workspaceToDelete(scope, c.var.userId, name)
+    const used = await checkDeletionCode(target, code)
     const { organizationGone } = await deleteWorkspace(scope, scope)
+    await used()
     const session = await prisma.authSession.findUnique({
       where: { id: c.var.authSessionId },
       select: { activeWorkspaceId: true },
@@ -301,16 +390,24 @@ export const workspaces = new Hono<AppEnv>()
     return c.json({ activeWorkspaceId: session?.activeWorkspaceId ?? null, organizationGone })
   })
 
+  /** Mail the person a code to delete their account, once they typed their email address. */
+  .post('/me/deletion-code', async (c) => {
+    const { email } = await parseBody(c.req.raw, AccountDeletionCode)
+    const user = await accountToDelete(c.var.userId, email)
+    await sendDeletionCode(user.email, { kind: 'account', userId: user.id })
+    return c.body(null, 204)
+  })
+
   /**
-   * Delete the signed-in person's account for good, typing their email address to confirm
-   * (src/account-delete.ts). Signed out in the same answer.
+   * Delete the signed-in person's account for good, typing their email address and the code
+   * mailed to them to confirm (src/account-delete.ts). Signed out in the same answer.
    */
   .delete('/me', async (c) => {
-    const { email } = await parseBody(c.req.raw, DeleteAccount)
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: c.var.userId } })
-    if (email.trim().toLowerCase() !== user.email.toLowerCase())
-      throw new HTTPException(400, { message: 'Type your email address to confirm' })
+    const { email, code } = await parseBody(c.req.raw, DeleteAccount)
+    const user = await accountToDelete(c.var.userId, email)
+    const used = await checkDeletionCode({ kind: 'account', userId: user.id }, code)
     await deleteAccount(user.id)
+    await used()
     // Its session is gone already: this only clears the cookie.
     const signedOut = await auth.api
       .signOut({ headers: c.req.raw.headers, returnHeaders: true })

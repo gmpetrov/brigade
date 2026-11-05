@@ -75,6 +75,7 @@ export const ModelName = {
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
+  ChiefDecision: 'ChiefDecision',
   Wakeup: 'Wakeup',
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
@@ -303,7 +304,10 @@ export const MemberScalarFieldEnum = {
   removingAt: 'removingAt',
   notify: 'notify',
   suggestions: 'suggestions',
-  autoMerge: 'autoMerge'
+  autoMerge: 'autoMerge',
+  chiefAnswers: 'chiefAnswers',
+  chiefAuto: 'chiefAuto',
+  chiefAutoChangedAt: 'chiefAutoChangedAt'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -507,7 +511,9 @@ export const SessionScalarFieldEnum = {
   playbookRunId: 'playbookRunId',
   playbookTeammate: 'playbookTeammate',
   surfacedAt: 'surfacedAt',
-  quiet: 'quiet'
+  quiet: 'quiet',
+  chiefDecisionId: 'chiefDecisionId',
+  chiefWordSeq: 'chiefWordSeq'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -559,6 +565,35 @@ export const ScheduleScalarFieldEnum = {
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
+
+
+export const ChiefDecisionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  memberId: 'memberId',
+  teammateId: 'teammateId',
+  askSeq: 'askSeq',
+  question: 'question',
+  options: 'options',
+  childSessionId: 'childSessionId',
+  status: 'status',
+  verdict: 'verdict',
+  kind: 'kind',
+  optionIndex: 'optionIndex',
+  reason: 'reason',
+  basis: 'basis',
+  parked: 'parked',
+  decidedAt: 'decidedAt',
+  sentAt: 'sentAt',
+  outcome: 'outcome',
+  outcomeAt: 'outcomeAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ChiefDecisionScalarFieldEnum = (typeof ChiefDecisionScalarFieldEnum)[keyof typeof ChiefDecisionScalarFieldEnum]
 
 
 export const WakeupScalarFieldEnum = {
@@ -734,6 +769,7 @@ export const PullRequestScalarFieldEnum = {
   requestedByMemberId: 'requestedByMemberId',
   round: 'round',
   resolveFromSha: 'resolveFromSha',
+  approvalCarriedTo: 'approvalCarriedTo',
   note: 'note',
   autoMergeAt: 'autoMergeAt',
   state: 'state',

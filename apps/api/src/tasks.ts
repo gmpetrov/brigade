@@ -22,6 +22,7 @@ import { choicesWaitingAmong } from './choices-waiting.js'
 import { failedWaitingAmong } from './failed.js'
 import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
+import { markOnChiefsWord } from './chief-answers.js'
 import { hubs, taskUpdated } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
 import { projectRefusal } from './task-project.js'
@@ -569,6 +570,19 @@ export async function computerFor(
 }
 
 /**
+ * A teammate hands work on from a thread whose work goes on Chief's word (src/chief-answers.ts):
+ * the work it hands on goes on it too. A person's own hand-over does not.
+ */
+async function fromChiefsWord(db: ScopedDb, by: By) {
+  if (!by.from || by.actor.type !== 'teammate') return false
+  const from = await db.session.findFirst({
+    where: { id: by.from.sessionId },
+    select: { chiefWordSeq: true },
+  })
+  return from?.chiefWordSeq != null
+}
+
+/**
  * A backlog task gets its teammate and its thread, with the brief as the
  * first message. Taking the teammate is the claim: two assigns never start
  * two threads. If the thread cannot start, the task goes back to Backlog.
@@ -600,6 +614,8 @@ async function startTask(
       ...(by.from ? { askedByMemberId: await askedBy(db, by.from.sessionId) } : {}),
       taskId: task.id,
       projectId: task.projectId,
+      // Started from a thread on Chief's word: the task's work goes on it too.
+      chiefWord: await fromChiefsWord(db, by),
     })
     if (outcome === 'offline') {
       // The failed thread is left as a plain one.
@@ -703,6 +719,8 @@ export async function assignTask(
       message: `${teammate.name} runs on ${teammate.harness === 'codex' ? 'Codex' : 'Claude'}, and the thread's starter has no account for it with usage left on its computer.`,
     })
   if (thread.status === 'running' || thread.status === 'starting') await interrupt(thread)
+  // Handed over from a thread on Chief's word: the work goes on it there too.
+  if (await fromChiefsWord(db, by)) await markOnChiefsWord(db, thread.id, { chiefWordSeq: 0 })
   await joinThread(db, thread.id, [teammate.id])
   const from = task.teammate ?? { name: 'the previous teammate' }
   const text = await handover(db, task, thread, from, teammate, input.reason)
@@ -1356,6 +1374,8 @@ export async function handleTaskCall(
         await requireMayAct(db, by, taskId)
         if (target.controlledByMemberId)
           return fail('A person has control of that thread right now. Try again later.')
+        // Written on Chief's word: the work it asks for there goes on it too.
+        await markOnChiefsWord(db, target.id, session)
         const outcome = await promptThread(db, scope, target, {
           text: taskComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
           memberId: null,

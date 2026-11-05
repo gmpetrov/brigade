@@ -51,7 +51,11 @@ export function reviewLine(p: { tracking: PullRequestSummary['tracking'] }): str
     case 'reviewing':
       return `${who} is reviewing it`
     case 'approved':
-      return review.changed ? `Approved by ${who}, before the latest commits` : `Approved by ${who}`
+      return review.changed
+        ? `Approved by ${who}, before the latest commits`
+        : review.kept
+          ? `Approved by ${who}, still the same after resolving conflicts`
+          : `Approved by ${who}`
     case 'changes_requested':
       return review.changed
         ? `${who} asked for changes, before the latest commits`

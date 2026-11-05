@@ -231,6 +231,8 @@ export async function saveLibraryFile(
     baseSha?: string
     /** Its caller holds the file's lock already (withLibraryLock): the lease it writes under. */
     lease?: LibraryLease
+    /** Only a new file: one there already, made meanwhile, stays as it is (and is returned). */
+    createOnly?: boolean
   } = {},
 ): Promise<Awaited<ReturnType<typeof writeLibraryFile>>> {
   // A Markdown file is changed one save at a time: a list's lines are read, changed and written
@@ -418,6 +420,7 @@ async function writeLibraryFile(
   const existing = await db.document.findFirst({
     where: { kind: 'library', path: input.path, deletedAt: null },
   })
+  if (options.createOnly && existing) return existing
   if (options.baseSha && existing && existing.sha256 !== options.baseSha) throw new StaleMemory()
   // The same bytes again: nothing changed, nothing to record.
   if (

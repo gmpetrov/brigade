@@ -114,6 +114,27 @@ export const WakeupStatus = {
 export type WakeupStatus = (typeof WakeupStatus)[keyof typeof WakeupStatus]
 
 
+export const ChiefDecisionStatus = {
+  pending: 'pending',
+  suggested: 'suggested',
+  answered: 'answered',
+  escalated: 'escalated',
+  superseded: 'superseded',
+  failed: 'failed'
+} as const
+
+export type ChiefDecisionStatus = (typeof ChiefDecisionStatus)[keyof typeof ChiefDecisionStatus]
+
+
+export const ChiefOutcome = {
+  agreed: 'agreed',
+  disagreed: 'disagreed',
+  overruled: 'overruled'
+} as const
+
+export type ChiefOutcome = (typeof ChiefOutcome)[keyof typeof ChiefOutcome]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',

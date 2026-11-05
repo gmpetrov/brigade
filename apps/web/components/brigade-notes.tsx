@@ -4,7 +4,10 @@
 // saying what it is, with what the teammate got folded under it, not a person's bubble. What
 // the teammate receives stays the same.
 import {
+  chiefAnswerNote,
+  chiefOverruledNote,
   documentFileId,
+  isChiefDecisionBrief,
   forPeople,
   fromTaskBrief,
   fromTaskComment,
@@ -19,6 +22,7 @@ import {
   AlarmClock,
   CalendarClock,
   ChevronRight,
+  Crown,
   FileText,
   GitMerge,
   Info,
@@ -44,6 +48,8 @@ export type BrigadeNote = {
   body: string
   /** A trigger's event as sent, under the body when open. */
   raw?: unknown
+  /** An answer Chief gave in the person's name (docs/chief-answers.md): its decision. */
+  chief?: { decisionId: string }
   /** Files of the library's documents that went with it (a hand-off's), under the body when open. */
   files?: { id: string; name: string }[]
 }
@@ -54,6 +60,23 @@ export type BrigadeNote = {
  */
 export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | null {
   if (!fromBrigade || !text.trim()) return null
+  const answer = chiefAnswerNote(text)
+  if (answer)
+    return {
+      icon: Crown,
+      label: `Chief answered for you · “${answer.answer}”`,
+      body: answer.reason + (answer.basis ? `\n\nFrom your mandate: ${answer.basis}` : ''),
+      chief: { decisionId: answer.decisionId },
+    }
+  const overruled = chiefOverruledNote(text)
+  if (overruled)
+    return {
+      icon: Crown,
+      label: `You marked Chief’s answer as wrong · “${overruled.answer}”`,
+      body: 'Its teammate was told to stop what it started on it, and Chief suggests that kind of question to you again.',
+    }
+  if (isChiefDecisionBrief(text))
+    return { icon: Crown, label: 'The question Chief decided for you', body: text }
   const run = scheduledRunNote(text)
   if (run)
     return {
@@ -133,8 +156,8 @@ const firstLine = (body: string) =>
 /** Its first line, for a queued message's preview. */
 export const notePreview = (note: BrigadeNote) => firstLine(note.body)
 
-/** A note in the thread: one muted line, open for the whole of it. */
-export function BrigadeNoteLine({ note }: { note: BrigadeNote }) {
+/** A note in the thread: one muted line, open for the whole of it, with what can be done about it. */
+export function BrigadeNoteLine({ note, action }: { note: BrigadeNote; action?: React.ReactNode }) {
   const Icon = note.icon
   return (
     <Collapsible className="text-sm text-muted-foreground">
@@ -159,6 +182,7 @@ export function BrigadeNoteLine({ note }: { note: BrigadeNote }) {
         <Markdown text={note.body} />
         {note.files && <NoteFiles files={note.files} />}
         {note.raw !== undefined && <Raw value={note.raw} />}
+        {action}
       </CollapsibleContent>
     </Collapsible>
   )

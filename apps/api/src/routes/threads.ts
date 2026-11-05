@@ -108,6 +108,7 @@ import { markDone, markReopened, reopenThread } from '../thread-done.js'
 import { actorNames } from '../library-history.js'
 import { latersOf, setLater } from '../later.js'
 import { descendants, reportConversation, reportOf } from '../children.js'
+import { noteChiefDismissed, overruleDecision, threadDecisions } from '../chief-answers.js'
 import { deleteThread } from '../thread-delete.js'
 import { stopWatching } from '../replies.js'
 import { cancelWakeup } from '../wakeups.js'
@@ -445,6 +446,10 @@ export const threads = new Hono<AppEnv>()
             updatedAt: true,
             computerId: true,
             computer: { select: { kind: true, name: true } },
+            // For its menu in the sidebar, as a thread's own row has it (thread-menu.tsx).
+            startedByMemberId: true,
+            othersMayPrompt: true,
+            doneAt: true,
           },
           orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         })
@@ -522,17 +527,34 @@ export const threads = new Hono<AppEnv>()
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           children: children
             .filter((child) => child.parentId === row.id)
-            .map(({ parentId: _, computerId, computer, ...child }) => ({
-              ...child,
-              unread: unread(
-                childTurns.find((t) => t.sessionId === child.id)?._max.at,
-                childReads.find((r) => r.sessionId === child.id)?.seenAt,
-              ),
-              wakeAt: wakeAt(child.id),
-              previewRunning:
-                !!previews.get(child.id) &&
-                !previewOfflineIn(presence, { id: computerId, ...computer }),
-            })),
+            .map(
+              ({
+                parentId,
+                computerId,
+                computer,
+                startedByMemberId,
+                othersMayPrompt,
+                ...child
+              }) => ({
+                ...child,
+                // What its menu needs (thread-menu.tsx): who started it, who else may change it,
+                // and this member's pin and Later on it.
+                parent: { id: parentId! },
+                startedBy: { id: startedByMemberId },
+                othersMayPrompt: openToOthers({ othersMayPrompt, computer }),
+                pinnedAt:
+                  pins.find((p) => p.sessionId === child.id)?.pinnedAt.toISOString() ?? null,
+                laterAt: laters.get(child.id)?.toISOString() ?? null,
+                unread: unread(
+                  childTurns.find((t) => t.sessionId === child.id)?._max.at,
+                  childReads.find((r) => r.sessionId === child.id)?.seenAt,
+                ),
+                wakeAt: wakeAt(child.id),
+                previewRunning:
+                  !!previews.get(child.id) &&
+                  !previewOfflineIn(presence, { id: computerId, ...computer }),
+              }),
+            ),
           list: lists.get(row.id) ?? null,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
@@ -568,8 +590,10 @@ export const threads = new Hono<AppEnv>()
         trigger: { select: { id: true, label: true, event: true } },
         schedule: { select: { id: true, title: true } },
         parent: { select: { id: true, title: true } },
-        // Shown in it, newest first: each a line that opens it.
+        // Shown in it, newest first: each a line that opens it. Not Chief's decision threads,
+        // which show as their decision on the question (chiefDecisions).
         children: {
+          where: { chiefDecisionId: null },
           select: {
             id: true,
             title: true,
@@ -655,7 +679,7 @@ export const threads = new Hono<AppEnv>()
     // This member's pin and later, for the thread's menu in its details.
     const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
     const hub = hubs.get(c.var.scope.workspaceId)
-    const [pin, later, presence, waitingSince, names] = await Promise.all([
+    const [pin, later, presence, waitingSince, names, chiefDecisions] = await Promise.all([
       c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
       c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
       hub.presence([thread.computer.id]),
@@ -664,6 +688,8 @@ export const threads = new Hono<AppEnv>()
       thread.doneByType && thread.doneById
         ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
         : null,
+      // Chief's decisions on its questions (src/chief-answers.ts), each shown on its question.
+      threadDecisions(c.var.db, thread.id),
     ])
     return c.json({
       ...thread,
@@ -675,6 +701,7 @@ export const threads = new Hono<AppEnv>()
       },
       pinnedAt: pin?.pinnedAt.toISOString() ?? null,
       laterAt: later?.laterAt.toISOString() ?? null,
+      chiefDecisions,
       doneBy: (thread.doneAt && names?.(thread.doneByType, thread.doneById)?.name) || null,
       // Where it is going, not the message that goes with it.
       move: movePublic(thread.move),
@@ -1557,6 +1584,17 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
+  /**
+   * The person marks one of Chief's answers in their name as wrong (src/chief-answers.ts): its
+   * teammate is told to stop what it started on it, and Chief suggests that kind again.
+   */
+  .post('/:id/chief/:decisionId/wrong', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    return c.json(await overruleDecision(scope, thread.id, c.req.param('decisionId')))
+  })
+
   .post('/:id/interrupt', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
@@ -2076,6 +2114,8 @@ export const threads = new Hono<AppEnv>()
       UPDATE "Session" SET "choicesDismissedSeq" = ${seq}, "updatedAt" = now()
       WHERE id = ${thread.id} AND "workspaceId" = ${scope.workspaceId}
         AND ("choicesDismissedSeq" IS NULL OR "choicesDismissedSeq" < ${seq})`
+    // Chief's decisions on it are moot, an answer it has not delivered yet included.
+    await noteChiefDismissed(scope, thread.id, seq)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

@@ -38,13 +38,15 @@ export type PullReview =
   | { state: 'reviewing'; reviewer: Ref | null; threadId: string }
   /**
    * Its latest verdict. changed: commits came after the one it looked at (unset where
-   * GitHub was not asked, as in Needs you's list).
+   * GitHub was not asked, as in Needs you's list). kept: an approval that still holds for
+   * its head, which resolved its conflicts without changing the lines it adds or removes.
    */
   | {
       state: 'approved' | 'changes_requested'
       reviewer: Ref | null
       threadId: string | null
       changed?: boolean
+      kept?: boolean
       at: string
     }
   /** The teammate that opened it asked for none, and why. */
@@ -156,7 +158,10 @@ export type PullRequestDetail = PullRequestSummary & {
   githubReviews: { author: string | null; state: string; body: string; at: string | null }[]
 }
 
-/** What a merge asks a pull request's author when it conflicts (src/pull-requests.ts in the API). */
+/**
+ * What a merge asks a pull request's author when it conflicts (src/pull-requests.ts in the API):
+ * a merge a person asked for (Resolve conflicts), or their Auto-merge's.
+ */
 export function resolveConflictsMessage(r: {
   number: number
   title: string
@@ -166,21 +171,25 @@ export function resolveConflictsMessage(r: {
   head: string
   author: string
   method: MergeMethod
+  by?: 'person' | 'auto-merge'
 }) {
+  const asked = r.by === 'auto-merge' ? 'Auto-merge merges it' : 'a person asked to merge it'
   return [
     `Pull request #${r.number} "${r.title}" in ${r.repository} conflicts with \`${r.base}\`, ` +
-      `and a person asked to merge it once that is resolved: ${r.url}`,
+      `and ${asked} once that is resolved: ${r.url}`,
     '',
     `${r.author}, fetch \`${r.base}\` and merge it into \`${r.head}\`. Resolve each conflict so ` +
       `both sides' changes still work, run the typecheck and tests, then commit and push to ` +
       `\`${r.head}\`. Do not rebase or force-push. When you are done, Brigade merges it ` +
-      `(${r.method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : r.method}) once GitHub allows it. If a conflict needs a person to decide, say so in your ` +
+      `(${r.method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : r.method}) once GitHub allows it; ` +
+      `if a review approved it and you do more than bring in \`${r.base}\`'s changes, its reviewer ` +
+      'looks at what you pushed first. If a conflict needs a person to decide, say so in your ' +
       'reply and do not push. Do not mention other teammates in your reply.',
   ].join('\n')
 }
 
 const RESOLVE_MESSAGE =
-  /^Pull request #(\d+) "(.*)" in (\S+) conflicts with `([^`\n]+)`, and a person asked to merge it once that is resolved: \S+\n\n\S[^\n]*, fetch `/
+  /^Pull request #(\d+) "(.*)" in (\S+) conflicts with `([^`\n]+)`, and (?:a person asked to merge it|Auto-merge merges it) once that is resolved: \S+\n\n\S[^\n]*, fetch `/
 
 /** A resolveConflictsMessage read back, for the dashboard's note; null for any other text. */
 export function resolveConflictsNote(text: string) {

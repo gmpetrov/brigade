@@ -3,6 +3,7 @@
 // folder from teammates. A rule follows the folder's path; the runner mirrors
 // for each teammate only what it may read.
 import {
+  CHIEF_FOLDER,
   inFolder,
   libraryAccessFor,
   type FolderAccess,
@@ -48,13 +49,20 @@ export async function folderRules(db: ScopedDb): Promise<FolderRule[]> {
 /** What a teammate may do with each library path. */
 export async function teammateLibraryAccess(
   db: ScopedDb,
-  teammate: { id: string; libraryAccess: LibraryAccess },
+  teammate: { id: string; libraryAccess: LibraryAccess; kind?: string },
 ) {
   const rules = await folderRules(db)
   const who = { id: teammate.id, library: teammate.libraryAccess }
+  // Chief keeps the people's mandates in its own folder (docs/chief-answers.md): it may save
+  // there wherever it may read, unless a person closed it to Chief.
+  const chiefs = (path: string) =>
+    teammate.kind === 'chief' && (path === CHIEF_FOLDER || path.startsWith(`${CHIEF_FOLDER}/`))
   return {
     rules,
-    of: (path: string): FolderAccess => libraryAccessFor(path, who, rules),
+    of: (path: string): FolderAccess => {
+      const access = libraryAccessFor(path, who, rules)
+      return access === 'read' && chiefs(path) ? 'read_write' : access
+    },
   }
 }
 

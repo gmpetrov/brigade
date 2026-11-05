@@ -497,6 +497,27 @@
     }
   }
 
+  /* The bar along the top of the window while the page reloads onto a new version
+   * (components/update-pill.tsx): fast at first, then slower, never quite reaching the end,
+   * since the new page replaces it. Still, half-way, for those who ask for less motion. */
+  .update-progress {
+    animation: update-progress 4s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+  }
+  @keyframes update-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(0.9);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .update-progress {
+      animation: none;
+      transform: scaleX(0.5);
+    }
+  }
+
   /* A teammate's name in its pebble's colour (components/pebble-avatar.tsx's pebbleInk),
    * at one perceived lightness for every hue, so a yellow reads as well as a blue on the
    * page. Where a browser cannot, it stays the text's own colour. */

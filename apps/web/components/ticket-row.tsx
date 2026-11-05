@@ -114,6 +114,27 @@ export function TicketRow({
           Waiting for the playbook&apos;s owner or an admin
         </span>
       )
+  } else if (open && t.type === 'approval' && t.payload.chiefPromotion) {
+    // Chief would answer that kind in their name: theirs alone to allow.
+    const promotion = t.payload.chiefPromotion
+    actions =
+      promotion.memberId === me.memberId ? (
+        <>
+          <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+            Let Chief answer on its own
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
+            Keep suggesting
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            You took its pick {promotion.agreed} of your last {promotion.decided} times.
+          </span>
+        </>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          Waiting for the person Chief answers for
+        </span>
+      )
   } else if (open && t.type === 'approval' && t.payload.skillAction) {
     // A teammate's skill: it shapes what every teammate does, so an admin decides.
     actions = admin ? (

@@ -47,6 +47,7 @@ import {
   type LibraryFile,
   type AgentEvent,
   type Ask,
+  type ChiefDecisionView,
   type AskReply,
   type CredentialKind,
   type Handback,
@@ -106,6 +107,7 @@ import {
   handOffNote,
   type BrigadeNote,
 } from '@/components/brigade-notes'
+import { ChiefTake, MarkWrong, takeOn } from '@/components/chief-take'
 import {
   EditableEmailPreview,
   isEmailSend,
@@ -2598,9 +2600,15 @@ export function ThreadItems({
   onSideAction,
   pending,
   next = [],
+  chiefDecisions,
+  onChiefWrong,
 }: {
   threadId: string
   items: Item[]
+  /** Chief's decisions on the thread's questions (docs/chief-answers.md), each shown on its question. */
+  chiefDecisions?: ChiefDecisionView[]
+  /** Marks one of Chief's answers in the person's name as wrong. Unset when they cannot. */
+  onChiefWrong?: (decisionId: string) => Promise<void>
   /** Teammates whose turns wait to answer after another's, in order (useThreadItems). */
   next?: string[]
   /**
@@ -2793,15 +2801,30 @@ export function ThreadItems({
             </div>
           )
         // A wake-up, a schedule's run…: a line saying what it is, what it says folded under it.
-        if (item.note)
+        if (item.note) {
+          // An answer Chief gave in the person's name: they may mark it wrong, once.
+          const answered = item.note.chief
+            ? chiefDecisions?.find((d) => d.id === item.note!.chief!.decisionId)
+            : undefined
           return (
             <div key={item.key} data-seq={item.seq} className="min-w-0">
-              <BrigadeNoteLine note={item.note} />
+              <BrigadeNoteLine
+                note={item.note}
+                action={
+                  answered &&
+                  (answered.outcome === 'overruled' ? (
+                    <p className="text-xs text-muted-foreground">You marked it as wrong.</p>
+                  ) : (
+                    onChiefWrong && <MarkWrong onMark={() => onChiefWrong(answered.id)} />
+                  ))
+                }
+              />
               {item.attachments.length > 0 && (
                 <MessageAttachments attachments={item.attachments} className="mt-2" />
               )}
             </div>
           )
+        }
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         // Elements picked in the preview are chips above it, out of its text; their
         // pictures show in them, not with its other files.
@@ -3035,7 +3058,8 @@ export function ThreadItems({
             .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
           const dismissed =
             choicesDismissedSeq != null && item.seq != null && item.seq <= choicesDismissedSeq
-          return (
+          const take = takeOn(chiefDecisions, item.seq ?? undefined)
+          const card = (
             <ChoicesCard
               key={item.key}
               choices={choices}
@@ -3047,11 +3071,24 @@ export function ThreadItems({
               }
             />
           )
+          if (!take) return card
+          // A design is picked on its card: there it becomes the design, which a message alone would not.
+          const designed = choices.options.some((o) => o.design && o.label === take.option?.label)
+          return (
+            <div key={item.key} className="flex flex-col gap-2">
+              {card}
+              <ChiefTake
+                decision={take}
+                open={reply === undefined && !dismissed}
+                {...(onChoose && !designed ? { onUse: (text: string) => onChoose(text) } : {})}
+              />
+            </div>
+          )
         }
         const replies = suggestedReplies(item)
         if (replies) {
           if (!repliesOpen(i) || !onChoose) return null
-          return (
+          const buttons = (
             <SuggestedReplyButtons
               key={item.key}
               replies={replies}
@@ -3059,6 +3096,14 @@ export function ThreadItems({
               {...(previewStart ? { preview: previewStart } : {})}
               onSend={onChoose}
             />
+          )
+          const take = takeOn(chiefDecisions, item.seq ?? undefined)
+          if (!take) return buttons
+          return (
+            <div key={item.key} className="flex flex-col gap-2">
+              {buttons}
+              <ChiefTake decision={take} open onUse={(text) => onChoose(text)} />
+            </div>
           )
         }
         const widget = shownWidget(item)

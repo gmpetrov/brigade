@@ -56,6 +56,7 @@ export type PullRequestMinAggregateOutputType = {
   requestedByMemberId: string | null
   round: number | null
   resolveFromSha: string | null
+  approvalCarriedTo: string | null
   note: string | null
   autoMergeAt: Date | null
   state: string | null
@@ -84,6 +85,7 @@ export type PullRequestMaxAggregateOutputType = {
   requestedByMemberId: string | null
   round: number | null
   resolveFromSha: string | null
+  approvalCarriedTo: string | null
   note: string | null
   autoMergeAt: Date | null
   state: string | null
@@ -112,6 +114,7 @@ export type PullRequestCountAggregateOutputType = {
   requestedByMemberId: number
   round: number
   resolveFromSha: number
+  approvalCarriedTo: number
   note: number
   autoMergeAt: number
   state: number
@@ -152,6 +155,7 @@ export type PullRequestMinAggregateInputType = {
   requestedByMemberId?: true
   round?: true
   resolveFromSha?: true
+  approvalCarriedTo?: true
   note?: true
   autoMergeAt?: true
   state?: true
@@ -180,6 +184,7 @@ export type PullRequestMaxAggregateInputType = {
   requestedByMemberId?: true
   round?: true
   resolveFromSha?: true
+  approvalCarriedTo?: true
   note?: true
   autoMergeAt?: true
   state?: true
@@ -208,6 +213,7 @@ export type PullRequestCountAggregateInputType = {
   requestedByMemberId?: true
   round?: true
   resolveFromSha?: true
+  approvalCarriedTo?: true
   note?: true
   autoMergeAt?: true
   state?: true
@@ -323,6 +329,7 @@ export type PullRequestGroupByOutputType = {
   requestedByMemberId: string | null
   round: number
   resolveFromSha: string | null
+  approvalCarriedTo: string | null
   note: string | null
   autoMergeAt: Date | null
   state: string
@@ -374,6 +381,7 @@ export type PullRequestWhereInput = {
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  approvalCarriedTo?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
@@ -409,6 +417,7 @@ export type PullRequestOrderByWithRelationInput = {
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvalCarriedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   autoMergeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
@@ -448,6 +457,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  approvalCarriedTo?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
@@ -483,6 +493,7 @@ export type PullRequestOrderByWithAggregationInput = {
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvalCarriedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   autoMergeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
@@ -519,6 +530,7 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   requestedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   round?: Prisma.IntWithAggregatesFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  approvalCarriedTo?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   autoMergeAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
@@ -543,6 +555,7 @@ export type PullRequestCreateInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -578,6 +591,7 @@ export type PullRequestUncheckedCreateInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -605,6 +619,7 @@ export type PullRequestUpdateInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -640,6 +655,7 @@ export type PullRequestUncheckedUpdateInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -671,6 +687,7 @@ export type PullRequestCreateManyInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -695,6 +712,7 @@ export type PullRequestUpdateManyMutationInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -723,6 +741,7 @@ export type PullRequestUncheckedUpdateManyInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -767,6 +786,7 @@ export type PullRequestCountOrderByAggregateInput = {
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
+  approvalCarriedTo?: Prisma.SortOrder
   note?: Prisma.SortOrder
   autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
@@ -800,6 +820,7 @@ export type PullRequestMaxOrderByAggregateInput = {
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
+  approvalCarriedTo?: Prisma.SortOrder
   note?: Prisma.SortOrder
   autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
@@ -828,6 +849,7 @@ export type PullRequestMinOrderByAggregateInput = {
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
+  approvalCarriedTo?: Prisma.SortOrder
   note?: Prisma.SortOrder
   autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
@@ -1076,6 +1098,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1109,6 +1132,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1169,6 +1193,7 @@ export type PullRequestScalarWhereInput = {
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  approvalCarriedTo?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
@@ -1193,6 +1218,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1226,6 +1252,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1279,6 +1306,7 @@ export type PullRequestCreateWithoutSessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1312,6 +1340,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1349,6 +1378,7 @@ export type PullRequestCreateWithoutReviewSessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1382,6 +1412,7 @@ export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1451,6 +1482,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1485,6 +1517,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1527,6 +1560,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1561,6 +1595,7 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1587,6 +1622,7 @@ export type PullRequestCreateWithoutListItemsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1621,6 +1657,7 @@ export type PullRequestUncheckedCreateWithoutListItemsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1663,6 +1700,7 @@ export type PullRequestUpdateWithoutListItemsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1697,6 +1735,7 @@ export type PullRequestUncheckedUpdateWithoutListItemsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1723,6 +1762,7 @@ export type PullRequestCreateWithoutSpecsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1757,6 +1797,7 @@ export type PullRequestUncheckedCreateWithoutSpecsInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1799,6 +1840,7 @@ export type PullRequestUpdateWithoutSpecsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1833,6 +1875,7 @@ export type PullRequestUncheckedUpdateWithoutSpecsInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1862,6 +1905,7 @@ export type PullRequestCreateManyWorkspaceInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -1886,6 +1930,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1919,6 +1964,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1949,6 +1995,7 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1976,6 +2023,7 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -2000,6 +2048,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2033,6 +2082,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2063,6 +2113,7 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2090,6 +2141,7 @@ export type PullRequestCreateManySessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -2117,6 +2169,7 @@ export type PullRequestCreateManyReviewSessionInput = {
   requestedByMemberId?: string | null
   round?: number
   resolveFromSha?: string | null
+  approvalCarriedTo?: string | null
   note?: string | null
   autoMergeAt?: Date | string | null
   state?: string
@@ -2141,6 +2194,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2174,6 +2228,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2204,6 +2259,7 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2228,6 +2284,7 @@ export type PullRequestUpdateWithoutReviewSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2261,6 +2318,7 @@ export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2291,6 +2349,7 @@ export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvalCarriedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2368,6 +2427,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   requestedByMemberId?: boolean
   round?: boolean
   resolveFromSha?: boolean
+  approvalCarriedTo?: boolean
   note?: boolean
   autoMergeAt?: boolean
   state?: boolean
@@ -2404,6 +2464,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   requestedByMemberId?: boolean
   round?: boolean
   resolveFromSha?: boolean
+  approvalCarriedTo?: boolean
   note?: boolean
   autoMergeAt?: boolean
   state?: boolean
@@ -2436,6 +2497,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   requestedByMemberId?: boolean
   round?: boolean
   resolveFromSha?: boolean
+  approvalCarriedTo?: boolean
   note?: boolean
   autoMergeAt?: boolean
   state?: boolean
@@ -2468,6 +2530,7 @@ export type PullRequestSelectScalar = {
   requestedByMemberId?: boolean
   round?: boolean
   resolveFromSha?: boolean
+  approvalCarriedTo?: boolean
   note?: boolean
   autoMergeAt?: boolean
   state?: boolean
@@ -2476,7 +2539,7 @@ export type PullRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "repositoryId" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "autoMergeAt" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "repositoryId" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "approvalCarriedTo" | "note" | "autoMergeAt" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
@@ -2570,12 +2633,18 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     resolveFromSha: string | null
     /**
+     * A head the author pushed to resolve its conflicts that left its own changes (the lines it
+     * adds and removes) as its latest approval read them: that approval holds for this head too.
+     */
+    approvalCarriedTo: string | null
+    /**
      * Why a merge is waiting or stopped, shown on the pull request.
      */
     note: string | null
     /**
-     * When Brigade set it merging on its own, for its member's Auto-merge (src/auto-merge.ts): such
-     * a merge gives up rather than sending it back to the author or asking a person.
+     * When Brigade set it merging on its own, for its member's Auto-merge (src/pull-requests.ts):
+     * its conflicts go back to the author, as a person's merge's do; anything else that stops it
+     * (failed checks, a rule GitHub enforces) gives up and leaves it to a person, with no ticket.
      */
     autoMergeAt: Date | null
     /**
@@ -3034,6 +3103,7 @@ export interface PullRequestFieldRefs {
   readonly requestedByMemberId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly round: Prisma.FieldRef<"PullRequest", 'Int'>
   readonly resolveFromSha: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly approvalCarriedTo: Prisma.FieldRef<"PullRequest", 'String'>
   readonly note: Prisma.FieldRef<"PullRequest", 'String'>
   readonly autoMergeAt: Prisma.FieldRef<"PullRequest", 'DateTime'>
   readonly state: Prisma.FieldRef<"PullRequest", 'String'>

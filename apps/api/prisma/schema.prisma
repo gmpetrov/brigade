@@ -201,6 +201,16 @@ model Member {
   /// Brigade merges the pull requests teammates open in their threads once they are ready: no
   /// review under way or asked for, and checks passed (src/auto-merge.ts). Owners and admins only.
   autoMerge             Boolean                @default(false)
+  /// Chief reads the buttons and choices their teammates end on before they do, and in their name
+  /// suggests an answer, or gives it on its own for the kinds in chiefAuto (docs/chief-answers.md).
+  /// Off: none of it, as before. Off for new members for now; members who had it keep theirs.
+  chiefAnswers          Boolean                @default(false)
+  /// The kinds of question (ChiefKind) Chief answers on its own for them; it suggests the others.
+  chiefAuto             String[]               @default([])
+  /// When they last changed chiefAuto themselves: the suggestions before it count no more toward
+  /// offering them to let Chief answer a kind on its own.
+  chiefAutoChangedAt    DateTime?
+  chiefDecisions        ChiefDecision[]
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]
@@ -297,6 +307,7 @@ model Workspace {
   tasks                 Task[]
   schedules             Schedule[]
   wakeups               Wakeup[]
+  chiefDecisions        ChiefDecision[]
   replyWatches          ReplyWatch[]
   heldCalls             HeldCall[]
   runnerCommands        RunnerCommand[]
@@ -723,6 +734,18 @@ model Session {
   /// The list items it works on (docs/lists.md).
   listItems ListItemThread[]
 
+  /// Chief's decisions on the questions its teammates ended on (docs/chief-answers.md).
+  chiefDecisions  ChiefDecision[] @relation("ChiefDecisionThread")
+  /// Set on Chief's thread deciding one of them, a child of the thread asking: shown there as the
+  /// decision, not among its sub-threads.
+  chiefDecisionId String?         @unique
+  chiefDecision   ChiefDecision?  @relation("ChiefDecisionChild", fields: [chiefDecisionId], references: [id], onDelete: SetNull)
+  /// Its work goes on Chief's word from this event on (its seq): Chief answered in its person's
+  /// name, or it was handed work while its giver did (a sub-thread, a task, a message). Only a
+  /// person's message after it lifts it. Meanwhile its App writes ask a person, whatever its
+  /// teammate's access (src/chief-answers.ts).
+  chiefWordSeq    Int?
+
   @@index([workspaceId, createdAt])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([projectId, createdAt])
@@ -854,6 +877,71 @@ enum WakeupStatus {
   cancelled
   /// Its computer stayed offline too long after it was due.
   missed
+}
+
+/// Where Chief's decision on a question stands (ChiefDecisionStatus in @brigade/contracts).
+enum ChiefDecisionStatus {
+  pending
+  suggested
+  answered
+  escalated
+  superseded
+  failed
+}
+
+/// What the person made of Chief's pick: theirs too, another, or a wrong answer.
+enum ChiefOutcome {
+  agreed
+  disagreed
+  overruled
+}
+
+/// Chief's decision on a question a teammate ended its reply on: buttons or a choices card, in a
+/// thread of a member who lets Chief answer for them (docs/chief-answers.md, src/chief-answers.ts).
+model ChiefDecision {
+  id             String              @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// The thread asking.
+  sessionId      String
+  session        Session             @relation("ChiefDecisionThread", fields: [sessionId], references: [id], onDelete: Cascade)
+  /// Whose name Chief answers in: the member who started the thread.
+  memberId       String
+  member         Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// The teammate whose question it is: an answer wakes it.
+  teammateId     String
+  /// The question's card (its tool.started seq), what it asks (a choices card's question), and
+  /// the answers it offers ([{ label, message, description? }]).
+  askSeq         Int
+  question       String?
+  options        Json
+  /// Chief's decision thread, its id chosen with the decision: started again after a restart, it
+  /// is the same one.
+  childSessionId String              @unique
+  child          Session?            @relation("ChiefDecisionChild")
+  status         ChiefDecisionStatus @default(pending)
+  /// answer, park or escalate (chief_decide).
+  verdict        String?
+  /// ChiefQuestionKind.
+  kind           String?
+  /// The answer picked, from 0.
+  optionIndex    Int?
+  reason         String?
+  basis          String?
+  /// The work put off, as added to the person's list.
+  parked         String?
+  decidedAt      DateTime?
+  /// An answer kept for the thread's computer, in order with the person's word (src/chief-order.ts).
+  sentAt         DateTime?
+  outcome        ChiefOutcome?
+  outcomeAt      DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([sessionId, askSeq])
+  @@index([memberId, kind, outcomeAt])
+  @@index([status, createdAt])
 }
 
 /// A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
@@ -1109,7 +1197,7 @@ enum MergeStatus {
   none
   /// It stopped and a person has a ticket: the conflicts were not resolved, or GitHub refuses the merge.
   stuck
-  /// A person asked to merge it once its conflicts are resolved: the author teammate's turn.
+  /// A person, or Auto-merge, asked to merge it once its conflicts are resolved: the author teammate's turn.
   resolving
   /// A person asked to merge it: it merges once GitHub allows it, with mergeMethod.
   merging
@@ -1162,10 +1250,14 @@ model PullRequest {
   round               Int                 @default(0)
   /// The head when the author's turn to resolve the conflicts began: unchanged after it, nothing was pushed.
   resolveFromSha      String?             @map("reviewedSha")
+  /// A head the author pushed to resolve its conflicts that left its own changes (the lines it
+  /// adds and removes) as its latest approval read them: that approval holds for this head too.
+  approvalCarriedTo   String?
   /// Why a merge is waiting or stopped, shown on the pull request.
   note                String?
-  /// When Brigade set it merging on its own, for its member's Auto-merge (src/auto-merge.ts): such
-  /// a merge gives up rather than sending it back to the author or asking a person.
+  /// When Brigade set it merging on its own, for its member's Auto-merge (src/pull-requests.ts):
+  /// its conflicts go back to the author, as a person's merge's do; anything else that stops it
+  /// (failed checks, a rule GitHub enforces) gives up and leaves it to a person, with no ticket.
   autoMergeAt         DateTime?
   /// As last seen on GitHub: open, closed or merged.
   state               String              @default("open")

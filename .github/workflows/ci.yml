@@ -1,0 +1,127 @@
+# The typecheck and the tests, on each pull request and each push to main: what teammates and
+# reviewers otherwise run by hand. Auto-merge waits for these checks to pass, and a reviewer
+# leaves to them what they run (apps/api/src/reviews.ts). A test file that fails runs once more
+# before it counts (scripts/ci/test.mjs), and failures show as annotations on the pull request.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same pull request or branch stops the run it replaces.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # The API's typecheck generates the Prisma Client, which reads it without connecting.
+      DATABASE_URL: postgresql://brigade:brigade@localhost:5432/brigade
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: pnpm lint
+
+  api:
+    name: Tests (API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: brigade
+          POSTGRES_PASSWORD: brigade
+          POSTGRES_DB: brigade
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U brigade"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://brigade:brigade@localhost:5433/brigade
+      # A suite skipped for want of a database fails, rather than passing with its tests left out.
+      REQUIRE_DATABASE: 1
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the shared packages
+        run: pnpm exec turbo run build --filter='@brigade/api^...'
+
+      - name: Database and keys
+        working-directory: apps/api
+        run: |
+          pnpm exec prisma migrate deploy
+          node scripts/playbooks.mjs
+          echo "VAULT_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: API
+        run: node scripts/ci/test.mjs apps/api --expose-gc --import tsx
+
+  tests:
+    name: Tests (runner, dashboard, packages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the shared packages
+        run: >-
+          pnpm exec turbo run build --filter='@brigade/runner^...' --filter='@brigade/web^...'
+          --filter=@brigade/contracts --filter=@brigade/providers
+
+      - name: Runner
+        run: node scripts/ci/test.mjs apps/runner --import tsx
+
+      - name: Dashboard
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/test.mjs apps/web --import tsx
+
+      - name: Contracts
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/test.mjs packages/contracts
+
+      - name: Providers
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/test.mjs packages/providers --import tsx
+
+      - name: Preview gateway
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/test.mjs apps/preview-gateway --import tsx

@@ -409,24 +409,30 @@ test('an address is mailed at most 3 times a day', { skip }, async () => {
   )
 })
 
-test("the plugin's invitation and member routes are closed over HTTP", { skip }, async () => {
-  for (const path of [
-    'invite-member',
-    'accept-invitation',
-    'reject-invitation',
-    'cancel-invitation',
-    'update-member-role',
-    'remove-member',
-    'leave',
-  ]) {
-    const response = await call(`/api/auth/organization/${path}`, {
-      body: { email: address('lee'), role: 'member', invitationId: 'x' },
-      cookie: ada.cookie,
-    })
-    assert.equal(response.status, 404, path)
-  }
-  assert.equal(await prisma.invitation.count({ where: { email: { startsWith: 'lee-' } } }), 0)
-})
+test(
+  "the plugin's invitation, member and deletion routes are closed over HTTP",
+  { skip },
+  async () => {
+    for (const path of [
+      'invite-member',
+      'accept-invitation',
+      'reject-invitation',
+      'cancel-invitation',
+      'update-member-role',
+      'remove-member',
+      'leave',
+      // An organization goes with its last workspace, behind the code mailed to its owner.
+      'delete',
+    ]) {
+      const response = await call(`/api/auth/organization/${path}`, {
+        body: { email: address('lee'), role: 'member', invitationId: 'x', organizationId: 'x' },
+        cookie: ada.cookie,
+      })
+      assert.equal(response.status, 404, path)
+    }
+    assert.equal(await prisma.invitation.count({ where: { email: { startsWith: 'lee-' } } }), 0)
+  },
+)
 
 test("auth's rate-limit cleanup leaves the invitation budget alone", { skip }, async () => {
   const { spendInvitation } = await import('../src/invitation-budget.js')
