@@ -24,6 +24,7 @@ import {
   DESIGN_THUMBNAIL,
   designFolderOf,
   DesignManifest,
+  formatMention,
   parseSkillMarkdown,
   PROPOSE_SKILL_TOOL,
   REPORT_FILES_MAX,
@@ -1233,7 +1234,8 @@ export function libraryTools(options: {
     search_workspace: tool({
       description:
         `Search the workspace's shared knowledge by keywords: its document library (mirrored read-only at ${options.libraryDir}), ` +
-        `the workspace, project and teammate memory, lines removed from memory (with why), and summaries of past threads. ` +
+        `the workspace, project and teammate memory, lines removed from memory (with why), and summaries of past threads, ` +
+        "each with the thread's mention, to name it by in a reply. " +
         'Use it before asking a person something the team may already know.',
       inputSchema: jsonSchema<{ query: string; limit?: number }>({
         type: 'object',
@@ -1252,9 +1254,21 @@ export function libraryTools(options: {
           toolCallId,
           toolName: 'search_workspace',
           input,
-        })) as { kind: string; path: string }[]
+        })) as { kind: string; path: string; sessionId?: string | null; title?: string }[]
         return hits.map((hit) =>
-          hit.kind === 'library' ? { ...hit, file: `${options.libraryDir}/${hit.path}` } : hit,
+          hit.kind === 'library'
+            ? { ...hit, file: `${options.libraryDir}/${hit.path}` }
+            : // A thread named by its mention is a link people open in the dashboard.
+              hit.kind === 'thread_summary' && hit.sessionId
+              ? {
+                  ...hit,
+                  mention: formatMention({
+                    kind: 'thread',
+                    id: hit.sessionId,
+                    label: hit.title?.replace(/^Thread: /, '') || hit.sessionId,
+                  }),
+                }
+              : hit,
         )
       },
     }),

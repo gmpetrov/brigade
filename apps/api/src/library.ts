@@ -223,7 +223,10 @@ export async function saveLibraryFile(
     fromCollab?: boolean
     /** Set when the save brings back an older version. */
     restoredFromId?: string
-    /** The stored text it builds on: when the file changed since, nothing is written (StaleMemory). */
+    /**
+     * The stored text it builds on: when the file changed since, nothing is written (StaleMemory),
+     * checked again as it commits.
+     */
     baseSha?: string
     /** Its caller holds the file's lock already (withLibraryLock): the lease it writes under. */
     lease?: LibraryLease
@@ -455,6 +458,16 @@ async function writeLibraryFile(
   // still this save's (a save past it changes nothing, and its object is never read).
   const commit = async (tx: Prisma.TransactionClient) => {
     await claimObject(tx, key)
+    if (existing && options.baseSha) {
+      // Built on the text it read: written only if nobody saved it since, whichever way they
+      // saved it (a JSON file's saves take no lock). Else nothing is, and the caller reads again.
+      const { count } = await tx.document.updateMany({
+        where: { id, sha256: options.baseSha, deletedAt: null },
+        data: { ...fields, bytesStaleAt: null },
+      })
+      if (!count) throw new StaleMemory()
+      return tx.document.findUniqueOrThrow({ where: { id } })
+    }
     if (existing)
       // Bytes a late save may have overwritten at the legacy key: no longer read.
       return tx.document.update({ where: { id }, data: { ...fields, bytesStaleAt: null } })

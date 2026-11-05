@@ -3,11 +3,13 @@
 // (lib/sidebar-keys.ts says which). The rows that are stops carry `data-nav-stop`: "link"
 // opens, as a click on it does; "toggle" (a folded section, a "+N more") is only focused, and
 // Enter unfolds it. Only the rows showing count: a folded section's rows are no stops.
+// On the row open, one with a caret (`data-nav-caret`: a list, a thread with sub-threads),
+// Enter folds or unfolds what is under it, as the caret does.
 // The keys work outside fields and in the composer, as in a chat app; another field keeps
 // its own ⌥↑ / ⌥↓, and so do menus, dialogs, a remote screen and a terminal.
 import { useEffect } from 'react'
 import { editable, OPEN_LAYER } from '@/components/side-panel'
-import { stepTo, walkKey, type Relation } from '@/lib/sidebar-keys'
+import { enterAt, stepTo, walkKey, type Relation } from '@/lib/sidebar-keys'
 
 const SIDEBAR = '[data-sidebar="sidebar"]'
 const STOPS = `${SIDEBAR} [data-nav-stop]`
@@ -23,6 +25,12 @@ function relation(stop: Element, from: Element): Relation {
 /** The stops showing now, in the sidebar's order (a hidden one has no box). */
 const shownStops = () =>
   [...document.querySelectorAll<HTMLElement>(STOPS)].filter((s) => s.getClientRects().length)
+
+/** The caret of a row that folds rows under it: a list, a thread with sub-threads. */
+const caretOf = (row: Element) => row.querySelector<HTMLElement>('[data-nav-caret]')
+
+/** Whether Enter folds or unfolds on that row: a folded section, a "+N more", a caret's row. */
+const folds = (row: Element) => row.matches('[data-nav-stop="toggle"]') || !!caretOf(row)
 
 /** Whether the keys belong to something else: a field, a menu, a dialog, a remote screen. */
 function elsewhere(focus: Element | null) {
@@ -63,14 +71,14 @@ export function useSidebarKeys() {
         const stops = shownStops()
         if (!stops.length) return
         const start = from(stops)
-        const to = stepTo(stops, start ? (s) => relation(s, start) : undefined, dir)
+        const to = start
+          ? stepTo(stops, (s) => relation(s, start), dir)
+          : enterAt(stops, (s) => s.hasAttribute('data-nav-top'), dir)
         // At either end, nothing; the composer's caret does not move either.
         e.preventDefault()
         if (to) go(to)
         return
       }
-      // Enter on a folded row unfolds it; the next ⌥↓ goes to the first row it showed, which
-      // comes right after the stop above it.
       const plain = !e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey
       if (
         e.key === 'Enter' &&
@@ -78,27 +86,41 @@ export function useSidebarKeys() {
         !e.repeat &&
         !e.defaultPrevented &&
         focus instanceof HTMLElement &&
-        focus.matches(`${STOPS}[data-nav-stop="toggle"]`)
+        focus.matches(STOPS)
       ) {
-        e.preventDefault()
-        const above = stepTo(shownStops(), (s) => relation(s, focus), -1)
-        focus.click()
-        held = above ?? null
-        return
+        // A folded row unfolds; the next ⌥↓ goes to the first row it showed, which comes right
+        // after the stop above it.
+        if (focus.dataset.navStop === 'toggle') {
+          e.preventDefault()
+          const above = stepTo(shownStops(), (s) => relation(s, focus), -1)
+          focus.click()
+          held = above ?? null
+          return
+        }
+        // The row open, with a caret: what is under it folds or unfolds, and the next ⌥↓ goes
+        // to the first row it showed. Another row's Enter opens it, as a link's does.
+        const caret = caretOf(focus)
+        if (caret && (focus === held || focus.getAttribute('data-active') === 'true')) {
+          e.preventDefault()
+          caret.click()
+          held = focus
+          return
+        }
       }
       held = null
     }
     const onPointerDown = () => {
       held = null
     }
-    // A page the walk opened focuses its composer once it has loaded, which may come after
-    // the walk went on to a folded row: the focus goes back to that row, so Enter unfolds it
-    // rather than going to the composer. Typing ended the run first: the composer keeps it.
+    // A page the walk opened focuses its composer once it has loaded: on a row Enter folds or
+    // unfolds (a folded row, or the one it opened with a caret), the focus goes back to that
+    // row, so Enter does that rather than going to the composer. Typing ends the run first
+    // (and the composer takes the keys typed), so the composer keeps the focus then.
     const onFocusIn = (e: FocusEvent) => {
       if (
         held instanceof HTMLElement &&
         held.isConnected &&
-        held.dataset.navStop === 'toggle' &&
+        folds(held) &&
         e.target instanceof Element &&
         e.target.closest('[data-composer]')
       )

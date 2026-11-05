@@ -188,6 +188,9 @@ Today, and its pull requests, files and routines are the workspace's pages, filt
 - **Runs on its own:** its playbooks, schedules and triggers, a dot for each one's health
   and when it runs or last ran. "All" opens Routines filtered on the project.
 - Whichever of the two has something comes first.
+- **Decisions:** its specs, notes and designs with their status (see Decisions below), Open
+  ones first (draft, accepted, and any that looks behind), then Shipped and All. A row opens
+  the file, or the design. A project with none shows nothing.
 
 The settings (`…/settings`) are one page in sections, with a nav beside them that follows the
 scroll (a row above them on a phone): **General** (name, logo or letters, website, brief, library
@@ -214,6 +217,41 @@ What the page showed before and why it went: the latest threads and Needs you re
 sidebar; the pull requests box repeated its tab, and for a project with an old repository
 listed years-old pull requests; Context (brief length, memory lines) repeated the settings;
 This week's numbers led to no decision.
+
+### Decisions
+
+A project's library folder holds two kinds of documents, kept apart (5 Nov 2026, from the
+trial on Brigade's own folder: `Projects/Brigade/decisions/project-library-spec.md` in the
+library). A **decision** (a spec, a proposal, a note, a design) says what was chosen and why, at
+a date, with a status; once shipped it is history. The **reference** says what is true today:
+the repository's `docs/` for a project with code, `reference/` in the folder otherwise. How
+teammates file them is the built-in skill `brigade-library` (docs/skills.md), which an admin can
+turn off.
+
+Nobody keeps an index: Brigade reads the status from the files (`src/decisions.ts`,
+`GET /api/projects/:id/decisions`), from the `text` the library already keeps for search.
+
+- **A spec's status line** is its third line: `Spec, 2026-10-19. Status: shipped (#241). …`,
+  one of six words (draft, accepted, shipped, paused, dropped, superseded), always English
+  (`parseStatusLine` in `packages/contracts/src/decisions.ts`). Any Markdown file under the
+  folder with such a line is a decision; one under `decisions/` without it shows as **No
+  status** (its `README.md` aside), so it gets fixed rather than missed.
+- **A design's status** is in its `design.json`: `status`, same words, and `pullRequests`.
+  A design with one is a decision; one under `designs/` without it shows as No status.
+  Options (`*.options/`) are not decisions.
+- **Flags** say what looks behind: still draft or accepted though a pull request linked to it
+  (below) is merged; shipped with no reference named on its line (a path in backticks, or a
+  link).
+
+**A merge ships the spec.** `github_create_pull_request` takes
+`specs: { ships: [path], partOf: [path] }`, library paths of Markdown files or design folders,
+kept as `SpecPull` rows when the author may change them; a path it may not is told back in the
+thread. When the pull request is merged (by Brigade or on GitHub), `settleSpecsOnMerge`
+writes its number on each, under the file's lock, credited to its author: those it `ships`
+get `shipped`, the others keep their status. Each link is settled once done, or for good when
+the file is gone, out of the author's reach, or has no status line to change (the thread is
+told to fix it); the others are tried again every 10 minutes (`spec-merge-sweep`). Its thread
+is told what changed and asked to name the reference on each shipped spec.
 
 ### Repository page
 

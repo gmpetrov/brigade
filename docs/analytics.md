@@ -73,7 +73,10 @@ HN and X often drop the referrer.
 
 The person's properties, set once by `signed_up`: `signup_channel`, `signup_source`,
 `signup_medium`, `signup_campaign`, `signup_referrer`, `signup_landing_page`, `signup_method`
-(`email_code`, `google`, `password`). Each event of a person also sets `internal`.
+(`email_code`, `google`, `password`). Each event of a person also sets `internal`. `onboarding_answered` sets what they answered to
+onboarding's questions (`@brigade/contracts`' `ONBOARDING_QUESTIONS`, also kept on
+`User.onboardingAnswers`): `role`, `team_size`, `first_work` and `heard_from`, each an option's id;
+a question skipped sets nothing.
 
 ## The API's events
 
@@ -122,13 +125,14 @@ a short word (`ENUM_VALUE`); the rest is dropped, whatever a rule returns.
 
 ### Sent from elsewhere
 
-| Event                                                                                                                                   | Where                                                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `signed_up` (`method`, `channel`)                                                                                                       | `recordSignup`, from better-auth's `databaseHooks.user.create.after` (`src/auth.ts`)   |
-| `turn_completed` (`harness`, `duration_s`, `outcome`: `done`, `interrupted`, `error`)                                                   | `trackTurns`, once a run of a thread's events is stored (`src/hub/runner-messages.ts`) |
-| `ticket_opened` (`kind`: the ticket's type)                                                                                             | Every ticket made through a scoped client (`onScopedWrite` in `src/analytics.ts`)      |
-| `pull_request_opened` (`by`)                                                                                                            | `notePullRequestCall` in `src/pull-requests.ts`, when a teammate opens one             |
-| `subscription_started` (`plan`, `currency`, `amount`), `subscription_canceled` (`months_active`, `reason`), `payment_failed` (`status`) | `savePlan` in `src/billing.ts`, when Stripe's status changes                           |
+| Event                                                                                                                                                               | Where                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signed_up` (`method`, `channel`)                                                                                                                                   | `recordSignup`, from better-auth's `databaseHooks.user.create.after` (`src/auth.ts`)                                                                      |
+| `turn_completed` (`harness`, `duration_s`, `outcome`: `done`, `interrupted`, `error`)                                                                               | `trackTurns`, once a run of a thread's events is stored (`src/hub/runner-messages.ts`)                                                                    |
+| `ticket_opened` (`kind`: the ticket's type)                                                                                                                         | Every ticket made through a scoped client (`onScopedWrite` in `src/analytics.ts`)                                                                         |
+| `pull_request_opened` (`by`)                                                                                                                                        | `notePullRequestCall` in `src/pull-requests.ts`, when a teammate opens one                                                                                |
+| `onboarding_answered` (`count`, `role_position`, `team_size_position`, `first_work_position`, `heard_from_position`: where each answer showed in its shuffled list) | `recordOnboardingAnswers`, once, when a new project's creator answers or skips onboarding's questions (`POST /me/onboarding`, `src/routes/workspaces.ts`) |
+| `subscription_started` (`plan`, `currency`, `amount`), `subscription_canceled` (`months_active`, `reason`), `payment_failed` (`status`)                             | `savePlan` in `src/billing.ts`, when Stripe's status changes                                                                                              |
 
 ## Errors
 

@@ -151,7 +151,8 @@ export const ModelName = {
   TeammateBackup: 'TeammateBackup',
   AccountLoginBackup: 'AccountLoginBackup',
   ComputerReplacement: 'ComputerReplacement',
-  FeatureFlag: 'FeatureFlag'
+  FeatureFlag: 'FeatureFlag',
+  SpecPull: 'SpecPull'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -178,7 +179,8 @@ export const UserScalarFieldEnum = {
   image: 'image',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  attribution: 'attribution'
+  attribution: 'attribution',
+  onboardingAnswers: 'onboardingAnswers'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -344,7 +346,8 @@ export const WorkspaceScalarFieldEnum = {
   hubMode: 'hubMode',
   deletingAt: 'deletingAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  builtinSkillsOff: 'builtinSkillsOff'
 } as const
 
 export type WorkspaceScalarFieldEnum = (typeof WorkspaceScalarFieldEnum)[keyof typeof WorkspaceScalarFieldEnum]
@@ -1905,6 +1908,19 @@ export const FeatureFlagScalarFieldEnum = {
 } as const
 
 export type FeatureFlagScalarFieldEnum = (typeof FeatureFlagScalarFieldEnum)[keyof typeof FeatureFlagScalarFieldEnum]
+
+
+export const SpecPullScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  pullRequestId: 'pullRequestId',
+  ships: 'ships',
+  settledAt: 'settledAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SpecPullScalarFieldEnum = (typeof SpecPullScalarFieldEnum)[keyof typeof SpecPullScalarFieldEnum]
 
 
 export const SortOrder = {

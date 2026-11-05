@@ -7,12 +7,14 @@ import {
   SKILL_PACK_MAX,
   SaveSkill,
   SaveSkillPack,
+  SetBuiltinSkill,
   UpdateSkillPack,
   UploadRef,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { directUploads, streamObject } from '../bucket.js'
+import { builtinSkillViews, setBuiltinSkill } from '../builtin-skills.js'
 import { installationToken } from '../connectors/github-app.js'
 import { workspaceGitHub } from '../git.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -47,6 +49,23 @@ export const skills = new Hono<AppEnv>()
   .get('/commands', async (c) => c.json(await skillCommands(c.var.db)))
 
   .get('/packs', async (c) => c.json((await listPacks(c.var.db)).map(toPack)))
+
+  /** Brigade's own skills: what each is for, and whether it is on here (docs/skills.md). */
+  .get('/builtin', async (c) => c.json(await builtinSkillViews(c.var.db)))
+
+  /** Turn one of Brigade's switchable skills on or off for the workspace: owners and admins. */
+  .put('/builtin/:name', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    const { scope, db } = c.var
+    const { enabled } = await parseBody(c.req.raw, SetBuiltinSkill)
+    await setBuiltinSkill(
+      scope,
+      { type: 'member', id: scope.memberId },
+      c.req.param('name'),
+      enabled,
+    )
+    return c.json(await builtinSkillViews(db))
+  })
 
   .post('/', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')

@@ -58,6 +58,7 @@ export type WorkspaceCountAggregateOutputType = {
   deletingAt: number
   createdAt: number
   updatedAt: number
+  builtinSkillsOff: number
   _all: number
 }
 
@@ -96,6 +97,7 @@ export type WorkspaceCountAggregateInputType = {
   deletingAt?: true
   createdAt?: true
   updatedAt?: true
+  builtinSkillsOff?: true
   _all?: true
 }
 
@@ -181,6 +183,7 @@ export type WorkspaceGroupByOutputType = {
   deletingAt: Date | null
   createdAt: Date
   updatedAt: Date
+  builtinSkillsOff: string[]
   _count: WorkspaceCountAggregateOutputType | null
   _min: WorkspaceMinAggregateOutputType | null
   _max: WorkspaceMaxAggregateOutputType | null
@@ -214,6 +217,7 @@ export type WorkspaceWhereInput = {
   deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
+  builtinSkillsOff?: Prisma.StringNullableListFilter<"Workspace">
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
   computers?: Prisma.ComputerListRelationFilter
   runners?: Prisma.RunnerListRelationFilter
@@ -282,6 +286,7 @@ export type WorkspaceWhereInput = {
   listItems?: Prisma.ListItemListRelationFilter
   listItemThreads?: Prisma.ListItemThreadListRelationFilter
   listItemPulls?: Prisma.ListItemPullListRelationFilter
+  specPulls?: Prisma.SpecPullListRelationFilter
 }
 
 export type WorkspaceOrderByWithRelationInput = {
@@ -294,6 +299,7 @@ export type WorkspaceOrderByWithRelationInput = {
   deletingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  builtinSkillsOff?: Prisma.SortOrder
   organization?: Prisma.OrganizationOrderByWithRelationInput
   computers?: Prisma.ComputerOrderByRelationAggregateInput
   runners?: Prisma.RunnerOrderByRelationAggregateInput
@@ -362,6 +368,7 @@ export type WorkspaceOrderByWithRelationInput = {
   listItems?: Prisma.ListItemOrderByRelationAggregateInput
   listItemThreads?: Prisma.ListItemThreadOrderByRelationAggregateInput
   listItemPulls?: Prisma.ListItemPullOrderByRelationAggregateInput
+  specPulls?: Prisma.SpecPullOrderByRelationAggregateInput
 }
 
 export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
@@ -377,6 +384,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
+  builtinSkillsOff?: Prisma.StringNullableListFilter<"Workspace">
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
   computers?: Prisma.ComputerListRelationFilter
   runners?: Prisma.RunnerListRelationFilter
@@ -445,6 +453,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   listItems?: Prisma.ListItemListRelationFilter
   listItemThreads?: Prisma.ListItemThreadListRelationFilter
   listItemPulls?: Prisma.ListItemPullListRelationFilter
+  specPulls?: Prisma.SpecPullListRelationFilter
 }, "id">
 
 export type WorkspaceOrderByWithAggregationInput = {
@@ -457,6 +466,7 @@ export type WorkspaceOrderByWithAggregationInput = {
   deletingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  builtinSkillsOff?: Prisma.SortOrder
   _count?: Prisma.WorkspaceCountOrderByAggregateInput
   _max?: Prisma.WorkspaceMaxOrderByAggregateInput
   _min?: Prisma.WorkspaceMinOrderByAggregateInput
@@ -475,6 +485,7 @@ export type WorkspaceScalarWhereWithAggregatesInput = {
   deletingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string
+  builtinSkillsOff?: Prisma.StringNullableListFilter<"Workspace">
 }
 
 export type WorkspaceCreateInput = {
@@ -486,6 +497,7 @@ export type WorkspaceCreateInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -554,6 +566,7 @@ export type WorkspaceCreateInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateInput = {
@@ -566,6 +579,7 @@ export type WorkspaceUncheckedCreateInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -633,6 +647,7 @@ export type WorkspaceUncheckedCreateInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUpdateInput = {
@@ -644,6 +659,7 @@ export type WorkspaceUpdateInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -712,6 +728,7 @@ export type WorkspaceUpdateInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateInput = {
@@ -724,6 +741,7 @@ export type WorkspaceUncheckedUpdateInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -791,6 +809,7 @@ export type WorkspaceUncheckedUpdateInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateManyInput = {
@@ -803,6 +822,7 @@ export type WorkspaceCreateManyInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
 }
 
 export type WorkspaceUpdateManyMutationInput = {
@@ -814,6 +834,7 @@ export type WorkspaceUpdateManyMutationInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
 }
 
 export type WorkspaceUncheckedUpdateManyInput = {
@@ -826,6 +847,7 @@ export type WorkspaceUncheckedUpdateManyInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
 }
 
 export type WorkspaceScalarRelationFilter = {
@@ -853,6 +875,7 @@ export type WorkspaceCountOrderByAggregateInput = {
   deletingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  builtinSkillsOff?: Prisma.SortOrder
 }
 
 export type WorkspaceMaxOrderByAggregateInput = {
@@ -940,8 +963,17 @@ export type WorkspaceUncheckedUpdateManyWithoutOrganizationNestedInput = {
   deleteMany?: Prisma.WorkspaceScalarWhereInput | Prisma.WorkspaceScalarWhereInput[]
 }
 
+export type WorkspaceCreatebuiltinSkillsOffInput = {
+  set: string[]
+}
+
 export type EnumHubModeFieldUpdateOperationsInput = {
   set?: $Enums.HubMode
+}
+
+export type WorkspaceUpdatebuiltinSkillsOffInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type WorkspaceCreateNestedOneWithoutComputersInput = {
@@ -1870,6 +1902,20 @@ export type WorkspaceUpdateOneRequiredWithoutTriggerDeliveriesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutTriggerDeliveriesInput, Prisma.WorkspaceUpdateWithoutTriggerDeliveriesInput>, Prisma.WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutSpecPullsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPullsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSpecPullsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutSpecPullsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPullsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSpecPullsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutSpecPullsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutSpecPullsInput, Prisma.WorkspaceUpdateWithoutSpecPullsInput>, Prisma.WorkspaceUncheckedUpdateWithoutSpecPullsInput>
+}
+
 export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   id?: string
   name: string
@@ -1879,6 +1925,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -1946,6 +1993,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
@@ -1958,6 +2006,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2024,6 +2073,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutBillingSubscriptionsInput = {
@@ -2051,6 +2101,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -2118,6 +2169,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
@@ -2130,6 +2182,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2196,6 +2249,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutOrganizationInput = {
@@ -2207,6 +2261,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
@@ -2274,6 +2329,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
@@ -2285,6 +2341,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2352,6 +2409,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutOrganizationInput = {
@@ -2393,6 +2451,7 @@ export type WorkspaceScalarWhereInput = {
   deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
+  builtinSkillsOff?: Prisma.StringNullableListFilter<"Workspace">
 }
 
 export type WorkspaceCreateWithoutComputersInput = {
@@ -2404,6 +2463,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
@@ -2471,6 +2531,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutComputersInput = {
@@ -2483,6 +2544,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2549,6 +2611,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutComputersInput = {
@@ -2576,6 +2639,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
@@ -2643,6 +2707,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutComputersInput = {
@@ -2655,6 +2720,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2721,6 +2787,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutRunnersInput = {
@@ -2732,6 +2799,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
@@ -2799,6 +2867,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutRunnersInput = {
@@ -2811,6 +2880,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2877,6 +2947,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutRunnersInput = {
@@ -2904,6 +2975,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
@@ -2971,6 +3043,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
@@ -2983,6 +3056,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3049,6 +3123,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTeammatesInput = {
@@ -3060,6 +3135,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -3127,6 +3203,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
@@ -3139,6 +3216,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3205,6 +3283,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTeammatesInput = {
@@ -3232,6 +3311,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -3299,6 +3379,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
@@ -3311,6 +3392,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3377,6 +3459,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadReadsInput = {
@@ -3388,6 +3471,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -3455,6 +3539,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
@@ -3467,6 +3552,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3533,6 +3619,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadReadsInput = {
@@ -3560,6 +3647,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -3627,6 +3715,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
@@ -3639,6 +3728,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3705,6 +3795,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadPinsInput = {
@@ -3716,6 +3807,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -3783,6 +3875,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
@@ -3795,6 +3888,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3861,6 +3955,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadPinsInput = {
@@ -3888,6 +3983,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -3955,6 +4051,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
@@ -3967,6 +4064,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4033,6 +4131,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSidebarOrdersInput = {
@@ -4044,6 +4143,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -4111,6 +4211,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
@@ -4123,6 +4224,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4189,6 +4291,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSidebarOrdersInput = {
@@ -4216,6 +4319,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -4283,6 +4387,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
@@ -4295,6 +4400,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4361,6 +4467,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadLatersInput = {
@@ -4372,6 +4479,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -4439,6 +4547,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
@@ -4451,6 +4560,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4517,6 +4627,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadLatersInput = {
@@ -4544,6 +4655,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -4611,6 +4723,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
@@ -4623,6 +4736,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4689,6 +4803,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutHomeDismissalsInput = {
@@ -4700,6 +4815,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -4767,6 +4883,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
@@ -4779,6 +4896,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4845,6 +4963,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutHomeDismissalsInput = {
@@ -4872,6 +4991,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -4939,6 +5059,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
@@ -4951,6 +5072,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5017,6 +5139,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionsInput = {
@@ -5028,6 +5151,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -5095,6 +5219,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionsInput = {
@@ -5107,6 +5232,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5173,6 +5299,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionsInput = {
@@ -5200,6 +5327,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -5267,6 +5395,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
@@ -5279,6 +5408,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5345,6 +5475,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTasksInput = {
@@ -5356,6 +5487,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -5423,6 +5555,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTasksInput = {
@@ -5435,6 +5568,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5501,6 +5635,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTasksInput = {
@@ -5528,6 +5663,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -5595,6 +5731,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTasksInput = {
@@ -5607,6 +5744,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5673,6 +5811,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSchedulesInput = {
@@ -5684,6 +5823,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -5751,6 +5891,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
@@ -5763,6 +5904,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5829,6 +5971,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSchedulesInput = {
@@ -5856,6 +5999,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -5923,6 +6067,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
@@ -5935,6 +6080,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6001,6 +6147,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutChiefDecisionsInput = {
@@ -6012,6 +6159,7 @@ export type WorkspaceCreateWithoutChiefDecisionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -6079,6 +6227,7 @@ export type WorkspaceCreateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
@@ -6091,6 +6240,7 @@ export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6157,6 +6307,7 @@ export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutChiefDecisionsInput = {
@@ -6184,6 +6335,7 @@ export type WorkspaceUpdateWithoutChiefDecisionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -6251,6 +6403,7 @@ export type WorkspaceUpdateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
@@ -6263,6 +6416,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6329,6 +6483,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutWakeupsInput = {
@@ -6340,6 +6495,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -6407,6 +6563,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
@@ -6419,6 +6576,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6485,6 +6643,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutWakeupsInput = {
@@ -6512,6 +6671,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -6579,6 +6739,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
@@ -6591,6 +6752,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6657,6 +6819,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutReplyWatchesInput = {
@@ -6668,6 +6831,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -6735,6 +6899,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
@@ -6747,6 +6912,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6813,6 +6979,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutReplyWatchesInput = {
@@ -6840,6 +7007,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -6907,6 +7075,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
@@ -6919,6 +7088,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6985,6 +7155,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadSeatsInput = {
@@ -6996,6 +7167,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -7063,6 +7235,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
@@ -7075,6 +7248,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7141,6 +7315,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadSeatsInput = {
@@ -7168,6 +7343,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -7235,6 +7411,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
@@ -7247,6 +7424,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7313,6 +7491,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionEventsInput = {
@@ -7324,6 +7503,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -7391,6 +7571,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
@@ -7403,6 +7584,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7469,6 +7651,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionEventsInput = {
@@ -7496,6 +7679,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -7563,6 +7747,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
@@ -7575,6 +7760,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7641,6 +7827,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutEventDaysInput = {
@@ -7652,6 +7839,7 @@ export type WorkspaceCreateWithoutEventDaysInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -7719,6 +7907,7 @@ export type WorkspaceCreateWithoutEventDaysInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
@@ -7731,6 +7920,7 @@ export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7797,6 +7987,7 @@ export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutEventDaysInput = {
@@ -7824,6 +8015,7 @@ export type WorkspaceUpdateWithoutEventDaysInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -7891,6 +8083,7 @@ export type WorkspaceUpdateWithoutEventDaysInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
@@ -7903,6 +8096,7 @@ export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7969,6 +8163,7 @@ export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTokenUsageInput = {
@@ -7980,6 +8175,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -8047,6 +8243,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
@@ -8059,6 +8256,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8125,6 +8323,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTokenUsageInput = {
@@ -8152,6 +8351,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -8219,6 +8419,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
@@ -8231,6 +8432,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8297,6 +8499,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAccountsInput = {
@@ -8308,6 +8511,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -8375,6 +8579,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAccountsInput = {
@@ -8387,6 +8592,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8453,6 +8659,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAccountsInput = {
@@ -8480,6 +8687,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -8547,6 +8755,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
@@ -8559,6 +8768,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8625,6 +8835,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestsInput = {
@@ -8636,6 +8847,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -8703,6 +8915,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
@@ -8715,6 +8928,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8781,6 +8995,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestsInput = {
@@ -8808,6 +9023,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -8875,6 +9091,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
@@ -8887,6 +9104,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8953,6 +9171,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestReviewsInput = {
@@ -8964,6 +9183,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -9031,6 +9251,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
@@ -9043,6 +9264,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9109,6 +9331,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestReviewsInput = {
@@ -9136,6 +9359,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -9203,6 +9427,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
@@ -9215,6 +9440,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9281,6 +9507,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCommentsInput = {
@@ -9292,6 +9519,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -9359,6 +9587,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCommentsInput = {
@@ -9371,6 +9600,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9437,6 +9667,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCommentsInput = {
@@ -9464,6 +9695,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -9531,6 +9763,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
@@ -9543,6 +9776,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9609,6 +9843,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAppsInput = {
@@ -9620,6 +9855,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -9687,6 +9923,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAppsInput = {
@@ -9699,6 +9936,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9765,6 +10003,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAppsInput = {
@@ -9792,6 +10031,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -9859,6 +10099,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAppsInput = {
@@ -9871,6 +10112,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9937,6 +10179,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionsInput = {
@@ -9948,6 +10191,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -10015,6 +10259,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
@@ -10027,6 +10272,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10093,6 +10339,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionsInput = {
@@ -10120,6 +10367,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -10187,6 +10435,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
@@ -10199,6 +10448,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10265,6 +10515,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutVaultSecretsInput = {
@@ -10276,6 +10527,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -10343,6 +10595,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
@@ -10355,6 +10608,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10421,6 +10675,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutVaultSecretsInput = {
@@ -10448,6 +10703,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -10515,6 +10771,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
@@ -10527,6 +10784,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10593,6 +10851,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialsInput = {
@@ -10604,6 +10863,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -10671,6 +10931,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
@@ -10683,6 +10944,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10749,6 +11011,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialsInput = {
@@ -10776,6 +11039,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -10843,6 +11107,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
@@ -10855,6 +11120,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10921,6 +11187,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialGrantsInput = {
@@ -10932,6 +11199,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -10999,6 +11267,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
@@ -11011,6 +11280,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11077,6 +11347,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialGrantsInput = {
@@ -11104,6 +11375,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -11171,6 +11443,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
@@ -11183,6 +11456,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11249,6 +11523,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutGrantsInput = {
@@ -11260,6 +11535,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -11327,6 +11603,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutGrantsInput = {
@@ -11339,6 +11616,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11405,6 +11683,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutGrantsInput = {
@@ -11432,6 +11711,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -11499,6 +11779,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
@@ -11511,6 +11792,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11577,6 +11859,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionCallsInput = {
@@ -11588,6 +11871,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -11655,6 +11939,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
@@ -11667,6 +11952,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11733,6 +12019,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionCallsInput = {
@@ -11760,6 +12047,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -11827,6 +12115,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
@@ -11839,6 +12128,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11905,6 +12195,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTriggersInput = {
@@ -11916,6 +12207,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -11983,6 +12275,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTriggersInput = {
@@ -11995,6 +12288,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12061,6 +12355,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTriggersInput = {
@@ -12088,6 +12383,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -12155,6 +12451,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
@@ -12167,6 +12464,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12233,6 +12531,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSubscriptionsInput = {
@@ -12244,6 +12543,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -12311,6 +12611,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
@@ -12323,6 +12624,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12389,6 +12691,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSubscriptionsInput = {
@@ -12416,6 +12719,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -12483,6 +12787,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
@@ -12495,6 +12800,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12561,6 +12867,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTicketsInput = {
@@ -12572,6 +12879,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -12639,6 +12947,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTicketsInput = {
@@ -12651,6 +12960,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12717,6 +13027,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTicketsInput = {
@@ -12744,6 +13055,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -12811,6 +13123,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
@@ -12823,6 +13136,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12889,6 +13203,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDocumentsInput = {
@@ -12900,6 +13215,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -12967,6 +13283,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
@@ -12979,6 +13296,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13045,6 +13363,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDocumentsInput = {
@@ -13072,6 +13391,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -13139,6 +13459,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
@@ -13151,6 +13472,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13217,6 +13539,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemsInput = {
@@ -13228,6 +13551,7 @@ export type WorkspaceCreateWithoutListItemsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -13295,6 +13619,7 @@ export type WorkspaceCreateWithoutListItemsInput = {
   contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemsInput = {
@@ -13307,6 +13632,7 @@ export type WorkspaceUncheckedCreateWithoutListItemsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13373,6 +13699,7 @@ export type WorkspaceUncheckedCreateWithoutListItemsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemsInput = {
@@ -13400,6 +13727,7 @@ export type WorkspaceUpdateWithoutListItemsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -13467,6 +13795,7 @@ export type WorkspaceUpdateWithoutListItemsInput = {
   contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
@@ -13479,6 +13808,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13545,6 +13875,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemThreadsInput = {
@@ -13556,6 +13887,7 @@ export type WorkspaceCreateWithoutListItemThreadsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -13623,6 +13955,7 @@ export type WorkspaceCreateWithoutListItemThreadsInput = {
   contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
@@ -13635,6 +13968,7 @@ export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13701,6 +14035,7 @@ export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemThreadsInput = {
@@ -13728,6 +14063,7 @@ export type WorkspaceUpdateWithoutListItemThreadsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -13795,6 +14131,7 @@ export type WorkspaceUpdateWithoutListItemThreadsInput = {
   contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
@@ -13807,6 +14144,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13873,6 +14211,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemPullsInput = {
@@ -13884,6 +14223,7 @@ export type WorkspaceCreateWithoutListItemPullsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -13951,6 +14291,7 @@ export type WorkspaceCreateWithoutListItemPullsInput = {
   contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
@@ -13963,6 +14304,7 @@ export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14029,6 +14371,7 @@ export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemPullsInput = {
@@ -14056,6 +14399,7 @@ export type WorkspaceUpdateWithoutListItemPullsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -14123,6 +14467,7 @@ export type WorkspaceUpdateWithoutListItemPullsInput = {
   contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
@@ -14135,6 +14480,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14201,6 +14547,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
   contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListPinsInput = {
@@ -14212,6 +14559,7 @@ export type WorkspaceCreateWithoutListPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -14279,6 +14627,7 @@ export type WorkspaceCreateWithoutListPinsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListPinsInput = {
@@ -14291,6 +14640,7 @@ export type WorkspaceUncheckedCreateWithoutListPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14357,6 +14707,7 @@ export type WorkspaceUncheckedCreateWithoutListPinsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListPinsInput = {
@@ -14384,6 +14735,7 @@ export type WorkspaceUpdateWithoutListPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -14451,6 +14803,7 @@ export type WorkspaceUpdateWithoutListPinsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
@@ -14463,6 +14816,7 @@ export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14529,6 +14883,7 @@ export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDocumentPinsInput = {
@@ -14540,6 +14895,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -14607,6 +14963,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
@@ -14619,6 +14976,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14685,6 +15043,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDocumentPinsInput = {
@@ -14712,6 +15071,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -14779,6 +15139,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
@@ -14791,6 +15152,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14857,6 +15219,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFoldersInput = {
@@ -14868,6 +15231,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -14935,6 +15299,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
@@ -14947,6 +15312,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15013,6 +15379,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFoldersInput = {
@@ -15040,6 +15407,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -15107,6 +15475,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
@@ -15119,6 +15488,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15185,6 +15555,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
@@ -15196,6 +15567,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -15263,6 +15635,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
@@ -15275,6 +15648,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15341,6 +15715,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput = {
@@ -15368,6 +15743,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -15435,6 +15811,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
@@ -15447,6 +15824,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15513,6 +15891,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAuditEntriesInput = {
@@ -15524,6 +15903,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -15591,6 +15971,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
@@ -15603,6 +15984,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15669,6 +16051,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAuditEntriesInput = {
@@ -15696,6 +16079,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -15763,6 +16147,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
@@ -15775,6 +16160,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15841,6 +16227,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAttachmentsInput = {
@@ -15852,6 +16239,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -15919,6 +16307,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
@@ -15931,6 +16320,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15997,6 +16387,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAttachmentsInput = {
@@ -16024,6 +16415,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -16091,6 +16483,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
@@ -16103,6 +16496,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16169,6 +16563,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadAttachmentsInput = {
@@ -16180,6 +16575,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -16247,6 +16643,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
@@ -16259,6 +16656,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16325,6 +16723,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadAttachmentsInput = {
@@ -16352,6 +16751,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -16419,6 +16819,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
@@ -16431,6 +16832,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16497,6 +16899,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDesignSystemsInput = {
@@ -16508,6 +16911,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -16575,6 +16979,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
@@ -16587,6 +16992,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16653,6 +17059,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDesignSystemsInput = {
@@ -16680,6 +17087,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -16747,6 +17155,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
@@ -16759,6 +17168,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16825,6 +17235,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillsInput = {
@@ -16836,6 +17247,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -16903,6 +17315,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillsInput = {
@@ -16915,6 +17328,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16981,6 +17395,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillsInput = {
@@ -17008,6 +17423,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -17075,6 +17491,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
@@ -17087,6 +17504,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17153,6 +17571,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillPacksInput = {
@@ -17164,6 +17583,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -17231,6 +17651,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
@@ -17243,6 +17664,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17309,6 +17731,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillPacksInput = {
@@ -17336,6 +17759,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -17403,6 +17827,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
@@ -17415,6 +17840,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17481,6 +17907,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPreviewRecipesInput = {
@@ -17492,6 +17919,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -17559,6 +17987,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
@@ -17571,6 +18000,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17637,6 +18067,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewRecipesInput = {
@@ -17664,6 +18095,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -17731,6 +18163,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
@@ -17743,6 +18176,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17809,6 +18243,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPreviewVariablesInput = {
@@ -17820,6 +18255,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -17887,6 +18323,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
@@ -17899,6 +18336,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17965,6 +18403,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewVariablesInput = {
@@ -17992,6 +18431,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -18059,6 +18499,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
@@ -18071,6 +18512,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18137,6 +18579,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectsInput = {
@@ -18148,6 +18591,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -18215,6 +18659,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectsInput = {
@@ -18227,6 +18672,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18293,6 +18739,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectsInput = {
@@ -18320,6 +18767,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -18387,6 +18835,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
@@ -18399,6 +18848,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18465,6 +18915,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectRepositoriesInput = {
@@ -18476,6 +18927,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -18543,6 +18995,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
@@ -18555,6 +19008,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18621,6 +19075,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectRepositoriesInput = {
@@ -18648,6 +19103,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -18715,6 +19171,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
@@ -18727,6 +19184,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18793,6 +19251,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPushNoticesInput = {
@@ -18804,6 +19263,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -18871,6 +19331,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
@@ -18883,6 +19344,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18949,6 +19411,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPushNoticesInput = {
@@ -18976,6 +19439,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -19043,6 +19507,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
@@ -19055,6 +19520,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19121,6 +19587,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
@@ -19132,6 +19599,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -19199,6 +19667,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
@@ -19211,6 +19680,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19277,6 +19747,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookInstallationsInput = {
@@ -19304,6 +19775,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -19371,6 +19843,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
@@ -19383,6 +19856,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19449,6 +19923,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookActionsInput = {
@@ -19460,6 +19935,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -19527,6 +20003,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
@@ -19539,6 +20016,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19605,6 +20083,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookActionsInput = {
@@ -19632,6 +20111,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -19699,6 +20179,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
@@ -19711,6 +20192,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19777,6 +20259,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookRunsInput = {
@@ -19788,6 +20271,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -19855,6 +20339,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
@@ -19867,6 +20352,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19933,6 +20419,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookRunsInput = {
@@ -19960,6 +20447,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -20027,6 +20515,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
@@ -20039,6 +20528,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20105,6 +20595,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
@@ -20116,6 +20607,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -20183,6 +20675,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
@@ -20195,6 +20688,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20261,6 +20755,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookDryRunsInput = {
@@ -20288,6 +20783,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -20355,6 +20851,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
@@ -20367,6 +20864,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20433,6 +20931,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadFollowsInput = {
@@ -20444,6 +20943,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -20511,6 +21011,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
@@ -20523,6 +21024,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20589,6 +21091,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadFollowsInput = {
@@ -20616,6 +21119,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -20683,6 +21187,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
@@ -20695,6 +21200,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20761,6 +21267,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailProjectsInput = {
@@ -20772,6 +21279,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -20839,6 +21347,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
@@ -20851,6 +21360,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20917,6 +21427,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailProjectsInput = {
@@ -20944,6 +21455,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -21011,6 +21523,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
@@ -21023,6 +21536,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21089,6 +21603,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailAliasesInput = {
@@ -21100,6 +21615,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -21167,6 +21683,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
@@ -21179,6 +21696,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21245,6 +21763,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailAliasesInput = {
@@ -21272,6 +21791,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -21339,6 +21859,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
@@ -21351,6 +21872,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21417,6 +21939,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailMessagesInput = {
@@ -21428,6 +21951,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -21495,6 +22019,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
@@ -21507,6 +22032,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21573,6 +22099,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailMessagesInput = {
@@ -21600,6 +22127,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -21667,6 +22195,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
@@ -21679,6 +22208,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21745,6 +22275,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailDomainsInput = {
@@ -21756,6 +22287,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -21823,6 +22355,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
@@ -21835,6 +22368,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21901,6 +22435,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailDomainsInput = {
@@ -21928,6 +22463,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -21995,6 +22531,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
@@ -22007,6 +22544,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22073,6 +22611,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutContactsInput = {
@@ -22084,6 +22623,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -22151,6 +22691,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutContactsInput = {
@@ -22163,6 +22704,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22229,6 +22771,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutContactsInput = {
@@ -22256,6 +22799,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -22323,6 +22867,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutContactsInput = {
@@ -22335,6 +22880,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22401,6 +22947,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutContactHandlesInput = {
@@ -22412,6 +22959,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -22479,6 +23027,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
@@ -22491,6 +23040,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22557,6 +23107,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutContactHandlesInput = {
@@ -22584,6 +23135,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -22651,6 +23203,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
@@ -22663,6 +23216,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22729,6 +23283,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutHeldCallsInput = {
@@ -22740,6 +23295,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -22807,6 +23363,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
@@ -22819,6 +23376,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22885,6 +23443,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutHeldCallsInput = {
@@ -22912,6 +23471,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -22979,6 +23539,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
@@ -22991,6 +23552,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23057,6 +23619,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutRunnerCommandsInput = {
@@ -23068,6 +23631,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -23135,6 +23699,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
@@ -23147,6 +23712,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23213,6 +23779,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutRunnerCommandsInput = {
@@ -23240,6 +23807,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -23307,6 +23875,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
@@ -23319,6 +23888,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23385,6 +23955,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSpecPartsInput = {
@@ -23396,6 +23967,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -23463,6 +24035,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
@@ -23475,6 +24048,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23541,6 +24115,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSpecPartsInput = {
@@ -23568,6 +24143,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -23635,6 +24211,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
@@ -23647,6 +24224,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23713,6 +24291,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
@@ -23724,6 +24303,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
@@ -23791,6 +24371,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
@@ -23803,6 +24384,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23869,6 +24451,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTriggerDeliveriesInput = {
@@ -23896,6 +24479,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
@@ -23963,6 +24547,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
@@ -23975,6 +24560,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24010,6 +24596,343 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
   specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   eventDays?: Prisma.WorkspaceEventDayUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutSpecPullsInput = {
+  id?: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutSpecPullsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainUncheckedCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactUncheckedCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutSpecPullsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPullsInput>
+}
+
+export type WorkspaceUpsertWithoutSpecPullsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedUpdateWithoutSpecPullsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPullsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutSpecPullsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSpecPullsInput, Prisma.WorkspaceUncheckedUpdateWithoutSpecPullsInput>
+}
+
+export type WorkspaceUpdateWithoutSpecPullsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutSpecPullsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24052,6 +24975,7 @@ export type WorkspaceCreateManyOrganizationInput = {
   deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
 }
 
 export type WorkspaceUpdateWithoutOrganizationInput = {
@@ -24063,6 +24987,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
@@ -24130,6 +25055,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
@@ -24141,6 +25067,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24208,6 +25135,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateManyWithoutOrganizationInput = {
@@ -24219,6 +25147,7 @@ export type WorkspaceUncheckedUpdateManyWithoutOrganizationInput = {
   deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
 }
 
 
@@ -24294,6 +25223,7 @@ export type WorkspaceCountOutputType = {
   listItems: number
   listItemThreads: number
   listItemPulls: number
+  specPulls: number
 }
 
 export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -24364,6 +25294,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   listItems?: boolean | WorkspaceCountOutputTypeCountListItemsArgs
   listItemThreads?: boolean | WorkspaceCountOutputTypeCountListItemThreadsArgs
   listItemPulls?: boolean | WorkspaceCountOutputTypeCountListItemPullsArgs
+  specPulls?: boolean | WorkspaceCountOutputTypeCountSpecPullsArgs
 }
 
 /**
@@ -24845,6 +25776,13 @@ export type WorkspaceCountOutputTypeCountListItemPullsArgs<ExtArgs extends runti
   where?: Prisma.ListItemPullWhereInput
 }
 
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountSpecPullsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SpecPullWhereInput
+}
+
 
 export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -24856,6 +25794,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  builtinSkillsOff?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   computers?: boolean | Prisma.Workspace$computersArgs<ExtArgs>
   runners?: boolean | Prisma.Workspace$runnersArgs<ExtArgs>
@@ -24924,6 +25863,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   listItems?: boolean | Prisma.Workspace$listItemsArgs<ExtArgs>
   listItemThreads?: boolean | Prisma.Workspace$listItemThreadsArgs<ExtArgs>
   listItemPulls?: boolean | Prisma.Workspace$listItemPullsArgs<ExtArgs>
+  specPulls?: boolean | Prisma.Workspace$specPullsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
 
@@ -24937,6 +25877,7 @@ export type WorkspaceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  builtinSkillsOff?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
 
@@ -24950,6 +25891,7 @@ export type WorkspaceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  builtinSkillsOff?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
 
@@ -24963,9 +25905,10 @@ export type WorkspaceSelectScalar = {
   deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  builtinSkillsOff?: boolean
 }
 
-export type WorkspaceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "name" | "logo" | "stripeCustomerId" | "hubMode" | "deletingAt" | "createdAt" | "updatedAt", ExtArgs["result"]["workspace"]>
+export type WorkspaceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "name" | "logo" | "stripeCustomerId" | "hubMode" | "deletingAt" | "createdAt" | "updatedAt" | "builtinSkillsOff", ExtArgs["result"]["workspace"]>
 export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   computers?: boolean | Prisma.Workspace$computersArgs<ExtArgs>
@@ -25035,6 +25978,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   listItems?: boolean | Prisma.Workspace$listItemsArgs<ExtArgs>
   listItemThreads?: boolean | Prisma.Workspace$listItemThreadsArgs<ExtArgs>
   listItemPulls?: boolean | Prisma.Workspace$listItemPullsArgs<ExtArgs>
+  specPulls?: boolean | Prisma.Workspace$specPullsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WorkspaceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -25115,6 +26059,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     listItems: Prisma.$ListItemPayload<ExtArgs>[]
     listItemThreads: Prisma.$ListItemThreadPayload<ExtArgs>[]
     listItemPulls: Prisma.$ListItemPullPayload<ExtArgs>[]
+    specPulls: Prisma.$SpecPullPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -25142,6 +26087,11 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     deletingAt: Date | null
     createdAt: Date
     updatedAt: Date
+    /**
+     * Brigade's own skills an owner or admin turned off here, by name (`brigade-library`): the
+     * others are on, as is a skill added later. Only those marked switchable (BUILTIN_SKILLS).
+     */
+    builtinSkillsOff: string[]
   }, ExtArgs["result"]["workspace"]>
   composites: {}
 }
@@ -25604,6 +26554,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   listItems<T extends Prisma.Workspace$listItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listItemThreads<T extends Prisma.Workspace$listItemThreadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listItemThreadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemThreadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listItemPulls<T extends Prisma.Workspace$listItemPullsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listItemPullsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPullPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  specPulls<T extends Prisma.Workspace$specPullsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$specPullsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SpecPullPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -25642,6 +26593,7 @@ export interface WorkspaceFieldRefs {
   readonly deletingAt: Prisma.FieldRef<"Workspace", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Workspace", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Workspace", 'DateTime'>
+  readonly builtinSkillsOff: Prisma.FieldRef<"Workspace", 'String[]'>
 }
     
 
@@ -27648,6 +28600,30 @@ export type Workspace$listItemPullsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.ListItemPullScalarFieldEnum | Prisma.ListItemPullScalarFieldEnum[]
+}
+
+/**
+ * Workspace.specPulls
+ */
+export type Workspace$specPullsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SpecPull
+   */
+  select?: Prisma.SpecPullSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SpecPull
+   */
+  omit?: Prisma.SpecPullOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SpecPullInclude<ExtArgs> | null
+  where?: Prisma.SpecPullWhereInput
+  orderBy?: Prisma.SpecPullOrderByWithRelationInput | Prisma.SpecPullOrderByWithRelationInput[]
+  cursor?: Prisma.SpecPullWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SpecPullScalarFieldEnum | Prisma.SpecPullScalarFieldEnum[]
 }
 
 /**

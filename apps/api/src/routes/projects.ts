@@ -1,5 +1,7 @@
 import { CreateProject, ReadSite, SetProjectRepositories, UpdateProject } from '@brigade/contracts'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import { projectDecisions } from '../decisions.js'
 import {
   createProject,
   deleteProject,
@@ -22,6 +24,16 @@ export const projects = new Hono<AppEnv>()
   .get('/', async (c) => c.json(await listProjects(c.var.db, c.req.query('repository'))))
 
   .get('/:id', async (c) => c.json(await getProject(c.var.db, c.var.scope, c.req.param('id'))))
+
+  /** Its specs, notes and designs with their status, read from its library folder (src/decisions.ts). */
+  .get('/:id/decisions', async (c) => {
+    const project = await c.var.db.project.findFirst({
+      where: { id: c.req.param('id') },
+      select: { folder: true },
+    })
+    if (!project) throw new HTTPException(404, { message: 'Project not found' })
+    return c.json(project.folder ? await projectDecisions(c.var.scope, project.folder) : [])
+  })
 
   /** Its logo. The URL names the version (`?v=`), so a browser keeps it for good. */
   .get('/:id/logo', async (c) => {

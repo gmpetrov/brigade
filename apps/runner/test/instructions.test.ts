@@ -176,3 +176,34 @@ test('a teammate calls child threads sub-threads, as people see them, in a paren
     assert.match(textFor(extra), /call them sub-threads when you write to people/)
   }
 })
+
+test("brigade-library comes with the library's write access, unless an admin turned it off", async () => {
+  const { builtinSkills } = await import('../src/instructions.js')
+  const names = (extra: Record<string, unknown>) =>
+    builtinSkills(ThreadSpec.parse({ ...testSpec(''), ...extra }), '/library').map((s) => s.name)
+  const writer = { library: 'read_write' }
+  assert.ok(names(writer).includes('brigade-library'))
+  assert.match(textFor(writer), /## Project documents[\s\S]*read the `brigade-library` skill/)
+  // Off for the workspace: neither the skill nor the line pointing to it.
+  const off = { ...writer, builtinSkillsOff: ['brigade-library'] }
+  assert.ok(!names(off).includes('brigade-library'))
+  assert.doesNotMatch(textFor(off), /brigade-library|## Project documents/)
+  // The other skills stay: they cannot be turned off.
+  assert.ok(
+    names({ ...writer, builtinSkillsOff: ['brigade-previews'] }).includes('brigade-previews'),
+  )
+  // A teammate that only reads the library files nothing.
+  assert.ok(!names({ library: 'read' }).includes('brigade-library'))
+  assert.doesNotMatch(textFor({ library: 'read' }), /brigade-library/)
+  // An API from before leaves the field out: on.
+  assert.ok(names(writer).includes('brigade-library'))
+})
+
+test('a teammate knows a thread mention, and names a thread by the one search_workspace gives', () => {
+  const text = textFor({})
+  assert.match(text, /A message mentions a thread as `@\[title\]\(thread:id\)`/)
+  assert.match(
+    text,
+    /Name a thread in your reply by its mention \(`search_workspace` gives it with its summary\), never by its id alone\./,
+  )
+})
