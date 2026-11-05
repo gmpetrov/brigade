@@ -219,7 +219,7 @@ describe('decisions', { skip: !database && 'no database answers' }, () => {
     const missed = await decisions.linkPullSpecs(db, p.id, ids.reader, {
       ships: ['Projects/Acme/landing.design'],
     })
-    assert.deepEqual(missed, ['Projects/Acme/landing.design/design.json'])
+    assert.deepEqual(missed, ['Projects/Acme/landing.design'])
     assert.equal(await db.specPull.count({ where: { pullRequestId: p.id } }), 0)
     // A spec whose line Brigade cannot read: settled, and left as it was.
     await save('Projects/Acme/decisions/broken.md', '# Broken\n\nStatus: shipped, sort of.\n')

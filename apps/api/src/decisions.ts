@@ -156,7 +156,7 @@ export async function linkPullSpecs(
   const wanted = [...ships, ...partOf]
   if (!wanted.length) return []
   const teammate = await db.teammate.findFirst({ where: { id: teammateId } })
-  if (!teammate) return wanted
+  if (!teammate) return wanted.map((p) => (isDesignManifest(p) ? designOf(p) : p))
   const access = await teammateLibraryAccess(db, teammate)
   const rows = await db.document.findMany({
     where: { kind: 'library', path: { in: wanted }, deletedAt: null },
@@ -173,7 +173,8 @@ export async function linkPullSpecs(
       skipDuplicates: true,
     })
   const keptPaths = new Set(kept.map((r) => r.path))
-  return wanted.filter((p) => !keptPaths.has(p))
+  // As people name them: a design by its folder.
+  return wanted.filter((p) => !keptPaths.has(p)).map((p) => (isDesignManifest(p) ? designOf(p) : p))
 }
 
 /**
