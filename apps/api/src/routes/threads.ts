@@ -445,6 +445,10 @@ export const threads = new Hono<AppEnv>()
             updatedAt: true,
             computerId: true,
             computer: { select: { kind: true, name: true } },
+            // For its menu in the sidebar, as a thread's own row has it (thread-menu.tsx).
+            startedByMemberId: true,
+            othersMayPrompt: true,
+            doneAt: true,
           },
           orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         })
@@ -522,17 +526,34 @@ export const threads = new Hono<AppEnv>()
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           children: children
             .filter((child) => child.parentId === row.id)
-            .map(({ parentId: _, computerId, computer, ...child }) => ({
-              ...child,
-              unread: unread(
-                childTurns.find((t) => t.sessionId === child.id)?._max.at,
-                childReads.find((r) => r.sessionId === child.id)?.seenAt,
-              ),
-              wakeAt: wakeAt(child.id),
-              previewRunning:
-                !!previews.get(child.id) &&
-                !previewOfflineIn(presence, { id: computerId, ...computer }),
-            })),
+            .map(
+              ({
+                parentId,
+                computerId,
+                computer,
+                startedByMemberId,
+                othersMayPrompt,
+                ...child
+              }) => ({
+                ...child,
+                // What its menu needs (thread-menu.tsx): who started it, who else may change it,
+                // and this member's pin and Later on it.
+                parent: { id: parentId! },
+                startedBy: { id: startedByMemberId },
+                othersMayPrompt: openToOthers({ othersMayPrompt, computer }),
+                pinnedAt:
+                  pins.find((p) => p.sessionId === child.id)?.pinnedAt.toISOString() ?? null,
+                laterAt: laters.get(child.id)?.toISOString() ?? null,
+                unread: unread(
+                  childTurns.find((t) => t.sessionId === child.id)?._max.at,
+                  childReads.find((r) => r.sessionId === child.id)?.seenAt,
+                ),
+                wakeAt: wakeAt(child.id),
+                previewRunning:
+                  !!previews.get(child.id) &&
+                  !previewOfflineIn(presence, { id: computerId, ...computer }),
+              }),
+            ),
           list: lists.get(row.id) ?? null,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,

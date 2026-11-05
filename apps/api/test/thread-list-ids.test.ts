@@ -8,7 +8,8 @@ import { sessionStub } from './session-stub.js'
 
 // GET /api/threads?id=…, repeated: threads as the sidebar's list has them, by id, however old.
 // The sidebar asks for the one open and for those waiting on the member that are older than
-// the latest it loaded, so they show with the others waiting. A child thread brings its parent.
+// the latest it loaded, so they show with the others waiting. A child thread brings its parent,
+// and under it carries what its menu in the sidebar needs.
 // Against the API's development database (apps/api/.env), in an organization of its own
 // removed at the end; skipped when no database answers.
 const envFile = new URL('../.env', import.meta.url)
@@ -106,5 +107,35 @@ describe('threads by id', { skip: !database && 'no database answers' }, () => {
       'Parent',
     ])
     assert.deepEqual(await list(`id=${a.id}`), ['Choices from last week'])
+  })
+
+  // Its row in the sidebar has a thread's menu (Pin, Rename, Mark done…): what it needs.
+  test('a child thread under its parent carries what its menu needs', async () => {
+    const parent = await thread('Menu parent')
+    const child = await thread('Menu child', parent.id)
+    await db.session.update({ where: { id: child.id }, data: { doneAt: new Date() } })
+    await db.threadPin.create({
+      data: { memberId: ids.member, sessionId: child.id, position: 0 },
+    } as never)
+    const res = await app.request(`/api/threads?id=${parent.id}`)
+    assert.equal(res.status, 200, await res.clone().text())
+    const [row] = (await res.json()) as {
+      children: {
+        id: string
+        startedBy: { id: string }
+        parent: { id: string }
+        othersMayPrompt: boolean
+        pinnedAt: string | null
+        laterAt: string | null
+        doneAt: string | null
+      }[]
+    }[]
+    const kid = row!.children.find((c) => c.id === child.id)!
+    assert.deepEqual(kid.startedBy, { id: ids.member })
+    assert.deepEqual(kid.parent, { id: parent.id })
+    assert.equal(kid.othersMayPrompt, false)
+    assert.ok(kid.pinnedAt, 'pinned by this member')
+    assert.equal(kid.laterAt, null)
+    assert.ok(kid.doneAt, 'marked done')
   })
 })
