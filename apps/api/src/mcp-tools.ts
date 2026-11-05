@@ -170,5 +170,17 @@ export async function mcpOperation(
   })
 }
 
+/**
+ * Ask an MCP account's server for its tools, as a turn would (kept a few minutes, like them): a
+ * server that refuses the account (an expired key: OpenRouter's lasts 7 days, with nothing to
+ * renew it) marks it needs_reauth on the way (authorisedFetch), which is what this is for.
+ * Throws when it could not list them, whatever the reason.
+ */
+export async function checkMcpSignIn(db: ScopedDb, scope: Scope, connection: McpConnection) {
+  const found = await serverFor(db, connection)
+  await fixedOf(db, connection, found.server)
+  await toolsOf(db, scope, connection, found)
+}
+
 /** Forget a connection's tools, e.g. once it is disconnected. */
 export const forgetMcpTools = (connectionId: string) => listed.delete(connectionId)

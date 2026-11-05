@@ -83,7 +83,7 @@ export function pullNumbersIn(rest: string) {
 
 /**
  * Whether a shipped spec's line says where the truth now lives: a path in backticks or a link
- * (`docs/tasks.md`, `apps/api/playbooks/README.md`, `../reference/offer.md`).
+ * (`docs/lists.md`, `apps/api/playbooks/README.md`, `../reference/offer.md`).
  */
 export function namesReference(rest: string) {
   return /`[^`\s]*[/.][^`\s]*`/.test(rest) || /\]\([^)\s]+\)/.test(rest)

@@ -27,7 +27,7 @@
     // Paths whose reads run in brigade-api's own isolates rather than the Api object (Phase 4 of
     // docs/workspace-hubs-plan.md), comma-separated; empty: none. Each with a client per request,
     // through Hyperdrive (DB_HYPERDRIVE in wrangler.jsonc): set it only once Hyperdrive is bound.
-    // First: "/api/threads,/api/inbox,/api/tasks,/api/projects".
+    // First: "/api/threads,/api/inbox,/api/projects".
     "STATELESS_ROUTES": "",
     // "hubs": sockets go to their workspace's hub object first (once most workspaces' hubs
     // have one); "api": to the Api object first, which passes on the others (src/front.ts).

@@ -44,7 +44,8 @@ export * from './secrets.js'
 export * from './skills.js'
 export * from './onboarding.js'
 export * from './suggestions.js'
-export * from './tasks.js'
+export * from './legacy-tasks.js'
+export * from './started-threads.js'
 export * from './thread-done.js'
 export * from './thread-history.js'
 export * from './trigger-events.js'
@@ -119,8 +120,10 @@ export * from './usage.js'
  *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
  * 51: Chief answers for the person (CHIEF_PROTOCOL): its decision threads (the spec's `decision`, and
  *     chief_decide and chief_decisions as schedule.call operations), and the spec's `chiefAnswers`.
+ * 52: no Tasks board: start_thread, message_thread and a playbook's file_idea as schedule.call
+ *     operations, and no task.call (the API still answers older runners' task tools: src/legacy-tasks.ts).
  */
-export const PROTOCOL_VERSION = 51
+export const PROTOCOL_VERSION = 52
 /**
  * Runners from this version on run Chief's decision threads (ThreadSpec.decision) with its
  * chief_decide tool, and tell teammates what Chief's answers are (ThreadSpec.chiefAnswers). The API

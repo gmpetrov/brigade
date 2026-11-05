@@ -45,7 +45,6 @@ import {
   type ConnectorGrant,
   type DesignPersonEdit,
   type ScheduleOperation,
-  type TaskOperation,
 } from '@brigade/contracts'
 import { ComputerUseError, type RequestOptions } from '../computer-use.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
@@ -403,6 +402,36 @@ const isObjectSchema = (schema: unknown): schema is JSONSchema7 =>
   (schema as JSONSchema7).type === 'object' &&
   !('oneOf' in schema || 'anyOf' in schema || 'allOf' in schema || '$ref' in schema)
 
+/** The Apps an access ask may name (open_ticket's app.kind): an MCP server added by its URL is mcp. */
+export const TICKET_APP_KINDS = [
+  'gmail',
+  'google_calendar',
+  'google_drive',
+  'google_docs',
+  'google_sheets',
+  'google_search_console',
+  'google_analytics',
+  'stripe',
+  'github',
+  'cloudflare',
+  'google_cloud',
+  'neon',
+  'supabase',
+  'atlassian',
+  'notion',
+  'linear',
+  'mixpanel',
+  'resend',
+  'replicate',
+  'openrouter',
+  'posthog',
+  'dataforseo',
+  'ahrefs',
+  'revenuecat',
+  'expo',
+  'mcp',
+] as const
+
 /**
  * The tools of the Apps granted to a thread. An App with one account: one tool per operation.
  * With several, one tool per operation all the same, whose `account` parameter picks the account
@@ -667,37 +696,7 @@ export const openTicketTool = tool({
               description:
                 'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket. For an MCP server already added, such as one a message mentions as an App, use kind mcp and put its name in what, and its server id when list_apps gives one; the url can be left out',
               properties: {
-                kind: {
-                  type: 'string',
-                  enum: [
-                    'gmail',
-                    'google_calendar',
-                    'google_drive',
-                    'google_docs',
-                    'google_sheets',
-                    'google_search_console',
-                    'google_analytics',
-                    'stripe',
-                    'github',
-                    'cloudflare',
-                    'google_cloud',
-                    'neon',
-                    'supabase',
-                    'atlassian',
-                    'notion',
-                    'linear',
-                    'mixpanel',
-                    'resend',
-                    'replicate',
-                    'openrouter',
-                    'posthog',
-                    'dataforseo',
-                    'ahrefs',
-                    'revenuecat',
-                    'expo',
-                    'mcp',
-                  ],
-                },
+                kind: { type: 'string', enum: [...TICKET_APP_KINDS] },
                 scope: { type: 'string', enum: ['read', 'read_write'] },
                 url: {
                   type: 'string',
@@ -1638,316 +1637,111 @@ export function libraryTools(options: {
   return tools
 }
 
-export type TaskCaller = (call: {
-  operation: TaskOperation
-  toolCallId: string
-  toolName: string
-  input: unknown
-}) => Promise<unknown>
-
 /**
- * Tasks on the board: create, list, comment on, change, assign, move and
- * complete them. The API checks every call. There is no tool to assign a
- * person or move a task to Needs you: a ticket (ask) does that.
- *
- * A playbook's run gets none that starts or prompts a thread outside the run (create_task for a
- * teammate, assign_task, message_thread to a task, move_task, complete_task): what started it is
- * untrusted, and a thread outside the run has none of its limits. A live run may still file an
- * idea in Backlog and add to a Backlog task, which start nothing; a dry run changes nothing.
+ * Threads it starts at the top, and writes in later (docs/hand-offs.md): start_thread hands a goal
+ * of its own, or work another teammate carries through, to a thread in the sidebar; message_thread
+ * writes in one it started, or in one of its children. The API checks every call. A playbook's run
+ * starts none outside it: what started it is untrusted, and a thread outside the run has none of
+ * its limits. It writes only in its own children.
  */
-export function taskTools(call: TaskCaller, playbook?: { dryRun: boolean }): Record<string, Tool> {
-  const all = boardTools(call)
-  if (!playbook) return all
-  const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
-    call({ operation, toolCallId, toolName, input })
-  const threadOnly = tool({
-    description:
-      'Write in one of your child threads (threadId, from list_children), which carries on and reports to you ' +
-      'again. Nowhere else.',
-    inputSchema: jsonSchema<{ threadId: string; text: string }>({
-      type: 'object',
-      properties: {
-        threadId: { type: 'string', description: 'One of your child threads' },
-        text: { type: 'string', description: 'The message, in Markdown' },
-      },
-      required: ['threadId', 'text'],
-    }),
-    execute: (input, { toolCallId }) =>
-      send(
-        'message_thread',
-        { name: 'comment', threadId: input.threadId, text: input.text },
-        input,
-        toolCallId,
-      ),
-  })
-  if (playbook.dryRun) return { list_tasks: all.list_tasks!, message_thread: threadOnly }
-  const backlog = tool({
-    description:
-      "Put a task in the Tasks board's Backlog, assigned to nobody, for a person to pick up: e.g. a customer's " +
-      'idea. It starts no thread. Look at list_tasks first: when one already covers it, add to it with ' +
-      'update_task instead.',
-    inputSchema: jsonSchema<{
-      title: string
-      description: string
-      priority?: 'low' | 'medium' | 'high' | 'urgent'
-    }>({
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'Short and imperative' },
-        description: { type: 'string', description: 'What is asked, and by whom, in a few lines' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
-      },
-      required: ['title', 'description'],
-    }),
-    execute: (input, { toolCallId }) =>
-      send(
-        'create_task',
-        {
-          name: 'create',
-          title: input.title,
-          description: input.description,
-          priority: input.priority ?? 'medium',
-          assignee: 'none',
+export function startedThreadTools(
+  call: ScheduleCaller,
+  options: { playbook: boolean },
+): Record<string, Tool> {
+  const message = (description: string, threadId: string) =>
+    tool({
+      description,
+      inputSchema: jsonSchema<{ threadId: string; text: string }>({
+        type: 'object',
+        properties: {
+          threadId: { type: 'string', description: threadId },
+          text: { type: 'string', description: 'The message, in Markdown' },
         },
-        input,
-        toolCallId,
+        required: ['threadId', 'text'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'message_thread', threadId: input.threadId, text: input.text },
+          toolCallId,
+          toolName: 'message_thread',
+          input,
+        }),
+    })
+  if (options.playbook)
+    return {
+      message_thread: message(
+        'Write in one of your child threads (threadId, from list_children), which carries on and reports to you ' +
+          'again. Nowhere else.',
+        'One of your child threads',
       ),
-  })
+    }
   return {
-    create_task: backlog,
-    list_tasks: all.list_tasks!,
-    update_task: all.update_task!,
-    message_thread: threadOnly,
-  }
-}
-
-function boardTools(call: TaskCaller): Record<string, Tool> {
-  const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
-    call({ operation, toolCallId, toolName, input })
-  const priority: JSONSchema7 = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] }
-  const taskId = { type: 'string', description: 'The task id, from list_tasks' } as const
-  return {
-    create_task: tool({
+    start_thread: tool({
       description:
-        "Create a task on the workspace's Tasks board. Work lives in threads, so only when the person asks to " +
-        'track something on the board, or to start work in a thread of its own: your own name as assignee for a ' +
-        'goal of yours that came up while talking about something else, another teammate (id or name) to hand ' +
-        'them work. Either starts at once in its own thread. "none" puts it in Backlog; "self" makes this thread ' +
-        'the task. One goal is one task and one deliverable, however big: keep its parts off the board. It goes in ' +
-        "this thread's project unless you set `project`: set it when the task belongs to another project than this " +
-        'thread (a Brigade fix that came up in a Lovarank thread goes in Brigade).',
+        'Start work in a thread of its own, at the top: in the sidebar, on this computer and the accounts of the ' +
+        'person in this thread, for whoever asked here. For a goal of yours that came up here but is not this ' +
+        "thread's work (leave teammate out), or work another teammate takes on and carries through (teammate). " +
+        'Not for work whose result must come back here: that is start_child. The thread does not see this ' +
+        'conversation: write a brief that stands alone (the goal, what done looks like, where the specs are). ' +
+        'With lines of a list (list and items), it works on them, as when a person hands lines over. One goal is ' +
+        'one thread and one deliverable, however big: never a thread per step. It goes in the project you set, ' +
+        "else the list's, else this thread's.",
       inputSchema: jsonSchema<{
         title: string
-        description: string
-        priority?: 'low' | 'medium' | 'high' | 'urgent'
-        assignee?: string
-        mission?: string
+        brief: string
+        teammate?: string
         project?: string
+        list?: string
+        items?: string[]
       }>({
         type: 'object',
         properties: {
           title: {
             type: 'string',
-            description: 'Short and imperative, e.g. "Add CSV export to billing"',
+            description: 'Short and plain, e.g. "Add CSV export to billing"',
           },
-          description: { type: 'string', description: 'What done looks like, in a few lines' },
-          priority,
-          assignee: {
+          brief: { type: 'string', description: 'The work, standing alone' },
+          teammate: {
             type: 'string',
-            description:
-              '"self" (default): this thread is the task. "none": Backlog. Else a teammate id or name, never a ' +
-              'person; your own name starts it in a new thread of yours.',
-          },
-          mission: {
-            type: 'string',
-            description:
-              'The id of the mission it belongs to, from list_tasks or the create_task that made it. It takes the ' +
-              "mission's project. Unset: a task of its own. A mission groups tasks only when several teammates each " +
-              "own a delivery the person follows on its own; a goal's parts are never tasks of a mission.",
+            description: 'Who does it: a teammate id or name, never a person. Unset: you.',
           },
           project: {
             type: 'string',
             description:
-              'The project it belongs to: its id (or name) from your instructions, or "none" for no project. ' +
-              "Unset: this thread's project. Leave it out with a mission, which gives its own project.",
+              'The project it belongs to: its id or name from your instructions, or "none" for no project.',
           },
-        },
-        required: ['title', 'description'],
-      }),
-      execute: (input, { toolCallId }) =>
-        send(
-          'create_task',
-          {
-            name: 'create',
-            title: input.title,
-            description: input.description,
-            priority: input.priority ?? 'medium',
-            assignee: input.assignee || 'self',
-            ...(input.mission ? { mission: input.mission } : {}),
-            ...(input.project ? { project: input.project === 'none' ? null : input.project } : {}),
-          },
-          input,
-          toolCallId,
-        ),
-    }),
-    list_tasks: tool({
-      description:
-        "The tasks on the board (Backlog, Needs you, Doing, Done) with their ids, and the workspace's teammates " +
-        'you can assign them to.',
-      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
-      execute: (input, { toolCallId }) => send('list_tasks', { name: 'list' }, input, toolCallId),
-    }),
-    message_thread: tool({
-      description:
-        "Write in another thread: a started task's thread (taskId), where its teammate reads it and answers there, " +
-        'or one of your child threads (threadId, from list_children), which carries on and reports to you again. ' +
-        'Nowhere else. To talk to a person, open a ticket instead.',
-      inputSchema: jsonSchema<{ taskId?: string; threadId?: string; text: string }>({
-        type: 'object',
-        properties: {
-          taskId: { ...taskId, description: 'A started task, from list_tasks. Or threadId.' },
-          threadId: { type: 'string', description: 'One of your child threads. Or taskId.' },
-          text: { type: 'string', description: 'The message, in Markdown' },
-        },
-        required: ['text'],
-      }),
-      execute: (input, { toolCallId }) =>
-        send(
-          'message_thread',
-          {
-            name: 'comment',
-            ...(input.taskId ? { taskId: input.taskId } : {}),
-            ...(input.threadId ? { threadId: input.threadId } : {}),
-            text: input.text,
-          },
-          input,
-          toolCallId,
-        ),
-    }),
-    update_task: tool({
-      description:
-        "Change a task's title, description or priority, move it into or out of a mission, or move it to another " +
-        "project, such as a task created in the wrong one. A task in a mission is in the mission's project: move " +
-        "the mission, or take the task out of it first. A task's thread moves with it.",
-      inputSchema: jsonSchema<{
-        taskId: string
-        title?: string
-        description?: string
-        priority?: 'low' | 'medium' | 'high' | 'urgent'
-        mission?: string
-        project?: string
-      }>({
-        type: 'object',
-        properties: {
-          taskId,
-          title: { type: 'string' },
-          description: { type: 'string' },
-          priority,
-          mission: {
-            type: 'string',
-            description: 'A mission id to move it into, or "none" to take it out of its mission',
-          },
-          project: {
-            type: 'string',
-            description:
-              'A project id (or name) from your instructions to move it to, or "none" to take it out of its project',
-          },
-        },
-        required: ['taskId'],
-      }),
-      execute: ({ mission, project, ...input }, { toolCallId }) =>
-        send(
-          'update_task',
-          {
-            name: 'update',
-            ...input,
-            ...(mission ? { mission: mission === 'none' ? null : mission } : {}),
-            ...(project ? { project: project === 'none' ? null : project } : {}),
-          },
-          { ...input, mission, project },
-          toolCallId,
-        ),
-    }),
-    assign_task: tool({
-      description:
-        'Give a task to a teammate (never a person). A Backlog task starts at once in its own thread; a started ' +
-        'one changes hands: the teammate joins its thread and is told why.',
-      inputSchema: jsonSchema<{ taskId: string; teammate: string; reason?: string }>({
-        type: 'object',
-        properties: {
-          taskId,
-          teammate: { type: 'string', description: 'A teammate id or name, from list_tasks' },
-          reason: { type: 'string', description: 'Why, for the teammate taking it over' },
-        },
-        required: ['taskId', 'teammate'],
-      }),
-      execute: (input, { toolCallId }) =>
-        send(
-          'assign_task',
-          {
-            name: 'assign',
-            taskId: input.taskId,
-            teammateId: input.teammate,
-            reason: input.reason ?? '',
-          },
-          input,
-          toolCallId,
-        ),
-    }),
-    move_task: tool({
-      description:
-        'Move a task: "doing" reopens a done, archived or trashed task; "archived" puts a done task away; ' +
-        '"trash" takes any task off the board (it can be restored). To mark one done, use complete_task. ' +
-        'Needs you is not a place you move tasks to: open a ticket when you need a person.',
-      inputSchema: jsonSchema<{ taskId: string; to: 'doing' | 'archived' | 'trash' }>({
-        type: 'object',
-        properties: { taskId, to: { type: 'string', enum: ['doing', 'archived', 'trash'] } },
-        required: ['taskId', 'to'],
-      }),
-      execute: (input, { toolCallId }) =>
-        send('move_task', { name: 'move', ...input }, input, toolCallId),
-    }),
-    complete_task: tool({
-      description:
-        "Mark a task done once the work is finished and delivered: this thread's task by default, or another by " +
-        'its id. Give a short summary of what was done and links to what was produced (pull request, document, ' +
-        'file) so a person or another teammate can find it.',
-      inputSchema: jsonSchema<{
-        taskId?: string
-        summary: string
-        deliverables?: { label: string; url: string }[]
-      }>({
-        type: 'object',
-        properties: {
-          taskId: { type: 'string', description: "Unset: this thread's task" },
-          summary: { type: 'string', description: 'What was done, in a few lines' },
-          deliverables: {
+          list: { type: 'string', description: "A list's library path, with items" },
+          items: {
             type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                label: { type: 'string', description: 'e.g. "Pull request acme/web#42"' },
-                url: { type: 'string', description: 'An https link' },
-              },
-              required: ['label', 'url'],
-            },
+            items: { type: 'string' },
+            description:
+              "Lines of the list it works on: each line's id, or its text (all of it, or enough of its start to be the only one)",
           },
         },
-        required: ['summary'],
+        required: ['title', 'brief'],
       }),
       execute: (input, { toolCallId }) =>
-        send(
-          'complete_task',
-          {
-            name: 'complete',
-            ...(input.taskId ? { taskId: input.taskId } : {}),
-            summary: input.summary,
-            deliverables: input.deliverables ?? [],
+        call({
+          operation: {
+            name: 'start_thread',
+            title: input.title,
+            brief: input.brief,
+            ...(input.teammate ? { teammate: input.teammate } : {}),
+            ...(input.project ? { project: input.project === 'none' ? null : input.project } : {}),
+            ...(input.list ? { list: input.list } : {}),
+            ...(input.items?.length ? { items: input.items } : {}),
           },
-          input,
           toolCallId,
-        ),
+          toolName: 'start_thread',
+          input,
+        }),
     }),
+    message_thread: message(
+      'Write in another thread: one you started (start_thread), where its teammate reads it and answers there, or ' +
+        'one of your child threads (from list_children), which carries on and reports to you again. Nowhere else. ' +
+        'To talk to a person, open a ticket instead.',
+      'A thread you started, or one of your child threads',
+    ),
   }
 }
 
@@ -2069,8 +1863,8 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
     list_items: tool({
       description:
         'Read a list: the checklist lines of a Markdown file of the library, each ticked or not, with its id when ' +
-        'work is attached to it, and the threads and pull requests on it. Without a path: the items this thread ' +
-        'works on.',
+        'work is attached to it, the threads and pull requests on it, and the library paths of the files under it. ' +
+        'Without a path: the items this thread works on.',
       inputSchema: jsonSchema<{ path?: string }>({
         type: 'object',
         properties: {
@@ -2590,6 +2384,28 @@ export function playbookTools(call: ScheduleCaller): Record<string, Tool> {
           input,
         }),
     }),
+    file_idea: tool({
+      description:
+        "Keep an idea for the team, such as a customer's feature request: one line added to the playbook's " +
+        'ideas list in the library, where a person decides what to do with it. It starts nothing.',
+      inputSchema: jsonSchema<{ text: string }>({
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'What is asked, why, and who asked (their company), in one line',
+          },
+        },
+        required: ['text'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'file_idea', text: input.text },
+          toolCallId,
+          toolName: 'file_idea',
+          input,
+        }),
+    }),
   }
 }
 
@@ -2919,7 +2735,7 @@ export function childTools(
           teammate: {
             type: 'string',
             description:
-              "Who does it: a teammate id or name (list_tasks lists them). In a playbook's thread, one of its teammates by its key (e.g. developer). Unset: you.",
+              "Who does it: a teammate id or name. In a playbook's thread, one of its teammates by its key (e.g. developer). Unset: you.",
           },
           wait: {
             type: 'boolean',

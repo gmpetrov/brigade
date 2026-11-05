@@ -10,6 +10,7 @@ import { join } from 'node:path'
 import {
   CATALOG_INCOMPLETE_HEADER,
   CATALOG_SHARED_PARAM,
+  CATALOG_SIGNED_OUT_HEADER,
   ConnectorGrant,
   ThreadSpec,
   unsharedSubschemas,
@@ -29,6 +30,12 @@ const ATTEMPT_MS = 30_000
 /** The API will not have it however often it is asked (unknown token, part gone, bad hash). */
 class Refused extends Error {}
 
+/** An App's operations for a turn, and why it has none when its catalog could not be listed. */
+type Catalog = {
+  operations: ConnectorGrant['operations']
+  unavailable?: ConnectorGrant['unavailable']
+}
+
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /**
@@ -47,7 +54,7 @@ export class SpecParts {
   private readonly reading = new Map<string, Promise<unknown>>()
   /** Catalogs read lately, and being read, by connection, scope and version. */
   private readonly catalogs = new Map<string, ConnectorGrant['operations']>()
-  private readonly cataloging = new Map<string, Promise<ConnectorGrant['operations']>>()
+  private readonly cataloging = new Map<string, Promise<Catalog>>()
 
   constructor(
     private readonly config: Pick<RunnerConfig, 'apiUrl' | 'token'>,
@@ -111,9 +118,13 @@ export class SpecParts {
     }
     if (!whole.connectors.some((c) => c.catalog)) return whole
     const connectors = await Promise.all(
-      whole.connectors.map(async (grant) =>
-        grant.catalog ? { ...grant, operations: await this.catalog(grant) } : grant,
-      ),
+      whole.connectors.map(async (grant) => {
+        if (!grant.catalog) return grant
+        const { operations, unavailable } = await this.catalog(grant)
+        // Not listed now: the teammate is told why (instructions.ts), and the API's own reason
+        // (an account it knows is signed out) holds when the catalog came.
+        return { ...grant, operations, ...(unavailable ? { unavailable } : {}) }
+      }),
     )
     return { ...whole, connectors }
   }
@@ -123,17 +134,17 @@ export class SpecParts {
    * give (the connection gone since) leaves the App without tools in this turn, as a signed-out
    * one does; one it could not give now holds the command, as a part does.
    */
-  private catalog(grant: ConnectorGrant): Promise<ConnectorGrant['operations']> {
+  private catalog(grant: ConnectorGrant): Promise<Catalog> {
     const key = `${grant.connectionId}:${grant.scope}:${grant.catalog!.version}`
     const hit = this.catalogs.get(key)
-    if (hit) return Promise.resolve(hit)
+    if (hit) return Promise.resolve({ operations: hit })
     const pending = this.cataloging.get(key)
     if (pending) return pending
     const read = this.readCatalog(grant, key)
-      .then(({ operations, keep }) => {
+      .then(({ operations, keep, unavailable }) => {
         if (this.catalogs.size > 200) this.catalogs.clear()
         if (keep) this.catalogs.set(key, operations)
-        return operations
+        return { operations, ...(unavailable ? { unavailable } : {}) }
       })
       .finally(() => this.cataloging.delete(key))
     this.cataloging.set(key, read)
@@ -153,9 +164,11 @@ export class SpecParts {
     const path = `/runner/catalogs/${encodeURIComponent(grant.connectionId)}?scope=${grant.scope}&version=${encodeURIComponent(grant.catalog!.version)}&${CATALOG_SHARED_PARAM}=shared`
     let text: string
     let complete = true
+    let signedOut = false
     try {
       text = await this.fetch(path, (_, response) => {
         complete = response.headers.get(CATALOG_INCOMPLETE_HEADER) !== '1'
+        signedOut = response.headers.get(CATALOG_SIGNED_OUT_HEADER) === '1'
       })
     } catch (error) {
       if (!(error instanceof Refused)) throw error
@@ -165,8 +178,14 @@ export class SpecParts {
     const operations = whole(JSON.parse(text))
     // Not listed now (its server down): for this turn only, asked again at the next.
     if (!complete) {
-      console.warn(`${grant.kind} (${grant.connectionId}): its tools could not be listed now`)
-      return { operations, keep: false }
+      console.warn(
+        `${grant.kind} (${grant.connectionId}): its tools could not be listed now${signedOut ? ', signed out' : ''}`,
+      )
+      return {
+        operations,
+        keep: false,
+        unavailable: signedOut ? ('signed_out' as const) : ('unreachable' as const),
+      }
     }
     await mkdir(this.dir, { recursive: true, mode: 0o700 })
       .then(() => writeFile(file, text, { mode: 0o600 }))

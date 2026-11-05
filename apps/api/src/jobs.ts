@@ -29,7 +29,6 @@ import { dueCommands, giveUp, resendCommands, sweepCommands } from './runner-com
 import { dueSchedules, fireDueSchedules } from './schedules.js'
 import { sweepSpecParts } from './spec-parts.js'
 import { dueSubscriptions, readSubscriptions } from './subscriptions/index.js'
-import { sweepDoneTasks } from './tasks.js'
 import { sweepListMerges } from './lists.js'
 import { sweepSpecMerges } from './decisions.js'
 import { repairStaleBytes } from './library.js'
@@ -105,14 +104,12 @@ export const JOBS = {
   'runner-commands-given-up': { every: 60, run: (_key, now) => giveUp(now.getTime()) },
   'github-redeliver': { every: 600, run: () => redeliverFailed() },
   // Hourly: uploads abandoned mid-way or never sent with a message; files no document refers
-  // to; library files in the trash long enough; tasks done long enough, off the board; images a
-  // runner uploaded after their thread was deleted; finished rows of the work kept in the
-  // database; mail left in its box past its time.
+  // to; library files in the trash long enough; images a runner uploaded after their thread was
+  // deleted; finished rows of the work kept in the database; mail left in its box past its time.
   'upload-sweep': { every: 3600, run: () => sweepUploads() },
   'asset-sweep': { every: 3600, run: () => sweepAssets() },
   'file-upload-sweep': { every: 3600, run: () => sweepFileUploads() },
   'trash-sweep': { every: 3600, run: () => sweepTrash() },
-  'done-task-sweep': { every: 3600, run: () => sweepDoneTasks() },
   // Every 10 minutes: list items a merged pull request closes, not ticked yet (src/lists.ts).
   'list-merge-sweep': { every: 600, run: () => sweepListMerges() },
   // Every 10 minutes: specs and designs a merged pull request ships, not marked yet (src/decisions.ts).

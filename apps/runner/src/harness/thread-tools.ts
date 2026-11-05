@@ -28,12 +28,11 @@ const appTool = (name: string) => [name, `${name}_*`]
 
 /** Brigade's tools that are the thread's alone, by name; a name ending in "*" is a prefix. */
 export const THREAD_TOOLS = [
-  // Its result and its end: a child's report, a playbook run's case and outcome, the task and
-  // list items it was given, the thread declared done.
+  // Its result and its end: a child's report, a playbook run's case and outcome, the list items
+  // it was given, the thread declared done.
   'report',
   'playbook_triage',
   'playbook_report',
-  'complete_task',
   'complete_item',
   'complete_thread',
   // What it waits on and what wakes it: child threads, wake-ups and reviews, whose news comes
@@ -49,11 +48,11 @@ export const THREAD_TOOLS = [
   // the thread.
   'open_ticket',
   'message_thread',
-  // Work the thread then owns and answers for: tasks, routines, playbooks and pull requests
-  // (opening, readying, reviewing and merging one are its decisions: a review a sub-agent posted
-  // would stand as the thread's verdict).
-  'create_task',
-  'assign_task',
+  // Work the thread then owns and answers for: threads it starts, ideas a playbook keeps,
+  // routines, playbooks and pull requests (opening, readying, reviewing and merging one are its
+  // decisions: a review a sub-agent posted would stand as the thread's verdict).
+  'start_thread',
+  'file_idea',
   'create_schedule',
   'update_schedule',
   'create_trigger',

@@ -43,3 +43,21 @@ test('when the message can’t go, the note that stands in keeps what the person
   assert.equal(fallback.body.quiet, undefined)
   assert.equal(fallback.body.note, note)
 })
+
+test('the message the API writes, with the files under each line, is the one sent', async () => {
+  const calls: { path: string; body: Record<string, unknown> }[] = []
+  const written = `${note}\n\n- Write public docs\n  - File in the library: Projects/Acme/launch.md.files/cmshot/shot.png`
+  await handToThread(
+    async (path, init) => {
+      calls.push({ path, body: init.body as Record<string, unknown> })
+      return path.endsWith('/link') ? { sessionId: 'thread1', itemIds: [], message: written } : {}
+    },
+    file,
+    'thread1',
+    [{ ...items[0]!, files: ['cmshot'] }],
+    note,
+  )
+  assert.deepEqual(calls[0]!.body.items, [{ ...items[0]!, files: ['cmshot'] }])
+  assert.equal(calls[0]!.body.note, note)
+  assert.equal(calls[1]!.body.text, written)
+})

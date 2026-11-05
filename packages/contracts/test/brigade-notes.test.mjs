@@ -2,11 +2,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   fromTaskBrief,
-  fromTaskComment,
+  fromThreadComment,
   scheduledRunMessage,
   scheduledRunNote,
-  taskBrief,
-  taskComment,
+  threadComment,
   wakeupMessage,
   wakeupNote,
 } from '../dist/index.js'
@@ -55,18 +54,18 @@ test('a scheduled run message reads back, with or without a parent', () => {
   assert.equal(scheduledRunNote('Scheduled run of "x". Check it.'), null)
 })
 
-test('a task comment reads back', () => {
+test('a comment from another thread reads back, as old task comments were written', () => {
   const c = { from: 'Ada', threadTitle: 'Deploy', text: 'Done.' }
-  assert.deepEqual(fromTaskComment(taskComment(c)), c)
-  assert.equal(fromTaskComment('**Ada** said hi'), null)
+  assert.deepEqual(fromThreadComment(threadComment(c)), c)
+  // Written by the Tasks board's comment_task, in old threads: the same words.
+  assert.deepEqual(fromThreadComment('**Ada** commented from the thread “Deploy”:\n\nDone.'), c)
+  assert.equal(fromThreadComment('**Ada** said hi'), null)
 })
 
-test('a task brief a teammate wrote reads back', () => {
-  const b = { from: 'Riley', threadTitle: 'Ops', title: 'Fix it', description: 'Then ship.' }
-  assert.deepEqual(fromTaskBrief(taskBrief(b)), {
-    from: 'Riley',
-    threadTitle: 'Ops',
-    text: '**Fix it**\n\nThen ship.',
-  })
+test('an old task brief a teammate wrote reads back', () => {
+  assert.deepEqual(
+    fromTaskBrief('**Riley** started this task from the thread “Ops”:\n\n**Fix it**\n\nThen ship.'),
+    { from: 'Riley', threadTitle: 'Ops', text: '**Fix it**\n\nThen ship.' },
+  )
   assert.equal(fromTaskBrief('**Fix it**\n\nThen ship.'), null)
 })

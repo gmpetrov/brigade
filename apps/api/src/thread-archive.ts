@@ -1,18 +1,17 @@
 // Archiving a thread puts away what waited on a person there: its tickets and pull
-// requests leave Home, the sidebar and the app badge, and an unfinished task leaves the
-// board. Hidden, not cancelled: unarchiving brings it all back, and so does anything new
-// that waits on a person there, so a teammate still at work is never left unheard.
+// requests leave Home, the sidebar and the app badge. Hidden, not cancelled: unarchiving brings
+// it all back, and so does anything new that waits on a person there, so a teammate still at
+// work is never left unheard.
 import { onScopedWrite, scoped, type Scope } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
-import { archiveWithThread, unarchiveWithThread } from './tasks.js'
 import { reopenThread } from './thread-done.js'
 
-/** A thread and its children, archived or back; its task goes and comes back with it. */
+/** A thread and its children, archived or back. */
 export async function setThreadArchived(scope: Scope, threadId: string, on: boolean) {
   const db = scoped(scope)
   const thread = await db.session.findFirst({
     where: { id: threadId },
-    select: { id: true, status: true, updatedAt: true, taskId: true },
+    select: { id: true, status: true, updatedAt: true },
   })
   if (!thread) return
   const at = on ? new Date() : null
@@ -25,10 +24,6 @@ export async function setThreadArchived(scope: Scope, threadId: string, on: bool
   await db.session.updateMany({ where: { parentId: thread.id }, data: { archivedAt: at } })
   // Archived is put away for everyone: no longer for later for anyone (src/later.ts).
   if (at) await db.threadLater.deleteMany({ where: { sessionId: thread.id } })
-  if (thread.taskId)
-    await (at
-      ? archiveWithThread(scope, thread.taskId, at)
-      : unarchiveWithThread(scope, thread.taskId))
   void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
 }
 

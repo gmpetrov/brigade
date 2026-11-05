@@ -31,7 +31,7 @@ Brigade is open source: everything on this page can be checked in the
 
 | What                                        | Where                                                        | How                                                                                          |
 | ------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Threads, tasks, memory, settings            | Database (Neon)                                              | Encrypted at rest by the provider                                                            |
+| Threads, memory, settings                   | Database (Neon)                                              | Encrypted at rest by the provider                                                            |
 | Library files and attachments               | Cloudflare R2                                                | Encrypted at rest by the provider                                                            |
 | Secrets, App sign-ins and API keys          | Database                                                     | Encrypted by Brigade (AES-256-GCM), with a key per organization kept apart from the database |
 | Cloud computer backups                      | Cloudflare R2                                                | Encrypted by the computer before upload (AES-256-GCM), with a key per workspace              |

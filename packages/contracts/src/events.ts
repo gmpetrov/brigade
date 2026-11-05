@@ -138,7 +138,7 @@ export const ANSWER_MESSAGE_TOOL = 'answer_message'
 /**
  * Steps that are no work of their own, by bare tool name: the reply written
  * before one still answers the turn. A closing card counts even when it was
- * refused and called again; so do a wake-up, a task closed and a thread declared done after the
+ * refused and called again; so do a wake-up, a thread declared done (an old thread's task closed) after the
  * reply.
  */
 export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
@@ -154,6 +154,7 @@ export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   ANSWER_MESSAGE_TOOL,
   'set_wakeup',
   'cancel_wakeup',
+  // An old thread's task closed (the Tasks board is gone).
   'complete_task',
   'complete_thread',
 ])

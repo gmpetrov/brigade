@@ -131,24 +131,17 @@ import {
   playbookTools,
   playbookInstallTools,
   showWidgetTool,
-  taskTools,
+  startedThreadTools,
   type ComputerUse,
   type ConnectorCaller,
   type ImageMaker,
   type LibraryCaller,
   type PreviewTools,
   type ScheduleCaller,
-  type TaskCaller,
   widgetGuideTool,
 } from './tools.js'
 
-export type {
-  ConnectorCaller,
-  LibraryCaller,
-  PreviewTools,
-  ScheduleCaller,
-  TaskCaller,
-} from './tools.js'
+export type { ConnectorCaller, LibraryCaller, PreviewTools, ScheduleCaller } from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
@@ -156,8 +149,6 @@ export type ThreadContext = {
   libraryDir: (teammateId: string) => Promise<string>
   memoryFor: (teammateId: string) => MemorySnapshot
   callLibrary: LibraryCaller
-  /** Create a task from the thread, or complete its task. */
-  callTask: TaskCaller
   /** Create, list or change the teammate's schedules. */
   callSchedule: ScheduleCaller
   /** The thread's live preview: an app the teammate runs for people to try. */
@@ -281,7 +272,6 @@ const ALWAYS_LOADED = [
   SHOW_WIDGET_TOOL,
   WIDGET_GUIDE_TOOL,
   'report',
-  'complete_task',
   'search_workspace',
 ]
 
@@ -298,7 +288,6 @@ function createAgent(
   mcpServers: Record<string, unknown>,
   library: Parameters<typeof libraryTools>[0],
   checkoutRepo: (input: CheckoutInput) => Promise<unknown>,
-  callTask: TaskCaller,
   callSchedule: ScheduleCaller,
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
@@ -358,8 +347,9 @@ function createAgent(
         ...credentialTools(credentials),
         ...libraryTools(library),
         ...(spec.git ? repoTools(checkoutRepo) : {}),
-        // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
-        ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
+        // Threads it starts at the top, and writes in later; a playbook's run starts none outside it
+        // and writes only in its children (the API refuses them too).
+        ...startedThreadTools(callSchedule, { playbook: !!spec.playbook }),
         // Schedules, triggers and wake-ups: only in a thread a person started (the API refuses them
         // elsewhere), never in a playbook's run, whose schedules' runs would be threads outside it.
         ...(startedByPerson(spec) ? scheduleTools(callSchedule) : {}),
@@ -431,12 +421,19 @@ type Live = {
 
 /**
  * Which connector tools, effort and suggestions a spec gives: an agent made with others is out
- * of date (suggestions are its harness's environment, BRIGADE_PROMPT_SUGGESTIONS).
+ * of date (suggestions are its harness's environment, BRIGADE_PROMPT_SUGGESTIONS). An account
+ * the teammate cannot use (ConnectorGrant.unavailable) too, and why: its instructions say so, and
+ * are written only as a session starts. Left out of a usable account's key, as before it.
  */
-const agentKey = (spec: ThreadSpec) =>
+export const agentKey = (spec: ThreadSpec) =>
   JSON.stringify([
     spec.effort ?? null,
-    spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
+    spec.connectors.map((c) => [
+      c.connectionId,
+      c.scope,
+      c.operations.map((o) => o.name),
+      ...(c.unavailable ? [c.unavailable] : []),
+    ]),
     spec.suggestions,
   ])
 
@@ -1993,7 +1990,6 @@ export class HarnessThread {
             }
           : result
       },
-      this.context.callTask,
       (call) =>
         reportWithFiles(this.reportsWhenDone(call), {
           read: (file, max) => this.readFile(file, max, 'Files sent with a report'),

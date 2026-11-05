@@ -486,7 +486,7 @@ export class Threads {
       /** A teammate's reply mentioned others in the thread: ask the API to have them answer next. */
       handoff: (sessionId: string, fromTeammateId: string, teammateIds: string[]) => void
       /** The library and memory threads reach. */
-      context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule' | 'preview'>
+      context: Omit<ThreadContext, 'callLibrary' | 'callSchedule' | 'preview'>
       /** Apps teammates run for people to try, one per thread. */
       previews: Previews
       /** Put an image a reply shows in its thread's bucket folder (reply-images.ts). */
@@ -510,12 +510,6 @@ export class Threads {
         sessionId: string,
         teammateId: string,
         call: Parameters<ThreadContext['callLibrary']>[0],
-      ) => Promise<unknown>
-      /** A teammate's task tools: create a task from the thread, or complete its task. */
-      callTask: (
-        sessionId: string,
-        teammateId: string,
-        call: Parameters<ThreadContext['callTask']>[0],
       ) => Promise<unknown>
       /** A teammate's schedule tools: create, list or change its schedules. */
       callSchedule: (
@@ -2461,7 +2455,6 @@ export class Threads {
         {
           ...this.options.context,
           callLibrary: (call) => this.options.callLibrary(spec.sessionId, teammateId, call),
-          callTask: (call) => this.options.callTask(spec.sessionId, teammateId, call),
           callSchedule: (call) => this.options.callSchedule(spec.sessionId, teammateId, call),
           preview: this.options.previews.forSeat({
             sessionId: spec.sessionId,

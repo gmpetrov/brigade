@@ -6,7 +6,12 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { CATALOG_INCOMPLETE_HEADER, sharedSubschemas, ThreadSpec } from '@brigade/contracts'
+import {
+  CATALOG_INCOMPLETE_HEADER,
+  CATALOG_SIGNED_OUT_HEADER,
+  sharedSubschemas,
+  ThreadSpec,
+} from '@brigade/contracts'
 import { NotTaken } from '../src/connection.js'
 import { SpecParts } from '../src/spec-parts.js'
 
@@ -72,6 +77,11 @@ before(async () => {
           return res.writeHead(200, { [CATALOG_INCOMPLETE_HEADER]: '1' }).end('[]')
         return res.end(JSON.stringify(catalogOperations))
       }
+      // Its server refused the account (an expired key): signed out, until it is reconnected.
+      if (catalog[1] === 'expired')
+        return res
+          .writeHead(200, { [CATALOG_INCOMPLETE_HEADER]: '1', [CATALOG_SIGNED_OUT_HEADER]: '1' })
+          .end('[]')
     }
     res.writeHead(404).end()
   })
@@ -307,9 +317,28 @@ test('a catalog its server could not list now is used once, not kept', async () 
   const withCatalog = { ...spec(), connectors: [named('later', 'v1')] }
   const first = await parts.spec(withCatalog)
   assert.deepEqual(first.connectors[0]!.operations, [])
+  assert.equal(first.connectors[0]!.unavailable, 'unreachable', 'the teammate is told')
   assert.deepEqual(await readdir(fresh).catch(() => []), [], 'nothing kept on disk')
   const next = await parts.spec(withCatalog)
   assert.deepEqual(next.connectors[0]!.operations, catalogOperations)
+  assert.equal(next.connectors[0]!.unavailable, undefined, 'listed: usable')
   assert.equal(catalogRequests.length, 2, 'asked again')
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test('a catalog not listed because its server refused the account says it is signed out', async () => {
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const parts = new SpecParts({ apiUrl, token: 'token' }, fresh)
+  const filled = await parts.spec({ ...spec(), connectors: [named('expired', 'v1')] })
+  assert.deepEqual(filled.connectors[0]!.operations, [])
+  assert.equal(filled.connectors[0]!.unavailable, 'signed_out')
+  assert.deepEqual(await readdir(fresh).catch(() => []), [], 'nothing kept on disk')
+  // The API's own word, for an account whose tools came all the same, holds.
+  const said = await parts.spec({
+    ...spec(),
+    connectors: [{ ...named('c1', 'v2'), unavailable: 'signed_out' as const }],
+  })
+  assert.deepEqual(said.connectors[0]!.operations, catalogOperations)
+  assert.equal(said.connectors[0]!.unavailable, 'signed_out')
   await rm(fresh, { recursive: true, force: true })
 })

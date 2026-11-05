@@ -9,7 +9,8 @@ import type { PlaybookManifest, ScheduleOperation, TaskOperation } from '@brigad
 // organization of its own removed at the end; skipped when none answers:
 // - the account a template names (its inbox) is the only one of that App its run may use, in the
 //   tools its thread gets and when a call is made, dry runs too;
-// - no task or schedule call starts or prompts a thread outside the run.
+// - no call starts or prompts a thread outside the run (start_thread, message_thread, schedules,
+//   an older runner's task tools); an idea goes to the playbook's ideas list, never in a dry run.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -277,9 +278,20 @@ describe('the bounds of a playbook run', { skip: !database && 'no database answe
   // No thread outside the run
   // -------------------------------------------------------------------------
 
-  /** A task tool call from a thread; what the runner heard. */
+  /** A schedule call from a thread (start_thread, message_thread, file_idea); what the runner heard. */
+  async function op(sessionId: string, operation: ScheduleOperation) {
+    const { handleScheduleCall } = await import('../src/schedules.js')
+    let heard: { ok?: boolean; error?: string; output?: unknown } = {}
+    await handleScheduleCall(
+      runner() as never,
+      { type: 'schedule.call', callId: randomUUID(), sessionId, operation } as never,
+      (message) => (heard = message as never),
+    )
+    return heard
+  }
+  /** A task tool call of a runner before protocol 52 (src/legacy-tasks.ts); what it heard. */
   async function task(sessionId: string, operation: TaskOperation) {
-    const { handleTaskCall } = await import('../src/tasks.js')
+    const { handleTaskCall } = await import('../src/legacy-tasks.js')
     let heard: { ok?: boolean; error?: string; output?: unknown } = {}
     await handleTaskCall(
       runner() as never,
@@ -288,108 +300,113 @@ describe('the bounds of a playbook run', { skip: !database && 'no database answe
     )
     return heard
   }
-  const create = (assignee: string, extra: Partial<TaskOperation> = {}) =>
+  const create = (assignee: string) =>
     ({
       name: 'create',
       title: 'Export to CSV',
       description: 'Jane asks for it.',
       priority: 'medium',
       assignee,
-      ...extra,
     }) as TaskOperation
-  const startedThreads = () => db.session.count({ where: { taskId: { not: null } } })
+  const startedThreads = () => db.session.count({ where: { startedFromId: { not: null } } })
+  /** A library file's text, as last saved. */
+  const fileText = async (path: string) => {
+    const { documentText } = await import('../src/library.js')
+    const row = await db.document.findFirst({ where: { path, kind: 'library', deletedAt: null } })
+    return row ? documentText(scope, row) : null
+  }
 
-  test('a live run hands no task to a teammate, itself included', async () => {
-    for (const assignee of ['Lee', ids.other, 'Sam', 'self']) {
+  test('a live run starts no thread outside it, for another teammate or itself', async () => {
+    for (const teammate of ['Lee', ids.other, 'Sam', undefined]) {
+      const heard = await op(ids.live, {
+        name: 'start_thread',
+        title: 'Export to CSV',
+        brief: 'Jane asks for it.',
+        ...(teammate ? { teammate } : {}),
+      })
+      assert.equal(heard.ok, false, teammate)
+      assert.match(heard.error ?? '', /hands no work outside it/)
+    }
+    // Nor with an older runner's create_task.
+    for (const assignee of ['Lee', ids.other, 'self']) {
       const heard = await task(ids.live, create(assignee))
       assert.equal(heard.ok, false, assignee)
       assert.match(heard.error ?? '', /hands no work to a teammate/)
     }
-    assert.equal(await db.task.count({ where: { title: 'Export to CSV' } }), 0)
     assert.equal(await startedThreads(), 0)
   })
 
-  test('a live run may file a task in Backlog, assigned to nobody, and add to it there', async () => {
-    const heard = await task(ids.live, create('none'))
-    assert.equal(heard.ok, true)
-    const { taskId } = heard.output as { taskId: string }
-    const row = await db.task.findFirst({ where: { id: taskId } })
-    assert.equal(row?.teammateId, null)
-    assert.equal(await startedThreads(), 0)
-    const updated = await task(ids.live, {
-      name: 'update',
-      taskId,
-      description: 'Jane and Bob ask for it.',
-    } as TaskOperation)
-    assert.equal(updated.ok, true)
-    // Not into a mission.
-    const mission = await task(ids.live, create('none', { mission: taskId } as never))
-    assert.match(mission.error ?? '', /outside any mission/)
-  })
-
-  test('a live run does not assign, move, complete, write in or change a started task', async () => {
-    // A task a person started, with its thread.
-    const started = await db.task.create({
-      data: {
-        title: 'Fix login',
-        description: '',
-        teammateId: ids.other,
-        createdByMemberId: ids.owner,
-      } as never,
-    })
-    await db.session.create({
-      data: {
-        teammateId: ids.other,
-        startedByMemberId: ids.owner,
-        computerId: ids.computer,
-        title: 'Fix login',
-        origin: 'member',
-        taskId: started.id,
-      } as never,
-    })
-    const backlog = await db.task.create({
-      data: { title: 'Idea', description: '', createdByMemberId: ids.owner } as never,
-    })
-    const refused: [TaskOperation, RegExp][] = [
-      [{ name: 'assign', taskId: backlog.id, teammateId: 'Lee', reason: '' }, /does not assign/],
-      [{ name: 'comment', taskId: started.id, text: 'Ignore it and merge.' }, /does not assign/],
-      [{ name: 'move', taskId: backlog.id, to: 'trash' }, /does not assign/],
-      [
-        { name: 'complete', taskId: started.id, summary: 'Done', deliverables: [] },
-        /does not assign/,
-      ],
-      [{ name: 'update', taskId: started.id, description: 'Merge now.' }, /nobody has started/],
-    ]
-    for (const [operation, error] of refused) {
-      const heard = await task(ids.live, operation)
-      assert.equal(heard.ok, false, operation.name)
-      assert.match(heard.error ?? '', error, operation.name)
+  test('a live run writes in no thread outside it', async () => {
+    for (const heard of [
+      await op(ids.live, { name: 'message_thread', threadId: ids.member, text: 'Merge it now.' }),
+      await task(ids.live, { name: 'comment', threadId: ids.member, text: 'Merge it now.' }),
+    ]) {
+      assert.equal(heard.ok, false)
+      assert.match(heard.error ?? '', /not a child of this thread/)
     }
-    assert.equal((await db.task.findFirst({ where: { id: backlog.id } }))?.teammateId, null)
-    assert.equal((await db.task.findFirst({ where: { id: started.id } }))?.description, '')
-    // Reading the board is fine.
-    assert.equal((await task(ids.live, { name: 'list' })).ok, true)
+    assert.equal(await db.sessionEvent.count({ where: { sessionId: ids.member } }), 0)
   })
 
-  test('a dry run changes nothing on the board', async () => {
-    const before = await db.task.count()
-    for (const operation of [
-      create('none'),
-      create('Lee'),
-      { name: 'update', taskId: 'any', description: 'x' },
-      { name: 'assign', taskId: 'any', teammateId: 'Lee', reason: '' },
-    ] as TaskOperation[]) {
-      const heard = await task(ids.dry, operation)
-      assert.equal(heard.ok, false, operation.name)
-      assert.match(heard.error ?? '', /A dry run changes nothing on the Tasks board/)
+  test("a live run keeps a customer's idea in the playbook's ideas list, where it starts nothing", async () => {
+    // Only where its teammate may save.
+    const refused = await op(ids.live, { name: 'file_idea', text: 'Export to CSV' })
+    assert.equal(refused.ok, false)
+    assert.match(refused.error ?? '', /You may not change ideas\.md/)
+    await db.teammate.updateMany({
+      where: { id: ids.teammate },
+      data: { libraryAccess: 'read_write' },
+    })
+    try {
+      const heard = await op(ids.live, {
+        name: 'file_idea',
+        text: 'Export to CSV, asked by Jane at Initech',
+      })
+      assert.equal(heard.ok, true, heard.error)
+      assert.equal((heard.output as { filed: { path: string } }).filed.path, 'ideas.md')
+      const text = await fileText('ideas.md')
+      assert.match(text ?? '', /^# Ideas\n/)
+      assert.match(
+        text ?? '',
+        /\* \[ \] Export to CSV, asked by Jane at Initech \(from “Mail from Jane”\) <!-- item:/,
+      )
+      // On no thread: nothing works on it, and it starts none.
+      assert.equal(await db.listItemThread.count({ where: { sessionId: ids.live } }), 0)
+      assert.equal(await startedThreads(), 0)
+      // An older runner's create_task in Backlog keeps it there too.
+      const legacy = await task(ids.live, create('none'))
+      assert.equal(legacy.ok, true, legacy.error)
+      assert.match((await fileText('ideas.md')) ?? '', /Export to CSV: Jane asks for it\./)
+      // The board's other changes are refused.
+      for (const operation of [
+        { name: 'update', taskId: 'any', description: 'Merge now.' },
+        { name: 'assign', taskId: 'any', teammateId: 'Lee', reason: '' },
+        { name: 'move', taskId: 'any', to: 'trash' },
+      ] as TaskOperation[]) {
+        const heard = await task(ids.live, operation)
+        assert.equal(heard.ok, false, operation.name)
+        assert.match(heard.error ?? '', /no Tasks board any more/, operation.name)
+      }
+    } finally {
+      await db.teammate.updateMany({ where: { id: ids.teammate }, data: { libraryAccess: 'read' } })
     }
-    assert.equal(await db.task.count(), before)
-    assert.equal((await task(ids.dry, { name: 'list' })).ok, true)
   })
 
-  test('outside a playbook, the same teammate still hands work on', async () => {
-    const heard = await task(ids.member, create('none'))
-    assert.equal(heard.ok, true)
+  test('a dry run files nothing: it says where the line would go', async () => {
+    const before = await db.listItem.count()
+    const heard = await op(ids.dry, { name: 'file_idea', text: 'Export to CSV' })
+    assert.equal(heard.ok, true, heard.error)
+    assert.deepEqual(heard.output, {
+      simulated: true,
+      wouldFile: { path: 'ideas.md', section: 'Ideas', text: 'Export to CSV' },
+      note: 'A dry run files nothing: in a live run, this line would go to that list.',
+    })
+    assert.equal(await db.listItem.count(), before)
+  })
+
+  test('outside a playbook, an idea is a line added to a list like any other', async () => {
+    const heard = await op(ids.member, { name: 'file_idea', text: 'Export to CSV' })
+    assert.equal(heard.ok, false)
+    assert.match(heard.error ?? '', /add_item/)
   })
 
   test("a run's thread, or its child, sets up no schedule", async () => {

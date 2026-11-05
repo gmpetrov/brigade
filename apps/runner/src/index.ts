@@ -406,8 +406,6 @@ async function start() {
         teammateId,
         operation: await libraryMessage(config, { sessionId, teammateId }, operation),
       }),
-    callTask: (sessionId, teammateId, { operation }) =>
-      connection.callTask({ sessionId, teammateId, operation }),
     callSchedule: (sessionId, teammateId, { operation, toolCallId, toolName, input }) =>
       connection.callSchedule(
         { sessionId, teammateId, operation },

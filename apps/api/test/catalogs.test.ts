@@ -30,6 +30,7 @@ const database = await Promise.race([
 type Sent = { type: string; [key: string]: unknown }
 type Grant = {
   connectionId: string
+  unavailable?: string
   catalog?: { version: string }
   operations: { name: string; write: boolean }[]
 }
@@ -53,6 +54,7 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
   let scope: { organizationId: string; workspaceId: string }
   let threadsApp: Hono
   let catalogsApp: Hono
+  let connectionsApp: Hono
   let restore: () => void
   let sent: Sent[]
   let close: (() => void) | undefined
@@ -61,6 +63,7 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     const { auth } = await import('../src/auth.js')
     const { threads } = await import('../src/routes/threads.js')
     const { runnerCatalogs } = await import('../src/routes/runner-catalogs.js')
+    const { connections } = await import('../src/routes/connections.js')
     const { hashToken } = await import('../src/hub.js')
     ids.org = `org-catalog-${suffix}`
     ids.user = `user-catalog-${suffix}`
@@ -129,6 +132,7 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     threadsApp = new Hono().route('/api/threads', threads)
     catalogsApp = new Hono().route('/runner/catalogs', runnerCatalogs)
+    connectionsApp = new Hono().route('/api/connections', connections)
     sent = []
   })
 
@@ -191,6 +195,7 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     const { operationSpecs } = await import('../src/connectors/index.js')
     await connect(PROTOCOL_VERSION)
     const grant = await startedGrant('Read my mail')
+    assert.equal(grant.unavailable, undefined, 'signed in')
     assert.deepEqual(grant.operations, [])
     assert.match(grant.catalog?.version ?? '', /^[0-9a-f]{32}$/)
 
@@ -284,8 +289,127 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     assert.ok(CATALOG_PROTOCOL > 0)
   })
 
+  test('an account its provider refused is said signed out in the spec', async () => {
+    const { PROTOCOL_VERSION } = await import('@brigade/contracts')
+    await connect(PROTOCOL_VERSION)
+    await db.connection.updateMany({ where: { id: ids.gmail }, data: { status: 'needs_reauth' } })
+    try {
+      const grant = await startedGrant('Read my mail, signed out')
+      assert.equal(grant.unavailable, 'signed_out')
+    } finally {
+      await db.connection.updateMany({ where: { id: ids.gmail }, data: { status: 'active' } })
+    }
+  })
+
+  test('an MCP server that refuses the account: signed out, not down', async () => {
+    const { CATALOG_INCOMPLETE_HEADER, CATALOG_SIGNED_OUT_HEADER } =
+      await import('@brigade/contracts')
+    const { sealSecret } = await import('../src/vault.js')
+    // Every request refused, as OpenRouter's server answers a key past its 7 days.
+    const server = createServer((req, res) => {
+      req.resume()
+      req.on('end', () => res.writeHead(401).end())
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`
+    try {
+      const app = await db.app.create({
+        data: {
+          key: `keyed-${suffix}`,
+          createdByMemberId: ids.member,
+          mcp: { url, transport: 'streamable', auth: 'api_key', prefix: 'keyed' },
+        },
+      } as never)
+      const connection = await db.connection.create({
+        data: {
+          appId: app.id,
+          kind: 'mcp',
+          label: 'Keyed',
+          createdByMemberId: ids.member,
+          vaultSecretId: await sealSecret(db, scope, { apiKey: 'expired' }),
+        },
+      } as never)
+      const res = await fetchCatalog(connection.id, 'scope=read_write&version=v')
+      assert.equal(res.status, 200)
+      assert.equal(res.headers.get(CATALOG_INCOMPLETE_HEADER), '1')
+      assert.equal(res.headers.get(CATALOG_SIGNED_OUT_HEADER), '1')
+      assert.deepEqual(await res.json(), [])
+      const row = await db.connection.findFirstOrThrow({ where: { id: connection.id } })
+      assert.equal(row.status, 'needs_reauth')
+    } finally {
+      server.close()
+    }
+  })
+
+  test("a ticket's check marks an account its MCP server refuses, and leaves one it cannot reach", async () => {
+    const { sealSecret } = await import('../src/vault.js')
+    const app = await db.app.create({
+      data: { key: 'openrouter', createdByMemberId: ids.member },
+    } as never)
+    const account = async (externalAccount: string) =>
+      (
+        await db.connection.create({
+          data: {
+            appId: app.id,
+            kind: 'openrouter',
+            label: 'OpenRouter',
+            externalAccount,
+            createdByMemberId: ids.member,
+            // OpenRouter's: a key with nothing to renew it, still within the days it was given.
+            vaultSecretId: await sealSecret(db, scope, {
+              accessToken: 'sk-or-expired',
+              refreshToken: null,
+              expiresAt: Date.now() + 3_600_000,
+              clientId: 'brigade',
+              tokenEndpoint: 'https://mcp.openrouter.ai/oauth/token',
+              resource: 'https://mcp.openrouter.ai/mcp',
+            }),
+          },
+        } as never)
+      ).id
+    const refused = await account('Personal account')
+    const down = await account('Organization account')
+    // OpenRouter's server, as the API reaches it: refusing the key, or not answering.
+    let answer = 401
+    let asked = 0
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const target = input instanceof Request ? input.url : String(input)
+      if (!target.startsWith('https://mcp.openrouter.ai/')) return realFetch(input, init)
+      asked++
+      return new Response('', { status: answer })
+    }) as typeof fetch
+    const check = async (id: string) => {
+      const res = await connectionsApp.request(`/api/connections/${id}/check`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      })
+      assert.equal(res.status, 200, await res.clone().text())
+      return ((await res.json()) as { status: string }).status
+    }
+    const status = async (id: string) =>
+      (await db.connection.findFirstOrThrow({ where: { id } })).status
+    try {
+      assert.equal(await check(refused), 'needs_reauth')
+      assert.equal(await status(refused), 'needs_reauth')
+      assert.ok(asked > 0, 'its server was asked')
+      // Marked already: not asked again.
+      const before = asked
+      assert.equal(await check(refused), 'needs_reauth')
+      assert.equal(asked, before)
+
+      answer = 503
+      assert.equal(await check(down), 'active')
+      assert.equal(await status(down), 'active')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
   test('an MCP server that cannot list its tools now is asked again at the next fetch', async () => {
-    const { CATALOG_INCOMPLETE_HEADER } = await import('@brigade/contracts')
+    const { CATALOG_INCOMPLETE_HEADER, CATALOG_SIGNED_OUT_HEADER } =
+      await import('@brigade/contracts')
     let up = false
     let listings = 0
     let asked = 0
@@ -335,6 +459,7 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
       const down = await get()
       assert.equal(down.status, 200)
       assert.equal(down.headers.get(CATALOG_INCOMPLETE_HEADER), '1')
+      assert.equal(down.headers.get(CATALOG_SIGNED_OUT_HEADER), null, 'down, not signed out')
       assert.deepEqual(await down.json(), [])
       const once = asked
       await get()
