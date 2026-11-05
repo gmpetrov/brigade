@@ -100,6 +100,7 @@ export async function openAsk(
         label: o.label,
         message: choiceMessage(o),
         ...(o.description ? { description: o.description } : {}),
+        ...(o.design ? { design: true } : {}),
       }))
     } else if (tool === SUGGEST_REPLIES_TOOL) {
       const replies = safeReplies(data.input)

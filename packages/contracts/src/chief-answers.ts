@@ -27,6 +27,8 @@ export const ChiefOption = z.object({
   message: z.string(),
   /** What a choices card's option says of itself, beside its label. */
   description: z.string().optional(),
+  /** A design to pick on its card: a matter of taste, never answered by Chief. */
+  design: z.boolean().optional(),
 })
 export type ChiefOption = z.infer<typeof ChiefOption>
 
@@ -230,7 +232,8 @@ export function chiefPassBrief(b: {
           `   Answers: ${i.options
             .map(
               (o, k) =>
-                `${k + 1}) ${o.label}${o.description?.trim() ? ` (${oneLine(o.description)})` : ''}`,
+                `${k + 1}) ${o.label}${o.description?.trim() ? ` (${oneLine(o.description)})` : ''}` +
+                (o.design ? ' [a design: theirs to pick]' : ''),
             )
             .join('  ')}`,
         ].join('\n')

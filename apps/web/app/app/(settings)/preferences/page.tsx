@@ -1,10 +1,9 @@
 'use client'
 // Preferences: what each member sets for themselves, never for the workspace: next-message
 // suggestions, auto-merge of their threads' pull requests (owners and admins, who may merge),
-// what Chief answers in their name, and deleting their own account. Notifications have their own section; the theme is
-// picked in the member's menu, in the sidebar.
-import { CHIEF_KIND_LABELS, type ChiefSettings, type SetChief } from '@brigade/contracts'
-import Link from 'next/link'
+// their rules and Chief's daily pass, and deleting their own account. Notifications have their
+// own section; the theme is picked in the member's menu, in the sidebar.
+import { CHIEF_RULES_MAX, type ChiefSettings, type SetChief } from '@brigade/contracts'
 import { useEffect, useState, type ReactNode } from 'react'
 import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
@@ -14,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { api, useApi } from '@/lib/api'
 
 function Section({
@@ -106,134 +106,143 @@ export default function PreferencesPage() {
   )
 }
 
-/** "9 of your last 10": how often the person took Chief's pick, for a kind it suggests. */
-function trustLine(k: ChiefSettings['kinds'][number]) {
-  if (k.alone) return 'Answers on its own'
-  if (!k.decided) return 'Suggests'
-  return `Suggests · you took its pick ${k.agreed} of your last ${k.decided}`
+/** The browser's timezone: the person's morning, for their pass. */
+const browserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+  } catch {
+    return undefined
+  }
 }
 
+const RULES_EXAMPLE =
+  '- Brigade: go ahead on next steps of work I asked for\n- Anything visual (a design, a wording): ask me\n- Small fixes: open the pull request without asking'
+
 /**
- * Chief answers for them (docs/chief-answers.md): on or off, the kinds it answers alone, their
- * mandate, and its numbers. Theirs alone: it answers in their name.
+ * Their rules and Chief's daily pass (docs/chief-answers.md). Theirs alone: their teammates read
+ * their rules, and Chief acts in their name by them.
  */
 function ChiefSection() {
-  const { data, setData } = useApi<ChiefSettings>('/me/chief', ['thread.updated'])
+  const { data, setData } = useApi<ChiefSettings>('/me/chief')
+  const [rules, setRules] = useState<string>()
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [writing, setWriting] = useState(false)
   const [error, setError] = useState<string>()
+  const text = rules ?? data?.rules ?? ''
 
-  /** Shown at once, then saved; put back as it was if it fails. */
-  function change(body: SetChief, next: ChiefSettings) {
+  function save(body: SetChief, next?: ChiefSettings) {
     const before = data
-    setData(next)
+    if (next) setData(next)
     setError(undefined)
-    api<ChiefSettings>('/me/chief', { method: 'PUT', body })
-      .then(setData)
+    return api<ChiefSettings>('/me/chief', { method: 'PUT', body })
+      .then((after) => {
+        setData(after)
+        return true
+      })
       .catch((e: Error) => {
-        setData(before)
+        if (next) setData(before)
         setError(e.message)
+        return false
       })
   }
 
   if (!data) return null
-  const s = data.stats
+  const changed = text.trim() !== data.rules.trim()
   return (
-    <Section title="Chief" detail="Your chief of staff answers your teammates' questions for you.">
+    <Section
+      title="Chief"
+      detail="Your rules tell your teammates what to decide without asking you. Your chief of staff can go through what waits on you each morning."
+    >
       <div className="flex flex-col gap-5">
-        <div className="flex items-start justify-between gap-4">
-          <Label htmlFor="chief-answers" className="grid gap-1 font-normal">
-            <span className="font-medium">Answer my teammates&apos; questions</span>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="chief-rules" className="grid gap-1 font-normal">
+            <span className="font-medium">Your rules</span>
             <span className="text-muted-foreground text-xs">
-              When a teammate ends its reply on buttons or choices, Chief reads them first and, from
-              your mandate, suggests the one it would pick, or answers for you in the kinds you let
-              it. Merging, sending, publishing or paying still waits for you. Off, every question
-              waits for you.
+              Short lines in your words. Every teammate working for you reads them, decides what they
+              settle and asks you only the rest. Merging, sending, publishing or paying still waits
+              for you.
+            </span>
+          </Label>
+          <Textarea
+            id="chief-rules"
+            rows={5}
+            maxLength={CHIEF_RULES_MAX}
+            placeholder={RULES_EXAMPLE}
+            value={text}
+            onChange={(e) => {
+              setRules(e.target.value)
+              setSaved(false)
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={!changed || saving}
+              onClick={() => {
+                setSaving(true)
+                void save({ rules: text })
+                  .then((ok) => {
+                    if (ok) {
+                      setRules(undefined)
+                      setSaved(true)
+                    }
+                  })
+                  .finally(() => setSaving(false))
+              }}
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setWriting(true)}>
+              Write them with Chief
+            </Button>
+            {saved && !changed && (
+              <span className="text-muted-foreground text-xs">
+                Saved. Teammates read them from their next session.
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <Label htmlFor="chief-pass" className="grid gap-1 font-normal">
+            <span className="font-medium">Daily pass</span>
+            <span className="text-muted-foreground text-xs">
+              Each morning from {data.hour}:00
+              {data.timezone ? ` (${data.timezone})` : ''}, when something waits on you, Chief
+              goes through it: it answers in your name the questions your rules settle, tries
+              failed threads again, and leaves the rest on Today with what it would do, and rules
+              you may want to add. Off, nothing runs.
             </span>
           </Label>
           <Switch
-            id="chief-answers"
-            checked={data.on}
-            onCheckedChange={(on) => change({ on }, { ...data, on })}
+            id="chief-pass"
+            checked={data.pass}
+            onCheckedChange={(pass) => {
+              const timezone = browserTimezone()
+              void save(
+                { pass, ...(pass && timezone ? { timezone } : {}) },
+                { ...data, pass, ...(pass && timezone ? { timezone } : {}) },
+              )
+            }}
           />
         </div>
-        {data.on && (
-          <>
-            <ul className="flex flex-col gap-4">
-              {data.kinds.map((k) => (
-                <li key={k.kind} className="flex items-start justify-between gap-4">
-                  <Label htmlFor={`chief-${k.kind}`} className="grid gap-1 font-normal">
-                    <span className="font-medium">{CHIEF_KIND_LABELS[k.kind].label}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {CHIEF_KIND_LABELS[k.kind].hint}. {trustLine(k)}.
-                    </span>
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs">On its own</span>
-                    <Switch
-                      id={`chief-${k.kind}`}
-                      checked={k.alone}
-                      onCheckedChange={(on) =>
-                        change(
-                          { alone: { kind: k.kind, on } },
-                          {
-                            ...data,
-                            kinds: data.kinds.map((x) =>
-                              x.kind === k.kind ? { ...x, alone: on } : x,
-                            ),
-                          },
-                        )
-                      }
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="flex items-start justify-between gap-4">
-              <div className="grid gap-1 text-sm">
-                <span className="font-medium">Your mandate</span>
-                <span className="text-muted-foreground text-xs">
-                  What you aim for, the decisions that hold, and what you always decide yourself:
-                  what Chief answers by.
-                </span>
-              </div>
-              {data.mandate ? (
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`/app/library?file=${data.mandate.id}`}>Open</Link>
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => setWriting(true)}>
-                  Write it with Chief
-                </Button>
-              )}
-            </div>
-            {s.questions > 0 && (
-              <p className="text-muted-foreground text-xs">
-                Last {s.days} days: {s.questions} {s.questions === 1 ? 'question' : 'questions'},{' '}
-                {s.answered} answered on its own
-                {s.overruled ? ` (${s.overruled} marked wrong)` : ''}, {s.suggested} suggested
-                {s.agreed + s.disagreed
-                  ? ` (you took ${s.agreed} of ${s.agreed + s.disagreed})`
-                  : ''}
-                , {s.escalated} left to you.
-              </p>
-            )}
-          </>
-        )}
         {error && <p className="text-sm text-destructive-text">{error}</p>}
       </div>
-      {writing && <MandateDialog onClose={() => setWriting(false)} />}
+      {writing && <RulesDialog onClose={() => setWriting(false)} />}
     </Section>
   )
 }
 
-/** Writing the mandate happens in a chat with Chief, its message ready to send. */
-function MandateDialog({ onClose }: { onClose: () => void }) {
+/** Writing the rules happens in a chat with Chief, its message ready to send. */
+function RulesDialog({ onClose }: { onClose: () => void }) {
   const { teammates } = useDashboard()
   const chief = teammates.find((t) => t.kind === 'chief')
   const draft = useThreadDraft()
   const { setText } = draft
   useEffect(() => {
-    setText('Help me write my mandate: what I aim for now, and what I always decide myself.')
+    setText(
+      'Help me write my rules: what my teammates may decide without asking me, and what I always decide myself.',
+    )
   }, [setText])
   if (!chief) return null
   return (
@@ -243,9 +252,9 @@ function MandateDialog({ onClose }: { onClose: () => void }) {
         className="top-[20%] translate-y-0 gap-0 p-0 sm:max-w-2xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogTitle className="sr-only">Write your mandate with Chief</DialogTitle>
+        <DialogTitle className="sr-only">Write your rules with Chief</DialogTitle>
         <DialogDescription className="sr-only">
-          Chief writes it with you in a new thread, from what you tell it.
+          Chief writes them with you in a new thread, from what you tell it.
         </DialogDescription>
         <NewThread
           layout="dialog"

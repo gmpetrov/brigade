@@ -61,8 +61,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   @mentions joins the thread and answers next (only the chief can bring in teammates not yet in a thread, protocol
   18), and bigger work becomes a task. Onboarding names the project (organization and first workspace), then asks
   for an AI account: the dashboard stays closed until the member has one that has worked in that workspace.
-  Chief also answers teammates' buttons and choices in a member's name, suggesting first and alone only for the kinds
-  they allow; off, as a member's preference, it does none of it (docs/chief-answers.md).
+  Chief also keeps each member's rules, which every teammate working for them reads, and, with their daily pass on,
+  goes through what waits on them each morning, answering in their name what their rules settle; off, as a member's
+  preference, it does none of it (docs/chief-answers.md).
 - **Sign-in is Google or a code mailed to the address** (`src/sign-in-code.ts`, better-auth's emailOTP), which
   also signs up a new address: an account is only made by someone who reads its mail, and an invitation is only taken
   by a proven address. Passwords are off (`PASSWORD_SIGN_IN`), except locally and in previews for the dev accounts.

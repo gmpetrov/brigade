@@ -2,6 +2,7 @@
 import { UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { useBoard } from '@/components/board'
+import { ChiefPassSection } from '@/components/chief-pass'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { GettingStarted } from '@/components/getting-started'
 import { LooseEnds, SinceAway } from '@/components/home-feed'
@@ -140,6 +141,9 @@ export default function Home() {
       )}
 
       <GettingStarted threads={threads.data} />
+
+      {/* Chief's daily pass, for a person who has it on (docs/chief-answers.md). */}
+      {me.chiefPass && <ChiefPassSection />}
 
       {tickets.data && pulls.data && (
         <NeedsYou

@@ -1,6 +1,6 @@
 ---
 title: 'Teammates'
-description: 'What a teammate is, how Chief sets up your team and answers for you, and how to create, configure and archive teammates.'
+description: 'What a teammate is, how Chief sets up your team, keeps your rules and goes through what waits on you, and how to create, configure and archive teammates.'
 ---
 
 A teammate is the real Claude Code or Codex, given a job. It has a name, role instructions, a model, and the Apps,
@@ -17,31 +17,37 @@ the first teammate you talk to. It has two jobs:
   instructions and the Apps it needs.
 - **Answer and route.** Chief answers simple questions itself. For real work, it hands off to the right teammate: it
   mentions them, starts a sub-thread, or creates a task. It doesn't do a teammate's job itself.
-- **Answer your teammates for you.** When a teammate ends its reply on buttons or choices, Chief reads the question
-  before you do, and suggests an answer or gives it in your name. See below.
+- **Your rules and a daily pass.** Chief writes your rules with you, which every teammate working for you follows, and
+  can go through what waits on you each morning. See below.
 
 Chief's name can't change, and it can't be archived.
 
-### Chief answers for you
+### Your rules
 
-When a teammate ends its reply on buttons or choices in one of your threads, Chief reads the question first:
+Your rules are short lines in your words that settle what your teammates would otherwise ask you, for example
+"Brigade: go ahead on next steps of work I asked for" or "Anything visual: ask me". Every teammate working for you
+reads them, decides what they settle (and says so), and asks you only the rest. Merging, sending, publishing or paying
+still waits for you, rules or not.
 
-- **It suggests** the answer it would pick, under the question. Choose **Use it** to send it as yours, or answer as
-  you like.
-- **It leaves the question to you** when it's a matter of taste, anything that leaves Brigade (sending, publishing,
-  merging, paying), or nothing settles it, and says why.
-- **It answers on its own** only for the kinds of question you let it: next steps, approaches and priorities. Its
-  answer shows in the thread as **Chief answered for you**, with why. **Mark as wrong** tells the teammate to stop and
-  puts that kind back to suggestions. Three answers in a row in a thread without a word from you, and the next
-  question waits for you.
+Write them in **Preferences → Chief**, or choose **Write them with Chief** there: Chief proposes a few lines from what
+you tell it and saves them once you agree. Teammates read new rules from their next session.
 
-Chief decides from your **mandate**, `chief/mandate.md` in the library: what you aim for, the decisions that hold, and
-what you always decide yourself. Chief writes it with you when it sets up your team, or from **Write it with Chief** in
-**Preferences**, and can look back with you each week.
+### Chief's daily pass
 
-Once you took Chief's pick 9 of your last 10 times for a kind of question, a ticket offers to let it answer that kind
-on its own. Chief's answers are off until you turn them on in **Preferences → Chief**, where you also switch each
-kind yourself; off, every question waits for you.
+Turn on **Daily pass** in **Preferences → Chief**, and each morning from 7:00 (your timezone), when something waits on
+you, Chief goes through it in a thread of its own that no list shows:
+
+- **It answers in your name** the questions your teammates ended on (buttons or choices) that your rules plainly
+  settle. Never by guess, never a matter of taste such as a design, and never with no rules. The answer shows in the
+  thread as **Chief answered for you**, with why and the rule. **Mark as wrong** tells the teammate to stop and undo
+  what it can. Three answers in a row in a thread without a word from you, and the next question waits for you.
+- **It tries again** a thread that stopped on a passing error.
+- **It leaves you the rest on Today**, under **Chief's pass**: what is still yours to decide, with what it would do
+  (**Use it** sends its pick as yours), what it noticed across your threads, and rules you may want to add from your
+  recent answers (**Add to my rules**, or **Not this one**, and it won't propose it again). Tickets and pull requests
+  are always yours.
+
+If you write in a thread before Chief's answer reaches its teammate, your word wins and its answer never goes.
 
 Chief's answer is never your approval. Until you write in the thread again, the teammate's App actions ask you first,
 except opening a branch or a pull request, and so does any secret of the vault it would use without asking; it sets up

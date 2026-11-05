@@ -107,7 +107,7 @@ import {
   handOffNote,
   type BrigadeNote,
 } from '@/components/brigade-notes'
-import { ChiefTake, MarkWrong, takeOn } from '@/components/chief-take'
+import { MarkWrong } from '@/components/mark-wrong'
 import {
   EditableEmailPreview,
   isEmailSend,
@@ -2605,7 +2605,7 @@ export function ThreadItems({
 }: {
   threadId: string
   items: Item[]
-  /** Chief's decisions on the thread's questions (docs/chief-answers.md), each shown on its question. */
+  /** Chief's answers in the person's name (docs/chief-answers.md), each beside its note. */
   chiefDecisions?: ChiefDecisionView[]
   /** Marks one of Chief's answers in the person's name as wrong. Unset when they cannot. */
   onChiefWrong?: (decisionId: string) => Promise<void>
@@ -3058,8 +3058,7 @@ export function ThreadItems({
             .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
           const dismissed =
             choicesDismissedSeq != null && item.seq != null && item.seq <= choicesDismissedSeq
-          const take = takeOn(chiefDecisions, item.seq ?? undefined)
-          const card = (
+          return (
             <ChoicesCard
               key={item.key}
               choices={choices}
@@ -3071,24 +3070,11 @@ export function ThreadItems({
               }
             />
           )
-          if (!take) return card
-          // A design is picked on its card: there it becomes the design, which a message alone would not.
-          const designed = choices.options.some((o) => o.design && o.label === take.option?.label)
-          return (
-            <div key={item.key} className="flex flex-col gap-2">
-              {card}
-              <ChiefTake
-                decision={take}
-                open={reply === undefined && !dismissed}
-                {...(onChoose && !designed ? { onUse: (text: string) => onChoose(text) } : {})}
-              />
-            </div>
-          )
         }
         const replies = suggestedReplies(item)
         if (replies) {
           if (!repliesOpen(i) || !onChoose) return null
-          const buttons = (
+          return (
             <SuggestedReplyButtons
               key={item.key}
               replies={replies}
@@ -3096,14 +3082,6 @@ export function ThreadItems({
               {...(previewStart ? { preview: previewStart } : {})}
               onSend={onChoose}
             />
-          )
-          const take = takeOn(chiefDecisions, item.seq ?? undefined)
-          if (!take) return buttons
-          return (
-            <div key={item.key} className="flex flex-col gap-2">
-              {buttons}
-              <ChiefTake decision={take} open onUse={(text) => onChoose(text)} />
-            </div>
           )
         }
         const widget = shownWidget(item)

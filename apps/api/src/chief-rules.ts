@@ -26,22 +26,22 @@ export function validTimezone(timezone: string) {
 }
 
 /** A rule as a line of the rules. */
-const asLine = (line: string) => `- ${line.replace(/\s+/g, ' ').trim()}`
+const asLine = (line: string) =>
+  `- ${line
+    .replace(/^\s*[-*]\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim()}`
+
+/** A line as compared: no bullet, its spaces folded, in lower case. */
+const bare = (line: string) =>
+  line
+    .replace(/^\s*[-*]\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
 
 /** Whether the rules hold that line already, however it was written. */
-const holds = (rules: string, line: string) => {
-  const want = line.replace(/\s+/g, ' ').trim().toLowerCase()
-  return rules
-    .split('\n')
-    .map((l) =>
-      l
-        .replace(/^\s*[-*]\s*/, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase(),
-    )
-    .includes(want)
-}
+const holds = (rules: string, line: string) => rules.split('\n').map(bare).includes(bare(line))
 
 /** What a member set for Chief (GET /me/chief). */
 export async function chiefSettings(db: ScopedDb, memberId: string): Promise<ChiefSettings> {

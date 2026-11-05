@@ -8,12 +8,12 @@ import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
 import { sessionStub } from './session-stub.js'
 
-// Chief answers for the person (src/chief-answers.ts, docs/chief-answers.md): a question a
-// teammate ends on goes to Chief first, in a sub-thread of its own; its decision shows as a
-// suggestion, or reaches the teammate in the person's name for the kinds they let it; their own
-// answers measure it; App writes made on its word ask them. Against the API's development
-// database (apps/api/.env), in an organization of its own removed at the end; skipped when no
-// database answers.
+// Chief for the person (docs/chief-answers.md): their rules reach the teammates working for them;
+// their daily pass reads what waits on them, answers in their name what their rules settle, tries
+// failed threads again and reports to Today; its answers reach the teammate in order with the
+// person's word, and App writes made on them ask the person. Against the API's development database
+// (apps/api/.env), in an organization of its own removed at the end; skipped when no database
+// answers.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -30,6 +30,8 @@ const database = await Promise.race([
 ]).catch(() => false)
 
 const chiefAnswers = await import('../src/chief-answers.js')
+const chiefPass = await import('../src/chief-pass.js')
+const chiefRules = await import('../src/chief-rules.js')
 const contracts = await import('@brigade/contracts')
 
 type Sent = { type: string; [key: string]: unknown }
@@ -42,7 +44,7 @@ const until = async (check: () => boolean | Promise<boolean>, what: string) => {
   assert.fail(`timed out waiting for ${what}`)
 }
 
-describe('Chief answers for the person', { skip: !database && 'no database answers' }, () => {
+describe('Chief for the person', { skip: !database && 'no database answers' }, () => {
   const suffix = randomUUID().slice(0, 8)
   const org = `org-chief-${suffix}`
   const people = ['ada', 'bob'] as const
@@ -126,8 +128,18 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     await prisma.user.deleteMany({ where: { id: { in: people.map(user) } } })
   })
 
-  const setMember = (data: { chiefAnswers?: boolean; chiefAuto?: string[] }, p: Person = 'ada') =>
-    prisma.member.update({ where: { id: member(p) }, data })
+  const setMember = (
+    data: {
+      chiefPass?: boolean
+      chiefRules?: string | null
+      chiefRulesRefused?: string[]
+      timezone?: string | null
+    },
+    p: Person = 'ada',
+  ) => prisma.member.update({ where: { id: member(p) }, data })
+
+  /** Ada's rules, by which Chief answers her teammates' next steps. */
+  const RULES = '- Admin work: go ahead on next steps of what I asked for'
 
   /** A thread Ada started with Riley on the cloud computer: her request. */
   async function thread() {
@@ -212,20 +224,49 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     return card
   }
 
-  const ended = (id: string) =>
-    chiefAnswers.noteChiefAsks({ id, organizationId: org, workspaceId }, true)
+  type Made = {
+    pass: { id: string }
+    child: {
+      id: string
+      startedByMemberId: string
+      chiefPassId: string | null
+      organizationId: string
+      workspaceId: string
+    }
+    item: number
+    decision?: { id: string }
+  }
 
-  /** A decision Chief is making on the thread's question, with its decision thread, made here. */
-  async function pending(sessionId: string, askSeq: number, replies = ['Build it', 'Not yet']) {
+  /**
+   * Ada's pass, at work on this card: its thread, quiet, where Chief answers it as item 1. Her
+   * rules and pass on, as an answer needs them.
+   */
+  async function pending(
+    sessionId: string,
+    askSeq: number,
+    replies = ['Build it', 'Not yet'],
+  ): Promise<Made> {
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const childSessionId = `c${randomUUID().replace(/-/g, '').slice(0, 24)}`
-    const decision = await db.chiefDecision.create({
+    const pass = await db.chiefPass.create({
       data: {
-        sessionId,
         memberId: member('ada'),
-        teammateId: riley,
-        askSeq,
-        options: replies.map((r) => ({ label: r, message: r })),
-        childSessionId,
+        day: `day-${randomUUID().slice(0, 8)}`,
+        sessionId: childSessionId,
+        items: [
+          {
+            kind: 'question',
+            n: 1,
+            title: 'Admin page',
+            sessionId,
+            teammate: 'Riley',
+            teammateId: riley,
+            askSeq,
+            options: replies.map((r) => ({ label: r, message: r })),
+            question: 'The migration is ready. Shall I build the admin page too?',
+            cardQuestion: null,
+          },
+        ],
       },
     } as never)
     const child = await db.session.create({
@@ -233,38 +274,45 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
         id: childSessionId,
         teammateId: chief,
         startedByMemberId: member('ada'),
+        askedByMemberId: member('ada'),
         computerId: cloud,
         accountId: account,
-        title: 'Chief’s decision',
+        title: 'Chief’s pass',
         status: 'running',
-        origin: 'child',
-        parentId: sessionId,
-        parentTeammateId: riley,
-        chiefDecisionId: decision.id,
+        quiet: true,
+        chiefPassId: pass.id,
       } as never,
     })
     await db.threadTeammate.create({ data: { sessionId: child.id, teammateId: chief } as never })
-    return { decision, child }
+    return { pass, child, item: 1 }
   }
 
+  /** Chief answers its pass's question in Ada's name (chief_answer): the answer, by its number. */
   const decide = async (
-    made: Awaited<ReturnType<typeof pending>>,
-    op: Partial<{
-      verdict: string
-      option: number
-      kind: string
-      reason: string
-      basis: string
-      parked: string
-    }>,
-  ) =>
-    (await chiefAnswers.handleChiefCall(db, scope, made.child, { id: chief, kind: 'chief' }, {
-      name: 'chief_decide',
-      verdict: 'answer',
-      kind: 'next_step',
-      reason: 'It serves this week’s launch, and it is a pull request.',
-      ...op,
-    } as never)) as { status?: string; recorded?: boolean; error?: string }
+    made: Made,
+    op: Partial<{ option: number; reason: string; rule: string; item: number }>,
+  ) => {
+    const output = (await chiefPass.handleChiefCall(
+      db,
+      scope,
+      made.child,
+      { id: chief, kind: 'chief' },
+      {
+        name: 'chief_answer',
+        item: made.item,
+        option: 1,
+        reason: 'It serves this week’s launch, and it is a pull request.',
+        rule: 'Admin work: go ahead on next steps of what I asked for',
+        ...op,
+      } as never,
+    )) as { status?: string; decisionId?: string | null; error?: string }
+    if (output.decisionId) made.decision = { id: output.decisionId }
+    return output
+  }
+
+  /** Chief's latest answer in a thread, made or on its way. */
+  const decisionOf = (sessionId: string) =>
+    db.chiefDecision.findFirstOrThrow({ where: { sessionId }, orderBy: { createdAt: 'desc' } })
 
   const row = (id: string) => db.chiefDecision.findFirstOrThrow({ where: { id } })
 
@@ -310,311 +358,563 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     })
   }
 
-  test('off, nothing starts; on, Chief reads the question in a decision thread with no App', async () => {
-    const { loadThread, specFor } = await import('../src/thread-spec.js')
+  test('rules reach the teammates working for their person, and nowhere else', async () => {
+    const { specFor, loadThread } = await import('../src/thread-spec.js')
+    const spec = async (id: string) => specFor(db, await loadThread(db, id))
+    await setMember({ chiefRules: null, chiefPass: false })
+    const id = await thread()
+    // None: as before.
+    let s = await spec(id)
+    assert.equal(s.rules ?? null, null)
+    assert.equal(s.chiefAnswers, false)
+    await setMember({ chiefRules: `  ${RULES}  ` })
+    s = await spec(id)
+    assert.deepEqual(s.rules, { person: 'Ada', text: RULES })
+    // With her pass on, her teammates are told what Chief's answers are, in her own threads.
+    assert.equal(s.chiefAnswers, false)
+    await setMember({ chiefPass: true })
+    assert.equal((await spec(id)).chiefAnswers, true)
+    // A thread Bob asks in too: whose rules would they be?
+    await db.session.updateMany({ where: { id }, data: { askedByMemberId: '*' } })
+    s = await spec(id)
+    assert.equal(s.rules ?? null, null)
+    assert.equal(s.chiefAnswers, false)
+    // Bob's own thread: Ada's rules are not his.
+    await db.session.updateMany({
+      where: { id },
+      data: { askedByMemberId: member('bob'), startedByMemberId: member('bob') },
+    })
+    assert.equal((await spec(id)).rules ?? null, null)
+  })
+
+  test('a person keeps their rules, turns their pass on in their timezone, and takes or refuses a proposed rule', async () => {
+    await setMember({ chiefRules: null, chiefPass: false, chiefRulesRefused: [], timezone: null })
+    const ada = { ...scope, memberId: member('ada') }
+    let settings = await chiefRules.setChief(db, ada, {
+      pass: true,
+      rules: '- Go ahead on fixes',
+      timezone: 'Europe/Paris',
+    })
+    assert.deepEqual(settings, {
+      pass: true,
+      rules: '- Go ahead on fixes',
+      timezone: 'Europe/Paris',
+      hour: contracts.CHIEF_PASS_HOUR,
+    })
+    await assert.rejects(
+      chiefRules.setChief(db, ada, { timezone: 'Mars/Olympus' }),
+      /Unknown timezone/,
+    )
+    settings = await chiefRules.decideRule(db, ada, {
+      line: 'Copy changes: just do them',
+      add: true,
+    })
+    assert.equal(settings.rules, '- Go ahead on fixes\n- Copy changes: just do them')
+    // Taken twice, kept once.
+    settings = await chiefRules.decideRule(db, ada, {
+      line: 'copy changes:  just do them',
+      add: true,
+    })
+    assert.equal(settings.rules, '- Go ahead on fixes\n- Copy changes: just do them')
+    await chiefRules.decideRule(db, ada, { line: 'Never ask about tests', add: false })
+    const row = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
+    assert.deepEqual(row.chiefRulesRefused, ['Never ask about tests'])
+    assert.equal(chiefRules.ruleState(row, 'Never ask about tests'), 'refused')
+    assert.equal(chiefRules.ruleState(row, '- Copy changes: just do them'), 'added')
+    assert.equal(chiefRules.ruleState(row, 'Something new'), 'proposed')
+    // Cleared: none.
+    settings = await chiefRules.setChief(db, ada, { rules: '   ', pass: false })
+    assert.equal(settings.rules, '')
+    assert.equal(settings.pass, false)
+  })
+
+  test('Chief writes a person’s rules with them in their thread, and nowhere else', async () => {
+    await setMember({ chiefRules: null })
+    const own = await db.session.create({
+      data: {
+        teammateId: chief,
+        startedByMemberId: member('ada'),
+        askedByMemberId: member('ada'),
+        computerId: cloud,
+        accountId: account,
+        title: 'My rules',
+        status: 'idle',
+      } as never,
+    })
+    const write = (session: typeof own, teammate = { id: chief, kind: 'chief' }) =>
+      chiefPass.handleChiefCall(db, scope, session, teammate, {
+        name: 'chief_rules',
+        rules: '- Go ahead on fixes',
+      } as never) as Promise<{ ok?: boolean; error?: string }>
+    assert.match((await write(own, { id: riley, kind: 'teammate' })).error ?? '', /Only Chief/)
+    assert.equal((await write(own)).ok, true)
+    const ada = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
+    assert.equal(ada.chiefRules, '- Go ahead on fixes')
+    // A thread several people ask in, or a pass: not there.
+    const shared = await db.session.update({
+      where: { id: own.id },
+      data: { askedByMemberId: '*' },
+    })
+    assert.match((await write(shared)).error ?? '', /not one person/)
+    const made = await pending(await thread(), 1)
+    assert.match((await write(made.child as never)).error ?? '', /Not in a pass/)
+  })
+
+  test('a pass runs once a day in the person’s morning, only when something waits on them, out of every list', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES, timezone: 'Europe/Paris' })
+    await setMember({ chiefPass: false }, 'bob')
+    const at = (d: string, hour: number) =>
+      new Date(`${d}T${String(hour).padStart(2, '0')}:30:00+01:00`)
+    const passesOn = async (day: string) =>
+      (await db.chiefPass.findMany({ where: { memberId: member('ada') } })).filter(
+        (p) => p.day === day,
+      )
+    // The passes of the tests before: over, so only her morning makes this workspace due.
+    await db.chiefPass.updateMany({ where: { status: 'running' }, data: { status: 'done' } })
+    // Her threads so far are long quiet by then: nothing of theirs waits.
+    await db.session.updateMany({
+      where: { startedByMemberId: member('ada') },
+      data: { updatedAt: new Date('2031-01-01') },
+    })
+    // 06:30 in Paris: not yet.
+    assert.ok(!(await chiefPass.duePasses(at('2031-03-03', 6))).includes(workspaceId))
+    // 07:30: due, and nothing waits: idle, no turn spent.
+    const morning = at('2031-03-03', 7)
+    assert.ok((await chiefPass.duePasses(morning)).includes(workspaceId))
+    await chiefPass.runDuePasses(workspaceId, morning)
+    let mine = await passesOn('2031-03-03')
+    assert.equal(mine.length, 1)
+    assert.equal(mine[0]!.status, 'idle')
+    assert.equal(await db.session.count({ where: { id: mine[0]!.sessionId! } }), 0)
+    // Once a day.
+    await chiefPass.runDuePasses(workspaceId, at('2031-03-03', 11))
+    assert.equal((await passesOn('2031-03-03')).length, 1)
+    // The next day a question waits: Chief's thread starts with its brief, quiet.
     const id = await thread()
     const card = await asks(id)
-    await setMember({ chiefAnswers: false })
-    await ended(id)
-    assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 0)
-    // Off, the spec says nothing of it either.
-    assert.equal(
-      (await specFor(db, await loadThread(db, id), { teammate: undefined })).chiefAnswers,
-      false,
-    )
-
-    await setMember({ chiefAnswers: true })
+    const next = at('2031-03-04', 8)
+    await db.session.updateMany({ where: { id }, data: { updatedAt: next } })
     const conn = await runner()
     try {
-      await ended(id)
-      const decision = await db.chiefDecision.findFirstOrThrow({ where: { sessionId: id } })
-      assert.equal(decision.askSeq, card)
-      assert.equal(decision.teammateId, riley)
-      assert.equal(decision.memberId, member('ada'))
-      assert.deepEqual(decision.options, [
-        { label: 'Build it', message: 'Build it' },
-        { label: 'Not yet', message: 'Not yet' },
-      ])
-      await until(
-        () =>
-          conn.sent.some(
-            (m) =>
-              m.type === 'thread.prompt' &&
-              (m.thread as { decision?: { id: string } })?.decision?.id === decision.id,
-          ),
-        "Chief's decision thread on the runner",
-      )
-      const prompt = conn.sent.find(
-        (m) => m.type === 'thread.prompt' && (m.thread as { decision?: unknown }).decision,
-      )!
-      assert.match(prompt.text as string, /^Decide for the person: /)
-      assert.match(prompt.text as string, /## The answers it offers\n1\. Build it\n2\. Not yet/)
-      assert.match(prompt.text as string, /Add the migration for the admin page\./)
-      assert.equal(prompt.memberId, null)
-      // Its thread: a sub-thread of Chief's, shown as the decision, with no App and nobody to bring in.
-      const child = await loadThread(db, decision.childSessionId)
-      assert.equal(child.parentId, id)
-      assert.equal(child.teammateId, chief)
-      assert.equal(child.chiefDecisionId, decision.id)
-      const spec = await specFor(db, child)
-      assert.deepEqual(spec.connectors, [])
-      assert.deepEqual(spec.roster, [])
-      assert.equal(spec.decision?.id, decision.id)
-      assert.equal(spec.git, undefined)
-      // The teammate's own spec, now: it is told what Chief's answers are.
-      assert.equal((await specFor(db, await loadThread(db, id))).chiefAnswers, true)
-      // The same end noted again: one decision.
-      await ended(id)
-      assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 1)
-      // The thread shows it on its question, not among its sub-threads.
-      const view = (await (await call('ada', `/${id}`)).json()) as {
-        children: { id: string }[]
-        chiefDecisions: { id: string; status: string; askSeq: number }[]
-      }
-      assert.deepEqual(view.children, [])
+      await chiefPass.runDuePasses(workspaceId, next)
+      mine = await passesOn('2031-03-04')
+      assert.equal(mine.length, 1)
+      assert.equal(mine[0]!.status, 'running')
+      const items = mine[0]!.items as { kind: string; sessionId: string; askSeq: number }[]
       assert.deepEqual(
-        view.chiefDecisions.map((d) => [d.id, d.status, d.askSeq]),
-        [[decision.id, 'pending', card]],
+        items.map((i) => [i.kind, i.sessionId, i.askSeq]),
+        [['question', id, card]],
       )
+      const passThread = await db.session.findFirstOrThrow({ where: { id: mine[0]!.sessionId! } })
+      assert.equal(passThread.quiet, true)
+      assert.equal(passThread.chiefPassId, mine[0]!.id)
+      assert.equal(passThread.teammateId, chief)
+      const ofPass = (m: Sent) =>
+        m.type === 'thread.prompt' &&
+        (m.thread as { sessionId: string }).sessionId === passThread.id
+      await until(() => conn.sent.some(ofPass), 'the pass on the runner')
+      const prompt = conn.sent.find(ofPass)!
+      const brief = prompt.text as string
+      assert.ok(contracts.isChiefPassBrief(brief))
+      assert.match(brief, /## Ada's rules\n- Admin work: go ahead on next steps/)
+      assert.match(brief, /1\. ".+": Riley \w+ ended its reply on a question\./)
+      assert.match(brief, /Answers: 1\) Build it {2}2\) Not yet/)
+      const spec = prompt.thread as { pass?: { id: string }; connectors: unknown[] }
+      assert.deepEqual(spec.pass, { id: mine[0]!.id })
+      assert.deepEqual(spec.connectors, [])
+      // In no list.
+      as = 'ada'
+      const listed = (await (await app.request('/api/threads')).json()) as { id: string }[]
+      assert.ok(!listed.some((t) => t.id === passThread.id))
     } finally {
       conn.close()
     }
   })
 
-  test('no decision for Chief’s own question, one already answered, or a thread another asks in', async () => {
-    await setMember({ chiefAnswers: true })
+  test('what waits on the person: their open questions and failures, not Chief’s own, another’s, or one answered', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES })
+    // Hers, open.
+    const open = await thread()
+    const card = await asks(open)
+    // Chief's own question: hers to answer.
     const own = await thread()
-    await db.threadTeammate.create({ data: { sessionId: own, teammateId: chief } as never })
     await asks(own, ['Yes', 'No'], { teammateId: chief })
-    await ended(own)
-    const answered = await thread()
-    await asks(answered)
-    await person(answered, 'Build it')
-    await ended(answered)
+    // Answered by an earlier pass already.
+    const done = await thread()
+    const doneCard = await asks(done)
+    await db.chiefDecision.create({
+      data: {
+        sessionId: done,
+        memberId: member('ada'),
+        teammateId: riley,
+        askSeq: doneCard,
+        options: [],
+        status: 'answered',
+      },
+    } as never)
+    // Bob asks in this one too.
     const shared = await thread()
     await asks(shared)
     await db.session.updateMany({ where: { id: shared }, data: { askedByMemberId: '*' } })
-    await ended(shared)
-    assert.equal(
-      await db.chiefDecision.count({ where: { sessionId: { in: [own, answered, shared] } } }),
-      0,
-    )
-  })
-
-  test('its pick shows as a suggestion, and the person’s own pick measures it', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: [] })
-    const id = await thread()
-    const card = await asks(id)
-    const made = await pending(id, card)
-    assert.equal(
-      (await decide(made, { option: 1, basis: 'This week: the launch.' })).status,
-      'suggested',
-    )
-    const d = await row(made.decision.id)
-    assert.equal(d.verdict, 'answer')
-    assert.equal(d.kind, 'next_step')
-    assert.equal(d.optionIndex, 0)
-    // Nothing reached the teammate.
-    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
-    // Deciding twice changes nothing.
-    assert.equal((await decide(made, { option: 2 })).recorded, false)
-    const views = await chiefAnswers.threadDecisions(db, id)
-    assert.equal(views[0]!.option?.label, 'Build it')
-    assert.equal(views[0]!.basis, 'This week: the launch.')
-    // Ada takes it.
-    const seq = await person(id, 'Build it')
-    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
-      { seq, event: { type: 'message.user', memberId: member('ada'), text: 'Build it' } },
-    ])
-    assert.equal((await row(made.decision.id)).outcome, 'agreed')
-
-    // Another question, another pick: not agreed.
-    const next = await asks(id)
-    const other = await pending(id, next)
-    await decide(other, { option: 1 })
-    const then = await person(id, 'Not yet')
-    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
-      { seq: then, event: { type: 'message.user', memberId: member('ada'), text: 'Not yet' } },
-    ])
-    assert.equal((await row(other.decision.id)).outcome, 'disagreed')
-  })
-
-  test('a choice it would pick is taken by the same click', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: [] })
-    const id = await thread()
-    const card = await asks(id, ['A · Bold', 'B · Calm'], { choices: true })
-    const made = await pending(id, card, [])
-    await db.chiefDecision.updateMany({
-      where: { id: made.decision.id },
-      data: {
-        options: ['A · Bold', 'B · Calm'].map((label) => ({
-          label,
-          message: contracts.choiceMessage({ label }),
-        })),
-      },
+    // Failed on an error.
+    const failed = await thread()
+    await say(failed, { type: 'turn.started', teammateId: riley, accountId: account })
+    await say(failed, { type: 'error', message: 'Request timed out' })
+    await db.session.updateMany({ where: { id: failed }, data: { status: 'failed' } })
+    const now = new Date()
+    await db.session.updateMany({
+      where: { id: { in: [open, own, done, shared, failed] } },
+      data: { updatedAt: now },
     })
-    await decide(made, { option: 2, kind: 'approach' })
-    const seq = await person(id, 'Go with B · Calm')
-    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
-      { seq, event: { type: 'message.user', memberId: member('ada'), text: 'Go with B · Calm' } },
-    ])
-    assert.equal((await row(made.decision.id)).outcome, 'agreed')
+    const items = await chiefPass.passItems(db, member('ada'), new Date(now.getTime() + 1000))
+    const of = (kind: string) => items.filter((i) => i.kind === kind).map((i) => i.sessionId)
+    assert.ok(of('question').includes(open))
+    assert.ok(!of('question').includes(own))
+    assert.ok(!of('question').includes(done))
+    assert.ok(!of('question').includes(shared))
+    assert.ok(of('failed').includes(failed))
+    const question = items.find((i) => i.sessionId === open)!
+    assert.equal(question.kind === 'question' && question.askSeq, card)
+    // Numbered from 1, in order.
+    assert.deepEqual(
+      items.map((i) => i.n),
+      items.map((_, k) => k + 1),
+    )
   })
 
-  test('left to the person, or moot once they answered first', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+  /** The card a thread's last turn ended on, by its seq. */
+  async function cardOf(sessionId: string) {
+    const ask = await chiefAnswers.openAsk(
+      db,
+      await db.session.findFirstOrThrow({ where: { id: sessionId } }),
+    )
+    return ask!.seq
+  }
+
+  /** Chief's call in its pass, as its tools send it. */
+  const passCall = (made: Made, op: object) =>
+    chiefPass.handleChiefCall(
+      db,
+      scope,
+      made.child,
+      { id: chief, kind: 'chief' },
+      op as never,
+    ) as Promise<{ ok?: boolean; error?: string; status?: string }>
+
+  test('Chief answers only by the person’s rules, never a design, only questions of its brief, until it reports', async () => {
     const id = await thread()
     const made = await pending(id, await asks(id))
+    const question = (options: object[]) => ({
+      kind: 'question',
+      n: 1,
+      title: 'Admin page',
+      sessionId: id,
+      teammate: 'Riley',
+      teammateId: riley,
+      askSeq: 0,
+      options,
+      question: 'Which card?',
+      cardQuestion: null,
+    })
+    const card = await cardOf(id)
+    await db.chiefPass.updateMany({
+      where: { id: made.pass.id },
+      data: {
+        items: [
+          {
+            ...question([
+              { label: 'A · Bold', message: 'Go with A · Bold', design: true },
+              { label: 'B · Calm', message: 'Go with B · Calm', design: true },
+            ]),
+            askSeq: card,
+          },
+          {
+            kind: 'ticket',
+            n: 2,
+            title: 'Admin page',
+            sessionId: id,
+            ticket: 'Approve',
+            type: 'approval',
+          },
+        ],
+      },
+    })
+    // A design is theirs.
+    assert.match((await decide(made, { option: 1 })).error ?? '', /design is theirs/)
+    assert.match((await decide(made, { item: 2 })).error ?? '', /no question/)
+    assert.match((await decide(made, { item: 9 })).error ?? '', /no question/)
+    assert.match((await decide(made, { option: 3 })).error ?? '', /has 2 answers/)
+    // With no rules, nothing in their name.
+    await setMember({ chiefRules: null })
+    await db.chiefPass.updateMany({
+      where: { id: made.pass.id },
+      data: {
+        items: [
+          {
+            ...question([
+              { label: 'Build it', message: 'Build it' },
+              { label: 'Not yet', message: 'Not yet' },
+            ]),
+            askSeq: card,
+          },
+        ],
+      },
+    })
+    assert.match((await decide(made, { option: 1 })).error ?? '', /no rules/)
+    assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 0)
+    // Reported: over.
+    await setMember({ chiefRules: RULES })
     assert.equal(
-      (
-        await decide(made, {
-          verdict: 'escalate',
-          option: 2,
-          kind: 'taste',
-          reason: 'It is the look.',
-        })
-      ).status,
-      'escalated',
+      (await passCall(made, { name: 'chief_report', decisions: [], notes: [], rules: [] })).ok,
+      true,
     )
-    assert.equal((await row(made.decision.id)).optionIndex, 1)
-    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
-
-    const late = await pending(id, await asks(id))
-    await person(id, 'Not yet')
-    assert.equal((await decide(late, { option: 1 })).status, 'superseded')
-    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
-    // Answering needs an answer.
-    const third = await pending(id, await asks(id))
-    assert.match((await decide(third, { option: 3 })).error ?? '', /option is 1 to 2/)
-    assert.match((await decide(third, { option: undefined })).error ?? '', /Give option/)
+    assert.match((await decide(made, { option: 1 })).error ?? '', /pass is over/)
+    // A thread that is no pass: not here.
+    const plain = await db.session.findFirstOrThrow({ where: { id } })
+    const output = (await chiefPass.handleChiefCall(
+      db,
+      scope,
+      plain,
+      { id: chief, kind: 'chief' },
+      {
+        name: 'chief_answer',
+        item: 1,
+        option: 1,
+        reason: 'r',
+        rule: 'r',
+      } as never,
+    )) as { error?: string }
+    assert.match(output.error ?? '', /daily pass/)
   })
 
-  test('for a kind it may answer alone, the answer reaches the teammate in the person’s name', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+  test('a failed thread is tried again by the pass, and Today shows what it settled, left and proposes', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES, chiefRulesRefused: [] })
+    const failed = await thread()
+    await say(failed, { type: 'turn.started', teammateId: riley, accountId: account })
+    await say(failed, { type: 'error', message: 'Request timed out' })
+    await db.session.updateMany({ where: { id: failed }, data: { status: 'failed' } })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    const first = (await db.chiefPass.findFirstOrThrow({ where: { id: made.pass.id } }))
+      .items as object[]
+    await db.chiefPass.updateMany({
+      where: { id: made.pass.id },
+      data: {
+        items: [
+          ...first,
+          {
+            kind: 'failed',
+            n: 2,
+            title: 'Rollout',
+            sessionId: failed,
+            teammate: 'Riley',
+            error: 'Request timed out',
+          },
+          {
+            kind: 'pull',
+            n: 3,
+            title: 'Rollout',
+            sessionId: failed,
+            pull: 'acme/web#7: Rollout',
+            state: 'ready to merge',
+          },
+        ],
+        createdAt: new Date(),
+      },
+    })
+    const conn = await runner()
+    try {
+      assert.match(
+        (await passCall(made, { name: 'chief_retry', item: 1, reason: 'r' })).error ?? '',
+        /did not fail/,
+      )
+      assert.equal(
+        (
+          await passCall(made, {
+            name: 'chief_retry',
+            item: 2,
+            reason: 'A timeout, likely passing.',
+          })
+        ).ok,
+        true,
+      )
+      await until(
+        () =>
+          conn.sent.some(
+            (m) =>
+              m.type === 'thread.retry' && (m.thread as { sessionId: string }).sessionId === failed,
+          ),
+        'the retry on the runner',
+      )
+      assert.equal((await decide(made, { option: 1 })).status, 'answered')
+      assert.match(
+        (
+          await passCall(made, {
+            name: 'chief_report',
+            decisions: [{ item: 9, recommendation: 'x' }],
+            notes: [],
+            rules: [],
+          })
+        ).error ?? '',
+        /No item 9/,
+      )
+      assert.equal(
+        (
+          await passCall(made, {
+            name: 'chief_report',
+            decisions: [{ item: 3, recommendation: 'Merge it: reviewed and green.' }],
+            notes: [{ item: 2, text: 'It timed out twice this week.' }],
+            rules: [
+              { line: 'Timeouts: try again once', why: 'You retried each of the last three.' },
+            ],
+          })
+        ).ok,
+        true,
+      )
+      const view = (await chiefPass.passView(db, member('ada')))!
+      assert.equal(view.id, made.pass.id)
+      assert.equal(view.status, 'done')
+      assert.deepEqual(
+        view.settled.map((s) => [s.kind, s.thread?.id, s.what, s.status]),
+        [
+          ['answered', id, 'Build it', 'answered'],
+          ['retried', failed, 'Tried its turn again', null],
+        ],
+      )
+      assert.equal(view.settled[0]!.rule, 'Admin work: go ahead on next steps of what I asked for')
+      assert.deepEqual(
+        view.decisions.map((d) => [d.kind, d.thread?.id, d.recommendation, d.option, d.open]),
+        [['pull', failed, 'Merge it: reviewed and green.', null, false]],
+      )
+      assert.deepEqual(view.notes, [
+        { thread: { id: failed, title: 'Rollout' }, text: 'It timed out twice this week.' },
+      ])
+      assert.deepEqual(view.rules, [
+        {
+          line: 'Timeouts: try again once',
+          why: 'You retried each of the last three.',
+          state: 'proposed',
+        },
+      ])
+      await chiefRules.decideRule(
+        db,
+        { ...scope, memberId: member('ada') },
+        {
+          line: 'Timeouts: try again once',
+          add: true,
+        },
+      )
+      assert.equal((await chiefPass.passView(db, member('ada')))!.rules[0]!.state, 'added')
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('a question still open on Today carries Chief’s pick; one answered meanwhile does not', async () => {
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    await db.chiefPass.updateMany({ where: { id: made.pass.id }, data: { createdAt: new Date() } })
+    await passCall(made, {
+      name: 'chief_report',
+      decisions: [{ item: 1, recommendation: 'Build it: it is next.', option: 1 }],
+      notes: [],
+      rules: [],
+    })
+    let view = (await chiefPass.passView(db, member('ada')))!
+    assert.deepEqual(view.decisions[0]!.option, { label: 'Build it', message: 'Build it' })
+    assert.equal(view.decisions[0]!.open, true)
+    await person(id, 'Not yet')
+    view = (await chiefPass.passView(db, member('ada')))!
+    assert.equal(view.decisions[0]!.open, false)
+  })
+
+  test('a pass that ends without reporting, or runs too long, is over: what it did stays', async () => {
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    await chiefPass.notePassEvents(scope, { id: made.child.id, chiefPassId: made.pass.id }, [
+      { event: { type: 'turn.completed' } },
+    ])
+    assert.equal(
+      (await db.chiefPass.findFirstOrThrow({ where: { id: made.pass.id } })).status,
+      'failed',
+    )
+    // One that never started after a restart: over once it ran too long.
+    const stuck = await pending(id, 1)
+    await db.chiefPass.updateMany({
+      where: { id: stuck.pass.id },
+      data: { createdAt: new Date(Date.now() - 31 * 60_000) },
+    })
+    assert.ok((await chiefPass.duePasses()).includes(workspaceId))
+    await chiefPass.runDuePasses(workspaceId)
+    assert.equal(
+      (await db.chiefPass.findFirstOrThrow({ where: { id: stuck.pass.id } })).status,
+      'failed',
+    )
+  })
+
+  test('an answer reaches the teammate in the person’s name, by their rule', async () => {
     const id = await thread()
     const made = await pending(id, await asks(id))
     const conn = await runner()
     try {
       assert.equal(
-        (await decide(made, { option: 1, basis: 'This week: the launch.' })).status,
+        (await decide(made, { option: 1, rule: 'Admin work: go ahead on next steps' })).status,
         'answered',
       )
       const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
       assert.equal(wakeup.kind, 'report')
       assert.equal(wakeup.teammateId, riley)
-      assert.equal(wakeup.sourceId, `chief:${made.decision.id}`)
-      await until(
-        () =>
-          conn.sent.some(
-            (m) =>
-              m.type === 'thread.prompt' && contracts.chiefAnswerNote(m.text as string) !== null,
-          ),
-        'the answer on the runner',
-      )
-      const prompt = conn.sent.find(
-        (m) => m.type === 'thread.prompt' && contracts.chiefAnswerNote(m.text as string),
-      )!
+      assert.equal(wakeup.sourceId, `chief:${made.decision!.id}`)
+      const answerHere = (m: Sent) =>
+        m.type === 'thread.prompt' &&
+        (m.thread as { sessionId?: string }).sessionId === id &&
+        contracts.chiefAnswerNote(m.text as string) !== null
+      await until(() => conn.sent.some(answerHere), 'the answer on the runner')
+      const prompt = conn.sent.find(answerHere)!
       assert.equal(prompt.memberId, null)
       assert.deepEqual(contracts.chiefAnswerNote(prompt.text as string), {
         answer: 'Build it',
         reason: 'It serves this week’s launch, and it is a pull request.',
-        basis: 'This week: the launch.',
-        decisionId: made.decision.id,
+        basis: 'Admin work: go ahead on next steps',
+        decisionId: made.decision!.id,
       })
+      const decision = await row(made.decision!.id)
+      assert.equal(decision.passId, made.pass.id)
+      assert.equal(decision.childSessionId, null)
+      // The same card again: as it stands, once.
+      assert.equal((await decide(made, { option: 2 })).status, 'answered')
+      assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 1)
     } finally {
       conn.close()
     }
   })
 
-  test('a parked proposal goes to the person’s list once answered', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['priority'] })
+  test('moot once the person answered first', async () => {
     const id = await thread()
-    const made = await pending(id, await asks(id))
-    const conn = await runner()
-    try {
-      assert.equal(
-        (
-          await decide(made, {
-            verdict: 'park',
-            option: 2,
-            kind: 'priority',
-            parked: 'An admin page',
-          })
-        ).status,
-        'answered',
-      )
-    } finally {
-      conn.close()
-    }
-    const list = await db.document.findFirst({
-      where: { kind: 'library', path: contracts.PARKED_PATH, deletedAt: null },
-    })
-    assert.ok(list, 'chief/parked.md made')
-    const items = await db.listItem.findMany({ where: { documentId: list!.id } })
-    assert.equal(items.length, 1)
-    assert.match(items[0]!.text, /^An admin page \(from “Admin page/)
+    const late = await pending(id, await asks(id))
+    await person(id, 'Not yet')
+    assert.equal((await decide(late, { option: 1 })).status, 'superseded')
+    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
   })
 
   test('after three answers in a row, the question is the person’s', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
     const id = await thread()
     const card = await asks(id)
     // Three answers of Chief's on questions since Ada last wrote.
-    for (let i = 1; i <= contracts.CHIEF_ANSWERS_IN_A_ROW; i++) {
-      const made = await pending(id, card + 1000 + i)
-      await db.chiefDecision.updateMany({
-        where: { id: made.decision.id },
-        data: { status: 'answered' },
-      })
-    }
-    const fourth = await pending(id, card + 2000)
-    assert.equal((await decide(fourth, { option: 1 })).status, 'suggested')
-    // Nor does a new decision start.
-    const before = await db.chiefDecision.count({ where: { sessionId: id } })
-    await ended(id)
-    assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), before)
-  })
-
-  test('nine of ten picks taken: one ticket offers to let it answer that kind alone, the person’s to decide', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: [] })
-    const id = await thread()
-    for (let i = 0; i < contracts.CHIEF_PROMOTION.decisions; i++) {
-      const made = await pending(id, await asks(id))
-      await decide(made, { option: 1, kind: 'approach' })
-      const text = i === 3 ? 'Not yet' : 'Build it'
-      const seq = await person(id, text)
-      await chiefAnswers.noteChiefAnswered(
-        { id, organizationId: org, workspaceId, parentId: null },
-        [{ seq, event: { type: 'message.user', memberId: member('ada'), text } }],
-      )
-    }
-    const offers = await db.ticket.findMany({
-      where: { sessionId: id, type: 'approval', status: 'open' },
-    })
-    assert.equal(offers.length, 1)
-    assert.deepEqual((offers[0]!.payload as { chiefPromotion: unknown }).chiefPromotion, {
-      memberId: member('ada'),
-      kind: 'approach',
-      agreed: 9,
-      decided: 10,
-    })
-    const { resolveTicket } = await import('../src/decide.js')
-    const as = (p: Person) => ({
-      ...scope,
-      userId: user(p),
-      memberId: member(p),
-      role: p === 'ada' ? 'owner' : 'member',
-    })
-    await assert.rejects(resolveTicket(as('bob') as never, offers[0]!.id, { approved: true }), {
-      status: 403,
-    })
-    await resolveTicket(as('ada') as never, offers[0]!.id, { approved: true })
-    const ada = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
-    assert.deepEqual(ada.chiefAuto, ['approach'])
-    assert.equal(
-      (await db.ticket.findFirstOrThrow({ where: { id: offers[0]!.id } })).status,
-      'approved',
-    )
+    for (let i = 1; i <= contracts.CHIEF_ANSWERS_IN_A_ROW; i++)
+      await db.chiefDecision.create({
+        data: {
+          sessionId: id,
+          memberId: member('ada'),
+          teammateId: riley,
+          askSeq: card + 1000 + i,
+          options: [],
+          status: 'answered',
+        },
+      } as never)
+    const fourth = await pending(id, card)
+    assert.equal((await decide(fourth, { option: 1 })).status, 'escalated')
+    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
   })
 
   /** A Gmail account Riley may write to, its writes allowed without asking. */
@@ -659,7 +959,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
 
   /** Chief answered in the thread, in Ada's name: its work goes on Chief's word. */
   async function answered(id: string) {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const made = await pending(id, await asks(id))
     const conn = await runner()
     try {
@@ -828,7 +1128,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     const early = await person(id, 'An early word.')
     const made = await answered(id)
     const word = async () => (await db.session.findFirstOrThrow({ where: { id } })).chiefWordSeq
-    assert.equal(await word(), made.decision.askSeq)
+    assert.equal(await word(), (await row(made.decision!.id)).askSeq)
     // The early message's hook, run late: Chief's word after it stands.
     await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
       {
@@ -836,14 +1136,14 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
         event: { type: 'message.user', memberId: member('ada'), text: 'An early word.' },
       },
     ])
-    assert.equal(await word(), made.decision.askSeq)
+    assert.equal(await word(), (await row(made.decision!.id)).askSeq)
     // Ada wrote, then Chief's answer reached the teammate after her: it is on Chief's word from there.
     const said = await person(id, 'Wait.')
     const note = await say(id, {
       type: 'message.user',
       memberId: null,
       text: contracts.chiefAnswerMessage({
-        decisionId: made.decision.id,
+        decisionId: made.decision!.id,
         answer: 'Build it',
         reason: 'r',
       }),
@@ -856,7 +1156,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
           type: 'message.user',
           memberId: null,
           text: contracts.chiefAnswerMessage({
-            decisionId: made.decision.id,
+            decisionId: made.decision!.id,
             answer: 'Build it',
             reason: 'r',
           }),
@@ -874,7 +1174,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
 
   /** Chief answered on its own while Ada's computer was away: its wake-up waits, nothing kept. */
   async function answeredAway() {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const made = await pending(id, await asks(id))
     // Her Mac, not the cloud computer, which would keep the answer for when it starts.
@@ -977,7 +1277,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     // Its wake-up fires again: the answer is kept, then held on its way to the computer.
     const fire = await holding('runnerCommand', 'updateManyAndReturn', () => fireAgain(wakeup.id))
     try {
-      assert.ok((await row(made.decision.id)).sentAt)
+      assert.ok((await row(made.decision!.id)).sentAt)
       let through = false
       const ada = call('ada', `/${id}/messages`, { body: { text: 'Not yet' } }).then((r) => {
         through = true
@@ -991,7 +1291,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       assert.equal(response.status, 200, await response.clone().text())
       await fire.done
       assert.deepEqual(prompts(conn.sent, id), ['chief', 'Not yet'])
-      assert.equal((await row(made.decision.id)).status, 'answered')
+      assert.equal((await row(made.decision!.id)).status, 'answered')
     } finally {
       await fire.close()
       conn.close()
@@ -1009,7 +1309,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       assert.equal(response.status, 200, await response.clone().text())
       // Hers waits for nothing.
       assert.ok(Date.now() - started < 5000, `took ${Date.now() - started} ms`)
-      assert.equal((await row(made.decision.id)).status, 'superseded')
+      assert.equal((await row(made.decision!.id)).status, 'superseded')
       fire.release()
       await fire.done
       assert.deepEqual(prompts(conn.sent, id), ['Not yet'])
@@ -1024,8 +1324,8 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     }
   })
 
-  test('the person’s word settles a decision being made, and an answer made while it was on its way', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+  test('the person’s word comes first, and an answer made while it was on its way never goes', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const made = await pending(id, await asks(id))
     const conn = await runner()
@@ -1036,22 +1336,21 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     // …while Chief answers, its answer held before it is kept too.
     const chief = await holding('account', 'findMany', () => decide(made, { option: 1 }))
     try {
-      assert.equal((await row(made.decision.id)).status, 'answered')
+      assert.equal((await decisionOf(id)).status, 'answered')
       ada.release()
       const response = (await ada.done) as Response
       assert.equal(response.status, 200, await response.clone().text())
-      assert.equal((await row(made.decision.id)).status, 'superseded')
+      assert.equal((await decisionOf(id)).status, 'superseded')
       chief.release()
       await chief.done
       assert.deepEqual(prompts(conn.sent, id), ['Not yet'])
 
-      // Her word kept while Chief still decides: the decision is moot, and makes nothing.
+      // Her word kept while the pass still reads: its answer then is moot, and makes nothing.
       const next = await pending(id, await asks(id))
       const res = await call('ada', `/${id}/messages`, { body: { text: 'Stop there' } })
       assert.equal(res.status, 200, await res.clone().text())
-      assert.equal((await row(next.decision.id)).status, 'superseded')
-      assert.equal((await decide(next, { option: 1 })).recorded, false)
-      assert.equal(await db.wakeup.count({ where: { sourceId: `chief:${next.decision.id}` } }), 0)
+      await decide(next, { option: 1 })
+      assert.equal((await row(next.decision!.id)).status, 'superseded')
       assert.deepEqual(prompts(conn.sent, id), ['Not yet', 'Stop there'])
     } finally {
       await ada.close()
@@ -1067,7 +1366,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     try {
       const takeover = await call('ada', `/${id}/takeover`, { body: { interrupt: true } })
       assert.equal(takeover.status, 200, await takeover.clone().text())
-      assert.equal((await row(made.decision.id)).status, 'superseded')
+      assert.equal((await row(made.decision!.id)).status, 'superseded')
       const back = await call('ada', `/${id}/handback`, { body: { note: 'Not yet' } })
       assert.equal(back.status, 200, await back.clone().text())
       fire.release()
@@ -1080,7 +1379,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
   })
 
   test('a word of the person’s the computer has not taken yet comes first: an answer decided meanwhile never goes', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const conn = await runner()
     try {
@@ -1089,7 +1388,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       assert.equal(response.status, 200, await response.clone().text())
       const made = await pending(id, await asks(id))
       await decide(made, { option: 1 })
-      assert.equal((await row(made.decision.id)).status, 'superseded')
+      assert.equal((await row(made.decision!.id)).status, 'superseded')
       assert.deepEqual(prompts(conn.sent, id), ['Also add tests.'])
       // Taken: the next answer goes.
       await db.runnerCommand.updateMany({
@@ -1105,7 +1404,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
   })
 
   test('an answer kept while the computer was away, and not sent, is withdrawn by the person’s word', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const made = await pending(id, await asks(id))
     // The cloud computer is away (stopped, say): the answer is kept for when it is back.
@@ -1119,7 +1418,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       (await db.runnerCommand.findFirstOrThrow({ where: { id: kept.id } })).status,
       'expired',
     )
-    assert.equal((await row(made.decision.id)).status, 'superseded')
+    assert.equal((await row(made.decision!.id)).status, 'superseded')
     // Back, it gets her word alone.
     const conn = await runner()
     try {
@@ -1142,7 +1441,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     }
     const response = await call('ada', `/${id}/messages`, { body: { text: 'Not yet' } })
     assert.equal(response.status, 200, await response.clone().text())
-    assert.equal((await row(made.decision.id)).status, 'answered')
+    assert.equal((await row(made.decision!.id)).status, 'answered')
     const back = await runner()
     try {
       await until(() => prompts(back.sent, id).length > 1, 'both')
@@ -1197,7 +1496,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
         return true
       })
       assert.deepEqual(prompts(taken, id), ['chief', 'Not yet'])
-      assert.equal((await row(made.decision.id)).status, 'answered')
+      assert.equal((await row(made.decision!.id)).status, 'answered')
     } finally {
       await resend.close()
       await flush.close()
@@ -1212,7 +1511,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     try {
       await fireAgain(wakeup.id)
       assert.deepEqual(prompts(conn.sent, id), ['chief'])
-      assert.ok((await row(made.decision.id)).sentAt)
+      assert.ok((await row(made.decision!.id)).sentAt)
       // Stopped once it was kept, before its wake-up was settled: tried again, it goes once.
       await db.wakeup.updateMany({
         where: { id: wakeup.id },
@@ -1221,7 +1520,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       await fireAgain(wakeup.id)
       assert.deepEqual(prompts(conn.sent, id), ['chief'])
       assert.equal((await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status, 'fired')
-      assert.equal((await row(made.decision.id)).status, 'answered')
+      assert.equal((await row(made.decision!.id)).status, 'answered')
     } finally {
       conn.close()
     }
@@ -1298,7 +1597,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
   })
 
   test('an answer the person overtook while its computer was offline never goes', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const made = await pending(id, await asks(id))
     // Offline: Ada's Mac, not the cloud computer, which would start.
@@ -1314,11 +1613,11 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
           (await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status,
           'cancelled',
         )
-        assert.equal((await row(made.decision.id)).status, 'superseded')
+        assert.equal((await row(made.decision!.id)).status, 'superseded')
         // Fired anyway (a tick that read it before): it goes nowhere.
         await db.wakeup.updateMany({ where: { id: wakeup.id }, data: { status: 'pending' } })
         await db.chiefDecision.updateMany({
-          where: { id: made.decision.id },
+          where: { id: made.decision!.id },
           data: { status: 'answered' },
         })
         const { fireNow } = await import('../src/wakeups.js')
@@ -1345,99 +1644,16 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
   })
 
   test('a card the person dismissed is not answered', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['approach'] })
+    await setMember({ chiefPass: true, chiefRules: RULES })
     const id = await thread()
     const labels = ['Sequential processing', 'Concurrent processing']
     const card = await asks(id, labels, { choices: true })
     const made = await pending(id, card, labels)
-    await db.chiefDecision.updateMany({
-      where: { id: made.decision.id },
-      data: {
-        options: labels.map((label) => ({ label, message: contracts.choiceMessage({ label }) })),
-      },
-    })
     const response = await call('ada', `/${id}/choices/dismiss`, { body: { seq: card } })
     assert.equal(response.status, 200, await response.clone().text())
-    assert.equal((await row(made.decision.id)).status, 'superseded')
-    // Its decision arriving after it: nothing goes.
-    await db.chiefDecision.updateMany({
-      where: { id: made.decision.id },
-      data: { status: 'pending' },
-    })
-    assert.equal((await decide(made, { option: 1, kind: 'approach' })).status, 'superseded')
+    // Its answer arriving after it: nothing goes.
+    assert.equal((await decide(made, { option: 1 })).status, 'superseded')
     assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
-  })
-
-  test('the brief has the card’s question and its options’ descriptions, and no mandate Chief may not read', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: [] })
-    const { saveLibraryFile } = await import('../src/library.js')
-    await saveLibraryFile(
-      db,
-      scope,
-      { type: 'member', id: member('ada') },
-      {
-        path: contracts.MANDATE_PATH,
-        bytes: new TextEncoder().encode('# Mandate\n\nThis week: MANDATE_SENTINEL_724\n'),
-      },
-    )
-    const prompts = async () => {
-      const id = await thread()
-      await person(id, 'Prepare the rollout.')
-      await say(id, { type: 'turn.started', teammateId: riley, accountId: account })
-      await say(id, {
-        type: 'message.done',
-        id: `m-${randomUUID()}`,
-        text: 'Here are the two routes.',
-      })
-      await say(id, {
-        type: 'tool.started',
-        toolCallId: `c-${randomUUID()}`,
-        toolName: 'offer_choices',
-        input: {
-          question: 'Where should I deploy the release?',
-          options: [
-            { id: 'a', label: 'Route A', description: 'Deploy to production now' },
-            { id: 'b', label: 'Route B', description: 'Deploy to staging only' },
-          ],
-        },
-      })
-      await say(id, { type: 'turn.completed', finishReason: 'stop' })
-      const conn = await runner()
-      try {
-        await ended(id)
-        await until(
-          () =>
-            conn.sent.some(
-              (m) =>
-                m.type === 'thread.prompt' &&
-                (m.thread as { parent?: { id: string } }).parent?.id === id,
-            ),
-          'the decision thread',
-        )
-        return conn.sent.find(
-          (m) =>
-            m.type === 'thread.prompt' &&
-            (m.thread as { parent?: { id: string } }).parent?.id === id,
-        )!.text as string
-      } finally {
-        conn.close()
-      }
-    }
-    const open = await prompts()
-    assert.match(open, /## The question\nWhere should I deploy the release\?/)
-    assert.match(open, /1\. Route A: Deploy to production now\n2\. Route B: Deploy to staging only/)
-    assert.match(open, /MANDATE_SENTINEL_724/)
-    // A person closes chief/ to Chief: its mandate stays out of the brief.
-    const folder = await db.libraryFolder.create({
-      data: { path: 'chief', restricted: true },
-    } as never)
-    try {
-      const closed = await prompts()
-      assert.ok(!closed.includes('MANDATE_SENTINEL_724'))
-      assert.match(closed, /\(None yet:/)
-    } finally {
-      await db.libraryFolder.deleteMany({ where: { id: folder.id } })
-    }
   })
 
   test('lists made at once by several calls keep every line, with nothing held open meanwhile', async () => {
@@ -1508,8 +1724,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     assert.match(text, /Second proposal/)
   })
 
-  test('marked wrong: the teammate is told, and the kind goes back to suggestions', async () => {
-    await setMember({ chiefAnswers: true, chiefAuto: ['next_step', 'approach'] })
+  test('marked wrong: the teammate is told to stop', async () => {
     const id = await thread()
     const made = await pending(id, await asks(id))
     const conn = await runner()
@@ -1517,14 +1732,12 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       await decide(made, { option: 1 })
       // Bob may not, in Ada's name.
       assert.equal(
-        (await call('bob', `/${id}/chief/${made.decision.id}/wrong`, { body: {} })).status,
+        (await call('bob', `/${id}/chief/${made.decision!.id}/wrong`, { body: {} })).status,
         403,
       )
-      const res = await call('ada', `/${id}/chief/${made.decision.id}/wrong`, { body: {} })
+      const res = await call('ada', `/${id}/chief/${made.decision!.id}/wrong`, { body: {} })
       assert.equal(res.status, 200, await res.clone().text())
-      assert.equal((await row(made.decision.id)).outcome, 'overruled')
-      const ada = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
-      assert.deepEqual(ada.chiefAuto, ['approach'])
+      assert.equal((await row(made.decision!.id)).outcome, 'overruled')
       await until(
         () =>
           conn.sent.some(
@@ -1535,29 +1748,11 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       )
       // Marked once: twice is the same.
       assert.equal(
-        (await call('ada', `/${id}/chief/${made.decision.id}/wrong`, { body: {} })).status,
+        (await call('ada', `/${id}/chief/${made.decision!.id}/wrong`, { body: {} })).status,
         200,
       )
-      // Its suggestions before count no more toward offering it again.
-      const trust = await chiefAnswers.trustOf(db, member('ada'), 'next_step')
-      assert.equal(trust.decided, 0)
     } finally {
       conn.close()
     }
-  })
-
-  test('its decision thread reports nothing: a decision not made fails, and nothing wakes the thread', async () => {
-    const { noteChildEvents } = await import('../src/children.js')
-    await setMember({ chiefAnswers: true, chiefAuto: [] })
-    const id = await thread()
-    const made = await pending(id, await asks(id))
-    await noteChildEvents({ ...made.child, organizationId: org, workspaceId }, [
-      { event: { type: 'turn.completed', at: new Date().toISOString() } },
-    ])
-    assert.equal((await row(made.decision.id)).status, 'failed')
-    const child = await db.session.findFirstOrThrow({ where: { id: made.child.id } })
-    assert.ok(child.reportDeliveredAt)
-    assert.equal((child.report as { status: string }).status, 'nothing')
-    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
   })
 })

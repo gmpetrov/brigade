@@ -92,8 +92,7 @@ async function duePairs(now: Date, workspaceId?: string) {
     where: { chiefPass: true },
     select: { id: true, organizationId: true, timezone: true },
   })
-  const pairs: { memberId: string; organizationId: string; workspaceId: string; day: string }[] =
-    []
+  const pairs: { memberId: string; organizationId: string; workspaceId: string; day: string }[] = []
   for (const member of members) {
     const { day, hour } = localDay(zoneOf(member), now)
     if (hour < CHIEF_PASS_HOUR) continue
@@ -351,6 +350,8 @@ export async function startPass(scope: Scope, memberId: string, day: string, now
       data: {
         memberId,
         day,
+        // By the clock the pass was due by: its time to settle counts from it.
+        createdAt: now,
         // Fixed now: started again after a restart, its thread is the same one.
         sessionId: `c${randomUUID().replace(/-/g, '').slice(0, 24)}`,
       } as never,
@@ -358,8 +359,7 @@ export async function startPass(scope: Scope, memberId: string, day: string, now
     })
   } catch (error) {
     // Claimed already, by another tick: one pass a day.
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
-      return null
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null
     throw error
   }
   const end = (status: 'failed' | 'idle') =>
@@ -464,7 +464,9 @@ const itemsOf = (value: unknown): Item[] =>
       })
     : []
 
-const retried = z.array(z.object({ kind: z.literal('retried'), item: z.number(), reason: z.string() }))
+const retried = z.array(
+  z.object({ kind: z.literal('retried'), item: z.number(), reason: z.string() }),
+)
 
 /** Chief's calls (its tools): a pass's chief_answer, chief_retry and chief_report; chief_rules elsewhere. */
 export async function handleChiefCall(
@@ -482,8 +484,7 @@ export async function handleChiefCall(
   if (op.name === 'chief_rules') {
     if (session.chiefPassId)
       return {
-        error:
-          'Not in a pass: propose rules in chief_report, and the person takes them on Today.',
+        error: 'Not in a pass: propose rules in chief_report, and the person takes them on Today.',
       }
     const asker = await askedBy(db, session.id)
     const person = asker === SEVERAL_ASKERS ? null : (asker ?? session.startedByMemberId)
@@ -503,6 +504,8 @@ export async function handleChiefCall(
       return { error: `Item ${op.item} is no question: only questions are answered.` }
     if (op.option > item.options.length)
       return { error: `Item ${op.item} has ${item.options.length} answers.` }
+    if (item.options[op.option - 1]!.design)
+      return { error: 'A design is theirs to pick, on its card: leave it to them.' }
     // Only by their own rules: with none, nothing is answered in their name.
     if (!(await personRules(db, pass.memberId))?.text)
       return { error: 'They have no rules yet: answer nothing in their name.' }
@@ -520,6 +523,7 @@ export async function handleChiefCall(
     })
     return {
       status: result.status,
+      decisionId: result.decisionId,
       next:
         result.status === 'answered'
           ? 'Your answer went to the teammate in their name.'
@@ -609,7 +613,7 @@ export async function passView(
     where: {
       memberId,
       status: { not: 'idle' },
-      createdAt: { gte: new Date(now.getTime() - SHOWN_FOR) },
+      createdAt: { gte: new Date(now.getTime() - SHOWN_FOR), lte: now },
     },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -689,4 +693,3 @@ export async function passView(
     })),
   }
 }
-

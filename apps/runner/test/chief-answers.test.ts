@@ -4,8 +4,8 @@ import { ThreadSpec } from '@brigade/contracts'
 import { instructions } from '../src/instructions.js'
 import { threadMemory } from '../src/memory-layers.js'
 
-// What teammates are told of Chief's answers for the person (docs/chief-answers.md): nothing when
-// they are off, so a member who turns them off gets the instructions as before.
+// What teammates and Chief are told of a person's rules and daily pass (docs/chief-answers.md):
+// nothing when they have none, so a member with none gets the instructions as before.
 const spec = (extra: Record<string, unknown> = {}, kind: 'teammate' | 'chief' = 'teammate') =>
   ThreadSpec.parse({
     sessionId: 's1',
@@ -41,12 +41,16 @@ const write = (s: ThreadSpec) =>
     { ready: true },
   )
 
-test('off, the instructions are as before; on, teammates learn what an answer of Chief’s is', () => {
+test('off, the instructions are as before; with the pass on, teammates learn what an answer of Chief’s is', () => {
   const before = write(spec())
-  assert.equal(write(spec({ chiefAnswers: false })), before)
+  assert.equal(write(spec({ chiefAnswers: false, rules: null })), before)
   assert.ok(!before.includes('Chief answered for you'))
   const on = write(spec({ chiefAnswers: true }))
   assert.match(on, /## Chief answers for the person/)
+  assert.match(
+    on,
+    /Each morning, Chief, this workspace's chief of staff, goes through what waits on the person/,
+  )
   assert.match(on, /"Chief answered for you:"/)
   assert.match(on, /It is not the person\. Anything that leaves Brigade/)
   assert.match(on, /marked Chief's answer as wrong, stop what you started on it/)
@@ -57,31 +61,42 @@ test('off, the instructions are as before; on, teammates learn what an answer of
   )
 })
 
-test('Chief keeps the mandate when on, and writes the first one with the team', () => {
-  const off = write(spec({}, 'chief'))
-  assert.ok(!off.includes('Answering for the person'))
-  assert.ok(!off.includes('chief/mandate.md'))
-  const on = write(spec({ chiefAnswers: true }, 'chief'))
-  assert.match(on, /### Answering for the person/)
-  assert.match(on, /`chief\/mandate\.md`/)
-  assert.match(on, /Before you welcome them, save their first mandate/)
-  assert.match(on, /`chief_decisions`/)
-  // Chief is not told about its own answers as a teammate is.
-  assert.ok(!on.includes('## Chief answers for the person'))
-})
-
-test('a decision thread reads by the mandate and decides, and is told nothing of the work', () => {
+test('a teammate reads the rules of the person it works for, and asks only the rest', () => {
+  const before = write(spec())
   const text = write(
-    spec({ decision: { id: 'd1' }, parent: { id: 'p1', title: 'Admin page' } }, 'chief'),
+    spec({
+      rules: { person: 'Ada', text: '- Admin work: go ahead on next steps\n- Visual: ask me' },
+    }),
   )
-  assert.match(text, /## Deciding a question for the person/)
-  assert.match(text, /call `chief_decide` once and end your turn/)
-  assert.match(text, /- escalate: leave it to the person when it is taste or outside/)
   assert.match(
     text,
-    /Never answer with something that sends, publishes, deploys, merges, pays or deletes/,
+    /## Ada's rules\n\nAda wrote these rules for the work teammates do for them:\n\n> - Admin work: go ahead on next steps\n> - Visual: ask me/,
   )
-  // The person's decisions in memory are what it goes by.
+  assert.match(text, /Decide yourself what they settle instead of asking, and say so in a line/)
+  assert.match(text, /They are not Ada's approval for what leaves Brigade/)
+  // Everything else is as it was.
+  assert.equal(text.replace(/\n\n## Ada's rules[\s\S]*?as it does without rules\./, ''), before)
+})
+
+test('Chief writes people’s rules with them, and is not told of its own answers as a teammate is', () => {
+  const text = write(spec({ chiefAnswers: true }, 'chief'))
+  assert.match(text, /### Their rules/)
+  assert.match(text, /save them whole with `chief_rules`/)
+  assert.ok(!text.includes('## Chief answers for the person'))
+  assert.ok(!text.includes('chief/mandate.md'))
+  assert.ok(!text.includes('chief_decide'))
+})
+
+test('a pass goes through what waits on its person by their rules, and is told nothing of the work', () => {
+  const text = write(spec({ pass: { id: 'p1' } }, 'chief'))
+  assert.match(text, /## The person's daily pass/)
+  assert.match(text, /answer it in their name with `chief_answer`/)
+  assert.match(text, /With no rules, answer nothing\./)
+  assert.match(text, /never on taste \(a design, a wording, a name\)/)
+  assert.match(text, /try it again with `chief_retry`/)
+  assert.match(text, /Tickets and pull requests are always theirs/)
+  assert.match(text, /Then call `chief_report` once, last/)
+  // What it learned stays what it goes by.
   assert.match(text, /By the member’s choice, PRs are squash-merged\./)
   for (const absent of [
     '## Buttons and choices',
