@@ -2069,8 +2069,8 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
     list_items: tool({
       description:
         'Read a list: the checklist lines of a Markdown file of the library, each ticked or not, with its id when ' +
-        'work is attached to it, and the threads and pull requests on it. Without a path: the items this thread ' +
-        'works on.',
+        'work is attached to it, the threads and pull requests on it, and the library paths of the files under it. ' +
+        'Without a path: the items this thread works on.',
       inputSchema: jsonSchema<{ path?: string }>({
         type: 'object',
         properties: {

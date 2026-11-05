@@ -207,3 +207,39 @@ test('a teammate knows a thread mention, and names a thread by the one search_wo
     /Name a thread in your reply by its mention \(`search_workspace` gives it with its summary\), never by its id alone\./,
   )
 })
+
+test('a thread’s list items come with the files under them, and a document’s files are found beside it', () => {
+  const spec = ThreadSpec.parse({
+    ...testSpec(''),
+    items: [
+      {
+        id: 'aaaaaaaaaaaaaaaa',
+        path: 'Projects/Brigade/launch.md',
+        text: 'Fix the dialog',
+        done: false,
+        files: ['Projects/Brigade/launch.md.files/cmshot/Screenshot 1.png'],
+      },
+      { id: 'bbbbbbbbbbbbbbbb', path: 'Projects/Brigade/launch.md', text: 'Pricing', done: true },
+    ],
+  })
+  const text = instructions(
+    spec,
+    threadMemory(spec, { workspace: '', teammate: '' }, '/threads/s1', now),
+    '/library',
+    {
+      ready: true,
+    },
+  )
+  assert.ok(
+    text.includes(
+      '- [ ] Fix the dialog (id `aaaaaaaaaaaaaaaa`, in Projects/Brigade/launch.md)\n' +
+        '  - File in the library: Projects/Brigade/launch.md.files/cmshot/Screenshot 1.png\n' +
+        '- [x] Pricing (id `bbbbbbbbbbbbbbbb`, in Projects/Brigade/launch.md)',
+    ),
+  )
+  assert.ok(
+    text.includes(
+      "A file put in a document, written `asset:<id>` in its text, is at /library/<the document's path>.files/<id>/<its name>.",
+    ),
+  )
+})

@@ -6,6 +6,7 @@
 import {
   chiefAnswerNote,
   chiefOverruledNote,
+  documentFileId,
   isChiefDecisionBrief,
   forPeople,
   fromTaskBrief,
@@ -22,6 +23,7 @@ import {
   CalendarClock,
   ChevronRight,
   Crown,
+  FileText,
   GitMerge,
   Info,
   ListTodo,
@@ -29,9 +31,14 @@ import {
   Zap,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useState } from 'react'
+import { MediaPreview } from '@/components/attachments'
 import { Raw } from '@/components/email-cards'
 import { Markdown } from '@/components/markdown'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Hint } from '@/components/ui/tooltip'
+import { documentFileUrl } from '@/lib/api'
+import { LIBRARY_IMAGE_FILE } from '@/lib/played-files'
 
 export type BrigadeNote = {
   icon: LucideIcon
@@ -43,6 +50,8 @@ export type BrigadeNote = {
   raw?: unknown
   /** An answer Chief gave in the person's name (docs/chief-answers.md): its decision. */
   chief?: { decisionId: string }
+  /** Files of the library's documents that went with it (a hand-off's), under the body when open. */
+  files?: { id: string; name: string }[]
 }
 
 /**
@@ -124,10 +133,16 @@ export function handOffNote(text: string): BrigadeNote | null {
   const handOff = handOffParts(text)
   if (!handOff) return null
   const count = handOff.items.length
+  // The files that went with the lines: in the library, beside the list (documentFilePath).
+  const files = (handOff.files ?? []).flatMap((path) => {
+    const id = documentFileId(path)
+    return id ? [{ id, name: path.split('/').pop() ?? path }] : []
+  })
   return {
     icon: ListTodo,
     label: `Handed over ${count} ${count > 1 ? 'items' : 'item'} of ${handOff.file.path.split('/').pop()}`,
     body: handOff.items.map((item) => `- ${item}`).join('\n'),
+    ...(files.length ? { files } : {}),
   }
 }
 
@@ -165,9 +180,51 @@ export function BrigadeNoteLine({ note, action }: { note: BrigadeNote; action?: 
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 flex flex-col gap-3 border-l-2 pl-4 text-foreground">
         <Markdown text={note.body} />
+        {note.files && <NoteFiles files={note.files} />}
         {note.raw !== undefined && <Raw value={note.raw} />}
         {action}
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+/** The files that went with a note: images as small pictures that open larger, others by name. */
+function NoteFiles({ files }: { files: NonNullable<BrigadeNote['files']> }) {
+  const [open, setOpen] = useState<{ name: string; src: string }>()
+  return (
+    <span className="flex flex-wrap items-start gap-2">
+      {files.map((f) => {
+        const src = documentFileUrl(`asset:${f.id}`)
+        return LIBRARY_IMAGE_FILE.test(f.name) ? (
+          <Hint key={f.id} label={`Preview ${f.name}`}>
+            <button
+              type="button"
+              aria-label={`Preview ${f.name}`}
+              onClick={() => setOpen({ name: f.name, src })}
+              className="block h-20 cursor-zoom-in overflow-hidden rounded-lg border bg-muted/40"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- a document's file through the API */}
+              <img src={src} alt={f.name} loading="lazy" className="block h-full w-auto" />
+            </button>
+          </Hint>
+        ) : (
+          <a
+            key={f.id}
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex max-w-64 items-center gap-1.5 rounded-lg border px-2 py-1 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <FileText aria-hidden className="size-3.5 shrink-0" />
+            <span className="truncate">{f.name}</span>
+          </a>
+        )
+      })}
+      <MediaPreview
+        media={open ? { ...open, kind: 'image' } : undefined}
+        onClose={() => setOpen(undefined)}
+        unavailable="This file can’t be shown: it is no longer in its document."
+      />
+    </span>
   )
 }

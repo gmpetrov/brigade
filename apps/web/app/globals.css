@@ -1116,6 +1116,16 @@
 .document-editor .bn-editor .bn-block-group .bn-block-group .bn-block-outer::before {
   display: none;
 }
+/* A file under a checklist line (docs/lists.md): small, as what goes with the line. */
+.document-editor
+  .bn-block-content[data-content-type='checkListItem']
+  ~ .bn-block-group
+  > .bn-block-outer
+  > .bn-block
+  > .bn-block-content[data-file-block]
+  .bn-file-block-content-wrapper {
+  max-width: 12rem;
+}
 .document-editor .bn-note {
   color: var(--muted-foreground);
   font-size: 0.9em;
