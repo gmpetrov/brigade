@@ -200,6 +200,9 @@ fn terminate(child: &mut Child) {
 
 pub struct Supervisor {
     status: Mutex<Status>,
+    /// Held through a link (picking its home, installing, linking, starting) and a switch:
+    /// one at a time, so neither runs for a workspace the other is changing.
+    changing: Mutex<()>,
     child: Mutex<Option<Child>>,
     wanted: AtomicBool,
     /// Increments on each start, so an old loop stops when a new one begins.
@@ -215,6 +218,7 @@ impl Supervisor {
     ) -> Arc<Self> {
         Arc::new(Self {
             status: Mutex::new(Status::Stopped),
+            changing: Mutex::new(()),
             child: Mutex::new(None),
             wanted: AtomicBool::new(false),
             generation: Mutex::new(0),
@@ -324,14 +328,21 @@ impl Supervisor {
         }
     }
 
-    /// Installs the runner with the API's script (Node.js too when needed), links the
-    /// workspace's home (`key`, see workspaces.rs) with a dashboard code, then runs it for
-    /// that workspace. Blocking: call from a thread.
-    pub fn connect(self: &Arc<Self>, api: &str, code: &str, key: &str) -> Result<(), String> {
+    /// Installs the runner with the API's script (Node.js too when needed), links the home
+    /// of the workspace the link names (`workspace`, see workspaces.rs) with a dashboard code,
+    /// then runs it for that workspace. Blocking: call from a thread.
+    pub fn connect(
+        self: &Arc<Self>,
+        api: &str,
+        code: &str,
+        workspace: Option<&str>,
+    ) -> Result<(), String> {
+        let _changing = self.changing.lock().unwrap_or_else(|e| e.into_inner());
+        let (key, created) = workspaces::home_for_link(workspace, api);
+        let key = key.as_str();
         self.stop();
         self.set(Status::Installing);
         let target = workspaces::home(key);
-        let created = !target.exists();
         let result = (|| {
             let installed = command("sh")
                 .and_then(|mut c| {
@@ -372,6 +383,7 @@ impl Supervisor {
     /// Runs the runner for another workspace linked here: the current one stops (its turns
     /// are saved, and carry on when it runs again), then the other's starts.
     pub fn switch(self: &Arc<Self>, key: &str) {
+        let _changing = self.changing.lock().unwrap_or_else(|e| e.into_inner());
         self.stop();
         workspaces::set_active(key);
         self.start();

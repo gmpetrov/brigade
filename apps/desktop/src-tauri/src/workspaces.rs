@@ -113,7 +113,8 @@ fn set_active_in(base: &Path, key: &str) {
 /// Where a link to the workspace `id` (when the link names it) on `api` goes, and whether
 /// that home is new: the workspace's own home when it is linked here already, so linking it
 /// again keeps its computer; without an id (a link from an older API), the active home, as
-/// Brigade.app did before; ~/.brigade while that is linked to nothing; else a new home.
+/// Brigade.app did before; ~/.brigade while that is linked to nothing; else a new home, made
+/// empty here. A new home that ends up not linked is the caller's to remove.
 fn home_for_link_in(base: &Path, id: Option<&str>, api: &str) -> (String, bool) {
     let api = api.trim_end_matches('/');
     let linked = all_in(base);
@@ -142,10 +143,14 @@ fn home_for_link_in(base: &Path, id: Option<&str>, api: &str) -> (String, bool) 
         } else {
             format!("w{stamp}-{n}")
         };
-        if !homes_dir(base).join(&key).exists() {
-            return (key, true);
+        // Made here, so two links at once never pick the same new home.
+        let _ = fs::create_dir_all(homes_dir(base));
+        match fs::create_dir(homes_dir(base).join(&key)) {
+            Ok(()) => return (key, true),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => n += 1,
+            // Not made: the link fails there, and nothing else is written.
+            Err(_) => return (key, true),
         }
-        n += 1;
     }
 }
 
@@ -241,6 +246,35 @@ mod tests {
         // The same workspace on another API is another workspace.
         let (_, new) = home_for_link_in(&base, Some("ws_a"), "https://other.test");
         assert!(new);
+    }
+
+    #[test]
+    fn links_at_once_get_homes_of_their_own() {
+        let base = temp();
+        link(
+            &base,
+            "Acme",
+            serde_json::json!({ "apiUrl": "https://api.test", "workspaceId": "ws_a" }),
+        );
+        let threads: Vec<_> = (0..8)
+            .map(|i| {
+                let base = base.clone();
+                std::thread::spawn(move || {
+                    home_for_link_in(&base, Some(&format!("ws_{i}")), "https://api.test")
+                })
+            })
+            .collect();
+        let mut keys: Vec<String> = threads
+            .into_iter()
+            .map(|t| {
+                let (key, new) = t.join().unwrap();
+                assert!(new && homes_dir(&base).join(&key).is_dir());
+                key
+            })
+            .collect();
+        keys.sort();
+        keys.dedup();
+        assert_eq!(keys.len(), 8);
     }
 
     #[test]

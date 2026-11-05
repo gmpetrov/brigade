@@ -248,9 +248,7 @@ fn open_link(app: &AppHandle, link: &Url) {
             return;
         }
         let supervisor = app.state::<Arc<Supervisor>>().inner().clone();
-        let api = api.trim_end_matches('/');
-        let (key, _) = workspaces::home_for_link(workspace_id.as_deref(), api);
-        match supervisor.connect(api, &code, &key) {
+        match supervisor.connect(api.trim_end_matches('/'), &code, workspace_id.as_deref()) {
             Ok(()) => {
                 let mut settings = load_settings();
                 if let Some(url) = dashboard_url
