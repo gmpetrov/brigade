@@ -95,6 +95,8 @@ export function ListGroupRow({
                   aria-hidden
                   // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
                   data-keeps-sidebar
+                  // Enter on the row does the same (sidebar-keys.tsx).
+                  data-nav-caret
                   className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
                   onClick={(e) => {
                     e.preventDefault()
