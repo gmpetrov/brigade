@@ -15,6 +15,7 @@ import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { HarnessLogo } from '@/components/harness-logo'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { UsageShare } from '@/components/usage-share'
 import { useApi } from '@/lib/api'
 
 const PERIODS: { days: UsagePeriod; label: string }[] = [
@@ -60,15 +61,18 @@ export default function UsagePage() {
           counts, never what was said.
           {usage.data?.scope === 'mine' && ' You see what your own accounts spent.'}
         </p>
-        <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as UsagePeriod)}>
-          <TabsList aria-label="Period">
-            {PERIODS.map((p) => (
-              <TabsTrigger key={p.days} value={String(p.days)}>
-                {p.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as UsagePeriod)}>
+            <TabsList aria-label="Period">
+              {PERIODS.map((p) => (
+                <TabsTrigger key={p.days} value={String(p.days)}>
+                  {p.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          {data && all(data.totals) > 0 && <UsageShare data={data} />}
+        </div>
         {usage.error && <p className="text-sm text-destructive-text">{usage.error.message}</p>}
       </header>
 

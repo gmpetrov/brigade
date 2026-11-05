@@ -483,3 +483,54 @@ test(
     )
   },
 )
+
+test(
+  'the share card gets tokens by quarter hour, and the period before once counted alike',
+  { skip },
+  async () => {
+    const later = new Date('2026-12-01T12:07:00Z')
+    const ago = (hours: number) => new Date(later.getTime() - hours * 3_600_000)
+    const workspace = await prisma.workspace.create({
+      data: { organizationId: ids.organization, name: 'Usage card' },
+    })
+    const w = { organizationId: ids.organization, workspaceId: workspace.id }
+    const row = (when: Date, input: number, output = 0) =>
+      prisma.tokenUsage.create({
+        data: {
+          ...w,
+          memberId: ids.members[0]!,
+          provider: 'claude_code',
+          source: 'member',
+          inputTokens: input,
+          outputTokens: output,
+          at: when,
+        },
+      })
+    const report = (days: 1 | 7 | 30, now = later) =>
+      usageReport({ ...w, memberId: ids.members[0]!, role: 'owner' }, days, now)
+
+    // A first week has nothing before it to compare with.
+    await row(ago(1), 100)
+    assert.equal((await report(7)).previous, null)
+
+    await row(new Date('2026-12-01T11:00:00Z'), 20, 5)
+    await row(ago(72), 50, 10)
+    await row(ago(240), 40)
+    await row(ago(480), 1)
+    const week = await report(7)
+    assert.equal(week.totals.input, 170)
+    assert.deepEqual(week.previous && [week.previous.input, week.previous.runs], [40, 1])
+    // Each quarter hour's start, in UTC, oldest first: 11:00 has two rows' tokens.
+    assert.deepEqual(week.quarters, [
+      { at: '2026-11-28T12:00:00Z', tokens: 60 },
+      { at: '2026-12-01T11:00:00Z', tokens: 125 },
+    ])
+
+    // A stretch before starts before Usage counted as it does now: not compared.
+    assert.equal((await report(7, new Date('2026-11-10T00:00:00Z'))).previous, null)
+    // A member who spent nothing before has nothing to compare with either.
+    const theirs = await usageReport({ ...w, memberId: ids.members[1]!, role: 'member' }, 7, later)
+    assert.equal(theirs.previous, null)
+    assert.deepEqual(theirs.quarters, [])
+  },
+)

@@ -54,6 +54,27 @@ export function demoUsage(
     }),
     { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, runs: 0 },
   )
+  // Each day's tokens spread over its quarter hours: working hours mostly, routines at night.
+  const quarters: UsageResponse['quarters'] = []
+  const first = Math.floor(since.getTime() / (15 * 60_000)) * 15 * 60_000
+  const perDay = new Map(daily.map((d) => [d.day, d.input + d.output]))
+  const weights: number[] = []
+  for (let at = first; at <= now; at += 15 * 60_000) {
+    const hour = new Date(at).getUTCHours()
+    const busy = hour >= 8 && hour < 19 ? 1 : hour >= 19 ? 0.45 : 0.12
+    weights.push(noise(at / 900_000) < 0.35 ? 0 : busy * (0.4 + noise(at / 900_000 + 0.5)))
+  }
+  const dayWeight = new Map<string, number>()
+  weights.forEach((w, i) => {
+    const day = new Date(first + i * 15 * 60_000).toISOString().slice(0, 10)
+    dayWeight.set(day, (dayWeight.get(day) ?? 0) + w)
+  })
+  weights.forEach((w, i) => {
+    const at = new Date(first + i * 15 * 60_000)
+    const day = at.toISOString().slice(0, 10)
+    const tokens = Math.round(((perDay.get(day) ?? 0) * w) / (dayWeight.get(day) || 1))
+    if (tokens > 0) quarters.push({ at: at.toISOString(), tokens })
+  })
   const share = (parts: [string, string, number][]): UsageGroup[] =>
     sum(
       parts.map(([id, label, part]) => ({
@@ -73,8 +94,8 @@ export function demoUsage(
     ['title', 0.005],
   ]
   const teammates = input.teammates.slice(0, 6)
-  const weights = teammates.map((_, i) => 1 / (i + 1.4))
-  const weight = weights.reduce((a, b) => a + b, 0)
+  const teammateWeights = teammates.map((_, i) => 1 / (i + 1.4))
+  const weight = teammateWeights.reduce((a, b) => a + b, 0)
   const threads = input.threads.slice(0, 10)
   return {
     days,
@@ -88,7 +109,7 @@ export function demoUsage(
     ]),
     bySource: share(sources.map(([id, part]) => [id, id, part])),
     byTeammate: share(
-      teammates.map((t, i) => [t.id, t.name ?? 'Teammate', (weights[i]! / weight) * 0.97]),
+      teammates.map((t, i) => [t.id, t.name ?? 'Teammate', (teammateWeights[i]! / weight) * 0.97]),
     ),
     byModel: share([
       ['claude-opus-5-5', 'claude-opus-5-5', 0.71],
@@ -115,5 +136,8 @@ export function demoUsage(
     topSchedules: share(
       input.schedules.slice(0, 4).map((s, i) => [s.id, s.title ?? 'Routine', 0.17 / (i + 1.6)]),
     ).map((s) => ({ ...s, runs: days })),
+    quarters,
+    // A period before that spent a little less: the card says by how much.
+    previous: spent(total.input * 0.72, Math.round(total.runs * 0.8)),
   }
 }
