@@ -275,6 +275,8 @@ type Remote = {
   env: Record<string, string>
   /** Asleep: the app and its machine stopped while nobody used it; the next request wakes them. */
   asleep?: boolean
+  /** Its machine being stopped: a wake waits for that first, or the stop would land after it. */
+  sleeping?: Promise<unknown>
   waking?: Promise<void>
   /** When the API was last told it is in use. */
   touchedAt: number
@@ -1406,19 +1408,23 @@ export class Previews {
     })
     child.stdout!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
     child.stderr!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
-    void preview.exited.then((code) => {
+    void preview.exited.then(async (code) => {
       if (this.previews.get(sessionId) !== preview || preview.child !== child) return
       // Asleep: stopped on purpose, with its machine.
       if (remote.asleep) return
       if (preview.stopping)
         return this.ended(preview, preview.stopping.status, preview.stopping.reason)
-      // ssh says 255 when the connection, not the app, ended.
+      // ssh says 255 when the connection ended, or when the app was killed by a signal there.
+      const lost = code === 255 && !(await remote.link.alive())
+      if (this.previews.get(sessionId) !== preview || preview.child !== child) return
       const how =
         code === null
           ? 'could not start'
-          : code === 255
+          : lost
             ? 'lost its connection to its machine'
-            : `exited with code ${code}`
+            : code === 255
+              ? 'was stopped on its machine'
+              : `exited with code ${code}`
       const ran = preview.info.status === 'running' || preview.restarting
       if (ran && this.restartAfterExit(preview, how)) return
       this.ended(preview, 'failed', ran ? `The app stopped: it ${how}` : `The command ${how}`)
@@ -1451,15 +1457,18 @@ export class Previews {
       `[preview] Asleep after ${Math.round(SLEEP_MS / 60_000)} minutes without use: its machine stopped, ` +
         'and the next visit wakes it in about half a minute\n',
     )
-    remote.sync.stop()
-    await signalApp(remote.link, 'TERM')
-    preview.child?.kill('SIGKILL')
-    remote.link.close()
-    await this.options.machines?.sleep(preview.seat.sessionId).catch((error: unknown) => {
-      console.warn(
-        `preview of ${preview.seat.sessionId}: its machine did not stop: ${String(error)}`,
-      )
-    })
+    remote.sleeping = (async () => {
+      remote.sync.stop()
+      await signalApp(remote.link, 'TERM')
+      preview.child?.kill('SIGKILL')
+      remote.link.close()
+      await this.options.machines?.sleep(preview.seat.sessionId).catch((error: unknown) => {
+        console.warn(
+          `preview of ${preview.seat.sessionId}: its machine did not stop: ${String(error)}`,
+        )
+      })
+    })()
+    await remote.sleeping
   }
 
   /**
@@ -1473,6 +1482,8 @@ export class Previews {
       preview.info = { ...preview.info, status: 'starting', reason: 'Waking its machine' }
       this.report(preview)
       this.append(preview, '[preview] Waking its machine\n')
+      // Still going to sleep: started again only once it stopped.
+      await remote.sleeping
       try {
         const machines = this.options.machines
         if (!machines) throw new Error('this runner has none')
