@@ -283,7 +283,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   that is starting wait in the table however long it takes, across API restarts, and a computer that never came up is
   started again each minute. A command not through in 24 hours fails and opens a ticket in its thread (a thread left
   starting goes back to idle); an interrupt or a browser window is dropped after 10 minutes instead, being moot. An
-  older runner takes each command once, as before. Rows are deleted 3 days after they settle.
+  older runner takes each command once, as before. Rows are deleted 3 days after they settle. A thread's person's word
+  and Chief's answers are kept under the thread's lock, and kept and sent one at a time by its hub, so its computer
+  reads them in the order they were kept (`apps/api/src/chief-order.ts`, docs/chief-answers.md).
 - **Vault.** AES-256-GCM, with each organization's key derived (HKDF) from `VAULT_KEY`; the workspace id is bound
   in as authenticated data, so a secret cannot be moved to another workspace. Decrypted only inside the API, per call.
 - **Connector calls** (`apps/api/src/connector-calls.ts`). The runner passes granted operations to `HarnessAgent` as

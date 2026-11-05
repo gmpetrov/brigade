@@ -6,8 +6,9 @@ member's thread, Chief reads the question before the person does and, in their n
 answer their mandate settles, says "not now" to work outside their priorities, or leaves the
 question to them with why. People call it **Chief answers for you** (Preferences → Chief).
 
-Code: `apps/api/src/chief-answers.ts`, `packages/contracts/src/chief-answers.ts`, the runner's
-`decisionInstructions` and `chiefTools`, and `apps/web/components/chief-take.tsx`.
+Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
+`packages/contracts/src/chief-answers.ts`, the runner's `decisionInstructions` and `chiefTools`, and
+`apps/web/components/chief-take.tsx`.
 
 ## Decisions
 
@@ -66,15 +67,22 @@ Code: `apps/api/src/chief-answers.ts`, `packages/contracts/src/chief-answers.ts`
   that thread's latest event on); not a review, which Brigade starts. Teammates are told the same
   of what Brigade cannot hold back: never deploy, publish, send, pay or delete another way (a
   command, a script) on Chief's word alone. That part is instructions, not a guard.
-- **The person's word always comes after an answer already sent, and an answer not sent yet never
-  comes after it.** Its wake-up claims the answer before it goes (`claimChiefAnswer`, under the
-  thread's lock, while its question is open) and releases it once kept for the computer, in order
-  (`releaseChiefAnswer`). A person's prompt (`promptThread`, `beforePersonPrompt`) waits for a
-  claimed answer to be kept, up to ten seconds, so the computer gets them in that order; any answer
-  not claimed by then is cancelled (`cancelUndelivered`), as it is when the person's message or a
-  dismissal reaches the thread. A computer that was offline never brings an answer the person
-  overtook. A dismissed card is a closed question (`questionClosed`), and dismissing settles
-  Chief's decisions on it (`noteChiefDismissed`).
+- **The thread reads an answer of Chief's before the person's word, or never.** Both reach its
+  computer as commands kept before they are sent (`RunnerCommand`), and which comes first is
+  settled as each is kept, in the transaction that keeps it, under the thread's lock
+  (`chief-order.ts`, `keepInOrder`). The person's word (their message, taking the thread in hand,
+  handing it back) supersedes Chief's decisions still being made and withdraws its answers that have
+  not gone to the computer: not kept yet, or kept while it was away and not sent since
+  (`withdrawAnswers`). An answer of Chief's is kept only while its question is open, nobody has the
+  thread in hand, and no word of the person's waits to be taken by the computer (`answerMayGo`);
+  else it never goes, and its wake-up is cancelled. The workspace's hub keeps and sends these
+  commands of one thread one at a time (`orderedThread`, `WorkspaceHub.inThreadOrder`): a message
+  sent while an answer is on its way to the computer waits for it. They are kept at distinct
+  instants, so a computer that comes back gets them in that order too. Nothing is claimed in
+  between: a process that stops at any point leaves the wake-up to fire again, and the answer is
+  kept once (its command's id is the wake-up's). A dismissed card is a closed question
+  (`questionClosed`), and dismissing settles Chief's decisions on it and withdraws its answers the
+  same way (`noteChiefDismissed`).
 - **Suggestions earn autonomy, as playbooks' actions do.** A person's message after a suggested
   question measures it (`noteChiefAnswered`): their pick was Chief's (`agreed`: the same message,
   the same choice, or the option's words), or another (`disagreed`); only the person Chief answers

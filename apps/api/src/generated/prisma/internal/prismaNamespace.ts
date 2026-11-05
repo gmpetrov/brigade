@@ -8443,7 +8443,6 @@ export const ChiefDecisionScalarFieldEnum = {
   basis: 'basis',
   parked: 'parked',
   decidedAt: 'decidedAt',
-  sendingAt: 'sendingAt',
   sentAt: 'sentAt',
   outcome: 'outcome',
   outcomeAt: 'outcomeAt',

@@ -34,7 +34,6 @@ CREATE TABLE "ChiefDecision" (
     "basis" TEXT,
     "parked" TEXT,
     "decidedAt" TIMESTAMP(3),
-    "sendingAt" TIMESTAMP(3),
     "sentAt" TIMESTAMP(3),
     "outcome" "ChiefOutcome",
     "outcomeAt" TIMESTAMP(3),

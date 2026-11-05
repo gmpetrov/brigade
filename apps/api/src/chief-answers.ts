@@ -39,6 +39,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
+import { CHIEF_SOURCE, lockThread, questionClosed, withdrawAnswers } from './chief-order.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { documentText } from './library.js'
@@ -154,24 +155,6 @@ export async function openAsk(
     }
   }
   return null
-}
-
-/**
- * The question is no longer open: a message came in the thread after it (a person answered it,
- * or Brigade moved the thread on), or a person dismissed its card without picking.
- */
-async function questionClosed(
-  db: Pick<ScopedDb, 'sessionEvent' | 'session'>,
-  sessionId: string,
-  seq: number,
-) {
-  const [after, thread] = await Promise.all([
-    db.sessionEvent.count({
-      where: { sessionId, type: { in: ['message.user', 'message.queued'] }, seq: { gt: seq } },
-    }),
-    db.session.findFirst({ where: { id: sessionId }, select: { choicesDismissedSeq: true } }),
-  ])
-  return after > 0 || (thread?.choicesDismissedSeq ?? -1) >= seq
 }
 
 /** When the person last wrote in the thread, by their message's seq; -1 when they never did. */
@@ -591,7 +574,7 @@ async function applyDecision(scope: Scope, decisionId: string) {
           basis: row.basis,
         }),
         wakeAt: new Date(),
-        sourceId: `chief:${row.id}`,
+        sourceId: `${CHIEF_SOURCE}${row.id}`,
       } as never,
     })
     return { status: 'answered' as const, row, wakeupId: wakeup.id }
@@ -624,118 +607,6 @@ async function applyDecision(scope: Scope, decisionId: string) {
 const chiefId = async (db: ScopedDb) =>
   (await db.teammate.findFirst({ where: { kind: 'chief' }, select: { id: true } }))?.id
 
-/** One thread's decisions, one change at a time: applyDecision, a person's answer, a dismissal. */
-const lockThread = (tx: Pick<ScopedDb, '$executeRaw'>, sessionId: string) =>
-  tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`chief:${sessionId}`}, 0))`
-
-/**
- * Chief's answers not on their way yet (their wake-up waits, unclaimed: the computer offline, or
- * the minute's tick not come), on questions up to `seq`: the person's word, or their dismissal,
- * came first. Their wake-ups are cancelled, so a computer back online never brings an answer the
- * person overtook, and the decisions superseded. One already on its way (claimChiefAnswer) goes:
- * the person's own prompt waits for it (beforePersonPrompt), so it reaches the thread first.
- */
-async function cancelUndelivered(
-  tx: Pick<ScopedDb, 'wakeup' | 'chiefDecision'>,
-  sessionId: string,
-  /** Questions up to this event; null: every one. */
-  seq: number | null,
-) {
-  const stale = await tx.chiefDecision.findMany({
-    where: {
-      sessionId,
-      status: 'answered',
-      ...(seq === null ? {} : { askSeq: { lte: seq } }),
-      sendingAt: null,
-      sentAt: null,
-    },
-    select: { id: true },
-  })
-  for (const d of stale) {
-    await tx.wakeup.updateMany({
-      where: { sessionId, sourceId: `chief:${d.id}`, status: 'pending' },
-      data: { status: 'cancelled' },
-    })
-    await tx.chiefDecision.updateMany({
-      where: { id: d.id, status: 'answered', sendingAt: null, sentAt: null },
-      data: { status: 'superseded' },
-    })
-  }
-  return stale.length
-}
-
-/**
- * An answer of Chief's about to go, as its wake-up fires (src/wakeups.ts): claimed under the
- * thread's lock while it is still due (answered, its question open, not cancelled), so a person's
- * prompt meanwhile waits for it rather than overtake it. stale: it never goes (its wake-up is
- * cancelled); busy: another fire holds it.
- */
-export async function claimChiefAnswer(scope: Scope, decisionId: string) {
-  const db = scoped(scope)
-  return db.$transaction(async (tx) => {
-    const decision = await tx.chiefDecision.findFirst({
-      where: { id: decisionId },
-      select: { status: true, sessionId: true, askSeq: true, sendingAt: true, sentAt: true },
-    })
-    if (!decision) return 'stale' as const
-    await lockThread(tx, decision.sessionId)
-    const now = await tx.chiefDecision.findFirst({
-      where: { id: decisionId },
-      select: { status: true, sendingAt: true, sentAt: true },
-    })
-    if (now?.sendingAt && !now.sentAt) return 'busy' as const
-    if (now?.status !== 'answered' || now.sentAt) return 'stale' as const
-    if (await questionClosed(tx, decision.sessionId, decision.askSeq)) {
-      await tx.chiefDecision.updateMany({
-        where: { id: decisionId, status: 'answered' },
-        data: { status: 'superseded' },
-      })
-      return 'stale' as const
-    }
-    await tx.chiefDecision.updateMany({
-      where: { id: decisionId },
-      data: { sendingAt: new Date() },
-    })
-    return 'go' as const
-  })
-}
-
-/** The claimed answer went (kept for its computer, in order), or did not and may be tried again. */
-export async function releaseChiefAnswer(scope: Scope, decisionId: string, sent: boolean) {
-  await scoped(scope).chiefDecision.updateMany({
-    where: { id: decisionId, sentAt: null },
-    data: sent ? { sentAt: new Date() } : { sendingAt: null },
-  })
-}
-
-/** How long a person's prompt waits for an answer of Chief's on its way, at most. */
-const SENDING_WAIT_MS = 10_000
-
-/**
- * A person's words are about to go to the thread (promptThread): an answer of Chief's already on
- * its way goes first, in the order the computer gets them; one not on its way never goes. So the
- * thread never reads Chief's answer after the person's own.
- */
-export async function beforePersonPrompt(scope: Scope, sessionId: string) {
-  const db = scoped(scope)
-  const open = await db.chiefDecision.count({
-    where: { sessionId, status: 'answered', sentAt: null },
-  })
-  if (!open) return
-  for (const started = Date.now(); Date.now() - started < SENDING_WAIT_MS;) {
-    const sending = await db.chiefDecision.count({
-      where: { sessionId, status: 'answered', sendingAt: { not: null }, sentAt: null },
-    })
-    if (!sending) break
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  const cancelled = await db.$transaction(async (tx) => {
-    await lockThread(tx, sessionId)
-    return cancelUndelivered(tx, sessionId, null)
-  })
-  if (cancelled) await threadChanged(scope, sessionId)
-}
-
 /**
  * A person dismissed a choices card without picking (POST /threads/:id/choices/dismiss): Chief's
  * decisions on it and before it are moot, an answer not delivered yet included.
@@ -748,7 +619,7 @@ export async function noteChiefDismissed(scope: Scope, sessionId: string, seq: n
       where: { sessionId, askSeq: { lte: seq }, status: { in: ['pending', 'suggested'] } },
       data: { status: 'superseded' },
     })
-    return count + (await cancelUndelivered(tx, sessionId, seq))
+    return count + (await withdrawAnswers(tx, sessionId, seq))
   })
   if (changed) await threadChanged(scope, sessionId)
 }
@@ -832,8 +703,9 @@ export async function noteChiefAnswered(
       if (e.event.memberId) await lowerChiefsWord(tx, session.id, e.seq)
       else await raiseChiefsWord(tx, session.id, e.seq)
     if (!message) return []
-    // Their word came before an answer of Chief's went: that answer never goes.
-    await cancelUndelivered(tx, session.id, message.seq)
+    // Their word came before an answer of Chief's went: that answer never goes. (Kept for the
+    // computer, their word did that already: src/chief-order.ts.)
+    await withdrawAnswers(tx, session.id, message.seq)
     const open = await tx.chiefDecision.findMany({
       where: {
         sessionId: session.id,

@@ -923,9 +923,7 @@ model ChiefDecision {
   /// The work put off, as added to the person's list.
   parked         String?
   decidedAt      DateTime?
-  /// An answer on its way to the thread's computer (its wake-up firing): a person's prompt waits
-  /// for it, so it goes first. sentAt: kept for the computer, in order.
-  sendingAt      DateTime?
+  /// An answer kept for the thread's computer, in order with the person's word (src/chief-order.ts).
   sentAt         DateTime?
   outcome        ChiefOutcome?
   outcomeAt      DateTime?

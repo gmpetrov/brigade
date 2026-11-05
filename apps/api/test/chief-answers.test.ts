@@ -869,21 +869,103 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     assert.equal(await word(), null)
   })
 
-  test('a person’s prompt waits for an answer of Chief’s on its way, and cancels one not yet', async () => {
+  /** Chief answered on its own while Ada's computer was away: its wake-up waits, nothing kept. */
+  async function answeredAway() {
     await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
     const id = await thread()
     const made = await pending(id, await asks(id))
-    // Offline: Ada's Mac, not the cloud computer, which would start. The answer waits.
+    // Her Mac, not the cloud computer, which would keep the answer for when it starts.
     await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'member_machine' } })
     try {
       assert.equal((await decide(made, { option: 1 })).status, 'answered')
     } finally {
       await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'cloud' } })
     }
+    const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
+    assert.equal(wakeup.status, 'pending')
+    return { id, made, wakeup }
+  }
+
+  /**
+   * Run `operation` with a database client whose `model.method` waits, from its first call on,
+   * until released: a step held midway, as under load. Its other queries, and everyone else's,
+   * go on.
+   */
+  async function holding(model: string, method: string, operation: () => Promise<unknown>) {
+    const { newPrismaClient, withPrismaClient } = await import('../src/db.js')
+    const base = newPrismaClient(process.env.DATABASE_URL!)
+    let reached!: () => void
+    let release!: () => void
+    const atStep = new Promise<void>((resolve) => (reached = resolve))
+    const held = new Promise<void>((resolve) => (release = resolve))
+    const wrap = (delegate: object) =>
+      new Proxy(delegate, {
+        get(target, key) {
+          const value = Reflect.get(target, key, target)
+          if (key !== method || typeof value !== 'function') return value
+          return async (...args: unknown[]) => {
+            reached()
+            await held
+            return value.apply(target, args)
+          }
+        },
+      })
+    const client = new Proxy(base, {
+      get(target, key) {
+        if (key === model) return wrap(Reflect.get(target, key, target))
+        if (key === '$extends')
+          return (...args: unknown[]) =>
+            new Proxy((target.$extends as (...a: unknown[]) => object)(...args), {
+              get(inner, k) {
+                const value = Reflect.get(inner, k, inner)
+                return k === model ? wrap(value) : value
+              },
+            })
+        const value = Reflect.get(target, key, target)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
+    const done = withPrismaClient(client as never, operation)
+    await Promise.race([atStep, done])
+    return {
+      release,
+      done,
+      close: async () => {
+        release()
+        await done.catch(() => {})
+        await base.$disconnect()
+      },
+    }
+  }
+
+  /** What the thread's computer was sent, in order: Chief's answers as 'chief'. */
+  const prompts = (sent: Sent[], id: string) =>
+    sent
+      .filter(
+        (m) =>
+          (m.thread as { sessionId?: string } | undefined)?.sessionId === id &&
+          (m.type === 'thread.prompt' || m.type === 'thread.handback'),
+      )
+      .map((m) =>
+        m.type === 'thread.handback'
+          ? `handback: ${m.note as string}`
+          : contracts.chiefAnswerNote(m.text as string)
+            ? 'chief'
+            : (m.text as string),
+      )
+
+  const fireAgain = async (wakeupId: string) => {
+    const { fireNow } = await import('../src/wakeups.js')
+    await fireNow(wakeupId)
+  }
+
+  test('an answer of Chief’s on its way to the computer goes before the person’s word, which waits for it', async () => {
+    const { id, made, wakeup } = await answeredAway()
     const conn = await runner()
+    // Its wake-up fires again: the answer is kept, then held on its way to the computer.
+    const fire = await holding('runnerCommand', 'updateManyAndReturn', () => fireAgain(wakeup.id))
     try {
-      // Its wake-up fires again and holds it, on its way: Ada's message waits for it.
-      assert.equal(await chiefAnswers.claimChiefAnswer(scope, made.decision.id), 'go')
+      assert.ok((await row(made.decision.id)).sentAt)
       let through = false
       const ada = call('ada', `/${id}/messages`, { body: { text: 'Not yet' } }).then((r) => {
         through = true
@@ -891,55 +973,190 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       })
       await new Promise((resolve) => setTimeout(resolve, 400))
       assert.equal(through, false)
-      // It goes (as fire does), then Ada's: in that order.
-      const { loadThread } = await import('../src/thread-spec.js')
-      const { promptThread } = await import('../src/work.js')
-      const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
-      await promptThread(db, scope, await loadThread(db, id), {
-        text: wakeup.note,
-        memberId: null,
-        teammateIds: [riley],
-      })
-      await chiefAnswers.releaseChiefAnswer(scope, made.decision.id, true)
-      const sent = await ada
-      assert.equal(sent.status, 200, await sent.clone().text())
-      const order = conn.sent
-        .filter(
-          (m) =>
-            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === id,
-        )
-        .map((m) => (contracts.chiefAnswerNote(m.text as string) ? 'chief' : m.text))
-      assert.deepEqual(order.slice(-2), ['chief', 'Not yet'])
+      assert.deepEqual(prompts(conn.sent, id), [])
+      fire.release()
+      const response = await ada
+      assert.equal(response.status, 200, await response.clone().text())
+      await fire.done
+      assert.deepEqual(prompts(conn.sent, id), ['chief', 'Not yet'])
       assert.equal((await row(made.decision.id)).status, 'answered')
-
-      // One not on its way when Ada writes never goes: her computer away when it is decided.
+    } finally {
+      await fire.close()
       conn.close()
+    }
+  })
+
+  test('an answer not kept when the person writes never goes, however long its wake-up takes', async () => {
+    const { id, made, wakeup } = await answeredAway()
+    const conn = await runner()
+    // Its wake-up fires again, and is held before the answer is kept (making the thread's spec).
+    const fire = await holding('account', 'findMany', () => fireAgain(wakeup.id))
+    try {
+      const started = Date.now()
+      const response = await call('ada', `/${id}/messages`, { body: { text: 'Not yet' } })
+      assert.equal(response.status, 200, await response.clone().text())
+      // Hers waits for nothing.
+      assert.ok(Date.now() - started < 5000, `took ${Date.now() - started} ms`)
+      assert.equal((await row(made.decision.id)).status, 'superseded')
+      fire.release()
+      await fire.done
+      assert.deepEqual(prompts(conn.sent, id), ['Not yet'])
+      assert.equal(
+        (await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status,
+        'cancelled',
+      )
+      assert.equal(await db.runnerCommand.count({ where: { id: `wakeup:${wakeup.id}` } }), 0)
+    } finally {
+      await fire.close()
+      conn.close()
+    }
+  })
+
+  test('the person’s word settles a decision being made, and an answer made while it was on its way', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    const conn = await runner()
+    // Ada writes while Chief decides: her prompt is held before it is kept…
+    const ada = await holding('account', 'findMany', () =>
+      call('ada', `/${id}/messages`, { body: { text: 'Not yet' } }),
+    )
+    // …while Chief answers, its answer held before it is kept too.
+    const chief = await holding('account', 'findMany', () => decide(made, { option: 1 }))
+    try {
+      assert.equal((await row(made.decision.id)).status, 'answered')
+      ada.release()
+      const response = (await ada.done) as Response
+      assert.equal(response.status, 200, await response.clone().text())
+      assert.equal((await row(made.decision.id)).status, 'superseded')
+      chief.release()
+      await chief.done
+      assert.deepEqual(prompts(conn.sent, id), ['Not yet'])
+
+      // Her word kept while Chief still decides: the decision is moot, and makes nothing.
       const next = await pending(id, await asks(id))
-      await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'member_machine' } })
-      try {
-        assert.equal((await decide(next, { option: 1 })).status, 'answered')
-      } finally {
-        await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'cloud' } })
-      }
-      const back = await runner()
-      try {
-        const res = await call('ada', `/${id}/messages`, { body: { text: 'Stop there' } })
-        assert.equal(res.status, 200, await res.clone().text())
-        assert.equal((await row(next.decision.id)).status, 'superseded')
-        const waiting = await db.wakeup.findFirstOrThrow({
-          where: { sourceId: `chief:${next.decision.id}` },
-        })
-        assert.equal(waiting.status, 'cancelled')
-        const { fireNow } = await import('../src/wakeups.js')
-        await db.wakeup.updateMany({ where: { id: waiting.id }, data: { status: 'pending' } })
-        const before = back.sent.length
-        await fireNow(waiting.id)
-        assert.ok(
-          !back.sent.slice(before).some((m) => contracts.chiefAnswerNote((m.text as string) ?? '')),
-        )
-      } finally {
-        back.close()
-      }
+      const res = await call('ada', `/${id}/messages`, { body: { text: 'Stop there' } })
+      assert.equal(res.status, 200, await res.clone().text())
+      assert.equal((await row(next.decision.id)).status, 'superseded')
+      assert.equal((await decide(next, { option: 1 })).recorded, false)
+      assert.equal(await db.wakeup.count({ where: { sourceId: `chief:${next.decision.id}` } }), 0)
+      assert.deepEqual(prompts(conn.sent, id), ['Not yet', 'Stop there'])
+    } finally {
+      await ada.close()
+      await chief.close()
+      conn.close()
+    }
+  })
+
+  test('taking the thread in hand, and handing it back, come before an answer not kept yet, which never goes', async () => {
+    const { id, made, wakeup } = await answeredAway()
+    const conn = await runner()
+    const fire = await holding('account', 'findMany', () => fireAgain(wakeup.id))
+    try {
+      const takeover = await call('ada', `/${id}/takeover`, { body: { interrupt: true } })
+      assert.equal(takeover.status, 200, await takeover.clone().text())
+      assert.equal((await row(made.decision.id)).status, 'superseded')
+      const back = await call('ada', `/${id}/handback`, { body: { note: 'Not yet' } })
+      assert.equal(back.status, 200, await back.clone().text())
+      fire.release()
+      await fire.done
+      assert.deepEqual(prompts(conn.sent, id), ['handback: Not yet'])
+    } finally {
+      await fire.close()
+      conn.close()
+    }
+  })
+
+  test('a word of the person’s the computer has not taken yet comes first: an answer decided meanwhile never goes', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const id = await thread()
+    const conn = await runner()
+    try {
+      // Ada writes as the turn ends on a question; her computer has not taken it when Chief answers.
+      const response = await call('ada', `/${id}/messages`, { body: { text: 'Also add tests.' } })
+      assert.equal(response.status, 200, await response.clone().text())
+      const made = await pending(id, await asks(id))
+      await decide(made, { option: 1 })
+      assert.equal((await row(made.decision.id)).status, 'superseded')
+      assert.deepEqual(prompts(conn.sent, id), ['Also add tests.'])
+      // Taken: the next answer goes.
+      await db.runnerCommand.updateMany({
+        where: { sessionId: id, status: 'pending' },
+        data: { status: 'acked' },
+      })
+      const next = await pending(id, await asks(id))
+      assert.equal((await decide(next, { option: 1 })).status, 'answered')
+      assert.deepEqual(prompts(conn.sent, id), ['Also add tests.', 'chief'])
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('an answer kept while the computer was away, and not sent, is withdrawn by the person’s word', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    // The cloud computer is away (stopped, say): the answer is kept for when it is back.
+    assert.equal((await decide(made, { option: 1 })).status, 'answered')
+    const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
+    const kept = await db.runnerCommand.findFirstOrThrow({ where: { id: `wakeup:${wakeup.id}` } })
+    assert.equal(kept.status, 'pending')
+    const response = await call('ada', `/${id}/messages`, { body: { text: 'Not yet' } })
+    assert.equal(response.status, 200, await response.clone().text())
+    assert.equal(
+      (await db.runnerCommand.findFirstOrThrow({ where: { id: kept.id } })).status,
+      'expired',
+    )
+    assert.equal((await row(made.decision.id)).status, 'superseded')
+    // Back, it gets her word alone.
+    const conn = await runner()
+    try {
+      await until(() => prompts(conn.sent, id).length > 0, 'her message')
+      assert.deepEqual(prompts(conn.sent, id), ['Not yet'])
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('an answer sent before the person’s word comes before it again on a computer that lost both', async () => {
+    const { id, made, wakeup } = await answeredAway()
+    const first = await runner()
+    try {
+      await fireAgain(wakeup.id)
+      assert.deepEqual(prompts(first.sent, id), ['chief'])
+    } finally {
+      // Gone before it said it took it.
+      first.close()
+    }
+    const response = await call('ada', `/${id}/messages`, { body: { text: 'Not yet' } })
+    assert.equal(response.status, 200, await response.clone().text())
+    assert.equal((await row(made.decision.id)).status, 'answered')
+    const back = await runner()
+    try {
+      await until(() => prompts(back.sent, id).length > 1, 'both')
+      assert.deepEqual(prompts(back.sent, id), ['chief', 'Not yet'])
+    } finally {
+      back.close()
+    }
+  })
+
+  test('a wake-up cut off midway is tried again, and its answer reaches the thread once', async () => {
+    // Stopped before its answer was kept: nothing holds it, the next try sends it.
+    const { id, made, wakeup } = await answeredAway()
+    const conn = await runner()
+    try {
+      await fireAgain(wakeup.id)
+      assert.deepEqual(prompts(conn.sent, id), ['chief'])
+      assert.ok((await row(made.decision.id)).sentAt)
+      // Stopped once it was kept, before its wake-up was settled: tried again, it goes once.
+      await db.wakeup.updateMany({
+        where: { id: wakeup.id },
+        data: { status: 'pending', firedAt: null },
+      })
+      await fireAgain(wakeup.id)
+      assert.deepEqual(prompts(conn.sent, id), ['chief'])
+      assert.equal((await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status, 'fired')
+      assert.equal((await row(made.decision.id)).status, 'answered')
     } finally {
       conn.close()
     }

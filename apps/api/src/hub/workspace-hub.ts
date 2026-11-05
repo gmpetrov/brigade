@@ -25,6 +25,7 @@ import {
   isDurable,
   keepCommand,
   noteSent,
+  orderedThread,
   pendingCommands,
   RESEND_MS,
   unclaim,
@@ -118,6 +119,11 @@ export class WorkspaceHub {
   private readonly connects = new Map<string, number[]>()
   /** State other modules keep for this hub (local()). */
   private readonly locals = new Map<string, unknown>()
+  /**
+   * The last of each thread's commands that go in order (orderedThread: the person's word, Chief's
+   * answers), being kept or sent: the next waits for it.
+   */
+  private readonly inOrder = new Map<string, Promise<void>>()
 
   constructor(
     readonly workspaceId: string,
@@ -379,14 +385,21 @@ export class WorkspaceHub {
     if (isDurable(message) || (conn && takesParts(conn.protocolVersion ?? 0)))
       message = await packCommand(this.workspaceId, message)
     if (isDurable(message)) {
-      // Kept already (a stable id tried again after a restart): it goes, or went, from that row.
-      if ((await keepCommand({ ...computer, workspaceId: this.workspaceId }, message)) !== 'kept')
-        return 'queued'
-      const now = this.runners.get(computer.id)
-      if (now && !this.isRestarting(computer.id)) {
-        await this.sendKept(computer.id, now, message)
-        return 'sent'
+      const kept = message
+      const go = async () => {
+        // Kept already (a stable id tried again after a restart): it goes, or went, from that row.
+        // Moot (an answer of Chief's the person's word overtook): it never goes.
+        if ((await keepCommand({ ...computer, workspaceId: this.workspaceId }, kept)) !== 'kept')
+          return 'queued' as const
+        const now = this.runners.get(computer.id)
+        if (!now || this.isRestarting(computer.id)) return null
+        await this.sendKept(computer.id, now, kept)
+        return 'sent' as const
       }
+      // The person's word and Chief's answers: kept and sent in the order the thread reads them.
+      const thread = orderedThread(kept)
+      const done = thread ? await this.inThreadOrder(thread, go) : await go()
+      if (done) return done
     } else if (
       this.sendToRunner(computer.id, this.runners.get(computer.id) === conn ? message : whole)
     ) {
@@ -415,6 +428,33 @@ export class WorkspaceHub {
       return
     }
     this.host.save('queued', entries.length ? entries : undefined)
+  }
+
+  /**
+   * Run `fn` once the thread's commands that go in order before it are kept and sent: one at a
+   * time, in the order they came (dispatch, flushQueue, resendCommands).
+   */
+  private async inThreadOrder<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+    const before = this.inOrder.get(sessionId)
+    let release!: () => void
+    const mine = new Promise<void>((resolve) => (release = resolve))
+    const last = before ? before.then(() => mine) : mine
+    this.inOrder.set(sessionId, last)
+    try {
+      if (before) await before
+      return await fn()
+    } finally {
+      release()
+      if (this.inOrder.get(sessionId) === last) this.inOrder.delete(sessionId)
+    }
+  }
+
+  /** sendKept, after its thread's commands that go in order before it (inThreadOrder). */
+  private sendInOrder(computerId: string, conn: RunnerConn, kept: DurableCommand) {
+    const thread = orderedThread(kept)
+    return thread
+      ? this.inThreadOrder(thread, () => this.sendKept(computerId, conn, kept))
+      : this.sendKept(computerId, conn, kept)
   }
 
   /** Send a kept command on this connection, unless an older runner took it already. */
@@ -457,7 +497,7 @@ export class WorkspaceHub {
     for (const command of await pendingCommands(computerId)) {
       if (this.runners.get(computerId) !== conn) return
       const message = await commandMessage(command.id)
-      if (message) await this.sendKept(computerId, conn, message)
+      if (message) await this.sendInOrder(computerId, conn, message)
     }
     const list = this.queued.get(computerId) ?? []
     this.queued.delete(computerId)
@@ -485,7 +525,7 @@ export class WorkspaceHub {
               now - command.sentAt.getTime() > RESEND_MS)
           if (!due) continue
           const message = await commandMessage(command.id)
-          if (message) await this.sendKept(computerId, conn, message)
+          if (message) await this.sendInOrder(computerId, conn, message)
         }
       } else if (now - since > 60_000) {
         const computer = await prisma.computer.findUnique({
