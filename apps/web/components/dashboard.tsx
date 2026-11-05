@@ -514,7 +514,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild tooltip="Today" isActive={pathname === '/app'}>
-                        <Link href="/app" data-nav-stop="link">
+                        <Link href="/app">
                           <Sun />
                           <span>Today</span>
                           {waitingOnYou > 0 && (
@@ -533,7 +533,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Inbox"
                         isActive={pathname.startsWith('/app/inbox')}
                       >
-                        <Link href="/app/inbox" data-nav-stop="link">
+                        <Link href="/app/inbox">
                           <Mail />
                           <span>Inbox</span>
                           {inboxWaiting > 0 && (
@@ -555,7 +555,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Board"
                         isActive={pathname.startsWith('/app/board')}
                       >
-                        <Link href="/app/board" data-nav-stop="link">
+                        <Link href="/app/board">
                           <SquareKanban />
                           <span>Board</span>
                         </Link>
@@ -567,7 +567,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Lists"
                         isActive={pathname.startsWith('/app/lists')}
                       >
-                        <Link href="/app/lists" data-nav-stop="link">
+                        <Link href="/app/lists">
                           <ListChecks />
                           <span>Lists</span>
                         </Link>
@@ -579,7 +579,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Library"
                         isActive={pathname.startsWith('/app/library')}
                       >
-                        <Link href="/app/library" data-nav-stop="link">
+                        <Link href="/app/library">
                           <Library />
                           <span>Library</span>
                         </Link>
@@ -817,6 +817,7 @@ function RoundButton({
         aria-label={label}
         onClick={onClick}
         data-nav-stop={nav && 'link'}
+        data-nav-top={nav && true}
         data-active={nav?.active}
         className={roundButtonClass}
       >
@@ -845,7 +846,12 @@ function NewThreadRailItem() {
   if (isViewer(useDashboard().me)) return null
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton tooltip="New thread" onClick={newThreadPage} data-nav-stop="link">
+      <SidebarMenuButton
+        tooltip="New thread"
+        onClick={newThreadPage}
+        data-nav-stop="link"
+        data-nav-top
+      >
         <Plus />
         <span>New thread</span>
       </SidebarMenuButton>
