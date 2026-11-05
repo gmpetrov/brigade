@@ -165,6 +165,8 @@ export type ThreadHeading = {
   teammate: Pick<Teammate, 'id' | 'name' | 'harness'>
   /** Everyone in it: the channel beside it is one of theirs. */
   teammateIds: string[]
+  /** Everyone in it, who leads it first: the pill at the top shows them all. */
+  teammates: Pick<Teammate, 'id' | 'name'>[]
   title: string
   /** The project it works in, if any. */
   project: Pick<ProjectSummary, 'id' | 'name' | 'icon'> | null
@@ -800,6 +802,10 @@ export function ThreadConversation({
     onHeading({
       teammate: { ...t.teammate, harness: t.teammate.harness as Teammate['harness'] },
       teammateIds: t.teammates.length ? t.teammates.map((p) => p.teammate.id) : [t.teammate.id],
+      teammates: [
+        t.teammate,
+        ...t.teammates.map((p) => p.teammate).filter((p) => p.id !== t.teammate.id),
+      ].map(({ id, name }) => ({ id, name })),
       title: t.title,
       project: t.project,
       computer: { kind: t.computer.kind, name: t.computer.name },

@@ -78,6 +78,12 @@ export function pebbleStyle(seed: string): CSSProperties {
   } as CSSProperties
 }
 
+/** A teammate's name in its pebble's colour (`.teammate-name` sets how light, for the
+ * theme): the same teammate reads the same in the thread as its pebble does at the top. */
+export function pebbleInk(seed: string): CSSProperties {
+  return { '--pebble-c1': pebbleStyle(seed)['--pebble-c1' as keyof CSSProperties] } as CSSProperties
+}
+
 /** A pebble in the theme's primary colour, its eyes cut out in the colour of the page under it. */
 const PRIMARY = {
   '--pebble-c1': 'var(--primary)',

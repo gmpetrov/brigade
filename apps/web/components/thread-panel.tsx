@@ -512,7 +512,7 @@ export function ThreadPanel() {
         ? shown && (
             <DetailsPill
               project={shown.project}
-              teammate={lead}
+              teammates={shown.teammates}
               label={shown.title}
               threadId={shown.id}
               heading
@@ -523,7 +523,7 @@ export function ThreadPanel() {
           )
         : teammate && (
             <DetailsPill
-              teammate={teammate}
+              teammates={[teammate]}
               label={teammate.name}
               details={`${teammate.name}'s computer, routines and more`}
             />
@@ -690,14 +690,17 @@ function PillBar({ children }: { children: ReactNode }) {
   )
 }
 
+/** The most avatars the pill stacks: past them, a count of the others. */
+const STACKED = 3
+
 /**
- * Where and who: the project's icon, the teammate's avatar, then the thread's title (or
- * the teammate's name). It grows to show a › on hover; a click opens and closes the details
+ * Where and who: the project's icon, the avatars of the thread's teammates (who leads it
+ * first), then the thread's title (or the teammate's name). It grows to show a › on hover; a click opens and closes the details
  * beside it: the thread's, its computer's, the teammate's.
  */
 function DetailsPill({
   project,
-  teammate,
+  teammates = [],
   label,
   threadId,
   heading = false,
@@ -706,7 +709,7 @@ function DetailsPill({
   reconnecting = false,
 }: {
   project?: Pick<ProjectRef, 'name' | 'icon'> | null
-  teammate?: Pick<Teammate, 'id' | 'name' | 'harness'>
+  teammates?: Pick<Teammate, 'id' | 'name'>[]
   label: string
   /** The label is this thread's title: it streams in when it changes. */
   threadId?: string
@@ -737,7 +740,7 @@ function DetailsPill({
           setDetails(true)
         }}
       >
-        {(project || teammate) && (
+        {(project || teammates.length > 0) && (
           <span className="flex shrink-0 items-center">
             {project && (
               <span title={project.name} className="flex">
@@ -745,19 +748,38 @@ function DetailsPill({
                 <span className="sr-only">{project.name}: </span>
               </span>
             )}
-            {teammate && (
-              // On the project's circle, in a ring of the pill's colour that cuts it, as on a
-              // board card.
+            {/* Each on the circle before it, in a ring of the pill's colour that cuts it, as on
+              a board card. Past a few, a count of the others, named on hover. */}
+            {[
+              ...teammates
+                .slice(0, STACKED)
+                .map((p) => <TeammateAvatar key={p.id} teammate={p} className="size-6" />),
+              ...(teammates.length > STACKED
+                ? [
+                    <span
+                      key="more"
+                      title={teammates
+                        .slice(STACKED)
+                        .map((p) => p.name)
+                        .join(', ')}
+                      className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground tabular-nums"
+                    >
+                      +{teammates.length - STACKED}
+                    </span>,
+                  ]
+                : []),
+            ].map((avatar, i) => (
               <span
+                key={avatar.key}
                 className={cn(
                   'flex rounded-full',
-                  project &&
+                  (project || i > 0) &&
                     '-ml-2 bg-card p-[1.5px] transition-colors group-hover:bg-accent group-aria-pressed:bg-accent',
                 )}
               >
-                <TeammateAvatar teammate={teammate} className="size-6" />
+                {avatar}
               </span>
-            )}
+            ))}
           </span>
         )}
         {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}

@@ -117,7 +117,7 @@ import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
-import { PebbleAvatar } from '@/components/pebble-avatar'
+import { PebbleAvatar, pebbleInk } from '@/components/pebble-avatar'
 import { PreviewElementChips } from '@/components/preview-elements'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
@@ -2852,16 +2852,30 @@ export function ThreadItems({
             : !previous ||
               previous.teammateId !== item.teammateId ||
               items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
+        // Another teammate speaks right after: a little more room, so the two read apart.
+        const handoff =
+          named &&
+          !!previous &&
+          previous.teammateId !== item.teammateId &&
+          !items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user')
         return (
           // No avatar: the thread's one living picture is its Working line's pebble. With
-          // several teammates, a name over each run says whose it is.
+          // several teammates, a name over each run says whose it is, in its pebble's colour.
           <div
             key={item.key}
             data-seq={item.seq}
-            className={cn('group/message flex items-start', run?.close && '-mt-3')}
+            className={cn(
+              'group/message flex items-start',
+              run?.close && '-mt-3',
+              handoff && 'mt-3',
+            )}
           >
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              {named && <span className="text-sm font-semibold">{author.name}</span>}
+              {named && (
+                <span className="teammate-name text-sm font-semibold" style={pebbleInk(author.id)}>
+                  {author.name}
+                </span>
+              )}
               {/* As wide as its text, so actions floating by its first line sit at the end of a short line, not at the far edge. */}
               <div
                 className={cn(
