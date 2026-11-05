@@ -11,6 +11,7 @@ import { rm, stat, statfs } from 'node:fs/promises'
 import { uptime } from 'node:os'
 import { join } from 'node:path'
 import { run } from './repos.js'
+import { teammateHome } from './teammates.js'
 
 /**
  * How full the disk is (statfs: 1 - bavail / blocks, ext4's reserve counted as used) past
@@ -66,10 +67,70 @@ const GO_MODULES = 'go/pkg/mod'
 const MINTLIFY_SITES = '.mintlify/previews'
 
 /**
- * After everything was freed, still this full: someone must act (a ticket in Needs you).
- * Below FULL again, it closes.
+ * After everything was freed, still this full: Brigade's operators must act (the disk report
+ * keeps it on the computer, for their disk: alert). Below FULL again, it is over.
  */
 export const STILL_FULL = 0.8
+
+/** A full disk's report names the largest entries of teammates' homes: at most this many… */
+export const LARGEST_COUNT = 8
+/** …none smaller than this. */
+export const LARGEST_MIN = 256 * 1024 ** 2
+const MEASURE_TIMEOUT_MS = 2 * 60_000
+/**
+ * Run as the teammate, in its home ($1): the size of each of its entries, hidden ones too, as
+ * du says it ("bytes<TAB>./name"). What it cannot read is left out, not a failure.
+ */
+const MEASURE_SCRIPT =
+  'cd -- "$1" 2>/dev/null || exit 0; ' +
+  'find . -mindepth 1 -maxdepth 1 -print0 | xargs -0 -r du -xs --block-size=1 -- 2>/dev/null; exit 0'
+
+export type Entry = { path: string; bytes: number }
+
+/** du's lines (MEASURE_SCRIPT) as paths under the home. */
+export function homeEntries(out: string, home: string): Entry[] {
+  return out.split('\n').flatMap((line) => {
+    const match = /^(\d+)\t\.\/(.+)$/.exec(line)
+    return match ? [{ path: `${home}/${match[2]}`, bytes: Number(match[1]) }] : []
+  })
+}
+
+/** The largest entries, largest first: at most `count`, none under `min`. */
+export const largest = (entries: Entry[], count = LARGEST_COUNT, min = LARGEST_MIN) =>
+  entries
+    .filter((entry) => entry.bytes >= min)
+    .sort((a, b) => b.bytes - a.bytes)
+    .slice(0, count)
+
+/**
+ * What takes room in teammates' homes, by entry: their thread folders together (threads), their
+ * tools' state and caches, and whatever a teammate left elsewhere, which nothing frees on its own
+ * (the thread folders are a cache, folders.ts; the rest of a home is not, as a teammate's cron
+ * jobs, services and tools may run from it). For Brigade's operators, once the disk stays full.
+ * Tests give where a user's home is (`homeOf`), and how many and how small (largest).
+ */
+export async function largestInHomes(
+  users: (string | undefined)[],
+  {
+    homeOf = (runAs: string | undefined) => teammateHome(runAs ?? ''),
+    count = LARGEST_COUNT,
+    min = LARGEST_MIN,
+  } = {},
+) {
+  const entries: Entry[] = []
+  for (const runAs of users) {
+    const home = homeOf(runAs)
+    const out = await run('sh', ['-c', MEASURE_SCRIPT, 'sh', home], {
+      runAs,
+      timeout: MEASURE_TIMEOUT_MS,
+    }).catch((error) => {
+      console.warn(`could not measure ${runAs ?? home}'s home: ${String(error)}`)
+      return Buffer.alloc(0)
+    })
+    entries.push(...homeEntries(out.toString(), home))
+  }
+  return largest(entries, count, min)
+}
 
 /**
  * Where boat's lazy restore keeps its state, readable by every user. A resumed computer runs

@@ -368,6 +368,9 @@ model Computer {
   /// again from the same place keeps this computer.
   machineId      String?
   status         ComputerStatus        @default(pending)
+  /// A cloud computer's disk while its runner says it stays full once it freed what it could
+  /// (src/computer-disk.ts): how full, since when, and what takes room. Null otherwise.
+  disk           Json?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   runner         Runner?

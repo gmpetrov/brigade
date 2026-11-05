@@ -8143,6 +8143,7 @@ export const ComputerScalarFieldEnum = {
   size: 'size',
   machineId: 'machineId',
   status: 'status',
+  disk: 'disk',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

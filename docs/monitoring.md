@@ -3,7 +3,8 @@
 Brigade tells its operators when something of its own breaks: the API failing, runners or
 cloud computers down, Stripe's or Resend's webhooks failing, background jobs throwing. All of
 it is in `apps/api/src/ops/`. It is not for members: their own trouble (a teammate's account
-signed out, a full disk) reaches them as tickets.
+signed out) reaches them as tickets. A cloud computer's full disk is Brigade's, not theirs: it
+is alerted on here only (`disk:<computerId>`).
 
 ## Where alerts go
 
@@ -80,7 +81,7 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `computer:<id>`               | A cloud computer in `error`, stuck `creating`/`starting` for 20 min without its runner, or `running` with no runner for 10 min                                                                                           | critical, critical, warning            |
 | `events-waiting:<computerId>` | Threads whose runner has sent the same events, unacknowledged, for 10 min (`events.waiting`)                                                                                                                             | warning; critical at 30 min            |
 | `backlog:<computerId>`        | Commands (`RunnerCommand`) its runner has not acknowledged: 20 or more, or the oldest 30 min old; never a member's machine while it is offline                                                                           | warning; critical at 100 or 3 h        |
-| `disk:<computerId>`           | A `disk_full` ticket open on a cloud computer                                                                                                                                                                            | warning                                |
+| `disk:<computerId>`           | A cloud computer's disk still full once its runner freed what it could (`Computer.disk`, below), with the largest entries of teammates' homes                                                                            | warning                                |
 | `worker:<script>`             | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them                                                                                                   | 5 / 50 in 10 min (checked every 5 min) |
 | `worker:<script>:resets`      | A `brigade-*` Worker's Durable Objects reset by the runtime: past their memory or CPU, or an internal error (each drops the object's sockets)                                                                            | 1 / 5 in 10 min (checked every 5 min)  |
 | `api-down`                    | The watchdog: the Api object does not answer, or its checks fail                                                                                                                                                         | critical                               |
@@ -112,6 +113,19 @@ been applied before its answer was lost.
 Each minute, the API logs what the hubs it holds hold (`hubs: hubs 3, runners 2, browsers 5,
 queued 0, …`), so a growth shows before it costs a restart. A workspace's hub object logs
 `hub <id>: woke with N sockets` each time it wakes.
+
+A cloud computer's disk is said full by its runner from 80% until it is back under 75%, once it
+has cleared caches, trimmed quiet threads and archived their folders (`apps/runner/src/folders.ts`).
+The computer keeps it (`Computer.disk`, `src/computer-disk.ts`): how full, since when, and the
+largest entries of each teammate's home, its thread folders together (`threads`) and the rest one
+by one. Members are not asked: deleting threads frees no more than archiving their folders did,
+and a larger disk is not theirs to choose. What is left is in use, or outside thread folders,
+where nothing frees it on its own, as a teammate's cron jobs, services and tools may run from its
+home (teammates are told to keep what they make in their thread's folder). To free it by hand,
+run as root through boat on the computer: `du -xsh /home/*/* /home/*/.[!.]* | sort -h | tail`,
+then remove what a teammate left that can be fetched or made again (a clone with nothing
+unpushed, raw render frames, downloads), never `/var/lib/ascii-lazy` (boat's own: `sysbind` binds
+the same files again, so du counts them twice there).
 
 Turns failing in one workspace only are that workspace's trouble (its member's account, say),
 not Brigade's: those are not alerted on.

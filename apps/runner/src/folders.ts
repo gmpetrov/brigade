@@ -31,8 +31,10 @@ import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.j
 import {
   CACHES_EVERY_MS,
   CRITICAL,
+  type Entry,
   freeCaches,
   installing,
+  largestInHomes,
   Reserve,
   restoring,
   STILL_FULL,
@@ -283,9 +285,10 @@ export class Folders {
       restoring?: () => Promise<boolean>
       /**
        * On a cloud computer, after each check: whether the disk is still full (STILL_FULL)
-       * once everything that could go went, and how full (0 to 1). A person is asked to act.
+       * once everything that could go went, how full (0 to 1), and while full what takes room
+       * in teammates' homes (largestInHomes). For Brigade's operators: members are not asked.
        */
-      reportDisk?: (disk: { full: boolean; used: number }) => void
+      reportDisk?: (disk: { full: boolean; used: number; largest?: Entry[] }) => void
       /**
        * On a cloud computer, where folders are backed up while on disk (BACKUP_PROTOCOL), for a
        * computer that replaces this one; and what a thread's teammate runs in the background.
@@ -600,7 +603,7 @@ export class Folders {
     let critical = false
     // While boat restores the disk, what is removed leaves it only once the restore is done, and
     // an archive adds its own file meanwhile: freeing would only fill it more, and the disk is
-    // not as full as it reads. A ticket says nothing true then either.
+    // not as full as it reads. Saying it full would not be true then either.
     let held = false
     try {
       await this.loaded
@@ -742,7 +745,13 @@ export class Folders {
     if (next.full !== (this.reported?.full ?? false))
       console.warn(`the disk is ${next.full ? 'still full' : 'no longer full'}`)
     this.reported = next
-    this.options.reportDisk({ full: next.full, used: Math.min(1, Math.max(0, used)) })
+    // Measured only while full, at most every REPORT_EVERY_MS: du reads every file of every home.
+    const largest = next.full ? await largestInHomes(await owners()) : []
+    this.options.reportDisk({
+      full: next.full,
+      used: Math.min(1, Math.max(0, used)),
+      ...(largest.length ? { largest } : {}),
+    })
   }
 
   /**
@@ -1152,7 +1161,7 @@ export function diskReport(
   now: number,
 ) {
   const full = used >= STILL_FULL || (Boolean(last?.full) && used >= FULL)
-  // Just started, between the two: whatever was said before stands (a ticket stays open).
+  // Just started, between the two: whatever was said before stands (a full disk stays full).
   if (!last && !full && used >= FULL) return null
   if (last && last.full === full && now - last.at < REPORT_EVERY_MS) return null
   return { full, at: now }

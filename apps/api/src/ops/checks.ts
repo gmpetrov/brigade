@@ -5,6 +5,7 @@
 // counts them.
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
+import { diskDetail, fullDisks, type DiskState } from '../computer-disk.js'
 import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
 import type { ThreadWaiting } from '../hub/host.js'
@@ -334,24 +335,17 @@ async function checkComputers(now: number) {
   for (const id of offlineSince.keys()) if (!seen.has(id)) offlineSince.delete(id)
   await settle('computer:', found, new Date(now))
 
-  const full = await prisma.ticket.findMany({
-    where: { type: 'disk_full', status: 'open' },
-    select: { workspaceId: true, payload: true, createdAt: true },
-  })
-  await settle(
-    'disk:',
-    full.map((t) => {
-      const computerId = (t.payload as { computerId?: string } | null)?.computerId ?? t.workspaceId
-      return {
-        key: `disk:${computerId}`,
-        severity: 'warning' as const,
-        title: `Cloud computer's disk full: ${computerId}`,
-        detail: `A disk_full ticket has been open since ${t.createdAt.toISOString().slice(0, 16)}Z. The runner should prevent this on its own: find out why it did not.`,
-      }
-    }),
-    new Date(now),
-  )
+  await settle('disk:', diskProblems(await fullDisks()), new Date(now))
 }
+
+/** Kept on the computer while its runner says the disk stays full (src/computer-disk.ts). */
+export const diskProblems = (full: { id: string; disk: DiskState }[]): Alert[] =>
+  full.map((c) => ({
+    key: `disk:${c.id}`,
+    severity: 'warning',
+    title: `Cloud computer's disk full: ${c.id}`,
+    detail: diskDetail(c.disk),
+  }))
 
 /** A thread whose events the runner keeps sending, unacknowledged, this long: the API drops them. */
 export const EVENTS_WAITING_MS = 10 * MINUTE

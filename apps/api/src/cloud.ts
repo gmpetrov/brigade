@@ -448,7 +448,7 @@ const percent = (share: number) => `${Math.round(share * 100)}%`
  * Before a stop: whether boat will resume the computer (STOP_LIMIT). Past it, Brigade's swap
  * file and the runner's reserve go first, so the snapshot leaves them out (both come back after
  * the resume); still past it, the stop waits, the swap file back, while the runner frees space
- * (its own thresholds are lower, disk.ts) and its owners are told (disk_full). A computer that
+ * (its own thresholds are lower, disk.ts) and Brigade's operators are told (disk:). A computer that
  * does not answer stops as before.
  */
 async function roomToStop(

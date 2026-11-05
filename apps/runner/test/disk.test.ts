@@ -20,7 +20,11 @@ exit 0
 )
 const {
   freeCaches,
+  homeEntries,
   installs,
+  largest,
+  largestInHomes,
+  LARGEST_MIN,
   npxInUse,
   oldStores,
   reserveSize,
@@ -215,9 +219,69 @@ test('the disk is said full from 80% until it is back under 75%, and said again 
   // Still full down to 75%, then not.
   assert.equal(diskReport(full!, 0.76, at + 120_000), null)
   assert.deepEqual(diskReport(full!, 0.74, at + 120_000), { full: false, at: at + 120_000 })
-  // A runner just started between the two says nothing: an open ticket stays open.
+  // A runner just started between the two says nothing: a full disk stays full.
   assert.equal(diskReport(undefined, 0.77, at), null)
   assert.deepEqual(diskReport(undefined, 0.74, at), { full: false, at })
+})
+
+test("a full disk names the largest entries of teammates' homes, hidden ones and thread folders too", async (t) => {
+  const homes = await mkdtemp(join(tmpdir(), 'homes-'))
+  t.after(() => rm(homes, { recursive: true, force: true }))
+  const fill = async (path: string, bytes: number) => {
+    await mkdir(join(path, '..'), { recursive: true })
+    await writeFile(path, Buffer.alloc(bytes, 1))
+  }
+  const MB = 1024 ** 2
+  await fill(join(homes, 'a', 'threads', 't1', 'frames.yuv'), 6 * MB)
+  await fill(join(homes, 'a', 'work', 'frames.yuv'), 4 * MB)
+  await fill(join(homes, 'a', '.browser', 'profile'), 2 * MB)
+  await fill(join(homes, 'a', 'note.txt'), 10)
+  await fill(join(homes, 'b', 'clone', 'big'), 5 * MB)
+  // A home that is not there adds nothing. Run as the runner itself here (no user).
+  const found = await largestInHomes([undefined, undefined, undefined], {
+    homeOf: (() => {
+      const queue = ['a', 'b', 'gone']
+      return () => join(homes, queue.shift()!)
+    })(),
+    count: 3,
+    min: MB,
+  })
+  assert.deepEqual(
+    found.map((e) => e.path.slice(homes.length + 1)),
+    ['a/threads', 'b/clone', 'a/work'],
+  )
+  assert.ok(found[0]!.bytes >= 6 * MB)
+  // Hidden entries count too; note.txt is under the minimum.
+  const more = await largestInHomes([undefined], {
+    homeOf: () => join(homes, 'a'),
+    count: 9,
+    min: MB,
+  })
+  assert.deepEqual(
+    more.map((e) => e.path.slice(homes.length + 1)),
+    ['a/threads', 'a/work', 'a/.browser'],
+  )
+  assert.equal(LARGEST_MIN, 256 * MB)
+})
+
+test('du lines become paths under the home, largest first, at most some, none too small', () => {
+  const entries = homeEntries(
+    '4096\t./work\n12000000000\t./threads\nnot a line\n2700000000\t./with space\n',
+    '/home/bt-1',
+  )
+  assert.deepEqual(entries, [
+    { path: '/home/bt-1/work', bytes: 4096 },
+    { path: '/home/bt-1/threads', bytes: 12e9 },
+    { path: '/home/bt-1/with space', bytes: 2.7e9 },
+  ])
+  assert.deepEqual(
+    largest(entries, 1).map((e) => e.path),
+    ['/home/bt-1/threads'],
+  )
+  assert.deepEqual(
+    largest(entries).map((e) => e.path),
+    ['/home/bt-1/threads', '/home/bt-1/with space'],
+  )
 })
 
 test("a teammate's old harness sessions and unused npx packages go, the rest stays", async (t) => {

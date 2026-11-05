@@ -344,9 +344,19 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   z.object({ type: z.literal('keepalive') }),
   /**
    * A cloud computer's disk after the runner freed what it could (DISK_PROTOCOL): still
-   * full, and how full (0 to 1). Said when that changes and every 10 minutes.
+   * full, and how full (0 to 1). Said when that changes and every 10 minutes. While full, the
+   * largest entries of teammates' homes, largest first: what an operator would free by hand.
+   * An older runner leaves them out.
    */
-  z.object({ type: z.literal('disk'), full: z.boolean(), used: z.number().min(0).max(1) }),
+  z.object({
+    type: z.literal('disk'),
+    full: z.boolean(),
+    used: z.number().min(0).max(1),
+    largest: z
+      .array(z.object({ path: z.string().max(1000), bytes: z.number().int().nonnegative() }))
+      .max(20)
+      .optional(),
+  }),
   /**
    * The runner restarts into an update and hands its turns over to the next one (protocol 29):
    * until that one connects, the API holds the computer's commands, and it stays online.

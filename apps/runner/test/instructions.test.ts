@@ -66,6 +66,8 @@ test('a thread loads each memory’s dated core, and its topics by name, size an
   )
   assert.match(text, /the newer one wins/)
   assert.doesNotMatch(text, /this thread is private/)
+  // Not on a cloud computer (instructions-cloud.test.ts): a member's machine is theirs.
+  assert.doesNotMatch(text, /## Your files/)
 })
 
 test('a private thread is told it writes only to its own memory', () => {

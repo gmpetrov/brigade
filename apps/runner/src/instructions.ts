@@ -55,6 +55,18 @@ const MEMORY_RULES =
   'since: check it before you rely on it, and when your work shows a line is wrong, say so in your reply. ' +
   '`search_workspace` also finds lines removed from memory, with why.'
 
+/**
+ * On a cloud computer, thread folders are a cache Brigade trims and archives (folders.ts), and
+ * nothing else in a teammate's home is freed on its own: what it leaves there stays for good.
+ */
+const YOUR_FILES =
+  '## Your files\n\n' +
+  "Keep everything you make for this thread in this thread's folder, your working directory: downloads, " +
+  'renders, clones, scratch files and tools you fetch. Never put them elsewhere in your home: Brigade frees ' +
+  'the disk by archiving the folders of quiet threads, but what lies outside them stays on the disk for good, ' +
+  "and the computer's disk is shared by every teammate. Delete large temporary files (raw video frames, " +
+  'archives, downloads) once you are done with them.'
+
 /** Where the teammate may save to the library: everywhere, nowhere, or some folders. */
 function saving(spec: ThreadSpec) {
   const folders = spec.libraryFolders ?? []
@@ -102,6 +114,7 @@ export function instructions(
       'Name a library file in your reply by its mention (`save_to_library` returns it) or its whole library path, ' +
       'never its bare file name.' +
       saving(spec),
+    CLOUD && YOUR_FILES,
     spec.project && project(spec.project, libraryDir),
     projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
