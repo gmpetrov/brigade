@@ -86,24 +86,14 @@ test('the rise shows only when usage went up from a period that spent something'
   assert.equal(rise(totals(100), null), null)
 })
 
-test("the card names only the providers that spent, Claude's first", () => {
-  const group = (id: string, n: number) => ({ id, label: id, ...totals(n) })
+test('the card says the period and its total', () => {
   const text = cardText({
     days: 7,
     totals: totals(48_200_000),
     previous: null,
-    byProvider: [group('codex', 10), group('claude_code', 20)],
   } as Parameters<typeof cardText>[0])
-  assert.deepEqual(text.providers, ['claude_code', 'codex'])
   assert.equal(text.total, '48.2M tokens')
   assert.equal(text.title, 'Last 7 days')
-  const one = cardText({
-    days: 1,
-    totals: totals(5),
-    previous: null,
-    byProvider: [group('codex', 0), group('claude_code', 5)],
-  } as Parameters<typeof cardText>[0])
-  assert.deepEqual(one.providers, ['claude_code'])
 })
 
 test('the hour the clocks go back through twice keeps its tokens, the second time too', () => {

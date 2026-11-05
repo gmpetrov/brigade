@@ -1,7 +1,6 @@
 // The Usage card as an image: drawn on a canvas in the browser, in the theme the page shows,
 // from what lib/usage-card.ts lays out. Counts only, as on the page.
 import type { UsageResponse } from '@brigade/contracts'
-import { HARNESS_MARKS } from '@/components/harness-logo'
 import { cardGrid, cardText, shades } from '@/lib/usage-card'
 
 const WIDTH = 1200
@@ -99,37 +98,35 @@ export async function drawCard(data: UsageResponse): Promise<Blob> {
   }
   ctx.letterSpacing = '0px'
 
-  // The providers it was spent on, top right.
-  ctx.font = font(600, 22)
-  let right = WIDTH - PAD
-  for (const provider of [...text.providers].reverse()) {
-    const label = provider === 'codex' ? 'Codex' : 'Claude'
-    const width = ctx.measureText(label).width
-    ctx.fillStyle = theme.mutedForeground
-    ctx.fillText(label, right - width, PAD + 24)
-    const m = HARNESS_MARKS[provider]
-    mark(ctx, m.path, 24, right - width - 40, PAD - 4, 30, m.color ?? theme.foreground)
-    right -= width + 40 + 28
-  }
-
-  // The grid, as large as the space between the total and the footer allows.
+  // The grid, across the whole width between the margins; its cells as square as the height
+  // between the total and the footer leaves them.
   const grid = cardGrid(data.days, data.quarters)
   const shade = shades(grid.cells)
-  const top = PAD + 160
-  const bottom = HEIGHT - PAD - 56
+  const top = PAD + 150
+  const bottom = HEIGHT - PAD - 52
   const width = WIDTH - 2 * PAD
   const height = bottom - top
-  const step = Math.min(width / (grid.columns - 0.2), height / (grid.rows - 0.2))
-  const cell = step * 0.8
-  const left = PAD + (width - (grid.columns * step - step * 0.2)) / 2
-  const y0 = top + (height - (grid.rows * step - step * 0.2)) / 2
+  const stepX = width / (grid.columns - 0.2)
+  const stepY = Math.min(stepX, height / (grid.rows - 0.2))
+  const gap = stepX * 0.2
+  const cellWidth = stepX - gap
+  const cellHeight = stepY - gap
+  const left = PAD
+  const y0 = top + (height - (grid.rows * stepY - gap)) / 2
   for (let row = 0; row < grid.rows; row++)
     for (let column = 0; column < grid.columns; column++) {
       const s = shade[row * grid.columns + column]!
       ctx.save()
       ctx.fillStyle = s ? theme.primary : theme.muted
       ctx.globalAlpha = s ? SHADE_ALPHA[s]! : 1
-      roundRect(ctx, left + column * step, y0 + row * step, cell, cell, cell * 0.2)
+      roundRect(
+        ctx,
+        left + column * stepX,
+        y0 + row * stepY,
+        cellWidth,
+        cellHeight,
+        Math.min(cellWidth, cellHeight) * 0.2,
+      )
       ctx.restore()
     }
 
@@ -145,7 +142,7 @@ export async function drawCard(data: UsageResponse): Promise<Blob> {
   ctx.restore()
   ctx.fillStyle = theme.mutedForeground
   ctx.font = font(600, 24)
-  ctx.fillText('Brigade · brigade.lol', PAD + 46, HEIGHT - PAD - 4)
+  ctx.fillText('Brigade.lol', PAD + 46, HEIGHT - PAD - 4)
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(
