@@ -1,5 +1,5 @@
 'use client'
-import type { CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, type CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -84,12 +84,108 @@ export function pebbleInk(seed: string): CSSProperties {
   return { '--pebble-c1': pebbleStyle(seed)['--pebble-c1' as keyof CSSProperties] } as CSSProperties
 }
 
-/** A pebble in the theme's primary colour, its eyes cut out in the colour of the page under it. */
-const PRIMARY = {
-  '--pebble-c1': 'var(--primary)',
-  '--pebble-c2': 'var(--primary)',
+/** The Working line's pebble: solid grey, its eyes cut out in the colour of the page under
+ * it. Grey is no teammate's colour, so it reads as a status and never as someone. */
+const NEUTRAL = {
+  '--pebble-c1': 'var(--muted-foreground)',
+  '--pebble-c2': 'var(--muted-foreground)',
   '--pebble-eye': 'var(--background)',
 } as CSSProperties
+
+/** What the Working pebble's eyes do, by the kind of step it is on. */
+export type PebbleExpression = 'read' | 'think' | 'focus' | 'curious' | 'aha' | 'glance'
+
+/** Where the eyes look (x, y in % of the pebble) and each eye's size, [width, height]. */
+type Pose = { x: number; y: number; eyes: [[number, number], [number, number]] }
+const pose = (x: number, y: number, sx = 1, sy = 1, right?: [number, number]): Pose => ({
+  x,
+  y,
+  eyes: [[sx, sy], right ?? [sx, sy]],
+})
+const SPRING = 'cubic-bezier(.34,1.56,.64,1)'
+const EASE = 'cubic-bezier(.4,0,.2,1)'
+/** A pose, how long the eyes take to reach it (ms), how long they stay there, and how. */
+type Move = [Pose, number, number, string?]
+const EXPRESSIONS: Record<PebbleExpression, Move[]> = {
+  // Eyes down, scanning a line, back to the start of the next.
+  read: [
+    [pose(-7, 7, 1, 0.85), 350, 250],
+    [pose(7, 7, 1, 0.85), 900, 150, EASE],
+    [pose(-7, 10, 1, 0.85), 260, 200],
+    [pose(7, 10, 1, 0.85), 900, 150, EASE],
+  ],
+  // Up and to the side, drifting slowly.
+  think: [
+    [pose(7, -8, 1, 0.92), 450, 900],
+    [pose(-5, -9, 1, 0.92), 1200, 600, EASE],
+    [pose(3, -10, 1, 0.92), 900, 500, EASE],
+  ],
+  // A squint, as when reading up close.
+  focus: [
+    [pose(0, 2, 1.05, 0.5), 300, 1300],
+    [pose(2, 2, 1.05, 0.42), 700, 600, EASE],
+  ],
+  // One eye bigger, the other squinted: a raised brow.
+  curious: [
+    [pose(4, -2, 1.15, 1.3, [0.95, 0.72]), 350, 1300],
+    [pose(2, -1, 1.05, 1.1, [1, 0.85]), 600, 500, EASE],
+  ],
+  // Both widen, then settle.
+  aha: [
+    [pose(0, -3, 1.3, 1.38), 260, 800],
+    [pose(0, 0), 400, 600],
+  ],
+  // A quick look left, then right.
+  glance: [
+    [pose(-8, 0), 220, 500],
+    [pose(8, 0), 260, 500],
+    [pose(0, 0), 300, 300],
+  ],
+}
+
+/**
+ * Moves the pebble's eyes through its expression, one move after another, by writing their
+ * transforms (no re-render). A new expression takes over once the move under way ends, so the
+ * eyes never jump. Still while out of sight (`data-still`) and for those who ask for less motion.
+ */
+function useExpression(expression: PebbleExpression | undefined) {
+  const node = useRef<HTMLElement | null>(null)
+  const current = useRef(expression)
+  useEffect(() => {
+    current.current = expression
+  }, [expression])
+  const on = expression !== undefined
+  useEffect(() => {
+    const el = node.current
+    if (!on || !el || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const face = el.querySelector<HTMLElement>('.pebble-face')
+    const eyes = [...el.querySelectorAll<HTMLElement>('.pebble-eye')]
+    let queue: Move[] = []
+    let timer: ReturnType<typeof setTimeout>
+    const next = () => {
+      if (el.hasAttribute('data-still')) {
+        timer = setTimeout(next, 1_000)
+        return
+      }
+      if (!queue.length) queue = [...EXPRESSIONS[current.current ?? 'think']]
+      const [p, ms, hold, ease = SPRING] = queue.shift()!
+      const transition = `transform ${ms}ms ${ease}`
+      if (face) {
+        face.style.transition = transition
+        face.style.transform = `translate(${p.x}%, ${p.y}%)`
+      }
+      eyes.forEach((eye, i) => {
+        const [sx, sy] = p.eyes[i] ?? [1, 1]
+        eye.style.transition = transition
+        eye.style.transform = `scale(${sx}, ${sy})`
+      })
+      timer = setTimeout(next, ms + hold)
+    }
+    next()
+    return () => clearTimeout(timer)
+  }, [on])
+  return node
+}
 
 /** An agent's picture: a softly morphing pebble with pill eyes that blink into happy
  * arcs, unique to its seed (the agent's id) and the same wherever it shows. The chief
@@ -100,23 +196,35 @@ export function PebbleAvatar({
   title,
   crown = false,
   tone,
+  expression,
 }: {
   seed: string
   className?: string
   title?: string
   crown?: boolean
-  /** In the theme's primary colour, its eyes the page's own (a Working line), not its seed's. */
-  tone?: 'primary'
+  /** In neutral grey, its eyes the page's own (a Working line), not its seed's colours. */
+  tone?: 'neutral'
+  /** Its eyes move as this says (EXPRESSIONS above) instead of glancing around now and then. */
+  expression?: PebbleExpression
 }) {
+  const expressive = useExpression(expression)
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      expressive.current = node
+      return node ? stillOutOfSight(node) : undefined
+    },
+    [expressive],
+  )
   return (
     <span
-      ref={stillOutOfSight}
+      ref={ref}
+      data-expressive={expression ? '' : undefined}
       data-slot="avatar"
       role="img"
       aria-label={title}
       title={title}
       className={cn('pebble relative flex size-8 shrink-0', className)}
-      style={tone === 'primary' ? { ...pebbleStyle(seed), ...PRIMARY } : pebbleStyle(seed)}
+      style={tone === 'neutral' ? { ...pebbleStyle(seed), ...NEUTRAL } : pebbleStyle(seed)}
     >
       <span className="pebble-body" />
       <span className="pebble-face">
