@@ -731,10 +731,11 @@ model Session {
   /// decision, not among its sub-threads.
   chiefDecisionId String?         @unique
   chiefDecision   ChiefDecision?  @relation("ChiefDecisionChild", fields: [chiefDecisionId], references: [id], onDelete: SetNull)
-  /// Its work goes on Chief's word: Chief answered in its person's name and they have not written
-  /// in it since, or it was handed work while its giver was (a sub-thread, a task, a message).
-  /// Meanwhile its App writes ask a person, whatever its teammate's access (connector-calls.ts).
-  chiefWordAt     DateTime?
+  /// Its work goes on Chief's word from this event on (its seq): Chief answered in its person's
+  /// name, or it was handed work while its giver did (a sub-thread, a task, a message). Only a
+  /// person's message after it lifts it. Meanwhile its App writes ask a person, whatever its
+  /// teammate's access (src/chief-answers.ts).
+  chiefWordSeq    Int?
 
   @@index([workspaceId, createdAt])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
@@ -922,6 +923,10 @@ model ChiefDecision {
   /// The work put off, as added to the person's list.
   parked         String?
   decidedAt      DateTime?
+  /// An answer on its way to the thread's computer (its wake-up firing): a person's prompt waits
+  /// for it, so it goes first. sentAt: kept for the computer, in order.
+  sendingAt      DateTime?
+  sentAt         DateTime?
   outcome        ChiefOutcome?
   outcomeAt      DateTime?
   createdAt      DateTime            @default(now())

@@ -55,6 +55,8 @@ export type ChiefDecisionMinAggregateOutputType = {
   basis: string | null
   parked: string | null
   decidedAt: Date | null
+  sendingAt: Date | null
+  sentAt: Date | null
   outcome: $Enums.ChiefOutcome | null
   outcomeAt: Date | null
   createdAt: Date | null
@@ -79,6 +81,8 @@ export type ChiefDecisionMaxAggregateOutputType = {
   basis: string | null
   parked: string | null
   decidedAt: Date | null
+  sendingAt: Date | null
+  sentAt: Date | null
   outcome: $Enums.ChiefOutcome | null
   outcomeAt: Date | null
   createdAt: Date | null
@@ -104,6 +108,8 @@ export type ChiefDecisionCountAggregateOutputType = {
   basis: number
   parked: number
   decidedAt: number
+  sendingAt: number
+  sentAt: number
   outcome: number
   outcomeAt: number
   createdAt: number
@@ -140,6 +146,8 @@ export type ChiefDecisionMinAggregateInputType = {
   basis?: true
   parked?: true
   decidedAt?: true
+  sendingAt?: true
+  sentAt?: true
   outcome?: true
   outcomeAt?: true
   createdAt?: true
@@ -164,6 +172,8 @@ export type ChiefDecisionMaxAggregateInputType = {
   basis?: true
   parked?: true
   decidedAt?: true
+  sendingAt?: true
+  sentAt?: true
   outcome?: true
   outcomeAt?: true
   createdAt?: true
@@ -189,6 +199,8 @@ export type ChiefDecisionCountAggregateInputType = {
   basis?: true
   parked?: true
   decidedAt?: true
+  sendingAt?: true
+  sentAt?: true
   outcome?: true
   outcomeAt?: true
   createdAt?: true
@@ -301,6 +313,8 @@ export type ChiefDecisionGroupByOutputType = {
   basis: string | null
   parked: string | null
   decidedAt: Date | null
+  sendingAt: Date | null
+  sentAt: Date | null
   outcome: $Enums.ChiefOutcome | null
   outcomeAt: Date | null
   createdAt: Date
@@ -349,6 +363,8 @@ export type ChiefDecisionWhereInput = {
   basis?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   parked?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sendingAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sentAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   outcome?: Prisma.EnumChiefOutcomeNullableFilter<"ChiefDecision"> | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ChiefDecision"> | Date | string
@@ -378,6 +394,8 @@ export type ChiefDecisionOrderByWithRelationInput = {
   basis?: Prisma.SortOrderInput | Prisma.SortOrder
   parked?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sendingAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   outcome?: Prisma.SortOrderInput | Prisma.SortOrder
   outcomeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -411,6 +429,8 @@ export type ChiefDecisionWhereUniqueInput = Prisma.AtLeast<{
   basis?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   parked?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sendingAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sentAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   outcome?: Prisma.EnumChiefOutcomeNullableFilter<"ChiefDecision"> | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ChiefDecision"> | Date | string
@@ -440,6 +460,8 @@ export type ChiefDecisionOrderByWithAggregationInput = {
   basis?: Prisma.SortOrderInput | Prisma.SortOrder
   parked?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sendingAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   outcome?: Prisma.SortOrderInput | Prisma.SortOrder
   outcomeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -473,6 +495,8 @@ export type ChiefDecisionScalarWhereWithAggregatesInput = {
   basis?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   parked?: Prisma.StringNullableWithAggregatesFilter<"ChiefDecision"> | string | null
   decidedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ChiefDecision"> | Date | string | null
+  sendingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ChiefDecision"> | Date | string | null
+  sentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ChiefDecision"> | Date | string | null
   outcome?: Prisma.EnumChiefOutcomeNullableWithAggregatesFilter<"ChiefDecision"> | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ChiefDecision"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ChiefDecision"> | Date | string
@@ -495,6 +519,8 @@ export type ChiefDecisionCreateInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -524,6 +550,8 @@ export type ChiefDecisionUncheckedCreateInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -547,6 +575,8 @@ export type ChiefDecisionUpdateInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -576,6 +606,8 @@ export type ChiefDecisionUncheckedUpdateInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -602,6 +634,8 @@ export type ChiefDecisionCreateManyInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -624,6 +658,8 @@ export type ChiefDecisionUpdateManyMutationInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -649,6 +685,8 @@ export type ChiefDecisionUncheckedUpdateManyInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -694,6 +732,8 @@ export type ChiefDecisionCountOrderByAggregateInput = {
   basis?: Prisma.SortOrder
   parked?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
+  sendingAt?: Prisma.SortOrder
+  sentAt?: Prisma.SortOrder
   outcome?: Prisma.SortOrder
   outcomeAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -723,6 +763,8 @@ export type ChiefDecisionMaxOrderByAggregateInput = {
   basis?: Prisma.SortOrder
   parked?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
+  sendingAt?: Prisma.SortOrder
+  sentAt?: Prisma.SortOrder
   outcome?: Prisma.SortOrder
   outcomeAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -747,6 +789,8 @@ export type ChiefDecisionMinOrderByAggregateInput = {
   basis?: Prisma.SortOrder
   parked?: Prisma.SortOrder
   decidedAt?: Prisma.SortOrder
+  sendingAt?: Prisma.SortOrder
+  sentAt?: Prisma.SortOrder
   outcome?: Prisma.SortOrder
   outcomeAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -924,6 +968,8 @@ export type ChiefDecisionCreateWithoutMemberInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -951,6 +997,8 @@ export type ChiefDecisionUncheckedCreateWithoutMemberInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1006,6 +1054,8 @@ export type ChiefDecisionScalarWhereInput = {
   basis?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   parked?: Prisma.StringNullableFilter<"ChiefDecision"> | string | null
   decidedAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sendingAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
+  sentAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   outcome?: Prisma.EnumChiefOutcomeNullableFilter<"ChiefDecision"> | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.DateTimeNullableFilter<"ChiefDecision"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ChiefDecision"> | Date | string
@@ -1028,6 +1078,8 @@ export type ChiefDecisionCreateWithoutWorkspaceInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1055,6 +1107,8 @@ export type ChiefDecisionUncheckedCreateWithoutWorkspaceInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1104,6 +1158,8 @@ export type ChiefDecisionCreateWithoutSessionInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1131,6 +1187,8 @@ export type ChiefDecisionUncheckedCreateWithoutSessionInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1164,6 +1222,8 @@ export type ChiefDecisionCreateWithoutChildInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1192,6 +1252,8 @@ export type ChiefDecisionUncheckedCreateWithoutChildInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1246,6 +1308,8 @@ export type ChiefDecisionUpdateWithoutChildInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1274,6 +1338,8 @@ export type ChiefDecisionUncheckedUpdateWithoutChildInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1298,6 +1364,8 @@ export type ChiefDecisionCreateManyMemberInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1320,6 +1388,8 @@ export type ChiefDecisionUpdateWithoutMemberInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1347,6 +1417,8 @@ export type ChiefDecisionUncheckedUpdateWithoutMemberInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1372,6 +1444,8 @@ export type ChiefDecisionUncheckedUpdateManyWithoutMemberInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1396,6 +1470,8 @@ export type ChiefDecisionCreateManyWorkspaceInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1418,6 +1494,8 @@ export type ChiefDecisionUpdateWithoutWorkspaceInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1445,6 +1523,8 @@ export type ChiefDecisionUncheckedUpdateWithoutWorkspaceInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1470,6 +1550,8 @@ export type ChiefDecisionUncheckedUpdateManyWithoutWorkspaceInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1494,6 +1576,8 @@ export type ChiefDecisionCreateManySessionInput = {
   basis?: string | null
   parked?: string | null
   decidedAt?: Date | string | null
+  sendingAt?: Date | string | null
+  sentAt?: Date | string | null
   outcome?: $Enums.ChiefOutcome | null
   outcomeAt?: Date | string | null
   createdAt?: Date | string
@@ -1516,6 +1600,8 @@ export type ChiefDecisionUpdateWithoutSessionInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1543,6 +1629,8 @@ export type ChiefDecisionUncheckedUpdateWithoutSessionInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1568,6 +1656,8 @@ export type ChiefDecisionUncheckedUpdateManyWithoutSessionInput = {
   basis?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parked?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sendingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   outcome?: Prisma.NullableEnumChiefOutcomeFieldUpdateOperationsInput | $Enums.ChiefOutcome | null
   outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1595,6 +1685,8 @@ export type ChiefDecisionSelect<ExtArgs extends runtime.Types.Extensions.Interna
   basis?: boolean
   parked?: boolean
   decidedAt?: boolean
+  sendingAt?: boolean
+  sentAt?: boolean
   outcome?: boolean
   outcomeAt?: boolean
   createdAt?: boolean
@@ -1624,6 +1716,8 @@ export type ChiefDecisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   basis?: boolean
   parked?: boolean
   decidedAt?: boolean
+  sendingAt?: boolean
+  sentAt?: boolean
   outcome?: boolean
   outcomeAt?: boolean
   createdAt?: boolean
@@ -1652,6 +1746,8 @@ export type ChiefDecisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   basis?: boolean
   parked?: boolean
   decidedAt?: boolean
+  sendingAt?: boolean
+  sentAt?: boolean
   outcome?: boolean
   outcomeAt?: boolean
   createdAt?: boolean
@@ -1680,13 +1776,15 @@ export type ChiefDecisionSelectScalar = {
   basis?: boolean
   parked?: boolean
   decidedAt?: boolean
+  sendingAt?: boolean
+  sentAt?: boolean
   outcome?: boolean
   outcomeAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "question" | "options" | "childSessionId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
+export type ChiefDecisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "memberId" | "teammateId" | "askSeq" | "question" | "options" | "childSessionId" | "status" | "verdict" | "kind" | "optionIndex" | "reason" | "basis" | "parked" | "decidedAt" | "sendingAt" | "sentAt" | "outcome" | "outcomeAt" | "createdAt" | "updatedAt", ExtArgs["result"]["chiefDecision"]>
 export type ChiefDecisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1760,6 +1858,12 @@ export type $ChiefDecisionPayload<ExtArgs extends runtime.Types.Extensions.Inter
      */
     parked: string | null
     decidedAt: Date | null
+    /**
+     * An answer on its way to the thread's computer (its wake-up firing): a person's prompt waits
+     * for it, so it goes first. sentAt: kept for the computer, in order.
+     */
+    sendingAt: Date | null
+    sentAt: Date | null
     outcome: $Enums.ChiefOutcome | null
     outcomeAt: Date | null
     createdAt: Date
@@ -2209,6 +2313,8 @@ export interface ChiefDecisionFieldRefs {
   readonly basis: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly parked: Prisma.FieldRef<"ChiefDecision", 'String'>
   readonly decidedAt: Prisma.FieldRef<"ChiefDecision", 'DateTime'>
+  readonly sendingAt: Prisma.FieldRef<"ChiefDecision", 'DateTime'>
+  readonly sentAt: Prisma.FieldRef<"ChiefDecision", 'DateTime'>
   readonly outcome: Prisma.FieldRef<"ChiefDecision", 'ChiefOutcome'>
   readonly outcomeAt: Prisma.FieldRef<"ChiefDecision", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ChiefDecision", 'DateTime'>

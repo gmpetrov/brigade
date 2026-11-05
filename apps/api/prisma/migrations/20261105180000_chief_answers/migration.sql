@@ -12,7 +12,7 @@ ADD COLUMN     "chiefAutoChangedAt" TIMESTAMP(3);
 
 -- AlterTable
 ALTER TABLE "Session" ADD COLUMN     "chiefDecisionId" TEXT,
-ADD COLUMN     "chiefWordAt" TIMESTAMP(3);
+ADD COLUMN     "chiefWordSeq" INTEGER;
 
 -- CreateTable
 CREATE TABLE "ChiefDecision" (
@@ -34,6 +34,8 @@ CREATE TABLE "ChiefDecision" (
     "basis" TEXT,
     "parked" TEXT,
     "decidedAt" TIMESTAMP(3),
+    "sendingAt" TIMESTAMP(3),
+    "sentAt" TIMESTAMP(3),
     "outcome" "ChiefOutcome",
     "outcomeAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

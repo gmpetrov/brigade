@@ -48,25 +48,33 @@ Code: `apps/api/src/chief-answers.ts`, `packages/contracts/src/chief-answers.ts`
   the teammate is told to stop and undo (`chiefOverruledMessage`, steered into a running turn),
   and the kind goes back to suggesting. A parked proposal's line goes to `chief/parked.md`, where
   Chief may save, once the answer is given, or once the person takes the suggestion. The list is
-  made when missing (`addListLine`), never over one made meanwhile: creators take turns on the
-  path, and the save only creates (`saveLibraryFile`'s `createOnly`).
-- **It is not the person's approval.** An answer marks its thread as going on Chief's word
-  (`Session.chiefWordAt`, set with the answer, under the thread's lock), until the person writes
-  there again (`noteChiefAnswered`), however many of Brigade's notes come meanwhile. While it
-  holds (`onChiefsWord`), every App write asks the person whatever the teammate's access, except
-  those that leave nothing outside and can be undone (`UNDOABLE_WRITES`: a branch, a pull request,
-  marking one ready); a vault credential that would go without asking asks too
+  made when missing (`addListLine`), never over one made meanwhile: the save only creates
+  (`saveLibraryFile`'s `createOnly`), one at the very same time loses on the path's uniqueness, and
+  nothing is held open meanwhile (a hub's pool has three connections).
+- **It is not the person's approval.** An answer puts its thread on Chief's word from an event
+  on (`Session.chiefWordSeq`): from its question when Chief answers, under the thread's lock, and
+  from the answer's own note once it reaches the teammate. Only a person's message after that
+  event lifts it (`noteChiefAnswered`, which applies the thread's messages in their order, so a
+  hook that runs late never lifts a newer mark), however many of Brigade's notes come meanwhile.
+  While it holds (`onChiefsWord`), every App write asks the person whatever the teammate's access,
+  except those that leave nothing outside and can be undone (`UNDOABLE_WRITES`: a branch, a pull
+  request, marking one ready); a vault credential that would go without asking asks too
   (`credentials.ts`), with what the person mentioned or allowed in the thread still holding; and
   no routine is set up or changed (`schedules.ts`). The work handed on carries the mark: a
-  sub-thread it starts (`startThread`'s `chiefWord`), a task it starts for a teammate, a message to
-  a sub-thread or a task's thread (`markOnChiefsWord`); not a review, which Brigade starts. Teammates
-  are told the same of what Brigade cannot hold back: never deploy, publish, send, pay or delete
-  another way (a command, a script) on Chief's word alone. That part is instructions, not a guard.
-- **An answer the person overtook never goes.** One whose wake-up has not reached the thread yet
-  (its computer offline) is cancelled when the person writes or dismisses the card
-  (`cancelUndelivered`), and checked again as it fires (`chiefAnswerDue`, `wakeups.ts`). A dismissed
-  card is a closed question (`questionClosed`), and dismissing settles Chief's decisions on it
-  (`noteChiefDismissed`).
+  sub-thread it starts (`startThread`'s `chiefWord`), a task it starts for a teammate or hands to
+  another (`assignTask`), a message to a sub-thread or a task's thread (`markOnChiefsWord`, from
+  that thread's latest event on); not a review, which Brigade starts. Teammates are told the same
+  of what Brigade cannot hold back: never deploy, publish, send, pay or delete another way (a
+  command, a script) on Chief's word alone. That part is instructions, not a guard.
+- **The person's word always comes after an answer already sent, and an answer not sent yet never
+  comes after it.** Its wake-up claims the answer before it goes (`claimChiefAnswer`, under the
+  thread's lock, while its question is open) and releases it once kept for the computer, in order
+  (`releaseChiefAnswer`). A person's prompt (`promptThread`, `beforePersonPrompt`) waits for a
+  claimed answer to be kept, up to ten seconds, so the computer gets them in that order; any answer
+  not claimed by then is cancelled (`cancelUndelivered`), as it is when the person's message or a
+  dismissal reaches the thread. A computer that was offline never brings an answer the person
+  overtook. A dismissed card is a closed question (`questionClosed`), and dismissing settles
+  Chief's decisions on it (`noteChiefDismissed`).
 - **Suggestions earn autonomy, as playbooks' actions do.** A person's message after a suggested
   question measures it (`noteChiefAnswered`): their pick was Chief's (`agreed`: the same message,
   the same choice, or the option's words), or another (`disagreed`); only the person Chief answers

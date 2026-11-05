@@ -781,26 +781,20 @@ export async function addListLine(
 ) {
   let file = await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })
   if (!file) {
-    // Made once: never over a file another call (or a person) made meanwhile, which then stands
-    // and takes the line. Two calls take turns making it; one made by someone else in between
-    // is kept (createOnly), and one made at the very same time loses on the path's uniqueness.
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`list-file:${scope.workspaceId}:${input.path}`}, 0))`
-        if (await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })) return
-        await saveLibraryFile(
-          db,
-          scope,
-          actor,
-          { path: input.path, bytes: new TextEncoder().encode(input.header) },
-          {},
-          { createOnly: true },
-        ).catch((error: unknown) => {
-          if ((error as { code?: string }).code !== 'P2002') throw error
-        })
-      },
-      { timeout: 30_000 },
-    )
+    // Made once, never over a file made meanwhile (by another call, or a person), which stands
+    // and takes the line: the save only creates (createOnly), and one at the very same time loses
+    // on the path's uniqueness. Nothing is held open while it saves: the save needs connections of
+    // its own from the same pool.
+    await saveLibraryFile(
+      db,
+      scope,
+      actor,
+      { path: input.path, bytes: new TextEncoder().encode(input.header) },
+      {},
+      { createOnly: true },
+    ).catch((error: unknown) => {
+      if ((error as { code?: string }).code !== 'P2002') throw error
+    })
     file = await listFile(db, { path: input.path })
   }
   const documentId = file.id

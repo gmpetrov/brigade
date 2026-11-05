@@ -31,6 +31,7 @@ export type SessionAvgAggregateOutputType = {
   lastSeq: number | null
   coldSeq: number | null
   movedSeq: number | null
+  chiefWordSeq: number | null
 }
 
 export type SessionSumAggregateOutputType = {
@@ -38,6 +39,7 @@ export type SessionSumAggregateOutputType = {
   lastSeq: number | null
   coldSeq: number | null
   movedSeq: number | null
+  chiefWordSeq: number | null
 }
 
 export type SessionMinAggregateOutputType = {
@@ -85,7 +87,7 @@ export type SessionMinAggregateOutputType = {
   surfacedAt: Date | null
   quiet: boolean | null
   chiefDecisionId: string | null
-  chiefWordAt: Date | null
+  chiefWordSeq: number | null
 }
 
 export type SessionMaxAggregateOutputType = {
@@ -133,7 +135,7 @@ export type SessionMaxAggregateOutputType = {
   surfacedAt: Date | null
   quiet: boolean | null
   chiefDecisionId: string | null
-  chiefWordAt: Date | null
+  chiefWordSeq: number | null
 }
 
 export type SessionCountAggregateOutputType = {
@@ -183,7 +185,7 @@ export type SessionCountAggregateOutputType = {
   surfacedAt: number
   quiet: number
   chiefDecisionId: number
-  chiefWordAt: number
+  chiefWordSeq: number
   _all: number
 }
 
@@ -193,6 +195,7 @@ export type SessionAvgAggregateInputType = {
   lastSeq?: true
   coldSeq?: true
   movedSeq?: true
+  chiefWordSeq?: true
 }
 
 export type SessionSumAggregateInputType = {
@@ -200,6 +203,7 @@ export type SessionSumAggregateInputType = {
   lastSeq?: true
   coldSeq?: true
   movedSeq?: true
+  chiefWordSeq?: true
 }
 
 export type SessionMinAggregateInputType = {
@@ -247,7 +251,7 @@ export type SessionMinAggregateInputType = {
   surfacedAt?: true
   quiet?: true
   chiefDecisionId?: true
-  chiefWordAt?: true
+  chiefWordSeq?: true
 }
 
 export type SessionMaxAggregateInputType = {
@@ -295,7 +299,7 @@ export type SessionMaxAggregateInputType = {
   surfacedAt?: true
   quiet?: true
   chiefDecisionId?: true
-  chiefWordAt?: true
+  chiefWordSeq?: true
 }
 
 export type SessionCountAggregateInputType = {
@@ -345,7 +349,7 @@ export type SessionCountAggregateInputType = {
   surfacedAt?: true
   quiet?: true
   chiefDecisionId?: true
-  chiefWordAt?: true
+  chiefWordSeq?: true
   _all?: true
 }
 
@@ -482,7 +486,7 @@ export type SessionGroupByOutputType = {
   surfacedAt: Date | null
   quiet: boolean
   chiefDecisionId: string | null
-  chiefWordAt: Date | null
+  chiefWordSeq: number | null
   _count: SessionCountAggregateOutputType | null
   _avg: SessionAvgAggregateOutputType | null
   _sum: SessionSumAggregateOutputType | null
@@ -555,7 +559,7 @@ export type SessionWhereInput = {
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   quiet?: Prisma.BoolFilter<"Session"> | boolean
   chiefDecisionId?: Prisma.StringNullableFilter<"Session"> | string | null
-  chiefWordAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  chiefWordSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   startedBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
@@ -648,7 +652,7 @@ export type SessionOrderByWithRelationInput = {
   surfacedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   quiet?: Prisma.SortOrder
   chiefDecisionId?: Prisma.SortOrderInput | Prisma.SortOrder
-  chiefWordAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
   startedBy?: Prisma.MemberOrderByWithRelationInput
@@ -744,7 +748,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   playbookTeammate?: Prisma.StringNullableFilter<"Session"> | string | null
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   quiet?: Prisma.BoolFilter<"Session"> | boolean
-  chiefWordAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  chiefWordSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   startedBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
@@ -837,7 +841,7 @@ export type SessionOrderByWithAggregationInput = {
   surfacedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   quiet?: Prisma.SortOrder
   chiefDecisionId?: Prisma.SortOrderInput | Prisma.SortOrder
-  chiefWordAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SessionCountOrderByAggregateInput
   _avg?: Prisma.SessionAvgOrderByAggregateInput
   _max?: Prisma.SessionMaxOrderByAggregateInput
@@ -895,7 +899,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   surfacedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   quiet?: Prisma.BoolWithAggregatesFilter<"Session"> | boolean
   chiefDecisionId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
-  chiefWordAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
+  chiefWordSeq?: Prisma.IntNullableWithAggregatesFilter<"Session"> | number | null
 }
 
 export type SessionCreateInput = {
@@ -933,7 +937,7 @@ export type SessionCreateInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -1026,7 +1030,7 @@ export type SessionUncheckedCreateInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -1095,7 +1099,7 @@ export type SessionUpdateInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -1188,7 +1192,7 @@ export type SessionUncheckedUpdateInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -1269,7 +1273,7 @@ export type SessionCreateManyInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateManyMutationInput = {
@@ -1307,7 +1311,7 @@ export type SessionUpdateManyMutationInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionUncheckedUpdateManyInput = {
@@ -1357,7 +1361,7 @@ export type SessionUncheckedUpdateManyInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionListRelationFilter = {
@@ -1427,7 +1431,7 @@ export type SessionCountOrderByAggregateInput = {
   surfacedAt?: Prisma.SortOrder
   quiet?: Prisma.SortOrder
   chiefDecisionId?: Prisma.SortOrder
-  chiefWordAt?: Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrder
 }
 
 export type SessionAvgOrderByAggregateInput = {
@@ -1435,6 +1439,7 @@ export type SessionAvgOrderByAggregateInput = {
   lastSeq?: Prisma.SortOrder
   coldSeq?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrder
 }
 
 export type SessionMaxOrderByAggregateInput = {
@@ -1482,7 +1487,7 @@ export type SessionMaxOrderByAggregateInput = {
   surfacedAt?: Prisma.SortOrder
   quiet?: Prisma.SortOrder
   chiefDecisionId?: Prisma.SortOrder
-  chiefWordAt?: Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrder
 }
 
 export type SessionMinOrderByAggregateInput = {
@@ -1530,7 +1535,7 @@ export type SessionMinOrderByAggregateInput = {
   surfacedAt?: Prisma.SortOrder
   quiet?: Prisma.SortOrder
   chiefDecisionId?: Prisma.SortOrder
-  chiefWordAt?: Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrder
 }
 
 export type SessionSumOrderByAggregateInput = {
@@ -1538,6 +1543,7 @@ export type SessionSumOrderByAggregateInput = {
   lastSeq?: Prisma.SortOrder
   coldSeq?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
+  chiefWordSeq?: Prisma.SortOrder
 }
 
 export type SessionCreateNestedManyWithoutStartedByInput = {
@@ -2531,7 +2537,7 @@ export type SessionCreateWithoutStartedByInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
@@ -2622,7 +2628,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -2732,7 +2738,7 @@ export type SessionScalarWhereInput = {
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   quiet?: Prisma.BoolFilter<"Session"> | boolean
   chiefDecisionId?: Prisma.StringNullableFilter<"Session"> | string | null
-  chiefWordAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  chiefWordSeq?: Prisma.IntNullableFilter<"Session"> | number | null
 }
 
 export type SessionCreateWithoutWorkspaceInput = {
@@ -2770,7 +2776,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
@@ -2861,7 +2867,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -2956,7 +2962,7 @@ export type SessionCreateWithoutComputerInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -3047,7 +3053,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -3142,7 +3148,7 @@ export type SessionCreateWithoutTeammateInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
@@ -3233,7 +3239,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -3328,7 +3334,7 @@ export type SessionCreateWithoutReadsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -3420,7 +3426,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -3504,7 +3510,7 @@ export type SessionUpdateWithoutReadsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -3596,7 +3602,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -3664,7 +3670,7 @@ export type SessionCreateWithoutPinsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -3756,7 +3762,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -3840,7 +3846,7 @@ export type SessionUpdateWithoutPinsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -3932,7 +3938,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -4000,7 +4006,7 @@ export type SessionCreateWithoutLatersInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -4092,7 +4098,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -4176,7 +4182,7 @@ export type SessionUpdateWithoutLatersInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -4268,7 +4274,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -4336,7 +4342,7 @@ export type SessionCreateWithoutChildrenInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -4428,7 +4434,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
@@ -4501,7 +4507,7 @@ export type SessionCreateWithoutParentInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -4592,7 +4598,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -4682,7 +4688,7 @@ export type SessionUpdateWithoutChildrenInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -4774,7 +4780,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
@@ -4858,7 +4864,7 @@ export type SessionCreateWithoutTaskInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -4949,7 +4955,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -5034,7 +5040,7 @@ export type SessionUpdateWithoutTaskInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -5125,7 +5131,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -5194,7 +5200,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -5286,7 +5292,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -5359,7 +5365,7 @@ export type SessionCreateWithoutScheduleInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -5450,7 +5456,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -5540,7 +5546,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -5632,7 +5638,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -5716,7 +5722,7 @@ export type SessionCreateWithoutChiefDecisionsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -5808,7 +5814,7 @@ export type SessionUncheckedCreateWithoutChiefDecisionsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -5881,7 +5887,7 @@ export type SessionCreateWithoutChiefDecisionInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -5972,7 +5978,7 @@ export type SessionUncheckedCreateWithoutChiefDecisionInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -6057,7 +6063,7 @@ export type SessionUpdateWithoutChiefDecisionsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -6149,7 +6155,7 @@ export type SessionUncheckedUpdateWithoutChiefDecisionsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -6228,7 +6234,7 @@ export type SessionUpdateWithoutChiefDecisionInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -6319,7 +6325,7 @@ export type SessionUncheckedUpdateWithoutChiefDecisionInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -6388,7 +6394,7 @@ export type SessionCreateWithoutWakeupsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -6480,7 +6486,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -6564,7 +6570,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -6656,7 +6662,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -6724,7 +6730,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -6816,7 +6822,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -6900,7 +6906,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -6992,7 +6998,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -7060,7 +7066,7 @@ export type SessionCreateWithoutTeammatesInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -7152,7 +7158,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -7236,7 +7242,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -7328,7 +7334,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -7396,7 +7402,7 @@ export type SessionCreateWithoutEventsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -7488,7 +7494,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
@@ -7572,7 +7578,7 @@ export type SessionUpdateWithoutEventsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -7664,7 +7670,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
@@ -7732,7 +7738,7 @@ export type SessionCreateWithoutColdChunksInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -7824,7 +7830,7 @@ export type SessionUncheckedCreateWithoutColdChunksInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -7908,7 +7914,7 @@ export type SessionUpdateWithoutColdChunksInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -8000,7 +8006,7 @@ export type SessionUncheckedUpdateWithoutColdChunksInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -8068,7 +8074,7 @@ export type SessionCreateWithoutEventVolumeInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -8160,7 +8166,7 @@ export type SessionUncheckedCreateWithoutEventVolumeInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -8244,7 +8250,7 @@ export type SessionUpdateWithoutEventVolumeInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -8336,7 +8342,7 @@ export type SessionUncheckedUpdateWithoutEventVolumeInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -8404,7 +8410,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -8496,7 +8502,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
@@ -8580,7 +8586,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -8672,7 +8678,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
@@ -8740,7 +8746,7 @@ export type SessionCreateWithoutAccountInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -8831,7 +8837,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -8926,7 +8932,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -9018,7 +9024,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -9091,7 +9097,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -9183,7 +9189,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -9267,7 +9273,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -9359,7 +9365,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -9438,7 +9444,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -9530,7 +9536,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -9598,7 +9604,7 @@ export type SessionCreateWithoutCommentsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -9690,7 +9696,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -9774,7 +9780,7 @@ export type SessionUpdateWithoutCommentsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -9866,7 +9872,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -9934,7 +9940,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -10026,7 +10032,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -10110,7 +10116,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -10202,7 +10208,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -10270,7 +10276,7 @@ export type SessionCreateWithoutTriggerInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -10361,7 +10367,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -10456,7 +10462,7 @@ export type SessionCreateWithoutTicketsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -10548,7 +10554,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -10632,7 +10638,7 @@ export type SessionUpdateWithoutTicketsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -10724,7 +10730,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -10792,7 +10798,7 @@ export type SessionCreateWithoutDocumentsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -10884,7 +10890,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -10968,7 +10974,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -11060,7 +11066,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -11128,7 +11134,7 @@ export type SessionCreateWithoutListItemsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -11220,7 +11226,7 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -11304,7 +11310,7 @@ export type SessionUpdateWithoutListItemsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -11396,7 +11402,7 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -11464,7 +11470,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -11556,7 +11562,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -11640,7 +11646,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -11732,7 +11738,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -11800,7 +11806,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -11892,7 +11898,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -11976,7 +11982,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -12068,7 +12074,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -12136,7 +12142,7 @@ export type SessionCreateWithoutProjectInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -12227,7 +12233,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -12322,7 +12328,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -12414,7 +12420,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -12487,7 +12493,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -12578,7 +12584,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -12668,7 +12674,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -12760,7 +12766,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -12844,7 +12850,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -12936,7 +12942,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -13020,7 +13026,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -13112,7 +13118,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -13180,7 +13186,7 @@ export type SessionCreateWithoutFollowersInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -13272,7 +13278,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -13345,7 +13351,7 @@ export type SessionCreateWithoutFollowingInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -13437,7 +13443,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -13521,7 +13527,7 @@ export type SessionUpdateWithoutFollowersInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -13613,7 +13619,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -13692,7 +13698,7 @@ export type SessionUpdateWithoutFollowingInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -13784,7 +13790,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -13852,7 +13858,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -13944,7 +13950,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -14028,7 +14034,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -14120,7 +14126,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -14188,7 +14194,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -14280,7 +14286,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -14364,7 +14370,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -14456,7 +14462,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -14524,7 +14530,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -14616,7 +14622,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -14700,7 +14706,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -14792,7 +14798,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -14860,7 +14866,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -14952,7 +14958,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -15036,7 +15042,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -15128,7 +15134,7 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -15196,7 +15202,7 @@ export type SessionCreateWithoutFolderBackupsInput = {
   playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   quiet?: boolean
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -15288,7 +15294,7 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
@@ -15372,7 +15378,7 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -15464,7 +15470,7 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -15543,7 +15549,7 @@ export type SessionCreateManyStartedByInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutStartedByInput = {
@@ -15581,7 +15587,7 @@ export type SessionUpdateWithoutStartedByInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
@@ -15672,7 +15678,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -15752,7 +15758,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyWorkspaceInput = {
@@ -15801,7 +15807,7 @@ export type SessionCreateManyWorkspaceInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutWorkspaceInput = {
@@ -15839,7 +15845,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
@@ -15930,7 +15936,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -16010,7 +16016,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyComputerInput = {
@@ -16059,7 +16065,7 @@ export type SessionCreateManyComputerInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutComputerInput = {
@@ -16097,7 +16103,7 @@ export type SessionUpdateWithoutComputerInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -16188,7 +16194,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -16268,7 +16274,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyTeammateInput = {
@@ -16317,7 +16323,7 @@ export type SessionCreateManyTeammateInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutTeammateInput = {
@@ -16355,7 +16361,7 @@ export type SessionUpdateWithoutTeammateInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
@@ -16446,7 +16452,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -16526,7 +16532,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyParentInput = {
@@ -16575,7 +16581,7 @@ export type SessionCreateManyParentInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutParentInput = {
@@ -16613,7 +16619,7 @@ export type SessionUpdateWithoutParentInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -16704,7 +16710,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -16784,7 +16790,7 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyScheduleInput = {
@@ -16833,7 +16839,7 @@ export type SessionCreateManyScheduleInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutScheduleInput = {
@@ -16871,7 +16877,7 @@ export type SessionUpdateWithoutScheduleInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -16962,7 +16968,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -17042,7 +17048,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyAccountInput = {
@@ -17091,7 +17097,7 @@ export type SessionCreateManyAccountInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutAccountInput = {
@@ -17129,7 +17135,7 @@ export type SessionUpdateWithoutAccountInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -17220,7 +17226,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -17300,7 +17306,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyTriggerInput = {
@@ -17349,7 +17355,7 @@ export type SessionCreateManyTriggerInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutTriggerInput = {
@@ -17387,7 +17393,7 @@ export type SessionUpdateWithoutTriggerInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -17478,7 +17484,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -17558,7 +17564,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyProjectInput = {
@@ -17607,7 +17613,7 @@ export type SessionCreateManyProjectInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutProjectInput = {
@@ -17645,7 +17651,7 @@ export type SessionUpdateWithoutProjectInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -17736,7 +17742,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -17816,7 +17822,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type SessionCreateManyPlaybookRunInput = {
@@ -17865,7 +17871,7 @@ export type SessionCreateManyPlaybookRunInput = {
   surfacedAt?: Date | string | null
   quiet?: boolean
   chiefDecisionId?: string | null
-  chiefWordAt?: Date | string | null
+  chiefWordSeq?: number | null
 }
 
 export type SessionUpdateWithoutPlaybookRunInput = {
@@ -17903,7 +17909,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -17994,7 +18000,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
@@ -18074,7 +18080,7 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  chiefWordAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 
@@ -18407,7 +18413,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   surfacedAt?: boolean
   quiet?: boolean
   chiefDecisionId?: boolean
-  chiefWordAt?: boolean
+  chiefWordSeq?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -18501,7 +18507,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   surfacedAt?: boolean
   quiet?: boolean
   chiefDecisionId?: boolean
-  chiefWordAt?: boolean
+  chiefWordSeq?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -18563,7 +18569,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   surfacedAt?: boolean
   quiet?: boolean
   chiefDecisionId?: boolean
-  chiefWordAt?: boolean
+  chiefWordSeq?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -18625,10 +18631,10 @@ export type SessionSelectScalar = {
   surfacedAt?: boolean
   quiet?: boolean
   chiefDecisionId?: boolean
-  chiefWordAt?: boolean
+  chiefWordSeq?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "choicesDismissedSeq" | "lastSeq" | "coldSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet" | "chiefDecisionId" | "chiefWordAt", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "choicesDismissedSeq" | "lastSeq" | "coldSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet" | "chiefDecisionId" | "chiefWordSeq", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -18954,11 +18960,12 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     chiefDecisionId: string | null
     /**
-     * Its work goes on Chief's word: Chief answered in its person's name and they have not written
-     * in it since, or it was handed work while its giver was (a sub-thread, a task, a message).
-     * Meanwhile its App writes ask a person, whatever its teammate's access (connector-calls.ts).
+     * Its work goes on Chief's word from this event on (its seq): Chief answered in its person's
+     * name, or it was handed work while its giver did (a sub-thread, a task, a message). Only a
+     * person's message after it lifts it. Meanwhile its App writes ask a person, whatever its
+     * teammate's access (src/chief-answers.ts).
      */
-    chiefWordAt: Date | null
+    chiefWordSeq: number | null
   }, ExtArgs["result"]["session"]>
   composites: {}
 }
@@ -19471,7 +19478,7 @@ export interface SessionFieldRefs {
   readonly surfacedAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly quiet: Prisma.FieldRef<"Session", 'Boolean'>
   readonly chiefDecisionId: Prisma.FieldRef<"Session", 'String'>
-  readonly chiefWordAt: Prisma.FieldRef<"Session", 'DateTime'>
+  readonly chiefWordSeq: Prisma.FieldRef<"Session", 'Int'>
 }
     
 

@@ -727,7 +727,7 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
       assert.equal((await labels(child.id, gmail)).length, 1)
 
       // A message to a sub-thread started before carries it there too.
-      await db.session.updateMany({ where: { id: child.id }, data: { chiefWordAt: null } })
+      await db.session.updateMany({ where: { id: child.id }, data: { chiefWordSeq: null } })
       const { messageChild } = await import('../src/children.js')
       const sent = await messageChild(
         db,
@@ -767,6 +767,179 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
         where: { task: { title: 'Archive the old mail' } },
       })
       assert.ok(chiefAnswers.onChiefsWord(task))
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('a task handed to another teammate from Chief’s word goes on it too', async () => {
+    const { handleTaskCall } = await import('../src/tasks.js')
+    const max = (await db.teammate.create({ data: { name: `Max ${suffix}` } } as never)).id
+    const conn = await runner()
+    try {
+      const task = async (sessionId: string, operation: Record<string, unknown>) => {
+        const replies: { ok: boolean; error?: string }[] = []
+        await handleTaskCall(
+          { computerId: cloud, organizationId: org, workspaceId } as never,
+          {
+            type: 'task.call',
+            callId: `call-${randomUUID()}`,
+            sessionId,
+            teammateId: riley,
+            operation,
+          } as never,
+          (m) => void replies.push(m as never),
+        )
+        assert.equal(replies[0]?.ok, true, JSON.stringify(replies))
+      }
+      // Started from a thread of Ada's own word: not on Chief's.
+      const plain = await thread()
+      await person(plain, 'Make a task to tidy the docs.')
+      const title = `Tidy the docs ${randomUUID().slice(0, 4)}`
+      await task(plain, {
+        name: 'create',
+        title,
+        description: '',
+        priority: 'medium',
+        assignee: riley,
+      })
+      const taskThread = await db.session.findFirstOrThrow({ where: { task: { title } } })
+      assert.equal(chiefAnswers.onChiefsWord(taskThread), false)
+      await db.session.updateMany({ where: { id: taskThread.id }, data: { status: 'idle' } })
+      // Handed to Max from a thread on Chief's word: its work goes on it now.
+      const marked = await thread()
+      await answered(marked)
+      await task(marked, { name: 'assign', taskId: taskThread.taskId, teammateId: max, reason: '' })
+      assert.ok(
+        chiefAnswers.onChiefsWord(
+          await db.session.findFirstOrThrow({ where: { id: taskThread.id } }),
+        ),
+      )
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('only a person’s message after Chief’s word lifts it, whatever order the hooks run in', async () => {
+    const id = await thread()
+    const early = await person(id, 'An early word.')
+    const made = await answered(id)
+    const word = async () => (await db.session.findFirstOrThrow({ where: { id } })).chiefWordSeq
+    assert.equal(await word(), made.decision.askSeq)
+    // The early message's hook, run late: Chief's word after it stands.
+    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
+      {
+        seq: early,
+        event: { type: 'message.user', memberId: member('ada'), text: 'An early word.' },
+      },
+    ])
+    assert.equal(await word(), made.decision.askSeq)
+    // Ada wrote, then Chief's answer reached the teammate after her: it is on Chief's word from there.
+    const said = await person(id, 'Wait.')
+    const note = await say(id, {
+      type: 'message.user',
+      memberId: null,
+      text: contracts.chiefAnswerMessage({
+        decisionId: made.decision.id,
+        answer: 'Build it',
+        reason: 'r',
+      }),
+    })
+    // The note's hook first, then hers: hers comes before it, and lifts nothing.
+    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
+      {
+        seq: note,
+        event: {
+          type: 'message.user',
+          memberId: null,
+          text: contracts.chiefAnswerMessage({
+            decisionId: made.decision.id,
+            answer: 'Build it',
+            reason: 'r',
+          }),
+        },
+      },
+    ])
+    await chiefAnswers.noteChiefAnswered({ id, organizationId: org, workspaceId, parentId: null }, [
+      { seq: said, event: { type: 'message.user', memberId: member('ada'), text: 'Wait.' } },
+    ])
+    assert.equal(await word(), note)
+    // Her word after it lifts it.
+    await answer(id, 'Go on.')
+    assert.equal(await word(), null)
+  })
+
+  test('a person’s prompt waits for an answer of Chief’s on its way, and cancels one not yet', async () => {
+    await setMember({ chiefAnswers: true, chiefAuto: ['next_step'] })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    // Offline: Ada's Mac, not the cloud computer, which would start. The answer waits.
+    await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'member_machine' } })
+    try {
+      assert.equal((await decide(made, { option: 1 })).status, 'answered')
+    } finally {
+      await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'cloud' } })
+    }
+    const conn = await runner()
+    try {
+      // Its wake-up fires again and holds it, on its way: Ada's message waits for it.
+      assert.equal(await chiefAnswers.claimChiefAnswer(scope, made.decision.id), 'go')
+      let through = false
+      const ada = call('ada', `/${id}/messages`, { body: { text: 'Not yet' } }).then((r) => {
+        through = true
+        return r
+      })
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      assert.equal(through, false)
+      // It goes (as fire does), then Ada's: in that order.
+      const { loadThread } = await import('../src/thread-spec.js')
+      const { promptThread } = await import('../src/work.js')
+      const wakeup = await db.wakeup.findFirstOrThrow({ where: { sessionId: id } })
+      await promptThread(db, scope, await loadThread(db, id), {
+        text: wakeup.note,
+        memberId: null,
+        teammateIds: [riley],
+      })
+      await chiefAnswers.releaseChiefAnswer(scope, made.decision.id, true)
+      const sent = await ada
+      assert.equal(sent.status, 200, await sent.clone().text())
+      const order = conn.sent
+        .filter(
+          (m) =>
+            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === id,
+        )
+        .map((m) => (contracts.chiefAnswerNote(m.text as string) ? 'chief' : m.text))
+      assert.deepEqual(order.slice(-2), ['chief', 'Not yet'])
+      assert.equal((await row(made.decision.id)).status, 'answered')
+
+      // One not on its way when Ada writes never goes: her computer away when it is decided.
+      conn.close()
+      const next = await pending(id, await asks(id))
+      await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'member_machine' } })
+      try {
+        assert.equal((await decide(next, { option: 1 })).status, 'answered')
+      } finally {
+        await db.computer.updateMany({ where: { id: cloud }, data: { kind: 'cloud' } })
+      }
+      const back = await runner()
+      try {
+        const res = await call('ada', `/${id}/messages`, { body: { text: 'Stop there' } })
+        assert.equal(res.status, 200, await res.clone().text())
+        assert.equal((await row(next.decision.id)).status, 'superseded')
+        const waiting = await db.wakeup.findFirstOrThrow({
+          where: { sourceId: `chief:${next.decision.id}` },
+        })
+        assert.equal(waiting.status, 'cancelled')
+        const { fireNow } = await import('../src/wakeups.js')
+        await db.wakeup.updateMany({ where: { id: waiting.id }, data: { status: 'pending' } })
+        const before = back.sent.length
+        await fireNow(waiting.id)
+        assert.ok(
+          !back.sent.slice(before).some((m) => contracts.chiefAnswerNote((m.text as string) ?? '')),
+        )
+      } finally {
+        back.close()
+      }
     } finally {
       conn.close()
     }
@@ -983,6 +1156,23 @@ describe('Chief answers for the person', { skip: !database && 'no database answe
     } finally {
       await db.libraryFolder.deleteMany({ where: { id: folder.id } })
     }
+  })
+
+  test('lists made at once by several calls keep every line, with nothing held open meanwhile', async () => {
+    const { addListLine } = await import('../src/lists.js')
+    const { documentText } = await import('../src/library.js')
+    const path = `chief/many-${randomUUID().slice(0, 6)}.md`
+    const actor = { type: 'teammate' as const, id: chief }
+    await Promise.all(
+      ['One', 'Two', 'Three', 'Four'].map((text) =>
+        addListLine(db, scope, actor, { path, header: '# Parked\n', text }),
+      ),
+    )
+    const file = await db.document.findFirstOrThrow({
+      where: { path, kind: 'library', deletedAt: null },
+    })
+    const text = await documentText(scope, file)
+    for (const line of ['One', 'Two', 'Three', 'Four']) assert.match(text, new RegExp(line))
   })
 
   test('two first lines of a list made at once both stay', async () => {

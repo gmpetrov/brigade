@@ -570,6 +570,19 @@ export async function computerFor(
 }
 
 /**
+ * A teammate hands work on from a thread whose work goes on Chief's word (src/chief-answers.ts):
+ * the work it hands on goes on it too. A person's own hand-over does not.
+ */
+async function fromChiefsWord(db: ScopedDb, by: By) {
+  if (!by.from || by.actor.type !== 'teammate') return false
+  const from = await db.session.findFirst({
+    where: { id: by.from.sessionId },
+    select: { chiefWordSeq: true },
+  })
+  return from?.chiefWordSeq != null
+}
+
+/**
  * A backlog task gets its teammate and its thread, with the brief as the
  * first message. Taking the teammate is the claim: two assigns never start
  * two threads. If the thread cannot start, the task goes back to Backlog.
@@ -602,14 +615,7 @@ async function startTask(
       taskId: task.id,
       projectId: task.projectId,
       // Started from a thread on Chief's word: the task's work goes on it too.
-      chiefWord:
-        !!by.from &&
-        !!(
-          await db.session.findFirst({
-            where: { id: by.from.sessionId },
-            select: { chiefWordAt: true },
-          })
-        )?.chiefWordAt,
+      chiefWord: await fromChiefsWord(db, by),
     })
     if (outcome === 'offline') {
       // The failed thread is left as a plain one.
@@ -713,6 +719,8 @@ export async function assignTask(
       message: `${teammate.name} runs on ${teammate.harness === 'codex' ? 'Codex' : 'Claude'}, and the thread's starter has no account for it with usage left on its computer.`,
     })
   if (thread.status === 'running' || thread.status === 'starting') await interrupt(thread)
+  // Handed over from a thread on Chief's word: the work goes on it there too.
+  if (await fromChiefsWord(db, by)) await markOnChiefsWord(db, thread.id, { chiefWordSeq: 0 })
   await joinThread(db, thread.id, [teammate.id])
   const from = task.teammate ?? { name: 'the previous teammate' }
   const text = await handover(db, task, thread, from, teammate, input.reason)

@@ -18,7 +18,12 @@ import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
 import { dueChildren, settleOverdueChildren } from './children.js'
-import { chiefAnswerDue, dueDecisions, settleStaleDecisions } from './chief-answers.js'
+import {
+  claimChiefAnswer,
+  dueDecisions,
+  releaseChiefAnswer,
+  settleStaleDecisions,
+} from './chief-answers.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
 
@@ -221,17 +226,22 @@ async function fire(wakeup: {
     await settle('missed')
     return changed(scope, thread)
   }
-  // An answer of Chief's the person overtook while it waited (their word, a dismissal): it never
-  // goes, rather than come after what they said (src/chief-answers.ts).
-  if (
-    wakeup.sourceId?.startsWith(CHIEF_SOURCE) &&
-    !(await chiefAnswerDue(scope, wakeup.sourceId.slice(CHIEF_SOURCE.length)))
-  ) {
-    await db.wakeup.updateMany({
-      where: { id: wakeup.id, status: 'pending' },
-      data: { status: 'cancelled' },
-    })
-    return changed(scope, thread)
+  // An answer of Chief's for the person (src/chief-answers.ts): claimed before it goes, so their
+  // own prompt meanwhile waits for it and never comes before it; one they overtook while it
+  // waited (their word, a dismissal) never goes.
+  const chiefDecision = wakeup.sourceId?.startsWith(CHIEF_SOURCE)
+    ? wakeup.sourceId.slice(CHIEF_SOURCE.length)
+    : null
+  if (chiefDecision) {
+    const claim = await claimChiefAnswer(scope, chiefDecision)
+    if (claim === 'busy') return
+    if (claim === 'stale') {
+      await db.wakeup.updateMany({
+        where: { id: wakeup.id, status: 'pending' },
+        data: { status: 'cancelled' },
+      })
+      return changed(scope, thread)
+    }
   }
   // Settled only once its prompt is kept (src/runner-commands.ts): a restart in between fires it
   // again, and the prompt's id, the wake-up's own, keeps it from reaching the thread twice.
@@ -257,6 +267,8 @@ async function fire(wakeup: {
     console.error(`wake-up ${wakeup.id}: could not prompt`, error)
     return 'offline' as const
   })
+  // Chief's answer kept for its computer, in order; or not, and claimed again at the next try.
+  if (chiefDecision) await releaseChiefAnswer(scope, chiefDecision, outcome !== 'offline')
   // A member's machine asleep: pending again, tried each minute, until it is too late.
   if (outcome === 'offline') {
     if (now.getTime() - wakeup.wakeAt.getTime() > MISSED_AFTER_MS) await settle('missed')

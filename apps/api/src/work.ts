@@ -13,6 +13,7 @@ import { audit } from './audit.js'
 import { capLabel, turnCapReached } from './caps.js'
 import type { RunnerToApi } from '@brigade/contracts'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { beforePersonPrompt } from './chief-answers.js'
 import { refuseWhileDeleting } from './deletion-fence.js'
 import { describeError, hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
@@ -104,6 +105,9 @@ export async function promptThread(
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   // Every turn starts here: none in a workspace being deleted, whose computer and Apps are going.
   await refuseWhileDeleting(scope.workspaceId)
+  // A person's words: an answer of Chief's already on its way goes first, and one not on its way
+  // never goes (src/chief-answers.ts). So the thread never reads Chief's answer after theirs.
+  if (prompt.memberId && !thread.parentId) await beforePersonPrompt(scope, thread.id)
   // Whose requests it works on: Brigade's own notes (a wake-up, a report) change nothing.
   const asker = prompt.memberId ?? prompt.onBehalfOf
   if (asker) await noteAsker(db, thread.id, asker)
@@ -449,8 +453,8 @@ export async function startThread(
     /** Chief's thread deciding a question for the person (src/chief-answers.ts): its decision. */
     chiefDecisionId?: string
     /**
-     * Handed on by a thread whose work goes on Chief's word (Session.chiefWordAt): this one's
-     * does too, and its App writes ask a person.
+     * Handed on by a thread whose work goes on Chief's word (Session.chiefWordSeq): this one's
+     * does too, from its start, and its App writes ask a person.
      */
     chiefWord?: boolean
   },
@@ -497,7 +501,7 @@ export async function startThread(
         ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
         ...(input.quiet ? { quiet: true } : {}),
         ...(input.chiefDecisionId ? { chiefDecisionId: input.chiefDecisionId } : {}),
-        ...(input.chiefWord ? { chiefWordAt: new Date() } : {}),
+        ...(input.chiefWord ? { chiefWordSeq: 0 } : {}),
         ...(input.origin?.kind === 'trigger'
           ? {
               origin: 'trigger',
