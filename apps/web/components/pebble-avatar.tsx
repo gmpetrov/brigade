@@ -90,6 +90,12 @@ const NEUTRAL = {
   '--pebble-c1': 'var(--muted-foreground)',
   '--pebble-c2': 'var(--muted-foreground)',
   '--pebble-eye': 'var(--background)',
+  // Eyes about a third bigger than a seed's, centred: its expressions read at 20px.
+  '--pebble-eye-w': '11%',
+  '--pebble-eye-h': '22%',
+  '--pebble-eye-gap': '13%',
+  '--pebble-eye-top': '34%',
+  '--pebble-eye-x': '0%',
 } as CSSProperties
 
 /** What the Working pebble's eyes do, by the kind of step it is on. */
