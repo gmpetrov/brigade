@@ -1,6 +1,6 @@
 // GitHub connector (REST API), on an installation of Brigade's GitHub App.
 // It reaches only the repositories the customer picked when installing it.
-import { ReviewChoice } from '@brigade/contracts'
+import { PullSpecs, ReviewChoice } from '@brigade/contracts'
 import { z } from 'zod'
 import { env } from '../config.js'
 import { GITHUB_API } from './github-app.js'
@@ -751,11 +751,21 @@ export const github: ConnectorDefinition = {
               'language, e.g. "Submit the sitemap in Search Console once deployed"): Brigade adds it under ' +
               'the item on merge, and ticks the item once all its remaining lines are ticked.',
           ),
+        specs: PullSpecs.optional().describe(
+          "The library's specs and designs this pull request builds, by path (a Markdown file, or a " +
+            "design's folder ending in .design): ships, those it builds whole, which Brigade marks " +
+            'shipped with its number once it is merged; partOf, those it is one step of, on which ' +
+            'Brigade writes its number and leaves the status. Only files you may change.',
+        ),
       }),
       target: (i) => `pull request ${i.head} → ${i.base ?? 'default branch'} in ${i.repository}`,
-      // The review and the items are Brigade's (src/reviews.ts, src/lists.ts), not GitHub's.
+      // The review, the items and the specs are Brigade's (src/reviews.ts, src/lists.ts,
+      // src/decisions.ts), not GitHub's.
       // With its repository's id, which a rename keeps: how Brigade follows it (src/pull-requests.ts).
-      run: async (ctx, { repository: r, review: _review, items: _items, ...fields }) => {
+      run: async (
+        ctx,
+        { repository: r, review: _review, items: _items, specs: _specs, ...fields },
+      ) => {
         const created = await send<PullRequest>(ctx, 'POST', `${repoPath(r)}/pulls`, {
           ...fields,
           base: fields.base ?? (await defaultBranch(ctx, r)),

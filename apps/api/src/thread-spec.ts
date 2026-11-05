@@ -264,6 +264,8 @@ export async function specFor(
     new Set(grants.map((g) => g.connection.appId)),
     playbook?.installationId ?? null,
   )
+  // Brigade's own skills an admin turned off here (src/routes/skills.ts, /builtin).
+  const off = await db.workspace.findFirst({ select: { builtinSkillsOff: true } })
   return {
     connectors: specs,
     account: accountRef(current),
@@ -329,6 +331,7 @@ export async function specFor(
     ),
     designSystems,
     skills,
+    builtinSkillsOff: off?.builtinSkillsOff ?? [],
     project,
     projects,
     // Taken in once by the computer it moved to; older runners ignore it.

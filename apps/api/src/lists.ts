@@ -112,7 +112,7 @@ async function editList(
  * are (its full text, or its saved version), until they are saved again (repairBytes). Never bytes
  * the row does not vouch for: refused when nothing else is there.
  */
-async function storedText(scope: Scope, row: FileRow) {
+export async function storedText(scope: Scope, row: FileRow) {
   if (row.bytesStaleAt) {
     const bytes = await committedBytes(scope, row)
     if (!bytes)
