@@ -40,6 +40,7 @@ const {
   machineTouch,
   sweepMachine,
   sweepPreviewMachines,
+  CLAIM_MS,
   MACHINES_RUNNING_MAX,
 } = machinesModule
 const database = await Promise.race([
@@ -548,18 +549,21 @@ describe('preview machines', { skip: !database && 'no database answers' }, () =>
     await machineUp(machines, runner(), sessionId, KEY)
     const { id } = await prisma.previewMachine.update({
       where: { sessionId },
-      data: { usedAt: new Date(Date.now() - 3600_000) },
+      data: { usedAt: new Date(Date.now() - 3 * 3600_000) },
     })
     const vm = ((await row(sessionId)).providerRef as { id: string }).id
-    // A sweep that began four minutes ago reaches this row now; its provider's stop is slow.
+    // A sweep that began longer ago than a claim lasts reaches this row now (a lease counted from
+    // its start would be over already); its provider's stop is slow.
     let stopped!: () => void
     machines.stopGate = new Promise<void>((done) => (stopped = done))
     const stopping = new Promise<void>((done) => (machines.onStop = done))
-    const sweep = sweepMachine(machines, id, ids.workspace, new Date(Date.now() - 4 * 60_000))
+    const began = new Date(Date.now() - 2 * CLAIM_MS)
+    const taking = Date.now()
+    const sweep = sweepMachine(machines, id, ids.workspace, began)
     await stopping
     const held = await row(sessionId)
     assert.equal(held.status, 'stopping')
-    assert.ok(held.claimedUntil!.getTime() > Date.now() + 5 * 60_000, 'a claim from now on')
+    assert.ok(held.claimedUntil!.getTime() >= taking + CLAIM_MS, 'a claim from when it was taken')
     // The thread's preview starts again meanwhile: it waits for the stop, then starts it again.
     let upDone = false
     const up = machineUp(machines, runner(), sessionId, KEY).then((r) => ((upDone = true), r))
