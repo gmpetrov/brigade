@@ -3,8 +3,14 @@
 // Brigade itself (a thread.note). A teammate's words never stand for a person's:
 // text inside one cannot pass for a message of its own.
 
-/** One thing said in the thread. by: the teammate's id, or null for a person or a note. */
-export type LogEntry = { by: string | null; name: string; text: string; note?: true }
+import { noteThreads } from '@brigade/contracts'
+
+/**
+ * One thing said in the thread. by: the teammate's id, or null for a person or a note.
+ * to: the teammate a message Brigade wrote was for (a sub-thread's report, a wake-up, a
+ * routine's run): it reads it as it is, the others as a note, never as a person's.
+ */
+export type LogEntry = { by: string | null; name: string; text: string; note?: true; to?: string }
 
 export type Speaker = 'person' | 'teammate' | 'note'
 
@@ -58,4 +64,23 @@ export function missedLines(unseen: Indexed[], budget: number, ask?: Indexed): s
     '(Messages between this one and the next are left out.)',
     ...lines,
   ]
+}
+
+/**
+ * For a teammate told the report of a sub-thread it did itself (a review it ran): that the
+ * report is its own, and where to read it whole. It did that work in a session of its own,
+ * so it has no memory of it here, and the note to the teammate it was for holds only its start.
+ */
+export function ownReports(unseen: LogEntry[], teammate: { id: string; name: string }) {
+  const own = unseen.flatMap((e) =>
+    e.note && e.to && e.to !== teammate.id
+      ? (noteThreads(e.text)?.threads ?? []).filter((t) => t.teammate === teammate.name)
+      : [],
+  )
+  if (!own.length) return ''
+  const threads = own.map((t) => `“${t.title}” (${t.id})`).join(', ')
+  return (
+    `Among Brigade's notes above is the report of your own sub-thread ${threads}. You did that work in a session of your own, ` +
+    'so you do not remember it here, and the note holds only its start: `read_child` with its id gives the whole report.'
+  )
 }

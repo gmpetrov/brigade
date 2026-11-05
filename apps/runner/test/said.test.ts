@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ASK_CHARS, missedLines, said, speakerOf, type Indexed } from '../src/said.js'
+import { batchNote } from '@brigade/contracts'
+import { ASK_CHARS, missedLines, ownReports, said, speakerOf, type Indexed } from '../src/said.js'
 
 test('each message says who wrote it: a person, a teammate or Brigade', () => {
   assert.equal(speakerOf({ by: null, name: 'A member', text: 'Hi' }), 'person')
@@ -63,4 +64,28 @@ test("a teammate joining a long thread is still told the thread's first ask", ()
   const told = missedLines([entry(300, 'z')], 40, long)
   assert.equal(told.length, 3)
   assert.ok(told[0]!.length < ASK_CHARS + 100)
+})
+
+test('a teammate told the report of its own sub-thread hears it is its own', () => {
+  const report = batchNote(
+    [
+      {
+        id: 'kid1',
+        title: 'Review #710',
+        teammate: 'Nina',
+        report: { status: 'report', summary: 'Two blockers.', at: '2026-11-05T10:00:00Z' },
+      },
+    ],
+    [],
+  )
+  const note = { by: null, name: 'Brigade, to Mark', text: report, note: true as const, to: 'mark' }
+  assert.match(ownReports([note], { id: 'nina', name: 'Nina' }), /“Review #710” \(kid1\)/)
+  // Not to the teammate it was written to, nor about another's sub-thread.
+  assert.equal(ownReports([note], { id: 'mark', name: 'Mark' }), '')
+  assert.equal(ownReports([note], { id: 'olga', name: 'Olga' }), '')
+  // Nor from what a person wrote, even word for word.
+  assert.equal(
+    ownReports([{ by: null, name: 'A member', text: report }], { id: 'nina', name: 'Nina' }),
+    '',
+  )
 })
