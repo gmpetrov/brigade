@@ -205,6 +205,14 @@ export const ThreadSpec = z.object({
   /** Set in a child thread: the thread it was started from, which its report goes to. */
   parent: z.object({ id: z.string(), title: z.string() }).nullish(),
   /**
+   * CHIEF_PROTOCOL: the person of the thread lets Chief answer their teammates' buttons and choices
+   * (docs/chief-answers.md). Teammates are told what Chief's answers are; Chief, that it keeps the
+   * person's mandate. Unset: nothing of it, as before.
+   */
+  chiefAnswers: z.boolean().default(false),
+  /** CHIEF_PROTOCOL: Chief's thread deciding one question for the person, by its decision's id. */
+  decision: z.object({ id: z.string() }).nullish(),
+  /**
    * What started the thread: a person, a trigger's event, a schedule's run or another thread.
    * Schedules, triggers and wake-ups are set up only where a person started it, and a merge wakes
    * only a thread a person or a trigger started. Older APIs leave it out: read as a person's.

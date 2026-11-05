@@ -39,6 +39,7 @@ import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } fr
 import { notePullRequestCall } from './pull-requests.js'
 import { reviewOnCreate } from './reviews.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { actingOnChiefsWord, UNDOABLE_WRITES } from './chief-answers.js'
 import { timeWhenSent } from './mail/gmail-outbound.js'
 import {
   decideHeld,
@@ -312,9 +313,16 @@ export async function handleConnectorCall(
     // A mailbox whose email waits for a person: every send asks, a playbook's too.
     const approves =
       MAIL_SENDS[connection.kind] === call.operation && connection.sendPolicy === 'approve'
+    // On Chief's word (it answered in the person's name since they last wrote): a write that
+    // leaves Brigade waits for the person, whatever the teammate's access (src/chief-answers.ts).
+    const onChiefsWord =
+      !playbook &&
+      !UNDOABLE_WRITES.has(call.operation) &&
+      (await actingOnChiefsWord(db, session.id))
     let asks = verdict
       ? verdict.level === 'ask' || approves
       : approves ||
+        onChiefsWord ||
         policy === 'ask' ||
         (operation.asks
           ? await operation.asks(
@@ -353,9 +361,11 @@ export async function handleConnectorCall(
         ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
         : approves
           ? `Every email from ${where} waits for a person's approval (its mailbox's setting).`
-          : verdict?.level === 'ask'
-            ? verdict.reason
-            : overCap
+          : onChiefsWord
+            ? `${teammate.name} acts on Chief's answer in your name: what leaves Brigade waits for you.`
+            : verdict?.level === 'ask'
+              ? verdict.reason
+              : overCap
       // Held with its ticket: made once a person decides, whenever that is (src/held-calls.ts).
       // An identical call meanwhile joins this ticket.
       await holdCall(db, {

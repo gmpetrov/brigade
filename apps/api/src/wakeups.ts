@@ -18,6 +18,7 @@ import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
 import { dueChildren, settleOverdueChildren } from './children.js'
+import { dueDecisions, settleStaleDecisions } from './chief-answers.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
 
@@ -263,7 +264,7 @@ export async function fireNow(id: string) {
 
 /** Workspaces with a wake-up, a child's report or a dry run due now (src/jobs.ts). */
 export async function dueWakeups(now = new Date()) {
-  const [wakeups, children, dryRuns] = await Promise.all([
+  const [wakeups, children, dryRuns, decisions] = await Promise.all([
     prisma.wakeup.findMany({
       where: { status: 'pending', wakeAt: { lte: now } },
       distinct: ['workspaceId'],
@@ -271,8 +272,9 @@ export async function dueWakeups(now = new Date()) {
     }),
     dueChildren(now),
     dueDryRuns(now.getTime()),
+    dueDecisions(now),
   ])
-  return [...wakeups.map((w) => w.workspaceId), ...children, ...dryRuns]
+  return [...wakeups.map((w) => w.workspaceId), ...children, ...dryRuns, ...decisions]
 }
 
 /**
@@ -297,4 +299,6 @@ export async function fireDueWakeups(workspaceId?: string) {
   await settleOverdueChildren(workspaceId)
   // Dry runs' events that took too long: left out, so the report comes.
   await settleOverdueDryRuns(workspaceId)
+  // Chief's decisions it never made: the questions are the person's.
+  await settleStaleDecisions(workspaceId)
 }

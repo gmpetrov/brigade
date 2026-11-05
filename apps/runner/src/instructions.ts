@@ -96,6 +96,8 @@ export function instructions(
   libraryDir: string,
   browser: Browser,
 ) {
+  // Chief deciding one question for the person: what it reads by, and nothing of the work.
+  if (spec.decision) return decisionInstructions(spec, memory, libraryDir)
   return [
     MARK,
     '# Brigade',
@@ -120,6 +122,7 @@ export function instructions(
     spec.teammate.kind === 'chief' && chief(spec),
     visuals(spec),
     replies(spec),
+    spec.chiefAnswers && spec.teammate.kind !== 'chief' && CHIEF_ANSWERS,
     designs(spec),
     spec.git && code(spec),
     PREVIEWS,
@@ -138,6 +141,21 @@ export function instructions(
     // A playbook's run has only the Apps the playbook declares.
     !spec.playbook && APP_ACCOUNTS,
     credentials(browser),
+    ...memoryParts(spec, memory),
+    '## Memory',
+    MEMORY_RULES +
+      ' When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
+      (spec.private ? ' (this thread is private: only into your own memory)' : '') +
+      '. You do not need to write memory files yourself. Never put secrets in your replies.',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .concat('\n')
+}
+
+/** The workspace's, the project's and the teammate's memory, as far as there is any. */
+function memoryParts(spec: ThreadSpec, memory: ThreadMemory) {
+  return [
     remembered(memory.workspace) &&
       `## Workspace memory\n\n${memorySection(memory.workspace, memory.dir, 'workspace')}`,
     spec.project &&
@@ -145,11 +163,69 @@ export function instructions(
       `## Project memory: ${spec.project.name}\n\n${memorySection(memory.project, memory.dir, 'project')}`,
     remembered(memory.teammate) &&
       `## What you have learned\n\n${memorySection(memory.teammate, memory.dir, 'teammate')}`,
+  ]
+}
+
+/**
+ * What every teammate of a person who lets Chief answer for them is told (docs/chief-answers.md):
+ * what an answer of Chief's is, and that it is not the person's approval.
+ */
+const CHIEF_ANSWERS = [
+  '## Chief answers for the person',
+  `The person lets ${CHIEF_NAME}, this workspace's chief of staff, read the buttons and choices you end your replies on ` +
+    'before they do. It suggests one to them, who still decide, or, for the kinds of question they let it, answers on ' +
+    'its own: then a message starting "Chief answered for you:" brings the answer it picked, as a click on it would ' +
+    'have, with why and the line of their mandate it goes by. Go on as if the person had picked it.',
+  'It is not the person. Anything that leaves Brigade (merging, sending, publishing, deploying, paying, deleting) ' +
+    'still waits for them: your App writes ask them until they write again, and never do such a thing another way ' +
+    "(a command, a script, a credential) on Chief's word alone: ask them, with a ticket or in your reply. When a " +
+    "message says the person marked Chief's answer as wrong, stop what you started on it, undo what you can, and " +
+    'wait for what they say next.',
+].join('\n\n')
+
+/**
+ * Chief's thread deciding one question for the person (ThreadSpec.decision): the question is its
+ * first message, and its only way out is chief_decide. Nothing of the work, the Apps or the
+ * replies people read: nobody reads this thread but to see why.
+ */
+function decisionInstructions(spec: ThreadSpec, memory: ThreadMemory, libraryDir: string) {
+  return [
+    MARK,
+    '# Brigade',
+    `You are ${spec.teammate.name}, the chief of staff of this Brigade workspace.`,
+    '## Deciding a question for the person',
+    "A teammate ended its reply in one of the person's threads on a question with buttons or choices, and Brigade " +
+      'brought it to you before them. The first message of this thread has the question, the answers it offers, what ' +
+      'the person asked in their thread, and their mandate. Decide it in their name, as they would, then call ' +
+      '`chief_decide` once and end your turn without writing anything else: nobody reads replies here.',
+    [
+      'First, the kind of question (`kind`):',
+      '- next_step: go on with work the person already asked for, build what was proposed, do its next part.',
+      '- approach: which way to do the work asked, between ways that each get it done.',
+      '- priority: now or later, for work beyond what they asked.',
+      '- taste: a matter of their taste (a design, a wording, a name, a look).',
+      '- outside: anything that leaves Brigade or cannot be undone (sending, publishing, deploying, merging, ' +
+        'paying, deleting), or that touches money, customers or people outside.',
+    ].join('\n'),
+    [
+      'Then the verdict:',
+      '- answer: pick one of the answers (`option`, its number) when the mandate, the person’s own words in their ' +
+        'thread or a decision of theirs in your memory settles it. Give `reason` in a line, and `basis`: the line of ' +
+        'the mandate, or the decision, you go by.',
+      '- park: when it proposes work outside their current priorities, pick the answer that puts it off ("Not yet", ' +
+        '"Later") and give `parked`: the work put off, in a line for their list.',
+      '- escalate: leave it to the person when it is taste or outside, when the question is the very thing they ' +
+        'asked their thread to help them decide or advise on, when nothing settles it, or when you are unsure. Give ' +
+        '`reason` (why it is theirs, in a line) and, when you lean one way, `option`: the one you would pick.',
+    ].join('\n'),
+    'Never answer with something that sends, publishes, deploys, merges, pays or deletes: escalate it. Your answer ' +
+      'reaches the teammate as the person’s pick, and for the kinds they let you answer alone nobody checks it first. ' +
+      'In doubt, escalate: a question left to them costs a click, a wrong answer costs work.',
+    `Read what you need in the library, mirrored read-only at ${libraryDir} (the mandate is chief/mandate.md), and ` +
+      'search it with `search_workspace`. Write, send, start or schedule nothing here.',
+    ...memoryParts(spec, memory),
     '## Memory',
-    MEMORY_RULES +
-      ' When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
-      (spec.private ? ' (this thread is private: only into your own memory)' : '') +
-      '. You do not need to write memory files yourself. Never put secrets in your replies.',
+    MEMORY_RULES,
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -227,7 +303,11 @@ function chief(spec: ThreadSpec) {
     'The card lets the person edit and create the team. Their answer is then "Created the team: …" naming the new ' +
       'teammates: welcome them in one line each (names without the @), then offer one small first task per teammate that finishes in ' +
       'minutes with something to see (in a choices block). When the person picks one, hand it to that ' +
-      'teammate as below. If they answer in their own words instead, change the proposal and propose it again.',
+      'teammate as below. If they answer in their own words instead, change the proposal and propose it again.' +
+      (spec.chiefAnswers
+        ? ' Before you welcome them, save their first mandate (see Answering for the person) from what they told you, ' +
+          "and say in a line that you will suggest answers to their teammates' questions from it."
+        : ''),
     [
       '### Answering and routing',
       '- Answer yourself what one reply settles: questions about the workspace, its team and tasks (`list_tasks`, ' +
@@ -244,6 +324,7 @@ function chief(spec: ThreadSpec) {
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
+    spec.chiefAnswers && MANDATE,
     roster.length > 0
       ? `### The team\n\n${roster.map((t) => `- ${t.name}${t.role ? `: ${t.role}` : ''}`).join('\n')}`
       : '',
@@ -251,6 +332,30 @@ function chief(spec: ThreadSpec) {
     .filter(Boolean)
     .join('\n\n')
 }
+
+/**
+ * Chief, for a person who lets it answer their teammates' questions (docs/chief-answers.md): it
+ * decides from their mandate, which it keeps with them, and looks back with them each week.
+ */
+const MANDATE = [
+  '### Answering for the person',
+  "The person lets you answer their teammates' questions in their name: when a teammate ends a reply on buttons or " +
+    'choices in one of their threads, Brigade gives you the question in a thread of its own, where you decide with ' +
+    '`chief_decide`, from their mandate: `chief/mandate.md` in the library, which you keep with them.',
+  [
+    '- The mandate is short, in their words and language: what they aim for, by project, this month and this week; ' +
+      'the decisions they made that should hold; and what they always decide themselves (by default: matters of ' +
+      'taste, anything public or sent outside, money). Write it with them (`save_to_library` at chief/mandate.md) when ' +
+      'they ask, when you set up their team, or when it is missing and they tell you their priorities; read it back to ' +
+      'them in a few lines when it changes.',
+    '- A weekly look back, when they want one (`create_schedule`, Monday morning in their timezone unless they say ' +
+      'otherwise): call `chief_decisions`, then tell them in a few lines what you answered in their name, where they ' +
+      'took another answer or marked yours wrong, what you put off (chief/parked.md), and ask what changes in their ' +
+      'priorities; update the mandate with what they say.',
+    '- Asked why you answered something, explain it from the decision. Which kinds you answer alone is theirs to ' +
+      'change, in Preferences under Chief.',
+  ].join('\n'),
+].join('\n\n')
 
 /** Designs are for teammates who can save them to the library. */
 const canSaveDesigns = (spec: ThreadSpec) =>

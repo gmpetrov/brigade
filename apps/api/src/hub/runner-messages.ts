@@ -15,6 +15,7 @@ import { trackTurns } from '../analytics.js'
 import { handlePreviewCall, handlePreviewExpose, notePreviewEvents } from '../app-previews.js'
 import { audit } from '../audit.js'
 import { noteChildEvents } from '../children.js'
+import { noteChiefAnswered, noteChiefAsks } from '../chief-answers.js'
 import { ensureSetup, giveHomesBackOnceRestored, stopWithoutPlan } from '../cloud.js'
 import { onRestored, restoreFor } from '../cloud-replace.js'
 import { handleConnectorCall } from '../connector-calls.js'
@@ -664,6 +665,16 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       session,
       status === 'idle' && fresh.some((e) => e.event.type === 'turn.completed'),
     ).catch(console.error)
+    // Chief answers for the person (src/chief-answers.ts): a person's message answers the
+    // questions before it, then a turn that ended idle on one is Chief's to read. Not awaited.
+    void noteChiefAnswered(session, fresh)
+      .then(() =>
+        noteChiefAsks(
+          session,
+          status === 'idle' && fresh.some((e) => e.event.type === 'turn.completed'),
+        ),
+      )
+      .catch((error: unknown) => console.warn(`thread ${session.id}: chief: ${String(error)}`))
     // Product analytics (src/analytics.ts): the turns these events end. Not awaited.
     trackTurns(session, fresh)
     // Not awaited, nor tried again: the tokens a turn spent never hold its thread back.

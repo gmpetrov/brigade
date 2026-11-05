@@ -1,4 +1,5 @@
 import {
+  CHIEF_FOLDER,
   Effort,
   folderExceptions,
   libraryAccessFor,
@@ -45,7 +46,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       task: { select: { id: true, title: true, description: true, completedAt: true } },
       parent: { select: { id: true, title: true } },
-      startedBy: { select: { suggestions: true } },
+      startedBy: { select: { suggestions: true, chiefAnswers: true } },
     },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -227,7 +228,19 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
-  const grants = await usableGrants(db, thread, teammate.id, granted, playbook)
+  // Chief deciding a question for the person (src/chief-answers.ts): it reads and decides, with no
+  // App, repository or computer of anyone's to act on.
+  const deciding = !!thread.chiefDecisionId && teammate.kind === 'chief'
+  // Its person lets Chief answer their teammates' questions: each teammate here is told what its
+  // answers are, and Chief that it keeps their mandate. In a member's own thread only, as Chief's
+  // answers are: a child reports, a playbook decides.
+  const chiefAnswers =
+    !deciding &&
+    thread.startedBy.chiefAnswers &&
+    thread.origin === 'member' &&
+    !thread.parentId &&
+    !playbook
+  const grants = deciding ? [] : await usableGrants(db, thread, teammate.id, granted, playbook)
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
@@ -289,12 +302,23 @@ export async function specFor(
       thread.startedBy.suggestions,
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
-    roster,
+    // Deciding, Chief brings nobody in.
+    roster: deciding ? [] : roster,
     library: teammate.libraryAccess,
-    libraryFolders: folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
+    libraryFolders: [
+      ...folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
+      // Chief keeps the person's mandate in its folder (teammateLibraryAccess lets it).
+      ...(chiefAnswers && teammate.kind === 'chief' && teammate.libraryAccess !== 'read_write'
+        ? [{ path: CHIEF_FOLDER, access: 'read_write' as const }]
+        : []),
+    ],
     private: thread.private,
     // A child reports to it; older runners ignore it, and its last message stands for its report.
     parent: thread.parent,
+    // Chief's answers for the person (CHIEF_PROTOCOL): false when they are off, and the
+    // instructions are as before.
+    chiefAnswers,
+    ...(deciding ? { decision: { id: thread.chiefDecisionId! } } : {}),
     // What the instructions and tools offer depends on it (schedules, wake-ups, a merge's wake-up).
     origin: thread.origin,
     playbook: playbook
@@ -334,7 +358,7 @@ export async function specFor(
     // Taken in once by the computer it moved to; older runners ignore it.
     ...(thread.movedAt ? { moved: movedOf(thread) } : {}),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
-    ...(github
+    ...(github && !deciding
       ? {
           git: gitAccess(
             { sessionId: thread.id, teammateId: teammate.id, computerId: thread.computerId },

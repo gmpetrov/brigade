@@ -502,11 +502,26 @@ export async function reportConversation(scope: Scope, childId: string) {
  * passing error) ends nothing: the report waits for the try, which the child's work goes on in.
  */
 export async function noteChildEvents(
-  session: { id: string; organizationId: string; workspaceId: string; parentId: string | null },
+  session: {
+    id: string
+    organizationId: string
+    workspaceId: string
+    parentId: string | null
+    /** Chief's thread deciding a question: no report, its decision goes its own way. */
+    chiefDecisionId?: string | null
+  },
   events: { event: { type: string; at: string; message?: string; retrying?: boolean } }[],
 ) {
   if (!session.parentId) return
   const scope: Scope = { organizationId: session.organizationId, workspaceId: session.workspaceId }
+  if (session.chiefDecisionId) {
+    const { noteDecisionEvents } = await import('./chief-answers.js')
+    return noteDecisionEvents(
+      scope,
+      { id: session.id, parentId: session.parentId, chiefDecisionId: session.chiefDecisionId },
+      events,
+    )
+  }
   const db = scoped(scope)
   for (const { event } of events) {
     if (event.type === 'message.user') {

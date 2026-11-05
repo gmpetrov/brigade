@@ -10,6 +10,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ScheduleOperation,
+  isChiefOperation,
   isTriggerOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -18,6 +19,7 @@ import { audit, type Actor } from './audit.js'
 import { outcomeOf } from './board.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
+import { handleChiefCall } from './chief-answers.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
 import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
@@ -541,6 +543,12 @@ export async function handleScheduleCall(
   // And a review of a pull request this thread opened.
   if (isReviewOperation(op)) {
     const output = await handleReviewCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And Chief's decisions for the person (src/chief-answers.ts): its decision threads decide, and
+  // it looks back at what it decided.
+  if (isChiefOperation(op)) {
+    const output = await handleChiefCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And declaring the work asked here delivered (docs/board.md), refused while anything is open.

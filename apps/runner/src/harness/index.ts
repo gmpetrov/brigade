@@ -127,6 +127,7 @@ import {
   listTools,
   scheduleTools,
   childTools,
+  chiefTools,
   playbookTools,
   playbookInstallTools,
   showWidgetTool,
@@ -332,6 +333,8 @@ function createAgent(
           [
             ...ALWAYS_LOADED,
             ...(chief ? [PROPOSE_TEAM_TOOL] : []),
+            // A decision thread's one way out, loaded with no tool search before it.
+            ...(spec.decision && chief ? ['chief_decide'] : []),
             // A big App's catalog (catalogTools): a few small tools, found then called, without a
             // tool search before them.
             ...Object.entries(apps)
@@ -340,51 +343,63 @@ function createAgent(
           ].map((name) => [name, { alwaysLoad: true }]),
         ),
       })
-  const tools = {
-    ...apps,
-    ...credentialTools(credentials),
-    ...libraryTools(library),
-    ...(spec.git ? repoTools(checkoutRepo) : {}),
-    // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
-    ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
-    // Schedules, triggers and wake-ups: only in a thread a person started (the API refuses them
-    // elsewhere), never in a playbook's run, whose schedules' runs would be threads outside it.
-    ...(startedByPerson(spec) ? scheduleTools(callSchedule) : {}),
-    // Nor the workspace's other Apps: it has only those the playbook declares.
-    ...appTools(callSchedule, { playbook: !!spec.playbook }),
-    // Lists' items (docs/lists.md): read, attach to this thread, tick, add.
-    ...listTools(callSchedule),
-    // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.
-    ...childTools(callSchedule, {
-      child: !!spec.parent,
-      follow: !!spec.playbook && !spec.playbook.dryRun,
-    }),
-    // Reviews of its pull requests, in a thread a person talks to: a child reports, a playbook decides.
-    ...(spec.git && !spec.parent && !spec.playbook ? reviewTools(callSchedule) : {}),
-    // A playbook run's root thread ends the run; its children report to it instead.
-    ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
-    // Elsewhere, a teammate may install one from the chat.
-    ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
-    // Declaring the thread done, in a thread a person talks to: a child reports, a playbook decides.
-    // A schedule's run ends with its turn.
-    ...doneTools(callSchedule, {
-      child: !!spec.parent,
-      playbook: !!spec.playbook,
-      scheduled: spec.origin === 'schedule',
-    }),
-    ...previewTools(preview, credentials),
-    ...(makeImage ? imageTools(makeImage) : {}),
-    ...(computer ? computerUseTools(computer) : {}),
-    // Claude Code asks with its own question tool; Codex's adapter has none.
-    ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
-    [OPEN_TICKET_TOOL]: openTicketTool,
-    [SHOW_WIDGET_TOOL]: showWidgetTool,
-    [WIDGET_GUIDE_TOOL]: widgetGuideTool,
-    // A person's message given to the running turn, answered at once (steeredText in threads.ts).
-    [ANSWER_MESSAGE_TOOL]: answerMessageTool,
-    // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
-    ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
-  }
+  // Chief deciding a question for the person (docs/chief-answers.md): it reads and decides, and
+  // nothing else; the API gives it no App, and its only way out is chief_decide.
+  const deciding = !!spec.decision && chief
+  const tools = deciding
+    ? {
+        search_workspace: libraryTools({ ...library, access: 'read', folders: [] })
+          .search_workspace!,
+        list_items: listTools(callSchedule).list_items!,
+        ...chiefTools(callSchedule, { deciding: true }),
+      }
+    : {
+        ...apps,
+        ...credentialTools(credentials),
+        ...libraryTools(library),
+        ...(spec.git ? repoTools(checkoutRepo) : {}),
+        // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
+        ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
+        // Schedules, triggers and wake-ups: only in a thread a person started (the API refuses them
+        // elsewhere), never in a playbook's run, whose schedules' runs would be threads outside it.
+        ...(startedByPerson(spec) ? scheduleTools(callSchedule) : {}),
+        // Nor the workspace's other Apps: it has only those the playbook declares.
+        ...appTools(callSchedule, { playbook: !!spec.playbook }),
+        // Lists' items (docs/lists.md): read, attach to this thread, tick, add.
+        ...listTools(callSchedule),
+        // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.
+        ...childTools(callSchedule, {
+          child: !!spec.parent,
+          follow: !!spec.playbook && !spec.playbook.dryRun,
+        }),
+        // Reviews of its pull requests, in a thread a person talks to: a child reports, a playbook decides.
+        ...(spec.git && !spec.parent && !spec.playbook ? reviewTools(callSchedule) : {}),
+        // A playbook run's root thread ends the run; its children report to it instead.
+        ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
+        // Elsewhere, a teammate may install one from the chat.
+        ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
+        // Declaring the thread done, in a thread a person talks to: a child reports, a playbook decides.
+        // A schedule's run ends with its turn.
+        ...doneTools(callSchedule, {
+          child: !!spec.parent,
+          playbook: !!spec.playbook,
+          scheduled: spec.origin === 'schedule',
+        }),
+        ...previewTools(preview, credentials),
+        ...(makeImage ? imageTools(makeImage) : {}),
+        ...(computer ? computerUseTools(computer) : {}),
+        // Claude Code asks with its own question tool; Codex's adapter has none.
+        ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
+        [OPEN_TICKET_TOOL]: openTicketTool,
+        [SHOW_WIDGET_TOOL]: showWidgetTool,
+        [WIDGET_GUIDE_TOOL]: widgetGuideTool,
+        // A person's message given to the running turn, answered at once (steeredText in threads.ts).
+        [ANSWER_MESSAGE_TOOL]: answerMessageTool,
+        // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
+        ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
+        // Chief, for a person who lets it answer for them: its look back at what it decided.
+        ...(chief && spec.chiefAnswers ? chiefTools(callSchedule, { deciding: false }) : {}),
+      }
   return {
     agent: new HarnessAgent({
       harness,

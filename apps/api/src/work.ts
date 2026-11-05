@@ -293,8 +293,9 @@ export async function handoffThread(
   const from = thread.teammates.find((t) => t.teammateId === message.fromTeammateId)
   if (!from) return
   // The chief routes work: a teammate it mentions joins the thread to answer. Not in a playbook's
-  // run: what started it is untrusted, and only a person brings another teammate in.
-  if (from.teammate.kind === 'chief' && !session.playbookRunId) {
+  // run: what started it is untrusted, and only a person brings another teammate in. Nor where it
+  // decides a question for the person (src/chief-answers.ts): it only decides there.
+  if (from.teammate.kind === 'chief' && !session.playbookRunId && !session.chiefDecisionId) {
     const joining = await db.teammate.findMany({
       where: {
         id: { in: message.teammateIds.filter((id) => !inThread.has(id)) },
@@ -445,6 +446,8 @@ export async function startThread(
      * a thread made here that did not start is deleted rather than left failed.
      */
     dropUnstarted?: boolean
+    /** Chief's thread deciding a question for the person (src/chief-answers.ts): its decision. */
+    chiefDecisionId?: string
   },
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
@@ -488,6 +491,7 @@ export async function startThread(
         ...(input.effort ? { effort: input.effort } : {}),
         ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
         ...(input.quiet ? { quiet: true } : {}),
+        ...(input.chiefDecisionId ? { chiefDecisionId: input.chiefDecisionId } : {}),
         ...(input.origin?.kind === 'trigger'
           ? {
               origin: 'trigger',
