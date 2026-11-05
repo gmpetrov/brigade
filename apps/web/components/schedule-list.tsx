@@ -63,7 +63,10 @@ function RunDots({ runs, className }: { runs: Schedule['recentRuns']; className?
 const clock = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
-/** One routine of the agenda: its time, its name and rhythm; Run now and its menu on hover. */
+/**
+ * One routine of the agenda: its time, its name and rhythm, its latest runs; Run now and its
+ * menu beside them on hover.
+ */
 function ScheduleRow({
   schedule,
   onEdit,
@@ -155,16 +158,8 @@ function ScheduleRow({
         </div>
       ) : (
         <div className="flex shrink-0 items-center gap-2">
-          <RunDots
-            runs={schedule.recentRuns}
-            className={cn(
-              'flex',
-              manager &&
-                !pinned &&
-                '[@media(hover:hover)]:group-focus-within:hidden [@media(hover:hover)]:group-hover:hidden',
-              manager && pinned && '[@media(hover:hover)]:hidden',
-            )}
-          />
+          {/* The dots stay while the actions show, so each run's link can still be reached. */}
+          <RunDots runs={schedule.recentRuns} className="flex" />
           {manager && (
             <div
               className={cn(
