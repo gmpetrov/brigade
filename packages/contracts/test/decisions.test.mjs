@@ -116,13 +116,11 @@ test('the status line is the first line with text after the title, never one fur
   )
 })
 
-test('a design.json that is not JSON as a whole still says its title and status', () => {
-  const cut =
-    '{\n  "title": "Sixty \\"boards\\"",\n  "status": "accepted",\n  "boards": [{"file": "a.html"'
-  assert.deepEqual(readDesignStatus(cut), {
-    title: 'Sixty "boards"',
-    status: 'accepted',
-    pullRequests: [],
-  })
-  assert.equal(readDesignStatus('{"status": "done", "boards": [').status, null)
+test('a design.json that is not JSON says no status, even with fields further in', () => {
+  // A board's title and status are not the design's.
+  assert.deepEqual(
+    readDesignStatus('{"boards":[{"title":"Old page","status":"shipped"}],"unfinished":'),
+    { title: null, status: null, pullRequests: [] },
+  )
+  assert.equal(readDesignStatus('{"title": "Home", "status": "accepted", "boards": [').status, null)
 })

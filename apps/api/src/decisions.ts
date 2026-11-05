@@ -29,8 +29,14 @@ import { noteInThread } from './thread-notes.js'
 
 /** Files read for a project's decisions, at most: the newest first. */
 const DECISIONS_MAX = 2000
-/** What is read of a Markdown file: its status line is near the top. A design.json is read whole. */
+/** What is read of a Markdown file: its status line is near the top. */
 const MARKDOWN_HEAD = 2000
+/**
+ * A design.json is read whole (it may be long), this many at a time and dropped once its title
+ * and status are read: each may be up to the library's 400k indexed characters, and the API's
+ * isolate has 128 MB for everything.
+ */
+const MANIFESTS_AT_ONCE = 10
 
 /** Reads and writes of a file that someone else keeps saving, before the sweep tries later. */
 const SAVE_ATTEMPTS = 3
@@ -66,10 +72,10 @@ function isDesignManifest(path: string) {
 export async function projectDecisions(scope: Scope, folder: string): Promise<DecisionView[]> {
   const prefix = `${folder.replace(/\/+$/, '')}/`
   const rows = await prisma.$queryRaw<
-    { id: string; path: string; updatedAt: Date; head: string }[]
+    { id: string; path: string; updatedAt: Date; head: string | null }[]
   >`
     SELECT "id", "path", "updatedAt",
-      CASE WHEN "path" LIKE '%/design.json' THEN "text" ELSE left("text", ${MARKDOWN_HEAD}::int) END AS "head"
+      CASE WHEN "path" LIKE '%/design.json' THEN NULL ELSE left("text", ${MARKDOWN_HEAD}::int) END AS "head"
     FROM "Document"
     WHERE "workspaceId" = ${scope.workspaceId}
       AND "organizationId" = ${scope.organizationId}
@@ -80,12 +86,22 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
     ORDER BY "updatedAt" DESC
     LIMIT ${DECISIONS_MAX}`
   const inFolder = (path: string, name: string) => path.startsWith(`${prefix}${name}/`)
+  // Each design's title and status, its manifest read whole a few at a time.
+  const manifests = rows.filter((r) => isDesignManifest(r.path)).map((r) => r.id)
+  const designs = new Map<string, ReturnType<typeof readDesignStatus>>()
+  for (let i = 0; i < manifests.length; i += MANIFESTS_AT_ONCE) {
+    const batch = await scoped(scope).document.findMany({
+      where: { id: { in: manifests.slice(i, i + MANIFESTS_AT_ONCE) } },
+      select: { id: true, text: true },
+    })
+    for (const m of batch) designs.set(m.id, readDesignStatus(m.text))
+  }
   const views: DecisionView[] = []
   for (const row of rows) {
     const updatedAt = row.updatedAt.toISOString()
     if (row.path.endsWith(`/${DESIGN_MANIFEST}`)) {
-      if (!isDesignManifest(row.path)) continue
-      const design = readDesignStatus(row.head)
+      const design = designs.get(row.id)
+      if (!design) continue
       if (!design.status && !inFolder(row.path, DESIGNS_FOLDER)) continue
       const path = designOf(row.path)
       views.push({
@@ -106,7 +122,8 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
     // A design's own notes are the design's.
     if (row.path.includes(`${DESIGN_SUFFIX}/`)) continue
     const name = row.path.split('/').pop()!
-    const line = parseStatusLine(row.head)
+    const head = row.head ?? ''
+    const line = parseStatusLine(head)
     if (!line && !(inFolder(row.path, DECISIONS_FOLDER) && name.toLowerCase() !== 'readme.md'))
       continue
     const flags: DecisionFlag[] = []
@@ -116,7 +133,7 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
       documentId: row.id,
       path: row.path,
       type: 'spec',
-      title: markdownTitle(row.head) || name.replace(/\.md$/i, ''),
+      title: markdownTitle(head) || name.replace(/\.md$/i, ''),
       kind: line?.kind ?? null,
       date: line?.date ?? null,
       status: line?.status ?? null,

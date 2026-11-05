@@ -128,15 +128,9 @@ export function readDesignStatus(json: string) {
   try {
     parsed = JSON.parse(json)
   } catch {
-    // Not JSON as a whole (written by hand, or cut): its top-level title and status, if they
-    // read plainly.
-    const status = /"status"\s*:\s*"([a-z]+)"/.exec(json)?.[1]
-    const title = /"title"\s*:\s*"((?:[^"\\\n]|\\.)*)"/.exec(json)?.[1]
-    return {
-      title: title ? title.replace(/\\(.)/g, '$1') : null,
-      status: DecisionStatus.safeParse(status).success ? (status as DecisionStatus) : null,
-      pullRequests: [] as number[],
-    }
+    // Not JSON (written by hand and broken): no status Brigade can trust. A field found by
+    // searching the text could be a board's, not the design's.
+    return { title: null, status: null, pullRequests: [] as number[] }
   }
   const object = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
   const read = DesignStatus.safeParse(object)

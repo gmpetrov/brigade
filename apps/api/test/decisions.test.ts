@@ -291,6 +291,20 @@ describe('decisions', { skip: !database && 'no database answers' }, () => {
       assert.equal(await db.specPull.count({ where: { pullRequestId: p.id, settledAt: null } }), 0)
     })
 
+  test('many designs are all read, a few manifests at a time', async () => {
+    for (let i = 0; i < 25; i++)
+      await save(
+        `Projects/Many/designs/d${i}.design/design.json`,
+        manifest({ title: `Design ${i}`, status: i % 2 ? 'shipped' : 'draft' }),
+      )
+    const found = await decisions.projectDecisions(scope, 'Projects/Many')
+    assert.equal(found.length, 25)
+    assert.deepEqual(
+      found.map((d) => [d.title, d.status]).sort(),
+      Array.from({ length: 25 }, (_, i) => [`Design ${i}`, i % 2 ? 'shipped' : 'draft']).sort(),
+    )
+  })
+
   test('a large design.json is read whole', async () => {
     const big = {
       title: 'Sixty boards',
