@@ -91,12 +91,27 @@ export function useSidebarKeys() {
     const onPointerDown = () => {
       held = null
     }
+    // A page the walk opened focuses its composer once it has loaded, which may come after
+    // the walk went on to a folded row: the focus goes back to that row, so Enter unfolds it
+    // rather than going to the composer. Typing ended the run first: the composer keeps it.
+    const onFocusIn = (e: FocusEvent) => {
+      if (
+        held instanceof HTMLElement &&
+        held.isConnected &&
+        held.dataset.navStop === 'toggle' &&
+        e.target instanceof Element &&
+        e.target.closest('[data-composer]')
+      )
+        held.focus({ preventScroll: true })
+    }
     // Before the composer's editor, which would move its caret on ⌥↑ / ⌥↓.
     window.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('pointerdown', onPointerDown, true)
+    window.addEventListener('focusin', onFocusIn, true)
     return () => {
       window.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('pointerdown', onPointerDown, true)
+      window.removeEventListener('focusin', onFocusIn, true)
     }
   }, [])
 }
