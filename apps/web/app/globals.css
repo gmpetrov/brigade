@@ -491,6 +491,16 @@
     }
   }
 
+  /* A teammate's name in its pebble's colour (components/pebble-avatar.tsx's pebbleInk),
+   * at one perceived lightness for every hue, so a yellow reads as well as a blue on the
+   * page. Where a browser cannot, it stays the text's own colour. */
+  .teammate-name {
+    color: oklch(from var(--pebble-c1) 0.52 min(c, 0.17) h);
+  }
+  .dark .teammate-name {
+    color: oklch(from var(--pebble-c1) 0.8 min(c, 0.14) h);
+  }
+
   /* A teammate's picture: a bare pebble, with no disc behind it, that morphs, glances
    * around and blinks its pill eyes into happy arcs (components/pebble-avatar.tsx sets
    * the variables from its id). Sized in percentages and container units, so it draws
