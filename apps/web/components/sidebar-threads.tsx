@@ -291,6 +291,7 @@ function SubThreadList({
                   title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
                   href={`/app/threads/${c.id}`}
                   data-active={c.id === activeId}
+                  data-nav-stop="link"
                   {...preloadOnPoint(c.id, c.id === activeId)}
                   onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
                   className={SUB_ROW}
@@ -367,6 +368,7 @@ function SubThreadList({
             <li className={BRANCH}>
               <button
                 type="button"
+                data-nav-stop="toggle"
                 onClick={() => setAll(true)}
                 className={cn(SUB_ROW, 'text-muted-foreground')}
               >
@@ -401,13 +403,17 @@ function FoldButton({
   folded,
   onToggle,
   href,
+  stop = false,
 }: {
   label: string
   folded: boolean
   onToggle: () => void
   href?: string
+  /** Folded, ⌥↑ / ⌥↓ stop on it, and Enter unfolds it (sidebar-keys.tsx). */
+  stop?: boolean
 }) {
   const Chevron = folded ? ChevronDown : ChevronUp
+  const navStop = stop && folded ? 'toggle' : undefined
   if (href)
     return (
       <span className="-ml-1 flex items-center">
@@ -416,6 +422,7 @@ function FoldButton({
         </Link>
         <button
           type="button"
+          data-nav-stop={navStop}
           onClick={onToggle}
           aria-expanded={!folded}
           aria-label={`${label}: ${folded ? 'show' : 'hide'}`}
@@ -428,6 +435,7 @@ function FoldButton({
   return (
     <button
       type="button"
+      data-nav-stop={navStop}
       onClick={onToggle}
       aria-expanded={!folded}
       aria-label={`${label}: ${folded ? 'show' : 'hide'}`}
@@ -1291,6 +1299,7 @@ export function SidebarWork({
       <SidebarMenuItem key="more-waiting">
         <SidebarMenuButton
           size="sm"
+          data-nav-stop="toggle"
           className="text-muted-foreground pl-8"
           onClick={() => setAllWaiting(true)}
         >
@@ -1301,7 +1310,12 @@ export function SidebarWork({
     ...ordered.slice(0, visible).map((t) => row(t)),
     more && (
       <SidebarMenuItem key="more">
-        <SidebarMenuButton size="sm" className="text-muted-foreground pl-8" onClick={more.onSelect}>
+        <SidebarMenuButton
+          size="sm"
+          data-nav-stop="toggle"
+          className="text-muted-foreground pl-8"
+          onClick={more.onSelect}
+        >
           <span>{more.label}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -1341,7 +1355,7 @@ export function SidebarWork({
               return (
                 <SidebarMenuItem key={p.id}>
                   <SidebarMenuButton asChild tooltip={p.list!.title} isActive={pathname === href}>
-                    <Link href={href} aria-label={p.list!.title}>
+                    <Link href={href} aria-label={p.list!.title} data-nav-stop="link">
                       <span className="relative flex size-4 shrink-0 items-center justify-center">
                         <ListChecks aria-hidden className="size-4" />
                         {t && statusKey(t) && (
@@ -1368,7 +1382,7 @@ export function SidebarWork({
                   tooltip={title}
                   isActive={threadId === t.id && (expanded || pathname === href)}
                 >
-                  <Link href={href} aria-label={title}>
+                  <Link href={href} aria-label={title} data-nav-stop="link">
                     <span className="relative flex size-4 shrink-0 items-center justify-center">
                       <TeammateAvatar teammate={t.teammate} className="size-5" />
                       {statusKey(t) && (
@@ -1396,6 +1410,7 @@ export function SidebarWork({
           <SidebarGroupLabel>
             <FoldButton
               label="Pinned"
+              stop
               folded={folded.pinned}
               onToggle={() => toggleFolded('pinned')}
             />
@@ -1413,6 +1428,7 @@ export function SidebarWork({
           {/* Folding it also takes the list back to its first threads. */}
           <FoldButton
             label="Threads"
+            stop
             folded={folded.threads}
             onToggle={() => {
               if (!folded.threads) {

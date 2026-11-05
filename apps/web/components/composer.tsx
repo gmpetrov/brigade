@@ -843,7 +843,8 @@ export function Composer({
   return (
     // `relative`: the mention menu docks here unless an ancestor is marked
     // `data-composer-frame` (a card around a bare composer).
-    <div className={cn('relative', fill && 'flex min-h-0 flex-1 flex-col')}>
+    // `data-composer`: ⌥↑ / ⌥↓ walk the sidebar from here too (sidebar-keys.tsx).
+    <div data-composer className={cn('relative', fill && 'flex min-h-0 flex-1 flex-col')}>
       <EditorContent
         editor={editor}
         className={fill ? 'flex min-h-0 flex-1 flex-col' : undefined}
