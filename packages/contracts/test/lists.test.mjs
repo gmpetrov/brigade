@@ -279,7 +279,13 @@ test('the files indented under a line are its own, and never its text', () => {
 })
 
 test('a file under a line whose text goes on below its box is still its own', () => {
-  const text = ['* [ ] Its text goes on\\', 'on a second row', '', '  ![a.png](asset:cma)', '* [ ] Next'].join('\n')
+  const text = [
+    '* [ ] Its text goes on\\',
+    'on a second row',
+    '',
+    '  ![a.png](asset:cma)',
+    '* [ ] Next',
+  ].join('\n')
   assert.deepEqual(
     parseList(text).lines.map((l) => [l.text, l.files.map((f) => f.id), l.end, l.last]),
     [
@@ -302,10 +308,18 @@ test('a line added beside one with files goes after them, and one under it right
     ],
   )
   // Beside a line with lines and files under it: after them all.
-  const second = insertLine(withFiles, list, { after: list.lines[1] }, 'Credits', 'eeeeeeeeeeeeeeee')
+  const second = insertLine(
+    withFiles,
+    list,
+    { after: list.lines[1] },
+    'Credits',
+    'eeeeeeeeeeeeeeee',
+  )
   assert.equal(second.split('\n')[14], '* [ ] Credits <!-- item:eeeeeeeeeeeeeeee -->')
   assert.deepEqual(
-    parseList(second).lines.map((l) => [l.text, l.files.length]).slice(1, 4),
+    parseList(second)
+      .lines.map((l) => [l.text, l.files.length])
+      .slice(1, 4),
     [
       ['References', 1],
       ['Two films', 1],
@@ -322,15 +336,31 @@ test('a line added beside one with files goes after them, and one under it right
   )
   assert.equal(under.split('\n')[3], '  * [ ] Ask Georges <!-- item:ffffffffffffffff -->')
   assert.deepEqual(
-    parseList(under).lines.slice(0, 2).map((l) => [l.text, l.files.length]),
+    parseList(under)
+      .lines.slice(0, 2)
+      .map((l) => [l.text, l.files.length]),
     [
       ['Voice: Cartesia or Georges', 2],
       ['Ask Georges', 0],
     ],
   )
   // At the end of a section whose last line has files: after them.
-  const sectioned = ['## Sound', '', '* [ ] Voice', '', '  ![a.png](asset:cma)', '', '## Next'].join('\n')
-  const added = insertLine(sectioned, parseList(sectioned), { section: 'Sound' }, 'Music', 'gggggggggggggggg')
+  const sectioned = [
+    '## Sound',
+    '',
+    '* [ ] Voice',
+    '',
+    '  ![a.png](asset:cma)',
+    '',
+    '## Next',
+  ].join('\n')
+  const added = insertLine(
+    sectioned,
+    parseList(sectioned),
+    { section: 'Sound' },
+    'Music',
+    'gggggggggggggggg',
+  )
   assert.equal(added.split('\n')[5], '* [ ] Music <!-- item:gggggggggggggggg -->')
   assert.deepEqual(
     parseList(added).lines.map((l) => [l.text, l.files.length]),

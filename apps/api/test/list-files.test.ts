@@ -12,7 +12,12 @@ process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { normalizeMarkdown } = await import('../src/collab.js')
 
-type Block = { type: string; props?: Record<string, unknown>; content?: unknown; children?: Block[] }
+type Block = {
+  type: string
+  props?: Record<string, unknown>
+  content?: unknown
+  children?: Block[]
+}
 const shape = (blocks: Block[]): unknown[] =>
   blocks.map((b) => [
     b.type,
@@ -27,7 +32,10 @@ test('files put under a line in the editor are written under it, and read back t
     {
       type: 'checkListItem',
       props: { checked: false },
-      content: [...text('Voice: Cartesia or Georges '), { type: 'item', props: { id: 'aaaaaaaaaaaaaaaa' } }],
+      content: [
+        ...text('Voice: Cartesia or Georges '),
+        { type: 'item', props: { id: 'aaaaaaaaaaaaaaaa' } },
+      ],
       children: [
         { type: 'image', props: { url: 'asset:cmshot', name: 'Screenshot 1.png' } },
         { type: 'file', props: { url: 'asset:cmbrief', name: 'brief.pdf', caption: 'Q3' } },

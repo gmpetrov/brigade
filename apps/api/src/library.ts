@@ -519,7 +519,13 @@ export async function mirroredAssets(db: ScopedDb, ids?: string[]) {
       sha256: { not: '' },
       document: { is: { kind: 'library', deletedAt: null } },
     },
-    select: { id: true, name: true, sha256: true, size: true, document: { select: { path: true } } },
+    select: {
+      id: true,
+      name: true,
+      sha256: true,
+      size: true,
+      document: { select: { path: true } },
+    },
     orderBy: { id: 'asc' },
   })
   return rows.map((row) => ({

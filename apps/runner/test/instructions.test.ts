@@ -222,9 +222,14 @@ test('a thread’s list items come with the files under them, and a document’s
       { id: 'bbbbbbbbbbbbbbbb', path: 'Projects/Brigade/launch.md', text: 'Pricing', done: true },
     ],
   })
-  const text = instructions(spec, threadMemory(spec, { workspace: '', teammate: '' }, '/threads/s1', now), '/library', {
-    ready: true,
-  })
+  const text = instructions(
+    spec,
+    threadMemory(spec, { workspace: '', teammate: '' }, '/threads/s1', now),
+    '/library',
+    {
+      ready: true,
+    },
+  )
   assert.ok(
     text.includes(
       '- [ ] Fix the dialog (id `aaaaaaaaaaaaaaaa`, in Projects/Brigade/launch.md)\n' +

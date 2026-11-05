@@ -557,7 +557,9 @@ export function handOffParts(
   const m = HAND_OFF.exec(text.trim())
   if (!m) return null
   const rows = m[3]!.trim().split('\n')
-  const files = rows.filter((row) => row.startsWith(HANDED_FILE)).map((row) => row.slice(HANDED_FILE.length))
+  const files = rows
+    .filter((row) => row.startsWith(HANDED_FILE))
+    .map((row) => row.slice(HANDED_FILE.length))
   return {
     file: { id: m[2]!, path: m[1]! },
     items: rows.filter((row) => row.startsWith('- ')).map((row) => row.slice(2)),

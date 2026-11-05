@@ -209,18 +209,43 @@ export function DocumentBlockNoteView({
   const [dragging, setDragging] = useState(false)
   const depth = useRef(0)
   const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes('Files')
+  // The checklist line files are dragged over, which they go under when dropped (docs/lists.md).
+  const box = useRef<HTMLDivElement>(null)
+  const [target, setTarget] = useState<{
+    id: string
+    top: number
+    left: number
+    width: number
+    height: number
+  } | null>(null)
+  const lineUnder = (e: React.DragEvent) => {
+    const line = !readOnly && hasFiles(e) ? checklistLineAt(e.target) : null
+    const outer = box.current?.getBoundingClientRect()
+    if (!line || !outer) return null
+    const rect = line.element.getBoundingClientRect()
+    return {
+      id: line.id,
+      top: rect.top - outer.top,
+      left: rect.left - outer.left,
+      width: rect.width,
+      height: rect.height,
+    }
+  }
 
   return (
-    // Files dropped anywhere on the document land in it: onto the text where
-    // they fall (BlockNote's own handling), elsewhere at the end.
+    // Files dropped anywhere on the document land in it: onto a checklist line, under it (its
+    // files, which go with it when it is handed over); onto the text elsewhere where they fall
+    // (BlockNote's own handling); elsewhere at the end. The line takes them before the editor
+    // sees the drop: BlockNote would put them beside it.
     // data-block-select: a drag started here, beside the lines, selects them whole
     // (document-block-select). data-keyboard: while it is edited, Escape is the editor's (it
     // selects the line), not the panel's around it.
     <div
+      ref={box}
       data-block-select
       data-keyboard={readOnly ? undefined : ''}
       className={cn(
-        'min-h-full rounded-lg transition-shadow',
+        'relative min-h-full rounded-lg transition-shadow',
         dragging && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-card',
       )}
       onDragEnter={(e) => {
@@ -231,19 +256,63 @@ export function DocumentBlockNoteView({
       onDragLeave={(e) => {
         if (!hasFiles(e)) return
         depth.current = Math.max(0, depth.current - 1)
-        if (depth.current === 0) setDragging(false)
+        if (depth.current === 0) {
+          setDragging(false)
+          setTarget(null)
+        }
+      }}
+      onDragOverCapture={(e) => {
+        const line = lineUnder(e)
+        setTarget((was) => (was?.id === line?.id && was?.top === line?.top ? was : line))
+        if (!line) return
+        // Not the editor's: its drop cursor between the lines would say they land beside it.
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'copy'
       }}
       onDragOver={(e) => {
         if (hasFiles(e)) e.preventDefault()
       }}
+      onDropCapture={(e) => {
+        const line = lineUnder(e)
+        setTarget(null)
+        if (!line) return
+        e.preventDefault()
+        e.stopPropagation()
+        depth.current = 0
+        setDragging(false)
+        void attachFiles(editor, line.id, Array.from(e.dataTransfer.files))
+      }}
+      onPasteCapture={(e) => {
+        // A file pasted alone (a screenshot) while the cursor is in a checklist line: under it.
+        const types = Array.from(e.clipboardData.types)
+        if (readOnly || !types.includes('Files') || types.some((t) => PASTED_TEXT.has(t))) return
+        const block = editor.getTextCursorPosition().block
+        if (block.type !== 'checkListItem') return
+        e.preventDefault()
+        e.stopPropagation()
+        void attachFiles(editor, block.id, Array.from(e.clipboardData.files))
+      }}
       onDrop={(e) => {
         depth.current = 0
         setDragging(false)
+        setTarget(null)
         if (!hasFiles(e) || e.defaultPrevented) return
         e.preventDefault()
         void appendFiles(editor, Array.from(e.dataTransfer.files))
       }}
     >
+      {target && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-10 rounded bg-primary/14 ring-1 ring-primary/22"
+          style={{ top: target.top, left: target.left, width: target.width, height: target.height }}
+        >
+          <span className="absolute top-full left-7 mt-1 rounded-lg border border-primary/55 bg-card px-2.5 py-1 text-[12.5px] whitespace-nowrap text-primary shadow-sm">
+            Attach to this line
+          </span>
+        </div>
+      )}
       <ListItemsProvider documentId={list ? documentId : null}>
         <BlockNoteView
           editor={editor}
@@ -455,6 +524,58 @@ const blockFor = (file: File) =>
       : file.type.startsWith('audio/')
         ? 'audio'
         : 'file'
+
+/** What a clipboard holds besides files that BlockNote pastes instead of them. */
+const PASTED_TEXT = new Set([
+  'blocknote/html',
+  'text/html',
+  'text/markdown',
+  'text/plain',
+  'vscode-editor-data',
+])
+
+const FILE_BLOCKS = new Set(['image', 'video', 'audio', 'file'])
+
+/** The checklist line an element is in: its own row, not what is nested under it. */
+function checklistLineAt(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null
+  const element = target.closest('.bn-block-content[data-content-type="checkListItem"]')
+  const id = element?.closest('[data-id]')?.getAttribute('data-id')
+  return element && id ? { element, id } : null
+}
+
+/**
+ * Files dropped or pasted on a checklist line: under it, after the files it has and before the
+ * lines nested under it, where its Markdown writes them (docs/lists.md). Each block is filled in
+ * as its upload lands.
+ */
+async function attachFiles(editor: DocumentBlockEditor, lineId: string, files: File[]) {
+  for (const file of files) {
+    const line = editor.getBlock(lineId)
+    if (!line || !editor.uploadFile) return
+    const block = { type: blockFor(file), props: { name: file.name } } as never
+    const under = line.children
+    let after = 0
+    while (after < under.length && FILE_BLOCKS.has(under[after]!.type)) after++
+    const added =
+      after > 0
+        ? editor.insertBlocks([block], under[after - 1]!, 'after')[0]
+        : under.length
+          ? editor.insertBlocks([block], under[0]!, 'before')[0]
+          : editor.updateBlock(line, { children: [block] }).children[0]
+    if (!added) continue
+    try {
+      const update = await editor.uploadFile(file, added.id)
+      editor.updateBlock(
+        added,
+        (typeof update === 'string' ? { props: { url: update } } : update) as never,
+      )
+    } catch {
+      // An empty block would only mislead (uploadFile said why).
+      editor.removeBlocks([added])
+    }
+  }
+}
 
 /** Files dropped beside the text: a block for each at the end, filled in as each upload lands. */
 async function appendFiles(editor: DocumentBlockEditor, files: File[]) {
