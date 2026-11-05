@@ -327,6 +327,17 @@ async function start() {
     }),
     stateFile: join(paths.state, 'previews.json'),
     busy: (sessionId) => threads.inUse(sessionId),
+    // Previews on a machine of their own, for threads whose starter chose them (preview_machines).
+    ...(CLOUD
+      ? {
+          machines: {
+            up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
+            sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
+            touch: (sessionId) => connection.previewMachine(sessionId, 'touch'),
+            home: paths.state,
+          },
+        }
+      : {}),
   })
   // What a cloud computer keeps only on its disk, backed up to Brigade, and put back on one
   // that replaces it before anything runs there.

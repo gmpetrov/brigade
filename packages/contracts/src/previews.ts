@@ -39,6 +39,53 @@ export const PreviewCheckState = z.object({
 })
 export type PreviewCheckState = z.infer<typeof PreviewCheckState>
 
+/**
+ * Previews on a machine of their own (the preview_machines feature, docs/previews.md): the
+ * runner asks the API for its thread's machine before it starts the app (up), says when nobody
+ * used it for a while so it stops and costs nothing (sleep), and that it is still in use
+ * (touch), which pushes back the provider's own stop.
+ */
+export const PreviewMachineAction = z.enum(['up', 'sleep', 'touch'])
+export type PreviewMachineAction = z.infer<typeof PreviewMachineAction>
+
+/** An OpenSSH public key, one line: the runner's, which the API lets into the machine. */
+export const SshPublicKey = z
+  .string()
+  .max(1000)
+  .regex(/^ssh-ed25519 [A-Za-z0-9+/=]+( [^\n]*)?$/, 'Expected an ssh-ed25519 public key')
+
+/**
+ * How the runner reaches its thread's machine over SSH: the address, the user, and the
+ * machine's host key, which came from the provider's API and not over SSH, so it is pinned.
+ */
+export const PreviewMachineAccess = z.object({
+  /** The machine's id at the provider, which names its host key (HostKeyAlias). */
+  id: z.string().max(200),
+  host: z.string().max(255),
+  port: z.number().int().min(1).max(65535),
+  user: z.string().max(64),
+  /** "ssh-ed25519 AAAA…": the machine's host key. */
+  hostKey: z.string().max(2000),
+  /** What it has, for the preview's log: "8 vCPU, 16 GB". */
+  size: z.string().max(100),
+})
+export type PreviewMachineAccess = z.infer<typeof PreviewMachineAccess>
+
+/**
+ * What `up` gives: the machine, or null to run the preview on the computer itself as before
+ * (the feature or the person's preference is off, too many machines run, the provider failed),
+ * with why when it is worth saying.
+ */
+export const PreviewMachineUp = z.object({
+  machine: PreviewMachineAccess.nullable(),
+  reason: z.string().max(500).optional(),
+})
+export type PreviewMachineUp = z.infer<typeof PreviewMachineUp>
+
+/** A member turns previews on a machine of their own on or off (Member.previewMachines). */
+export const SetPreviewMachines = z.object({ previewMachines: z.boolean() })
+export type SetPreviewMachines = z.infer<typeof SetPreviewMachines>
+
 /** What a preview is, as its events say. */
 export const PreviewInfo = z.object({
   previewId: z.string(),
@@ -67,6 +114,8 @@ export const PreviewInfo = z.object({
   commit: z.string().optional(),
   /** When this run started, from runners that report checks (older ones say running when the port answers). */
   startedAt: z.string().optional(),
+  /** It runs on a machine of its own (preview_machines), not on the computer: what that has. */
+  machine: z.string().max(100).optional(),
 })
 export type PreviewInfo = z.infer<typeof PreviewInfo>
 

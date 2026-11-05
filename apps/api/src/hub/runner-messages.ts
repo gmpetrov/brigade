@@ -37,6 +37,7 @@ import { noteMailLeft } from '../mail/outcomes.js'
 import { movesOn, onReleased } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import { noteDryRunEvents } from '../playbook-dry-runs.js'
+import { handlePreviewMachine } from '../preview-machines.js'
 import { messagesToRequeue, turnsToResume } from '../recovery.js'
 import { runnerBundle } from '../routes/runner-install.js'
 import { handleScheduleCall } from '../schedules.js'
@@ -250,6 +251,11 @@ async function handle(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
 
   if (message.type === 'preview.expose') {
     void handlePreviewExpose(runner, message, send).catch(failed(message.callId))
+    return
+  }
+
+  if (message.type === 'preview.machine') {
+    void handlePreviewMachine(runner, message, send).catch(failed(message.callId))
     return
   }
 

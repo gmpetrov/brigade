@@ -345,6 +345,11 @@ export type Me = {
   suggestions: boolean
   /** Brigade merges what teammates open in their threads once it is ready (owners and admins). */
   autoMerge: boolean
+  /**
+   * The previews of their threads run on a machine of their own (docs/previews.md); shown only to
+   * members with the preview_machines feature. Absent from APIs before it.
+   */
+  previewMachines?: boolean
   /** Chief reads their teammates' buttons and choices first, and answers in their name (docs/chief-answers.md). */
   chiefAnswers?: boolean
   /** Features hidden until ready that this person has (docs/feature-flags.md); absent in the demo. */

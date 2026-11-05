@@ -28,9 +28,11 @@ import {
 import {
   PREVIEW_PORTS_MAX,
   PreviewAction,
+  PreviewMachineAction,
   PreviewOperation,
   PreviewPort,
   PreviewStartOutcome,
+  SshPublicKey,
 } from './previews.js'
 import { ThreadPlaybook } from './playbooks.js'
 import { ScheduleOperation } from './schedules.js'
@@ -632,6 +634,21 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     sessionId: z.string(),
     teammateId: z.string().optional(),
     operation: PreviewOperation,
+  }),
+  /**
+   * The thread's preview machine (preview_machines, docs/previews.md), on a cloud computer.
+   * up: made or started, the runner's key let in, answered like a connector call with
+   * PreviewMachineUp ({ machine: null } runs the preview on the computer as before). sleep:
+   * stopped, its disk kept. touch: still in use. An API before it answers that it could not read
+   * the call, and the runner runs the preview on the computer.
+   */
+  z.object({
+    type: z.literal('preview.machine'),
+    callId: z.string(),
+    sessionId: z.string(),
+    action: PreviewMachineAction,
+    /** up: the runner's key, let into the machine. */
+    publicKey: SshPublicKey.optional(),
   }),
   /** What came of preview.start, or why it could not. */
   z.object({

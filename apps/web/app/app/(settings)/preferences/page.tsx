@@ -1,7 +1,8 @@
 'use client'
 // Preferences: what each member sets for themselves, never for the workspace: next-message
 // suggestions, auto-merge of their threads' pull requests (owners and admins, who may merge),
-// what Chief answers in their name, and deleting their own account. Notifications have their own section; the theme is
+// where their threads' previews run (members with the preview_machines feature), what Chief
+// answers in their name, and deleting their own account. Notifications have their own section; the theme is
 // picked in the member's menu, in the sidebar.
 import { CHIEF_KIND_LABELS, type ChiefSettings, type SetChief } from '@brigade/contracts'
 import Link from 'next/link'
@@ -43,6 +44,10 @@ export default function PreferencesPage() {
   const [autoMerge, setAutoMerge] = useState(me.autoMerge)
   useEffect(() => setAutoMerge(me.autoMerge), [me.autoMerge])
   const mayMerge = me.role === 'owner' || me.role === 'admin'
+  // Only for members with the feature (docs/feature-flags.md): the API refuses the others too.
+  const hasMachines = me.features?.includes('preview_machines') ?? false
+  const [machines, setMachines] = useState(me.previewMachines ?? false)
+  useEffect(() => setMachines(me.previewMachines ?? false), [me.previewMachines])
 
   /** Shown at once, then saved; put back as it was if it fails. */
   function suggest(on: boolean) {
@@ -57,6 +62,13 @@ export default function PreferencesPage() {
     api('/me/auto-merge', { method: 'PUT', body: { autoMerge: on } })
       .then(reloadMe)
       .catch(() => setAutoMerge(me.autoMerge))
+  }
+
+  function previewOnMachine(on: boolean) {
+    setMachines(on)
+    api('/me/preview-machines', { method: 'PUT', body: { previewMachines: on } })
+      .then(reloadMe)
+      .catch(() => setMachines(me.previewMachines ?? false))
   }
 
   return (
@@ -95,6 +107,24 @@ export default function PreferencesPage() {
               </span>
             </Label>
             <Switch id="auto-merge" checked={autoMerge} onCheckedChange={merge} />
+          </div>
+        </Section>
+      )}
+
+      {hasMachines && (
+        <Section title="Previews" detail="Where the app runs while you try it.">
+          <div className="flex items-start justify-between gap-4">
+            <Label htmlFor="preview-machines" className="grid gap-1 font-normal">
+              <span className="font-medium">Run previews on their own machine</span>
+              <span className="text-muted-foreground text-xs">
+                The preview of a thread you start runs on a machine of its own (8 vCPU, 16 GB), not
+                on the cloud computer your teammates work on. Its code stays on the cloud computer
+                and reaches the machine as it changes. It sleeps after 30 minutes without use and
+                takes about half a minute to wake. Off, previews run on the cloud computer, as
+                before.
+              </span>
+            </Label>
+            <Switch id="preview-machines" checked={machines} onCheckedChange={previewOnMachine} />
           </div>
         </Section>
       )}

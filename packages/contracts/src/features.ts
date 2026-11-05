@@ -14,6 +14,13 @@ export const FEATURES = {
       'Connect Google Drive accounts (the full drive scope, restricted like Gmail’s until CASA).',
     default: false,
   },
+  preview_machines: {
+    description:
+      'Previews on a machine of their own (docs/previews.md): a member who has it can turn it on ' +
+      'in Preferences, and the previews of the threads they start then run on a cloud machine of ' +
+      'their own, with their code kept in sync as it changes. Being tried by the team first.',
+    default: false,
+  },
 } as const satisfies Record<string, { description: string; default: boolean }>
 
 export type Feature = keyof typeof FEATURES

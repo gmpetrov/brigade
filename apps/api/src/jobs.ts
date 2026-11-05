@@ -23,6 +23,7 @@ import { dueMail, mailMinute, retryMail, sweepMail } from './mail/jobs.js'
 import { processMail } from './mail/inbound.js'
 import { sweep as sweepNotifications } from './notifications.js'
 import { noteFailure } from './ops/failures.js'
+import { sweepPreviewMachines } from './preview-machines.js'
 import { advanceMerges, dueMerges } from './pull-requests.js'
 import { redeliverFailed } from './routes/github-webhook.js'
 import { dueCommands, giveUp, resendCommands, sweepCommands } from './runner-commands.js'
@@ -103,6 +104,9 @@ export const JOBS = {
   'mail-outbound': { every: 60, run: () => mailMinute() },
   inbound: { every: 60, run: () => processDueInbound() },
   'runner-commands-given-up': { every: 60, run: (_key, now) => giveUp(now.getTime()) },
+  // Preview machines (src/preview-machines.ts): destroyed once their thread is gone or they slept
+  // long enough, stopped when their runner forgot them.
+  'preview-machines': { every: 60, run: (_key, now) => sweepPreviewMachines(now) },
   'github-redeliver': { every: 600, run: () => redeliverFailed() },
   // Hourly: uploads abandoned mid-way or never sent with a message; files no document refers
   // to; library files in the trash long enough; tasks done long enough, off the board; images a

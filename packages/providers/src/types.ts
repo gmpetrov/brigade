@@ -38,6 +38,32 @@ export class DesktopNotReady extends Error {
   }
 }
 
+/** Where an SSH key was let in: what to connect to, as whom, and the machine's own host key. */
+export type SshAccess = { host: string; port: number; user: string; hostKey: string }
+
+/**
+ * Machines of their own for previews (docs/previews.md, the preview_machines feature): one per
+ * thread, made when its preview first starts, stopped when nobody uses it, started again for its
+ * next visit, destroyed with the thread. Nothing of Brigade's own goes in them.
+ */
+export interface MachineProvider {
+  /** What one has, said to people: "8 vCPU, 16 GB". */
+  readonly size: string
+  /** Make one, running. The same `key` again gives the same machine: a retry makes no second one. */
+  create(spec: { name: string; key: string }): Promise<ComputerRef>
+  start(ref: ComputerRef): Promise<void> // resume with its disk
+  stop(ref: ComputerRef): Promise<void> // keep the disk, stop billing
+  destroy(ref: ComputerRef): Promise<void>
+  status(ref: ComputerRef): Promise<ComputerStatus>
+  /** Push back the provider's own stop, which only fires once nothing kept it alive. */
+  keepAlive(ref: ComputerRef): Promise<void>
+  /**
+   * Let a public key in (it stays across stops) and say where to connect. Asked again after each
+   * start: a started machine has a new address and a new host key.
+   */
+  authorize(ref: ComputerRef, publicKey: string): Promise<SshAccess>
+}
+
 export interface ComputerProvider {
   create(spec: ComputerSpec): Promise<ComputerRef>
   start(ref: ComputerRef): Promise<void> // resume with its disk
