@@ -1,6 +1,7 @@
 'use client'
 import {
   ChevronRight,
+  History,
   MessageSquare,
   MoreHorizontal,
   Pause,
@@ -64,8 +65,8 @@ const clock = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
 /**
- * One routine of the agenda: its time, its name and rhythm, its latest runs; Run now and its
- * menu beside them on hover.
+ * One routine of the agenda: its time, its name and rhythm, its latest runs; on hover, Run now
+ * and its menu in their place.
  */
 function ScheduleRow({
   schedule,
@@ -158,8 +159,17 @@ function ScheduleRow({
         </div>
       ) : (
         <div className="flex shrink-0 items-center gap-2">
-          {/* The dots stay while the actions show, so each run's link can still be reached. */}
-          <RunDots runs={schedule.recentRuns} className="flex" />
+          {/* The actions take the dots' place; the menu still opens the last run. */}
+          <RunDots
+            runs={schedule.recentRuns}
+            className={cn(
+              'flex',
+              manager &&
+                (pinned
+                  ? '[@media(hover:hover)]:hidden'
+                  : '[@media(hover:hover)]:group-focus-within:hidden [@media(hover:hover)]:group-hover:hidden'),
+            )}
+          />
           {manager && (
             <div
               className={cn(
@@ -197,6 +207,14 @@ function ScheduleRow({
                     <Pencil aria-hidden />
                     Edit
                   </DropdownMenuItem>
+                  {schedule.lastRun && (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/app/threads/${schedule.lastRun.id}`}>
+                        <History aria-hidden />
+                        Open last run
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {schedule.parentSession && (
                     <DropdownMenuItem asChild>
                       <Link href={`/app/threads/${schedule.parentSession.id}`}>
