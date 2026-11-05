@@ -185,6 +185,7 @@ import {
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { turnWait } from '@/lib/turn-wait'
+import { nextShownUntil } from '@/lib/next-up'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
 import { revealSeq } from '@/lib/reveal'
@@ -2503,9 +2504,6 @@ function ComputerAway({
  * Between a message and the first thing its teammate does: a line saying how far it got,
  * where the answer will show. It counts up past the first seconds.
  */
-/** How long after a turn ended its next teammate still shows as answering next, not started yet. */
-const NEXT_FRESH_MS = 2 * 60_000
-
 export function Answering({
   teammate,
   phase,
@@ -2655,6 +2653,21 @@ export function ThreadItems({
     (it) => it.kind === 'user' && it.memberId !== null && it.memberId !== me.memberId,
   )
   const memberNames = useMemberNames(othersWrote)
+  // Who answers after the turn under way, or the one that just ended: named under it until they
+  // start, or until its time (nextShownUntil), when the page renders again to stop showing it.
+  const nextUp = next.flatMap((id) => byId.get(id) ?? [])
+  const nextNames = nextUp.map((t) => t.name)
+  const lastTurnAt = items.findLast(
+    (it): it is Extract<Item, { kind: 'turn' }> => it.kind === 'turn',
+  )?.at
+  const nextUntil = nextUp.length > 0 ? nextShownUntil(working, lastTurnAt) : undefined
+  const [nextNow, setNextNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (nextUntil === undefined || nextUntil === Infinity) return
+    const timer = setTimeout(() => setNextNow(Date.now()), Math.max(0, nextUntil - Date.now()) + 50)
+    return () => clearTimeout(timer)
+  }, [nextUntil])
+  const nextFresh = nextUntil !== undefined && nextNow < nextUntil
   const [retrying, setRetrying] = useState<string>()
   // The latest turn failed: nothing came after its error but notes (a try planned on its own, say).
   const retryable = (i: number) =>
@@ -3421,14 +3434,6 @@ export function ThreadItems({
           ?.teammateId ?? '',
       )?.name
     : undefined
-  // Who answers after the turn under way, or the one that just ended: named under it until they start.
-  const nextUp = next.flatMap((id) => byId.get(id) ?? [])
-  const nextNames = nextUp.map((t) => t.name)
-  const lastTurn = items.findLast((it): it is Extract<Item, { kind: 'turn' }> => it.kind === 'turn')
-  // Between turns, the next starts within seconds: a list older than that was lost (a restart).
-  const nextFresh =
-    nextUp.length > 0 &&
-    (working || (lastTurn !== undefined && Date.now() - lastTurn.at < NEXT_FRESH_MS))
   const workingLineNode = workingLine && (
     <WorkingLine
       key="working"
