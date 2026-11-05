@@ -639,6 +639,7 @@ function addRoutine(routine: {
     pausedAt: null,
     lastError: null,
     lastRun: null,
+    recentRuns: [],
     parentSessionId: null,
     parentSession: null,
     createdByTeammateId: teammate.id,
