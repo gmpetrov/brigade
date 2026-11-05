@@ -225,6 +225,8 @@ export type Item =
       }
       /** Anything else Brigade wrote (a wake-up, a schedule's run…): a line rather than a person's bubble. */
       note?: BrigadeNote
+      /** Lines of a list a person handed over with a note: the note as their bubble, the lines as a line below it. */
+      lines?: { said: string; note: BrigadeNote }
       /** A person handed the thread back: their note and what they did, as a card rather than the teammate's prompt. */
       handback?: Handback & { commands: string[] }
       /** Written during its teammate's turn and answered on the side (message.side): that answer, under it. */
@@ -491,6 +493,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           const fromBrigade = e.memberId === null || resolveConflictsNote(e.text) !== null
           const handback = e.memberId !== null ? handbackNote(e.text) : null
           const handedOver = e.memberId !== null ? handedEmail(e.text) : null
+          const handOff = e.memberId !== null ? handOffNote(e.text) : null
           // Its card takes the place of the hand back's line, and of what that line held.
           if (handback && handed && items.includes(handed)) items.splice(items.indexOf(handed), 1)
           add({
@@ -506,7 +509,11 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
             ...userNote(e.text, fromBrigade),
-            ...(e.memberId !== null && handOffNote(e.text) ? { note: handOffNote(e.text)! } : {}),
+            ...(handOff
+              ? handOff.said
+                ? { lines: { said: handOff.said, note: handOff.note } }
+                : { note: handOff.note }
+              : {}),
             ...(handback ? { handback: { ...handback, commands: handed?.commands ?? [] } } : {}),
             ...(handedOver ? { handed: handedOver } : {}),
           })
@@ -2829,7 +2836,7 @@ export function ThreadItems({
         // Elements picked in the preview are chips above it, out of its text; their
         // pictures show in them, not with its other files.
         const { text: written, elements } = splitPreviewElements(
-          forPeople(item.handed ? item.handed.note : item.text),
+          forPeople(item.handed ? item.handed.note : item.lines ? item.lines.said : item.text),
         )
         const pictureOf = (name?: string) =>
           name ? item.attachments.find((a) => a.name === name && a.status === 'ready') : undefined
@@ -2874,6 +2881,12 @@ export function ThreadItems({
               </div>
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
+            {/* The lines handed over with it: folded under a line, as without a note. */}
+            {item.lines && (
+              <div className="max-w-full">
+                <BrigadeNoteLine note={item.lines.note} />
+              </div>
+            )}
             {/* Answered on the side: its aside says what became of it. */}
             {/* Steered into the running turn, as in a chat: nothing says so. */}
             {!item.side && item.steeredTo && asksParallel(item.text) ? (

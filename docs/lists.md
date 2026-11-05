@@ -59,8 +59,9 @@ mission; threads stay where the work happens.
   daily cap, its computer is off), with the person's note in it (`apps/web/lib/hand-off.ts`).
   In the thread, that message (and the first one of a thread started for lines) shows as a
   quiet line, "Handed over 1 item of launch.md" with the lines folded under it, rather than as
-  the person's bubble (`handOffParts`, `handOffNote`); one with a note the person wrote stays
-  their bubble. The teammate still receives the whole message.
+  the person's bubble (`handOffParts`, `handOffNote`). A note the person wrote with them comes
+  first in the message, before the request naming the list, and stays their bubble, with that
+  quiet line under it. The teammate still receives the whole message.
 - **One change of a list's file at a time.** Every save of a Markdown library file takes the
   file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it

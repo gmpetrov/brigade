@@ -135,10 +135,11 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
 }
 
 /**
- * Lines of a list a person handed over (handOffMessage), with no note of theirs: what they handed
- * over and from where, rather than the request it is worded as for the teammate.
+ * Lines of a list a person handed over (handOffMessage): what they handed over and from where,
+ * rather than the request it is worded as for the teammate, and the note they wrote with them
+ * (`said`), which stays their bubble.
  */
-export function handOffNote(text: string): BrigadeNote | null {
+export function handOffNote(text: string): { note: BrigadeNote; said?: string } | null {
   const handOff = handOffParts(text)
   if (!handOff) return null
   const count = handOff.items.length
@@ -148,10 +149,13 @@ export function handOffNote(text: string): BrigadeNote | null {
     return id ? [{ id, name: path.split('/').pop() ?? path }] : []
   })
   return {
-    icon: ListTodo,
-    label: `Handed over ${count} ${count > 1 ? 'items' : 'item'} of ${handOff.file.path.split('/').pop()}`,
-    body: handOff.items.map((item) => `- ${item}`).join('\n'),
-    ...(files.length ? { files } : {}),
+    note: {
+      icon: ListTodo,
+      label: `Handed over ${count} ${count > 1 ? 'items' : 'item'} of ${handOff.file.path.split('/').pop()}`,
+      body: handOff.items.map((item) => `- ${item}`).join('\n'),
+      ...(files.length ? { files } : {}),
+    },
+    ...(handOff.note ? { said: handOff.note } : {}),
   }
 }
 

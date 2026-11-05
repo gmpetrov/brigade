@@ -549,7 +549,8 @@ const HANDED_FILE = '  - File in the library: '
 
 /**
  * The message that hands lines to a teammate, in a new thread or one that runs already: the
- * person's note, or a request naming the list, then the lines, each with the files under it.
+ * person's note, if any, then a request naming the list, then the lines, each with the files
+ * under it. The request stays with a note too, so the note reads back apart from the lines.
  */
 export function handOffMessage(
   file: { id: string; path: string },
@@ -557,11 +558,12 @@ export function handOffMessage(
   note?: string | null,
 ) {
   const mention = formatMention({ kind: 'document', id: file.id, label: file.path })
+  const said = note?.trim()
   return [
-    note?.trim() ||
-      (lines.length > 1
-        ? `Please take these items of ${mention}:`
-        : `Please take this item of ${mention}:`),
+    ...(said ? [said] : []),
+    lines.length > 1
+      ? `Please take these items of ${mention}:`
+      : `Please take this item of ${mention}:`,
     handedLines(lines),
   ].join('\n\n')
 }
@@ -580,25 +582,30 @@ export function handedLines(lines: HandedLine[]) {
 }
 
 const HAND_OFF =
-  /^Please take (?:this item|these items) of @\[([^\]]*)\]\(document:([^)\s]+)\):\n\n((?:- .*(?:\n|$)(?: {2}- File in the library: .+(?:\n|$))*)+)$/
+  /^(?:([\s\S]*?)\n\n)?Please take (?:this item|these items) of @\[([^\]]*)\]\(document:([^)\s]+)\):\n\n((?:- .*(?:\n|$)(?: {2}- File in the library: .+(?:\n|$))*)+)$/
 
 /**
- * A hand-off message as handOffMessage writes it with no note of the person's: the list's file,
- * the lines and the files that went with them, so people see what was handed over rather than
- * the request it is worded as. Null for any other message, one with a note included: the person
- * wrote that.
+ * A hand-off message as handOffMessage writes it: the person's note if they wrote one, the
+ * list's file, the lines and the files that went with them, so people see their note and what
+ * was handed over rather than the request it is worded as. Null for any other message, and for
+ * one with a note from before the request followed notes (the note, then the lines).
  */
-export function handOffParts(
-  text: string,
-): { file: { id: string; path: string }; items: string[]; files?: string[] } | null {
+export function handOffParts(text: string): {
+  note?: string
+  file: { id: string; path: string }
+  items: string[]
+  files?: string[]
+} | null {
   const m = HAND_OFF.exec(text.trim())
   if (!m) return null
-  const rows = m[3]!.trim().split('\n')
+  const rows = m[4]!.trim().split('\n')
   const files = rows
     .filter((row) => row.startsWith(HANDED_FILE))
     .map((row) => row.slice(HANDED_FILE.length))
+  const note = m[1]?.trim()
   return {
-    file: { id: m[2]!, path: m[1]! },
+    ...(note ? { note } : {}),
+    file: { id: m[3]!, path: m[2]! },
     items: rows.filter((row) => row.startsWith('- ')).map((row) => row.slice(2)),
     ...(files.length ? { files } : {}),
   }
