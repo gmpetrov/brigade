@@ -40,7 +40,10 @@ mission; threads stay where the work happens.
   lines, else those under it in the saved file. `list_items` and the thread's items give the same
   paths, so a line reaches its teammate with its files whatever way it took (a hand-off, the
   backlog builder reading its list). The thread's quiet "Handed over" line shows them. A file
-  from before uploads were read back (no SHA-256 to check) is in no mirror, and goes nowhere.
+  from before uploads were read back (no SHA-256 to check) is in no mirror, and goes nowhere. A
+  file copied under a line from another document is beside that one, until it goes to the trash:
+  then the list takes it on. The editor never loses one: a file whose line its conversion does
+  not keep stays at the end of the document.
 - **`ListItem` keeps what the file cannot**, by that id: the threads on the line
   (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or what `remains`), who
   ticked it from Brigade (`doneBy*`), the item it is what remains of (`remainderOfId`) and its

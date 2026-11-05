@@ -566,7 +566,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   into a document go to the bucket under `<organization>/<workspace>/assets/<id>` (`DocumentAsset`; direct
   uploads with R2, through the API without) and are read through 5-minute signed URLs, so video seeks. The document
   refers to them as `asset:<id>`. The hourly sweep removes files no document refers to after a day (a block copied
-  into another document moves the file there), unfinished uploads after an hour, and a deleted file's at once.
+  into another document moves the file there, as does its own document going to the trash while a live one refers
+  to it: `moveFilesOfTrashed`), unfinished uploads after an hour, and a deleted file's at once.
   Mentions: `@` in a document names a library file, teammate, thread, connection or repository, stored as
   `@[label](kind:id)` like messages. `@brigade/editor` (`packages/editor`) holds the editor schema and the Markdown
   forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. It deploys

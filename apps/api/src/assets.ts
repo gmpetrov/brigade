@@ -194,7 +194,12 @@ async function removeAsset(id: string, scope: Scope) {
   )
 }
 
-/** The document of this workspace that still refers to the file, its own first. */
+/**
+ * The document of this workspace that still refers to the file: its own first, unless that one
+ * is in the trash and a live one refers to it too (a block copied over), which takes it on so the
+ * file stays where the library is read (teammates' mirrors, lists). One in the trash keeps it
+ * for a restore when no live one refers to it.
+ */
 async function holder(row: {
   id: string
   organizationId: string
@@ -203,24 +208,61 @@ async function holder(row: {
 }) {
   const reference = `asset:${row.id}`
   const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
-  if (row.documentId) {
-    const own = await prisma.document.findUnique({ where: { id: row.documentId } })
-    if (own) {
-      if (own.text.includes(reference)) return own.id
-      // A long library file: its stored text stops short; read the file itself.
-      // One too large to read whole may refer to it: kept.
-      if (own.kind === 'library' && own.size > LIBRARY_READ_MAX) return own.id
-      if (own.kind === 'library' && own.text.length >= INDEXED_CHARS) {
-        const bytes = await readLibraryFile(scope, own).catch(() => null)
-        if (!bytes || new TextDecoder().decode(bytes).includes(reference)) return own.id
-      }
-    }
-  }
+  const own = row.documentId
+    ? await prisma.document.findUnique({ where: { id: row.documentId } })
+    : null
+  const ownRefers = own ? await refersTo(scope, own, reference) : false
+  if (own && ownRefers && !own.deletedAt) return own.id
   const other = await prisma.document.findFirst({
-    where: { ...scope, text: { contains: reference } },
+    where: { ...scope, ...(own ? { id: { not: own.id } } : {}), text: { contains: reference } },
+    select: { id: true, deletedAt: true },
+    orderBy: { deletedAt: { sort: 'asc', nulls: 'first' } },
+  })
+  if (other && !other.deletedAt) return other.id
+  if (own && ownRefers) return own.id
+  return other?.id ?? null
+}
+
+/** Whether a document refers to the file, as far as can be told. */
+async function refersTo(
+  scope: Scope,
+  doc: { id: string; kind: string; text: string; size: number; objectKey: string | null },
+  reference: string,
+) {
+  if (doc.text.includes(reference)) return true
+  // A long library file: its stored text stops short; read the file itself.
+  // One too large to read whole may refer to it: kept.
+  if (doc.kind === 'library' && doc.size > LIBRARY_READ_MAX) return true
+  if (doc.kind === 'library' && doc.text.length >= INDEXED_CHARS) {
+    const bytes = await readLibraryFile(scope, doc).catch(() => null)
+    return !bytes || new TextDecoder().decode(bytes).includes(reference)
+  }
+  return false
+}
+
+/**
+ * The files of a document going to the trash that a live document refers to too (a block copied
+ * over) move to that one, so that they stay where the library is read (teammates' mirrors, a
+ * list's lines: docs/lists.md). The others stay with it, for a restore.
+ */
+export async function moveFilesOfTrashed(scope: Scope, documentId: string) {
+  const rows = await prisma.documentAsset.findMany({
+    where: { ...scope, documentId, status: 'ready' },
     select: { id: true },
   })
-  return other?.id ?? null
+  for (const row of rows) {
+    const live = await prisma.document.findFirst({
+      where: {
+        ...scope,
+        id: { not: documentId },
+        deletedAt: null,
+        text: { contains: `asset:${row.id}` },
+      },
+      select: { id: true },
+    })
+    if (live)
+      await prisma.documentAsset.update({ where: { id: row.id }, data: { documentId: live.id } })
+  }
 }
 
 /**

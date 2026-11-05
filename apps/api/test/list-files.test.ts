@@ -149,3 +149,36 @@ test('a line ticked by Brigade in a live document keeps the files under it', asy
     ],
   )
 })
+
+// Review of #738: a block of its own between a line and its file (a table, a quote, a thematic
+// break, a paragraph) once took the file's token with it, and saving dropped the file.
+for (const between of [
+  ['  | A | B |', '  | - | - |', '  | 1 | 2 |'],
+  ['  > Quote'],
+  ['  ---'],
+  ['', '  Paragraph', '  next line'],
+  ['  more'],
+]) {
+  test(`a file under a line stays its own past what comes between: ${between.join(' ').trim()}`, async () => {
+    const text = ['* [ ] Item', ...between, '', '  ![shot.png](asset:cmshot)', ''].join('\n')
+    const once = await normalizeMarkdown(text)
+    assert.equal(await normalizeMarkdown(once), once, 'stable')
+    assert.deepEqual(
+      parseList(once).lines.map((l) => [l.text, l.files.map((f) => f.id)]),
+      [['Item', ['cmshot']]],
+    )
+  })
+}
+
+test('a file whose line the conversion drops is kept, at the end, rather than lost', async () => {
+  const editor = ServerBlockNoteEditor.create({ schema: documentSchema })
+  // A line in an HTML comment, which the editor does not keep: its file stays in the document.
+  const blocks = (await markdownToBlocks(
+    editor,
+    ['<!--', '* [ ] hidden', '-->', '', '  ![a.png](asset:cmx)', '', 'After', ''].join('\n'),
+  )) as Block[]
+  assert.deepEqual(shape(blocks), [
+    ['paragraph', null],
+    ['image', 'asset:cmx'],
+  ])
+})

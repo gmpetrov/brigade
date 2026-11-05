@@ -216,7 +216,14 @@ function mediaBlock(match: RegExpMatchArray): Block | undefined {
   return { type: kind[1]!, props: { url, name, caption: kind[2] ?? '' } }
 }
 
-type Found = { media: Block[]; mentions: any[]; items: any[]; files: Block[] }
+type Found = {
+  media: Block[]
+  mentions: any[]
+  items: any[]
+  files: Block[]
+  /** The files put back under their list item, by index in `files`. */
+  placed: Set<number>
+}
 
 /**
  * Inline content with its tokens back as mentions and list items (a stray media token, a link).
@@ -237,8 +244,10 @@ function restoreInline(content: any, found: Found, own: Block[]): any {
       if (kept) out.push({ ...item, text: kept })
       if (m[1] === 'i') out.push(mentions[+m[2]!])
       else if (m[1] === 'k') out.push(items[+m[2]!])
-      else if (m[1] === 'n') own.push({ ...files[+m[2]!]! })
-      else {
+      else if (m[1] === 'n') {
+        own.push({ ...files[+m[2]!]! })
+        found.placed.add(+m[2]!)
+      } else {
         const block = media[+m[2]!]!
         out.push({
           type: 'link',
@@ -270,10 +279,10 @@ function restore(blocks: Block[], found: Found): Block[] {
 
 /** Markdown as blocks, media, mentions and list items included. Code blocks are left as written. */
 export async function markdownToBlocks(editor: MarkdownEditor, markdown: string) {
-  const found: Found = { media: [], mentions: [], items: [], files: [] }
+  const found: Found = { media: [], mentions: [], items: [], files: [], placed: new Set() }
   let fence: string | null = null
   // The list items the rows below may be under, deepest last: where each one's text starts, past
-  // which a row is still its own, and the row its text ends on, where a file under it is noted.
+  // which a row is still its own, and its own row, where a file under it is noted.
   const under: { column: number; row: number }[] = []
   const leave = (indent: number) => {
     while (under.length && under.at(-1)!.column > indent) under.pop()
@@ -306,8 +315,14 @@ export async function markdownToBlocks(editor: MarkdownEditor, markdown: string)
     if (block) {
       leave(indent)
       const item = under.at(-1)
-      // Indented under a list item: its file, kept under it (docs/lists.md).
-      if (item) lines[item.row] += `${OPEN}n${found.files.push(block) - 1}${CLOSE}`
+      // Indented under a list item: its file, kept under it (docs/lists.md). Noted in the item's own
+      // row, which is its text whatever follows it (a table, a quote), before a line break at its end.
+      if (item) {
+        const token = `${OPEN}n${found.files.push(block) - 1}${CLOSE}`
+        const row = lines[item.row]!
+        const brk = row.match(/(\\| {2,})$/)
+        lines[item.row] = brk ? `${row.slice(0, brk.index)}${token}${brk[1]}` : `${row}${token}`
+      }
       // Else its own paragraph, so it becomes its own block.
       lines.push(item ? '' : `\n${OPEN}m${found.media.push(block) - 1}${CLOSE}\n`)
       blank = true
@@ -316,8 +331,6 @@ export async function markdownToBlocks(editor: MarkdownEditor, markdown: string)
     const list = LIST_ROW.test(line)
     if (HEADING_ROW.test(line)) under.length = 0
     else if (list || blank) leave(indent)
-    // The text of the item above going on: its files go after it.
-    else if (under.length) under.at(-1)!.row = lines.length
     if (list) under.push({ column: textColumn(line), row: lines.length })
     blank = false
     lines.push(
@@ -332,8 +345,11 @@ export async function markdownToBlocks(editor: MarkdownEditor, markdown: string)
         }),
     )
   }
-  const blocks = await editor.tryParseMarkdownToBlocks(lines.join('\n'))
-  return restore(blocks, found)
+  const blocks = restore(await editor.tryParseMarkdownToBlocks(lines.join('\n')), found)
+  // A file whose item the conversion did not keep as one stays in the document, at its end:
+  // never lost, as saving it back would drop it from the text.
+  const lost = found.files.filter((_, i) => !found.placed.has(i))
+  return lost.length ? [...blocks, ...lost.map((f) => ({ ...f }))] : blocks
 }
 
 /** Ids of the uploaded files (`asset:<id>`) a Markdown text refers to. */

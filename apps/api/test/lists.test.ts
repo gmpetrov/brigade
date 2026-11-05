@@ -798,6 +798,75 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     await assert.rejects(library.mirroredFile(db, scope, pending.id), /File not found/)
     await db.documentAsset.deleteMany({ where: { documentId: sound.id } })
   })
+
+  // Review of #738: a file copied under a line from another document stayed that document's, and
+  // went out of teammates' reach once that document was in the trash.
+  test('a file copied under a line from a document then trashed goes on with the list', async () => {
+    const { storeAsset, sweepAssets } = await import('../src/assets.js')
+    const { trashLibraryFile, restoreLibraryFile } = await import('../src/library-history.js')
+    const member = { type: 'member' as const, id: ids.member }
+    const save = (path: string, text: string) =>
+      library.saveLibraryFile(db, scope, member, { path, bytes: new TextEncoder().encode(text) })
+    const source = await save('Notes/source.md', '# Source\n')
+    const file = await storeAsset(db, scope, {
+      documentId: source.id,
+      file: new File([Buffer.from('a brief')], 'brief.txt'),
+      memberId: ids.member,
+    })
+    await save('Notes/source.md', `# Source\n\n[brief.txt](asset:${file.id} "file")\n`)
+    const list = await save(
+      'Projects/Acme/copied.md',
+      `* [ ] Read the brief\n\n  [brief.txt](asset:${file.id} "file")\n`,
+    )
+    const filesOfLine = async () =>
+      (
+        (await lists.handleListCall(db, scope, { id: threadId }, riley, {
+          name: 'list_items',
+          path: 'Projects/Acme/copied.md',
+        })) as { lines: { files?: string[] }[] }
+      ).lines[0]!.files
+    // Still its own document's: found beside it.
+    assert.deepEqual(await filesOfLine(), [`Notes/source.md.files/${file.id}/brief.txt`])
+    // That one in the trash: the list takes it on, and teammates find it beside the list.
+    await trashLibraryFile(db, scope, member, source.id)
+    const beside = `Projects/Acme/copied.md.files/${file.id}/brief.txt`
+    assert.deepEqual(await filesOfLine(), [beside])
+    const { LIBRARY_VIEWS_PROTOCOL } = await import('@brigade/contracts')
+    const mirrored = (await library.manifest(db, { protocolVersion: LIBRARY_VIEWS_PROTOCOL })).files
+    assert.deepEqual(
+      mirrored.filter((f) => f.id === file.id).map((f) => f.path),
+      [beside],
+    )
+    // The sweep keeps it there, rather than going back to the trashed one; and one still with
+    // a document trashed before this moved it (as files were) goes to the live one.
+    await sweepAssets([file.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: file.id } }))?.documentId,
+      list.id,
+    )
+    await db.documentAsset.update({ where: { id: file.id }, data: { documentId: source.id } })
+    await sweepAssets([file.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: file.id } }))?.documentId,
+      list.id,
+    )
+    // A file no live document refers to stays with its document in the trash, for a restore.
+    const alone = await save('Notes/alone.md', '# Alone\n')
+    const own = await storeAsset(db, scope, {
+      documentId: alone.id,
+      file: new File([Buffer.from('mine')], 'mine.txt'),
+      memberId: ids.member,
+    })
+    await save('Notes/alone.md', `# Alone\n\n[mine.txt](asset:${own.id} "file")\n`)
+    await trashLibraryFile(db, scope, member, alone.id)
+    await sweepAssets([own.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: own.id } }))?.documentId,
+      alone.id,
+    )
+    await restoreLibraryFile(db, scope, member, alone.id)
+    await db.documentAsset.deleteMany({ where: { id: { in: [file.id, own.id] } } })
+  })
 })
 
 // What a review found (PR #487), each through the code that was fixed:
