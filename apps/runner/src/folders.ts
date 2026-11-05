@@ -34,6 +34,7 @@ import {
   freeCaches,
   installing,
   Reserve,
+  restoring,
   STILL_FULL,
   TIDY_EVERY_MS,
   tidyHome,
@@ -275,6 +276,11 @@ export class Folders {
       tempDir: string
       /** On a cloud computer, the file that sets room aside on the disk (disk.ts Reserve). */
       reserveFile?: string
+      /**
+       * Whether the computer's disk is still being restored after a resume (disk.ts): until it
+       * is, nothing is freed nor said full. Boat's by default on a cloud computer.
+       */
+      restoring?: () => Promise<boolean>
       /**
        * On a cloud computer, after each check: whether the disk is still full (STILL_FULL)
        * once everything that could go went, and how full (0 to 1). A person is asked to act.
@@ -592,8 +598,14 @@ export class Folders {
     if (this.checking) return
     this.checking = true
     let critical = false
+    // While boat restores the disk, what is removed leaves it only once the restore is done, and
+    // an archive adds its own file meanwhile: freeing would only fill it more, and the disk is
+    // not as full as it reads. A ticket says nothing true then either.
+    let held = false
     try {
       await this.loaded
+      held = await this.restoring()
+      if (held) return
       const now = Date.now()
       const candidates = await this.candidates()
       const quiet = (c: (typeof candidates)[number]) =>
@@ -692,14 +704,30 @@ export class Folders {
     } finally {
       // Room again: set some aside for the next time it fills.
       // keep() sets it aside only with room to spare, so not while nearly full.
-      await this.reserve
-        ?.keep()
-        .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
-      if (CLOUD)
+      if (!held)
+        await this.reserve
+          ?.keep()
+          .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
+      if (CLOUD && !held)
         await this.report().catch((error) => console.warn(`disk report failed: ${String(error)}`))
       this.checkedAt = Date.now()
       this.checking = false
     }
+  }
+
+  /** Whether the disk is still being restored (options.restoring), said in the log when that changes. */
+  private wasRestoring = false
+  private async restoring() {
+    if (!CLOUD) return false
+    const now = await (this.options.restoring ?? (() => restoring()))().catch(() => false)
+    if (now !== this.wasRestoring)
+      console.log(
+        now
+          ? 'the disk is still being restored: nothing freed nor said full until it is'
+          : 'the disk is restored',
+      )
+    this.wasRestoring = now
+    return now
   }
 
   /**

@@ -18,8 +18,17 @@ exit 0
 `,
   { mode: 0o755 },
 )
-const { freeCaches, installs, npxInUse, oldStores, reserveSize, runsMintlify, tidyHome } =
-  await import('../src/disk.js')
+const {
+  freeCaches,
+  installs,
+  npxInUse,
+  oldStores,
+  reserveSize,
+  restoring,
+  RESTORE_MAX_MS,
+  runsMintlify,
+  tidyHome,
+} = await import('../src/disk.js')
 const { diskReport } = await import('../src/folders.js')
 
 test('the reserve is 2 GiB, or 3% of a small disk', () => {
@@ -279,4 +288,29 @@ test('the npx folders processes run from are read from their command lines', () 
     ),
     ['/.npm/_npx/9f1c2a', '/.npm/_npx/77'],
   )
+})
+
+test("the disk is being restored from boat's mount at this boot until its hydration is done", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'disk-restore-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const at = (path: string, ms: number) => utimes(join(dir, path), ms / 1000, ms / 1000)
+  const boot = Date.parse('2026-11-05T05:03:00Z')
+  // Not boat: neither file.
+  assert.equal(await restoring(dir, boot + 60_000, boot), false)
+  // Mounted at this boot, the snapshot still copying in (Nov 5, 16 minutes after the resume).
+  await writeFile(join(dir, 'mounted'), '')
+  await at('mounted', boot + 20_000)
+  assert.equal(await restoring(dir, boot + 16 * 60_000, boot), true)
+  // A hydration-done left from an earlier boot does not end this one's restore.
+  await writeFile(join(dir, 'hydration-done'), '')
+  await at('hydration-done', boot - 3 * 60 * 60_000)
+  assert.equal(await restoring(dir, boot + 16 * 60_000, boot), true)
+  // Done (05:34:53).
+  await at('hydration-done', boot + 31 * 60_000)
+  assert.equal(await restoring(dir, boot + 32 * 60_000, boot), false)
+  // A mount from an earlier boot, its hydration never done: not this boot's restore.
+  await rm(join(dir, 'hydration-done'))
+  assert.equal(await restoring(dir, boot + 8 * 60 * 60_000, boot + 7 * 60 * 60_000), false)
+  // A restore said to run for longer than RESTORE_MAX_MS: taken as over, nothing held forever.
+  assert.equal(await restoring(dir, boot + 20_000 + RESTORE_MAX_MS, boot), false)
 })

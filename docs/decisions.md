@@ -730,7 +730,11 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   preview started from the dashboard, a takeover, a terminal, a file read) puts it back first and deletes the
   archive; the teammate's next turn fetches the caches its checkouts borrow from if they were swept, and is told to
   reinstall dependencies. A folder that cannot be put back stops the turn rather than start over in an empty one.
-  Disk then grows with the threads active at once, not with all threads. However empty the disk, a thread quiet
+  Disk then grows with the threads active at once, not with all threads.
+  While boat still restores a resumed computer's disk (`/var/lib/ascii-lazy/mounted` written since the boot, no
+  `hydration-done` since, for at most 3 hours), the runner frees nothing and does not say the disk is full
+  (`restoring` in `disk.ts`): a file removed then leaves the disk only once the restore is done, and an archive adds
+  its own file meanwhile. Every `disk_full` ticket from Oct 22 to Nov 5 opened in that window, after a resume. However empty the disk, a thread quiet
   for 6 hours (not in use, no preview) loses its dependency and build folders (`node_modules`, `.next`, `dist`…
   where git ignores them), and its teammate's next turn is told to reinstall: boat snapshots a computer every minute
   or two and goes over every path on its disk each time, and on our first cloud computer `node_modules` were about
