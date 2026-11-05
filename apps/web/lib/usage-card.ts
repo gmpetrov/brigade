@@ -4,30 +4,24 @@
 import type { UsagePeriod, UsageResponse, UsageTotals } from '@brigade/contracts'
 
 const HOUR_MS = 60 * 60_000
-const DAY_MS = 24 * HOUR_MS
 
 /**
- * The grid of a period: 24 hours is the last 24 hours (columns) by quarter hour (rows); 7 days,
- * the last 7 days (rows) by hour (columns); 30 days, the last 30 days (columns) by 3 hours (rows).
+ * The grid of a period, cell by cell up to now, oldest first: 24 hours is 24 hours (columns) by
+ * quarter hour (rows); 7 days, 7 stretches of 24 hours (rows) by hour (columns); 30 days,
+ * 30 stretches of 24 hours (columns) by 3 hours (rows). Each stretch starts at the same hour of
+ * the person's day, so a column (or row) is the same hours all along.
  */
 export type CardGrid = { columns: number; rows: number; cells: number[] }
 
-const LAYOUTS: Record<UsagePeriod, { columns: number; rows: number }> = {
-  1: { columns: 24, rows: 4 },
-  7: { columns: 24, rows: 7 },
-  30: { columns: 30, rows: 8 },
+const LAYOUTS: Record<
+  UsagePeriod,
+  { columns: number; rows: number; cellMs: number; hours: number; byColumn: boolean }
+> = {
+  // byColumn: cells follow each other down a column, then on to the next one.
+  1: { columns: 24, rows: 4, cellMs: 15 * 60_000, hours: 1, byColumn: true },
+  7: { columns: 24, rows: 7, cellMs: HOUR_MS, hours: 1, byColumn: false },
+  30: { columns: 30, rows: 8, cellMs: 3 * HOUR_MS, hours: 3, byColumn: true },
 }
-
-/** Local midnight of the day `at` falls on. */
-function midnight(at: Date) {
-  const day = new Date(at)
-  day.setHours(0, 0, 0, 0)
-  return day
-}
-
-/** Days between two local midnights, whatever daylight saving time did between them. */
-const daysBetween = (from: Date, to: Date) =>
-  Math.round((midnight(to).getTime() - midnight(from).getTime()) / DAY_MS)
 
 /** Lay the quarter hours out in the person's own hours (the computer's time zone). */
 export function cardGrid(
@@ -35,30 +29,19 @@ export function cardGrid(
   quarters: UsageResponse['quarters'],
   now = new Date(),
 ): CardGrid {
-  const { columns, rows } = LAYOUTS[days]
-  const cells = new Array<number>(columns * rows).fill(0)
-  // The first hour (24 hours) or day (7 and 30 days) the grid shows.
-  const firstHour = new Date(now)
-  firstHour.setMinutes(0, 0, 0)
-  firstHour.setTime(firstHour.getTime() - 23 * HOUR_MS)
-  const firstDay = midnight(now)
-  firstDay.setDate(firstDay.getDate() - (days === 7 ? 6 : 29))
+  const { columns, rows, cellMs, hours, byColumn } = LAYOUTS[days]
+  const count = columns * rows
+  const cells = new Array<number>(count).fill(0)
+  // The last cell is the one now falls in: its hour, or its 3 hours of the day.
+  const last = new Date(now)
+  last.setHours(Math.floor(last.getHours() / hours) * hours, 0, 0, 0)
+  const end = last.getTime() + hours * HOUR_MS
+  const start = end - count * cellMs
   for (const q of quarters) {
-    const at = new Date(q.at)
-    let column: number
-    let row: number
-    if (days === 1) {
-      const quarter = Math.floor((at.getTime() - firstHour.getTime()) / (15 * 60_000))
-      column = Math.floor(quarter / 4)
-      row = quarter - column * 4
-    } else if (days === 7) {
-      row = daysBetween(firstDay, at)
-      column = at.getHours()
-    } else {
-      column = daysBetween(firstDay, at)
-      row = Math.floor(at.getHours() / 3)
-    }
-    if (column < 0 || column >= columns || row < 0 || row >= rows) continue
+    const index = Math.floor((new Date(q.at).getTime() - start) / cellMs)
+    if (index < 0 || index >= count) continue
+    const column = byColumn ? Math.floor(index / rows) : index % columns
+    const row = byColumn ? index % rows : Math.floor(index / columns)
     cells[row * columns + column]! += q.tokens
   }
   return { columns, rows, cells }

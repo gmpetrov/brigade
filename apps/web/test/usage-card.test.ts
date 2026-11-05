@@ -3,7 +3,7 @@ import { test } from 'node:test'
 
 // The card's grid is laid out in the person's own hours: Paris, across the end of summer time.
 process.env.TZ = 'Europe/Paris'
-const { cardGrid, cardText, rise, shades } = await import('../lib/usage-card.ts')
+const { cardGrid, cardText, rise, shades } = await import('../lib/usage-card')
 
 const totals = (n: number) => ({ input: n, cacheRead: 0, cacheWrite: 0, output: 0, runs: 1 })
 
@@ -28,42 +28,47 @@ test('24 hours: a column per hour, a row per quarter, ending with the current ho
   )
 })
 
-test('7 days: a row per local day, a column per local hour', () => {
-  const now = new Date('2026-11-04T10:00:00Z')
+test('7 days: a row per 24 hours up to now, a column per hour', () => {
+  const now = new Date('2026-11-04T10:00:00Z') // 11:00 in Paris: the grid ends at noon
   const grid = cardGrid(
     7,
     [
-      { at: '2026-11-04T09:15:00Z', tokens: 3 }, // today 10:15: last row, column 10
-      { at: '2026-11-04T09:45:00Z', tokens: 4 }, // same hour
-      { at: '2026-10-28T23:30:00Z', tokens: 2 }, // 29 Oct 00:30: the first day
-      { at: '2026-10-28T22:30:00Z', tokens: 8 }, // 28 Oct 23:30: before it
+      { at: '2026-11-04T09:15:00Z', tokens: 3 }, // today 10:15: the last row, its 23rd hour
+      { at: '2026-11-04T09:45:00Z', tokens: 4 }, // the same hour
+      { at: '2026-10-28T23:30:00Z', tokens: 2 }, // 29 Oct 00:30: the first row, 13th hour
+      { at: '2026-10-28T10:30:00Z', tokens: 8 }, // before the grid
     ],
     now,
   )
-  assert.equal(grid.cells[6 * 24 + 10], 7)
-  assert.equal(grid.cells[0], 2)
+  assert.equal(grid.cells[6 * 24 + 22], 7)
+  assert.equal(grid.cells[12], 2)
   assert.equal(
     grid.cells.reduce((a, b) => a + b),
     9,
   )
 })
 
-test('30 days: a column per local day, a row per 3 hours, across a change of the clocks', () => {
-  const now = new Date('2026-11-04T10:00:00Z')
+test('30 days: a column per 24 hours up to now, a row per 3 hours', () => {
+  const now = new Date('2026-11-04T10:00:00Z') // 11:00 in Paris: the grid ends at noon
   const grid = cardGrid(
     30,
     [
-      { at: '2026-10-06T06:00:00Z', tokens: 1 }, // 6 Oct 08:00 (summer time): first day, row 2
-      { at: '2026-10-26T21:00:00Z', tokens: 6 }, // 26 Oct 22:00 (winter time): day 20, row 7
-      { at: '2026-11-04T09:00:00Z', tokens: 2 }, // today 10:00: last day, row 3
+      { at: '2026-10-06T06:00:00Z', tokens: 1 }, // first column, 7th row
+      { at: '2026-10-26T21:00:00Z', tokens: 6 }, // after the clocks went back: column 22, row 4
+      { at: '2026-11-04T09:00:00Z', tokens: 2 }, // the last cell
+      { at: '2026-10-05T10:00:00Z', tokens: 9 }, // before the grid
     ],
     now,
   )
   assert.equal(grid.columns, 30)
   assert.equal(grid.rows, 8)
-  assert.equal(grid.cells[2 * 30 + 0], 1)
-  assert.equal(grid.cells[7 * 30 + 20], 6)
-  assert.equal(grid.cells[3 * 30 + 29], 2)
+  assert.equal(grid.cells[6 * 30 + 0], 1)
+  assert.equal(grid.cells[3 * 30 + 21], 6)
+  assert.equal(grid.cells[7 * 30 + 29], 2)
+  assert.equal(
+    grid.cells.reduce((a, b) => a + b),
+    9,
+  )
 })
 
 test('shades go by rank among the cells that spent, from 1 to 4, and 0 for none', () => {
