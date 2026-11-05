@@ -792,8 +792,11 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   allows it, checked every minute; failed checks and new conflicts go back to the author, three turns at most,
   then a ticket. What the author pushed must leave its review's approval standing (`resolverDone`): when the lines
   the pull request itself adds and removes are as the approval read them (GitHub's compare of its base with each
-  head, without the lines around them, which merging its base in moves), the approval holds for the new head
-  (`PullRequest.approvalCarriedTo`, shown as kept); else Brigade asks the reviewer to look at what was pushed, in
+  head, without the lines around them, which merging its base in moves), and what changed since the approval is,
+  line for line, what its base brought between the commits each head starts from (a line of its own moved
+  elsewhere shows there), the approval holds for the new head (`PullRequest.approvalCarriedTo`, shown as kept). A
+  file GitHub shows no patch for (binary, too big) counts by its blob; one it cannot list (300 files or more), a
+  rewritten branch or GitHub failing to answer count as changed. Else Brigade asks the reviewer to look at what was pushed, in
   its review's thread as `message_thread` would (one of its looks), and the merge waits for that verdict: an
   approval of its head merges it, changes asked for stop it with a ticket, as does a look it cannot ask (none
   left, no thread). Merges are squash by default, audited as `pull_request.merged`. A merge leaves a note in the

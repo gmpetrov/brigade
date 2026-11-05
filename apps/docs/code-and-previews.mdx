@@ -39,8 +39,8 @@ An owner or admin can:
   **Rebase**. Your browser remembers the last one you picked.
 - **Resolve conflicts**: when it conflicts with its base branch, the teammate that wrote it resolves them in its
   thread, then Brigade merges it once GitHub allows it, after any checks pass. If a reviewer approved it and
-  resolving changed the lines the pull request itself adds or removes, the reviewer looks at the resolution first,
-  and it merges once they approve. A pull request opened outside Brigade shows **Resolve on GitHub** instead.
+  resolving did more than bring in the base branch's changes, the reviewer looks at the resolution first, and it
+  merges once they approve. A pull request opened outside Brigade shows **Resolve on GitHub** instead.
 - **Close** it without merging, or **Reopen** it.
 
 When a teammate suggests merging, its reply ends with a merge button, shown to owners and admins while the pull
@@ -51,7 +51,7 @@ has the last word: a draft or a branch rule can still stop the merge, and Brigad
 Owners and admins can also turn on **Auto-merge when ready** in **Settings → Preferences**: once a teammate is done
 with a pull request in one of your threads, its review (if it had one) approved it and its checks pass, Brigade
 merges it. One that conflicts goes back to the teammate to resolve first, and to its reviewer again if resolving
-changed the lines the pull request itself adds or removes.
+did more than bring in the base branch's changes.
 
 Once a pull request merges, the thread is told and its preview stops. Pull requests can also tick items on your
 [lists](/lists) when they merge.

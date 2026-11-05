@@ -4,7 +4,8 @@
 // another thread's app or containers, or the member's own (their dev stack,
 // macOS's AirPlay Receiver on 5000 and 7000), can hold the ports an app wants.
 import { execFile } from 'node:child_process'
-import { join } from 'node:path'
+import { readlink } from 'node:fs/promises'
+import { basename, join } from 'node:path'
 import { promisify } from 'node:util'
 import { HOME } from './config.js'
 import { composeProject } from './teammates.js'
@@ -51,6 +52,7 @@ export async function portHolders(port: number): Promise<PortHolder[]> {
     else if (line.startsWith('c') && holders.length) holders.at(-1)!.command = line.slice(1)
   }
   for (const holder of holders) {
+    holder.command = await programOf(holder.pid, holder.command)
     const cwd = await run('lsof', ['-a', '-p', String(holder.pid), '-d', 'cwd', '-Fn'], {
       timeout: 10_000,
     }).then(
@@ -64,6 +66,17 @@ export async function portHolders(port: number): Promise<PortHolder[]> {
     }
   }
   return holders
+}
+
+/**
+ * What a process runs, by name. lsof names it as its main thread is named, which on Linux a
+ * program may change: Node 24 calls it MainThread, which says nothing. There, the program it
+ * runs says more (node), when it may be read; elsewhere, and failing that, lsof's name.
+ */
+async function programOf(pid: number, command: string) {
+  if (process.platform !== 'linux') return command
+  const program = await readlink(`/proc/${pid}/exe`).catch(() => null)
+  return program ? basename(program.replace(/ \(deleted\)$/, '')) : command
 }
 
 /** The container that publishes the port, from the Docker the member's shell uses. */

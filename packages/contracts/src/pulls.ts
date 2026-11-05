@@ -182,9 +182,9 @@ export function resolveConflictsMessage(r: {
       `both sides' changes still work, run the typecheck and tests, then commit and push to ` +
       `\`${r.head}\`. Do not rebase or force-push. When you are done, Brigade merges it ` +
       `(${r.method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : r.method}) once GitHub allows it; ` +
-      'if a review approved it and your resolution changes the lines the pull request itself adds ' +
-      'or removes, its reviewer looks at the resolution first. If a conflict needs a person to ' +
-      'decide, say so in your reply and do not push. Do not mention other teammates in your reply.',
+      `if a review approved it and you do more than bring in \`${r.base}\`'s changes, its reviewer ` +
+      'looks at what you pushed first. If a conflict needs a person to decide, say so in your ' +
+      'reply and do not push. Do not mention other teammates in your reply.',
   ].join('\n')
 }
 

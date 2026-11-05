@@ -458,7 +458,7 @@ function Review({
         : review.changed
           ? `${who} approved it, before its latest commits.`
           : review.kept
-            ? `${who} approved it. Resolving its conflicts since left what it adds and removes the same.`
+            ? `${who} approved it. Resolving its conflicts since only brought in its base branch's changes.`
             : `${who} approved it.`
   const thread = review.threadId
   return (

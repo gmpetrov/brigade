@@ -1358,7 +1358,7 @@ type ApprovalAfter =
   | { kind: 'holds'; carried: boolean }
   /** A review of it is under way already. */
   | { kind: 'reviewing'; reviewer: string }
-  /** What it adds or removes changed since the approval (in files), or could not be compared (null). */
+  /** Since the approval, more changed than its base brought (in files), or it could not be told (null). */
   | {
       kind: 'look'
       reviewer: string
@@ -1371,7 +1371,8 @@ type ApprovalAfter =
 /**
  * Whether its latest review's approval still stands for its head, now that its author pushed
  * to get it merged: what the pull request itself adds and removes (ownChanges) is as the
- * approval read it. GitHub failing to say counts as changed: its reviewer looks.
+ * approval read it, and nothing changed since the approval but what its base brought
+ * (changesBetween). GitHub failing to say counts as changed: its reviewer looks.
  */
 async function approvalAfter(
   db: ScopedDb,
@@ -1389,14 +1390,34 @@ async function approvalAfter(
     holdsFor(last, reviewed!.approvalCarriedTo, p.head.sha)
   )
     return { kind: 'holds', carried: false }
-  const read = (sha: string) =>
-    ownChanges(gh, row.repository, p.base.ref, sha).catch((error: unknown) => {
-      console.warn(`${ref(row)}: its changes at ${sha} not read: ${String(error)}`)
+  // GitHub's answers one at a time, each kept only as small digests: a compare can be large.
+  const read = <T>(what: string, work: () => Promise<T>) =>
+    work().catch((error: unknown) => {
+      console.warn(`${ref(row)}: ${what} not read: ${String(error)}`)
       return null
     })
-  const [approved, now] = await Promise.all([read(last.sha), read(p.head.sha)])
-  const files = changedFiles(approved, now)
-  if (files?.length === 0) return { kind: 'holds', carried: true }
+  const own = (sha: string) =>
+    read(`its changes at ${sha}`, () => ownChanges(gh, row.repository, p.base.ref, sha))
+  const approved = await own(last.sha)
+  const now = await own(p.head.sha)
+  let files = changedFiles(approved?.changes ?? null, now?.changes ?? null)
+  if (files?.length === 0) {
+    // The same lines of its own: still, none may have moved (a guard put back in the wrong
+    // function adds and removes the same lines). What changed since the approval must be what
+    // its base brought between the commits of it each started from, line for line: all a moved
+    // line shows as, there.
+    const from = approved?.mergeBase
+    const to = now?.mergeBase
+    const brought =
+      from && to
+        ? await read('what its base brought', () => changesBetween(gh, row.repository, from, to))
+        : null
+    const since = await read('what changed since its approval', () =>
+      changesBetween(gh, row.repository, last.sha, p.head.sha),
+    )
+    files = changedFiles(brought, since)
+    if (files?.length === 0) return { kind: 'holds', carried: true }
+  }
   return {
     kind: 'look',
     reviewer: last.teammate?.name ?? 'Its reviewer',
@@ -1406,54 +1427,87 @@ async function approvalAfter(
   }
 }
 
-/** Files GitHub's compare lists at most: past them, what a pull request changes is not known whole. */
+/** Files GitHub's compare lists at most: past them, what changed is not known whole. */
 const COMPARE_FILES_MAX = 300
 
-/** A file a pull request changes, as GitHub's compare lists it. */
+/** A file a compare lists: its patch, or for one GitHub shows none of (binary, too big), its blob. */
 type GhChange = {
   filename: string
   previous_filename?: string
   status: string
-  changes: number
   sha?: string | null
   patch?: string
 }
 
+/** GitHub's compare of two commits: ahead when the second descends from the first. */
+type GhCompare = {
+  status?: string
+  merge_base_commit?: { sha: string } | null
+  files?: GhChange[]
+}
+
+/** GitHub's compare of `from` with `to`, from where they meet (three dots). */
+const compareOf = (gh: GitHub, repo: string, from: string, to: string) =>
+  call<GhCompare>(
+    gh,
+    `${repoPath(repo)}/compare/${from.split('/').map(encodeURIComponent).join('/')}...` +
+      // One commit a page: its files come with the first, whatever their count.
+      `${encodeURIComponent(to)}?per_page=1`,
+  )
+
 const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /**
- * What a pull request changes at a commit, as its Files changed shows it then (GitHub's compare
- * of its base branch with that commit, from where they meet): for each file, its status and the
- * lines it adds and removes, without the lines around them nor where they are, which merging its
- * base in moves. Null when GitHub cannot show it whole: as many files as it lists at most, or a
- * changed file it shows no patch for (too big, or binary), unless it is a new one.
+ * The lines each file of a compare adds and removes, one value per file: in their order, or as
+ * a set whatever their order and place (`anyOrder`). Without the lines around them nor where
+ * they are. A file GitHub shows no patch for (binary, too big) counts by its contents, its blob.
+ * Null when GitHub cannot list them all: as many files as it lists at most, or one with neither.
  */
-export async function ownChanges(gh: GitHub, repo: string, base: string, sha: string) {
-  const range = `${base.split('/').map(encodeURIComponent).join('/')}...${encodeURIComponent(sha)}`
-  // One commit a page: its files come with the first, whatever their count.
-  const { files = [] } = await call<{ files?: GhChange[] }>(
-    gh,
-    `${repoPath(repo)}/compare/${range}?per_page=1`,
-  )
+function linesOf(files: GhChange[], anyOrder = false) {
   if (files.length >= COMPARE_FILES_MAX) return null
   const changes = new Map<string, string>()
   for (const f of files) {
     const what = `${f.status} ${f.previous_filename ?? ''}`
     if (f.patch === undefined) {
-      if (f.changes === 0) changes.set(f.filename, what)
-      else if (f.status === 'added' && f.sha) changes.set(f.filename, `${what} ${f.sha}`)
-      else return null
+      if (!f.sha) return null
+      changes.set(f.filename, `${what} blob ${f.sha}`)
       continue
     }
     const lines = f.patch.split('\n')
-    const added = lines.filter((l) => l.startsWith('+')).join('\n')
-    const removed = lines.filter((l) => l.startsWith('-')).join('\n')
-    changes.set(f.filename, `${what} ${digest(added)} ${digest(removed)}`)
+    const these = (sign: string) => {
+      const picked = lines.filter((line) => line.startsWith(sign))
+      return digest((anyOrder ? picked.sort() : picked).join('\n'))
+    }
+    changes.set(f.filename, `${what} ${these('+')} ${these('-')}`)
   }
   return changes
 }
 
-/** The files whose own changes differ between two reads (ownChanges); null when either is not whole. */
+/**
+ * What a pull request changes at a commit, as its Files changed shows it then (GitHub's compare
+ * of its base branch with that commit, from where they meet): for each file, the lines it adds
+ * and removes, in their order, without the lines around them nor where they are, which merging
+ * its base in moves (linesOf); and the commit of its base it starts from.
+ */
+export async function ownChanges(gh: GitHub, repo: string, base: string, sha: string) {
+  const compared = await compareOf(gh, repo, base, sha)
+  return {
+    changes: linesOf(compared.files ?? []),
+    mergeBase: compared.merge_base_commit?.sha ?? null,
+  }
+}
+
+/**
+ * The lines each file gains and loses from a commit to a later one, in any order (linesOf). Null
+ * when `to` does not descend from `from` (a branch rewritten), or GitHub cannot show it whole.
+ */
+export async function changesBetween(gh: GitHub, repo: string, from: string, to: string) {
+  if (from === to) return new Map<string, string>()
+  const compared = await compareOf(gh, repo, from, to)
+  return compared.status === 'ahead' ? linesOf(compared.files ?? [], true) : null
+}
+
+/** The files whose lines differ between two reads (linesOf); null when either is not whole. */
 export function changedFiles(a: Map<string, string> | null, b: Map<string, string> | null) {
   if (!a || !b) return null
   return [...new Set([...a.keys(), ...b.keys()])].filter((f) => a.get(f) !== b.get(f)).sort()
@@ -1495,13 +1549,12 @@ async function askLook(
   const listed = files.slice(0, 20).map((f) => `\`${f}\``)
   const more = files.length > 20 ? `, and ${files.length - 20} more` : ''
   const since = `since you approved \`${short(look.approved)}\``
+  const brought = `what \`${p.base.ref}\` brought`
   const text = [
     `To get #${p.number} merged, ${author} ${fixed}. ` +
       (look.files
-        ? `What it pushed changed lines the pull request itself adds or removes ${since}: in ` +
-          `${listed.join(', ')}${more}.`
-        : 'Brigade could not tell whether what it pushed changed lines the pull request itself ' +
-          `adds or removes ${since}.`),
+        ? `What it pushed ${since} changes more than ${brought}: in ${listed.join(', ')}${more}.`
+        : `Brigade could not tell whether what it pushed ${since} changes more than ${brought}.`),
     `Look at what was pushed (\`git log ${short(look.approved)}..${short(p.head.sha)}\` on a ` +
       'checkout of its branch; `git show --remerge-diff` on a merge commit shows what its ' +
       "resolution did beyond merging). Check that both sides' changes still work together, then " +

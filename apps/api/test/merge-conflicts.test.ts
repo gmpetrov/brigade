@@ -73,53 +73,42 @@ const until = async (check: () => Promise<boolean>, what: string) => {
 }
 
 describe('what a pull request itself changes', () => {
-  /** GitHub answering a compare with these files, or with this status. */
-  const gh = (files: Change[] | number) => ({
+  /** GitHub answering a compare with these files (ahead, from base0), or with this status. */
+  const gh = (files: Change[] | number, status = 'ahead') => ({
     fetch: async () =>
       typeof files === 'number'
         ? Response.json({ message: 'Server Error' }, { status: files })
-        : Response.json({ files, commits: [] }),
+        : Response.json({ status, merge_base_commit: { sha: 'base0' }, files, commits: [] }),
   })
+  /** What it changes at a commit, as GitHub lists these files. */
+  const own = async (files: Change[]) => {
+    const { ownChanges } = await import('../src/pull-requests.js')
+    return (await ownChanges(gh(files), 'o/r', 'main', 'sha')).changes
+  }
 
   test('the same lines added and removed, among other lines and places, are the same change', async () => {
-    const { ownChanges, changedFiles } = await import('../src/pull-requests.js')
-    const before = await ownChanges(
-      gh([modified('a.ts', ['x', 'y'], ['add()'], 3)]),
-      'o/r',
-      'main',
-      's1',
-    )
+    const { changedFiles } = await import('../src/pull-requests.js')
+    const before = await own([modified('a.ts', ['x', 'y'], ['add()'], 3)])
     // Its base added a line where it adds its own, and moved everything down: the same change.
-    const after = await ownChanges(
-      gh([modified('a.ts', ['x', 'base()', 'y'], ['add()'], 9)]),
-      'o/r',
-      'main',
-      's2',
-    )
+    const after = await own([modified('a.ts', ['x', 'base()', 'y'], ['add()'], 9)])
     assert.deepEqual(changedFiles(before, after), [])
-    const other = await ownChanges(
-      gh([modified('a.ts', ['x', 'y'], ['add(1)'])]),
-      'o/r',
-      'main',
-      's3',
-    )
+    const other = await own([modified('a.ts', ['x', 'y'], ['add(1)'])])
     assert.deepEqual(changedFiles(before, other), ['a.ts'])
     // A file it no longer changes, or a new one, are changes too.
-    const more = await ownChanges(
-      gh([modified('a.ts', ['x', 'y'], ['add()']), modified('b.ts', ['z'], ['b()'])]),
-      'o/r',
-      'main',
-      's4',
-    )
+    const more = await own([
+      modified('a.ts', ['x', 'y'], ['add()']),
+      modified('b.ts', ['z'], ['b()']),
+    ])
     assert.deepEqual(changedFiles(before, more), ['b.ts'])
     assert.deepEqual(changedFiles(more, before), ['b.ts'])
   })
 
-  test('a file GitHub shows no patch for is known only when it is new, by its contents', async () => {
-    const { ownChanges, changedFiles } = await import('../src/pull-requests.js')
-    const image = (sha: string): Change => ({
+  test('a file GitHub shows no patch for counts by its contents, binary or too big', async () => {
+    const { changedFiles } = await import('../src/pull-requests.js')
+    // GitHub's shape for a binary file: no patch, no lines counted, its blob.
+    const image = (sha: string, status = 'added'): Change => ({
       filename: 'logo.png',
-      status: 'added',
+      status,
       changes: 0,
       sha,
     })
@@ -129,38 +118,116 @@ describe('what a pull request itself changes', () => {
       changes: 9000,
       sha,
     })
-    const a = await ownChanges(gh([image('i1'), big('b1')]), 'o/r', 'main', 's1')
-    assert.deepEqual(
-      changedFiles(a, await ownChanges(gh([image('i1'), big('b1')]), 'o/r', 'main', 's2')),
-      [],
-    )
-    assert.deepEqual(
-      changedFiles(a, await ownChanges(gh([image('i1'), big('b2')]), 'o/r', 'main', 's3')),
-      ['big.json'],
-    )
-    // A changed file it shows no patch for, not a new one: not known.
-    const changed = { filename: 'big.json', status: 'modified', changes: 9000, sha: 'b3' }
-    assert.equal(await ownChanges(gh([changed]), 'o/r', 'main', 's4'), null)
-    // A file renamed with no change: known by its old name.
-    const renamed = { filename: 'b.ts', previous_filename: 'a.ts', status: 'renamed', changes: 0 }
-    const moved = await ownChanges(gh([renamed]), 'o/r', 'main', 's5')
-    assert.deepEqual(changedFiles(moved, await ownChanges(gh([renamed]), 'o/r', 'main', 's6')), [])
-    assert.deepEqual(
-      changedFiles(
-        moved,
-        await ownChanges(gh([{ ...renamed, previous_filename: 'c.ts' }]), 'o/r', 'main', 's7'),
-      ),
-      ['b.ts'],
-    )
+    const a = await own([image('i1'), big('b1')])
+    assert.deepEqual(changedFiles(a, await own([image('i1'), big('b1')])), [])
+    assert.deepEqual(changedFiles(a, await own([image('i2'), big('b1')])), ['logo.png'])
+    assert.deepEqual(changedFiles(a, await own([image('i1'), big('b2')])), ['big.json'])
+    const changedImage = await own([image('i1', 'modified')])
+    assert.deepEqual(changedFiles(changedImage, await own([image('i1', 'modified')])), [])
+    assert.deepEqual(changedFiles(changedImage, await own([image('i2', 'modified')])), ['logo.png'])
+    // One with neither patch nor contents: not known.
+    assert.equal(await own([{ filename: 'big.json', status: 'modified', changes: 9000 }]), null)
+    // A file renamed with no change: known by its old name too.
+    const renamed = {
+      filename: 'b.ts',
+      previous_filename: 'a.ts',
+      status: 'renamed',
+      changes: 0,
+      sha: 'r1',
+    }
+    const moved = await own([renamed])
+    assert.deepEqual(changedFiles(moved, await own([renamed])), [])
+    assert.deepEqual(changedFiles(moved, await own([{ ...renamed, previous_filename: 'c.ts' }])), [
+      'b.ts',
+    ])
   })
 
   test('as many files as GitHub lists at most are not known whole', async () => {
-    const { ownChanges, changedFiles } = await import('../src/pull-requests.js')
+    const { changedFiles, changesBetween, ownChanges } = await import('../src/pull-requests.js')
     const files = Array.from({ length: 300 }, (_, i) => modified(`f${i}.ts`, ['x'], ['y']))
-    const many = await ownChanges(gh(files), 'o/r', 'main', 's1')
+    const many = await own(files)
     assert.equal(many, null)
     assert.equal(changedFiles(many, many), null)
     await assert.rejects(ownChanges(gh(500), 'o/r', 'main', 's2'))
+    // Nor what changed between two commits when the later does not descend from the first.
+    assert.equal(await changesBetween(gh([], 'diverged'), 'o/r', 'a', 'b'), null)
+    assert.deepEqual(await changesBetween(gh(500), 'o/r', 'a', 'a'), new Map())
+  })
+
+  test('a line of its own moved elsewhere by a resolution shows in what changed since, as Git makes it', async () => {
+    const { changedFiles, changesBetween, ownChanges } = await import('../src/pull-requests.js')
+    const { execFileSync } = await import('node:child_process')
+    const { mkdtempSync, rmSync, writeFileSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const dir = mkdtempSync(join(tmpdir(), 'merge-conflicts-'))
+    const git = (...args: string[]) =>
+      execFileSync('git', args, {
+        cwd: dir,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim()
+    const write = (text: string) => writeFileSync(join(dir, 'auth.js'), text)
+    try {
+      git('init', '-q', '-b', 'main')
+      git('config', 'user.name', 'Test')
+      git('config', 'user.email', 'test@example.invalid')
+      const baseline =
+        'export function canDelete(user) {\n  return true;\n}\n\n' +
+        'export function canRead(user) {\n  return true;\n}\n'
+      write(baseline)
+      git('add', 'auth.js')
+      git('commit', '-qm', 'baseline')
+      const guard = '  if (!user.admin) return false;\n'
+      git('checkout', '-qb', 'pr')
+      write(baseline.replace('  return true;', `${guard}  return true;`))
+      git('commit', '-qam', 'guard deletes')
+      const approved = git('rev-parse', 'HEAD')
+      git('checkout', '-q', 'main')
+      const upstream = baseline.replace('  return true;', '  log("delete");\n  return true;')
+      write(upstream)
+      git('commit', '-qam', 'log deletes')
+      /** Merge main into what was approved, resolving its conflict as `resolved`. */
+      const resolve = (branch: string, resolved: string) => {
+        git('checkout', '-qb', branch, approved)
+        assert.throws(() => git('merge', '-q', '--no-edit', 'main'), 'a real conflict')
+        write(resolved)
+        git('commit', '-qam', `resolve on ${branch}`)
+        return git('rev-parse', 'HEAD')
+      }
+      // Wrong: the guard put back in canRead. Right: both lines in canDelete.
+      const wrong = resolve(
+        'wrong',
+        upstream.replace('canRead(user) {\n', `canRead(user) {\n${guard}`),
+      )
+      const right = resolve(
+        'right',
+        upstream.replace('  log("delete");\n', `  log("delete");\n${guard}`),
+      )
+      /** The files GitHub's compare of two commits lists, from Git's own diff. */
+      const files = (from: string, to: string) => {
+        const diff = git('diff', from, to, '--', 'auth.js')
+        const patch = diff.slice(diff.indexOf('@@'))
+        return diff ? [{ filename: 'auth.js', status: 'modified', changes: 1, patch }] : []
+      }
+      const compare = (from: string, to: string) =>
+        changesBetween(gh(files(from, to)), 'o/r', from, to)
+      /** What it changes at a commit, from where it meets main (its Files changed then). */
+      const own = async (sha: string) =>
+        (await ownChanges(gh(files(git('merge-base', 'main', sha), sha)), 'o/r', 'main', sha))
+          .changes
+      const base = git('merge-base', 'main', approved)
+      const brought = await compare(base, 'main')
+      // The wrong resolution adds and removes the same lines of its own as approved...
+      assert.deepEqual(changedFiles(await own(approved), await own(wrong)), [])
+      // ...but since the approval, more changed than main brought: the guard moved.
+      assert.deepEqual(changedFiles(brought, await compare(approved, wrong)), ['auth.js'])
+      // The right one changed only what main brought.
+      assert.deepEqual(changedFiles(await own(approved), await own(right)), [])
+      assert.deepEqual(changedFiles(brought, await compare(approved, right)), [])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 
@@ -183,6 +250,13 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
   const merged = new Set<number>()
   /** What a pull request changes at a commit, as GitHub's compare of main with it lists it. */
   const changes = new Map<string, Change[]>()
+  /** The commit of main each head starts from: base0, then base1 once main is merged in. */
+  const bases = new Map<string, string>()
+  /** What changed from one commit to a later one, by "from...to": nothing unless said. */
+  const between = new Map<string, Change[]>()
+  /** What main brought from base0 to base1. */
+  const mainBrought = [modified('src/a.ts', ['one', 'two'], ['base()'])]
+  between.set('base0...base1', mainBrought)
   /** Commits GitHub fails to compare. */
   const unreadable = new Set<string>()
 
@@ -282,11 +356,23 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
         merged.add(Number(merge[1]))
         return Response.json({ merged: true })
       }
-      const compare = pathname.match(/^\/repos\/acme\/conflicts\/compare\/main\.\.\.(.+)$/)
+      const compare = pathname.match(/^\/repos\/acme\/conflicts\/compare\/(.+)\.\.\.(.+)$/)
       if (compare) {
-        const sha = decodeURIComponent(compare[1]!)
-        if (unreadable.has(sha)) return Response.json({ message: 'Server Error' }, { status: 500 })
-        return Response.json({ files: changes.get(sha) ?? [], commits: [] })
+        const [from, to] = [decodeURIComponent(compare[1]!), decodeURIComponent(compare[2]!)]
+        if (unreadable.has(to)) return Response.json({ message: 'Server Error' }, { status: 500 })
+        if (from === 'main')
+          return Response.json({
+            status: 'diverged',
+            merge_base_commit: { sha: bases.get(to) ?? 'base0' },
+            files: changes.get(to) ?? [],
+            commits: [],
+          })
+        return Response.json({
+          status: 'ahead',
+          merge_base_commit: { sha: from },
+          files: between.get(`${from}...${to}`) ?? [],
+          commits: [],
+        })
       }
       if (pathname.endsWith('/check-runs'))
         return Response.json({
@@ -429,15 +515,24 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
   const tickets = async (sessionId: string) =>
     (await db.ticket.findMany({ where: { sessionId, status: 'open' } })).map((t) => t.title)
 
-  /** Riley pushed `sha` to #number, which no longer conflicts, changing `files` as said. */
+  /**
+   * Riley pushed `sha` to #number, which then changes `files` from where it meets main. A push
+   * after its first merges main in (base1): what changed since the head before is what main
+   * brought, unless `since` says otherwise.
+   */
   function pushed(
     number: number,
     sha: string,
     files: Change[],
-    options: { conflicts?: boolean } = {},
+    options: { conflicts?: boolean; since?: Change[] } = {},
   ) {
+    const before = heads.get(number)
     heads.set(number, sha)
     changes.set(sha, files)
+    if (before) {
+      bases.set(sha, 'base1')
+      between.set(`${before}...${sha}`, options.since ?? mainBrought)
+    }
     if (options.conflicts) dirty.add(number)
     else dirty.delete(number)
   }
@@ -523,7 +618,7 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.match(look ?? '', /To get #2 merged, Riley resolved its conflicts with `main`/)
     assert.match(
       look ?? '',
-      /changed lines the pull request itself adds or removes since you approved `b1`: in `src\/a\.ts`/,
+      /What it pushed since you approved `b1` changes more than what `main` brought: in `src\/a\.ts`\./,
     )
     assert.match(look ?? '', /new verdict on its head `b2`/)
     assert.ok(!(await waiting()).includes(2), 'in review: nobody needs to do anything yet')
@@ -562,6 +657,23 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.ok((await waiting()).includes(3), 'its review is done: it waits on a person')
   })
 
+  test('a resolution that kept its lines but moved one has its reviewer look first', async () => {
+    const thread = await opened(14)
+    pushed(14, 'n1', asOpened, { conflicts: true })
+    const review = await approved(14, thread, 'n1')
+    await turnEnded(thread)
+    // The same lines of its own, but fix() went elsewhere: more changed since than main brought.
+    pushed(14, 'n2', kept, {
+      since: [...mainBrought, modified('src/b.ts', ['three', 'four'], ['fix()'])],
+    })
+    await turnEnded(thread)
+    assert.ok(!merged.has(14))
+    assert.equal((await row(14)).approvalCarriedTo, null)
+    assert.equal((await db.session.findFirstOrThrow({ where: { id: review } })).awaited, true)
+    const [look] = await prompts(review)
+    assert.match(look ?? '', /changes more than what `main` brought: in `src\/b\.ts`\./)
+  })
+
   test('what GitHub cannot compare is looked at too', async () => {
     const thread = await opened(4)
     pushed(4, 'd1', asOpened, { conflicts: true })
@@ -573,7 +685,10 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.ok(!merged.has(4))
     assert.equal((await db.session.findFirstOrThrow({ where: { id: review } })).awaited, true)
     const [look] = await prompts(review)
-    assert.match(look ?? '', /Brigade could not tell whether what it pushed changed lines/)
+    assert.match(
+      look ?? '',
+      /Brigade could not tell whether what it pushed since you approved `d1` changes more than what `main` brought\./,
+    )
   })
 
   test('nothing pushed stops it with a ticket for a person', async () => {
