@@ -223,10 +223,17 @@ export async function promptThread(
 
 /**
  * Try a thread's failed turn again (POST /threads/:id/retry, a person; or Chief's daily pass in a
- * person's name, src/chief-pass.ts): its latest turn event must be an error. Throws a 409 when
- * there is nothing to try again, or the computer cannot.
+ * person's name, src/chief-pass.ts, whose commandId keeps it only while their pass is on): its
+ * latest turn event must be an error. Throws a 409 when there is nothing to try again, or the
+ * computer cannot.
  */
-export async function retryThread(db: ScopedDb, scope: Scope, thread: Thread, memberId: string) {
+export async function retryThread(
+  db: ScopedDb,
+  scope: Scope,
+  thread: Thread,
+  memberId: string,
+  commandId: string = randomUUID(),
+) {
   const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computer.id)
   if (protocol !== undefined && protocol < RETRY_PROTOCOL)
     throw new HTTPException(409, {
@@ -255,7 +262,7 @@ export async function retryThread(db: ScopedDb, scope: Scope, thread: Thread, me
   const teammate = teammateIn(thread, turn?.type === 'turn.started' ? turn.teammateId : undefined)
   const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.retry',
-    commandId: randomUUID(),
+    commandId,
     thread: await specFor(db, thread, { teammate }),
     error: error.message.slice(0, 10_000),
     memberId,

@@ -29,7 +29,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { answerInTheirName, openAsk, optionsOf, UNSETTLED } from './chief-answers.js'
-import { questionClosed } from './chief-order.js'
+import { passRetryCommandId, questionClosed } from './chief-order.js'
 import { personRules, ruleState, setRulesByChief } from './chief-rules.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { failedThreadsOf } from './failed.js'
@@ -608,13 +608,19 @@ export async function handleChiefCall(
     const thread = await loadThread(db, item.sessionId).catch(() => null)
     if (!thread) return { error: 'That thread is gone.' }
     const { retryThread } = await import('./work.js')
+    // Kept only while their pass is on (keepForPass): turned off meanwhile, it never goes.
+    const commandId = passRetryCommandId(pass.id)
     try {
-      await retryThread(db, scope, thread, pass.memberId)
+      await retryThread(db, scope, thread, pass.memberId, commandId)
     } catch (error) {
       return {
         error:
           error instanceof HTTPException ? error.message : `It could not start: ${String(error)}`,
       }
+    }
+    if (!(await db.runnerCommand.count({ where: { id: commandId } }))) {
+      await passOn(db, pass)
+      return { error: PASS_OFF }
     }
     await db.$executeRaw`
       UPDATE "ChiefPass" SET actions = actions || ${JSON.stringify([

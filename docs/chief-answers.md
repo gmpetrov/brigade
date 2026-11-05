@@ -23,7 +23,7 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   (`ThreadSpec.chiefAnswers` false). Turned off, a pass at work stops: `setChief` marks theirs
   `failed` as it changes their row, in every workspace, every call of a pass checks it is still on
   (`passOn`), and an answer reads it under their row's lock, so one being kept as they turn it off
-  is kept first or not at all. `Member.chiefAnswers` and `chiefAuto` of #724 are no longer read,
+  is kept first or not at all; a retry's command too (`keepForPass`, by its commandId). `Member.chiefAnswers` and `chiefAuto` of #724 are no longer read,
   kept while an older API may (migrations only add), and were turned off for everyone first
   (`20261105233000_chief_answers_off_for_all`, #739).
 - **Rules are a text in the person's words, not a library file.** `Member.chiefRules`, at most

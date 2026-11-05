@@ -1967,4 +1967,72 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
     assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 1)
     assert.ok(!(await listed()))
   })
+
+  test('a retry the pass is sending as the person turns it off is kept before, or never goes', async () => {
+    const failed = await thread()
+    await person(failed, 'Work on the admin page.')
+    await say(failed, { type: 'turn.started', teammateId: riley, accountId: account })
+    await say(failed, { type: 'error', message: 'Request timed out' })
+    await db.session.updateMany({ where: { id: failed }, data: { status: 'failed' } })
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    await db.chiefPass.updateMany({
+      where: { id: made.pass.id },
+      data: {
+        items: [
+          {
+            kind: 'failed',
+            n: 1,
+            title: 'Failed admin page',
+            sessionId: failed,
+            teammate: 'Riley',
+            error: 'Request timed out',
+          },
+        ],
+      },
+    })
+    const conn = await runner()
+    const { localHub } = await import('../src/hub/memory-host.js')
+    const hub = localHub(workspaceId) as unknown as {
+      runnerProtocol: (computerId: string) => unknown
+    }
+    const original = hub.runnerProtocol
+    let reached!: () => void
+    const atProtocol = new Promise<void>((resolve) => (reached = resolve))
+    let release!: () => void
+    const released = new Promise<void>((resolve) => (release = resolve))
+    // The computer's runner asked over the hub (a call to another object in production) as the
+    // retry starts: she turns her pass off meanwhile.
+    hub.runnerProtocol = async (computerId: string) => {
+      reached()
+      await released
+      return original.call(hub, computerId)
+    }
+    const retries = () =>
+      db.runnerCommand.count({ where: { sessionId: failed, type: 'thread.retry' } })
+    let retrying: Promise<{ ok?: boolean; error?: string }> | undefined
+    try {
+      retrying = passCall(made, { name: 'chief_retry', item: 1, reason: 'It timed out.' })
+      await atProtocol
+      await chiefRules.setChief(db, { ...scope, memberId: member('ada') }, { pass: false })
+      release()
+      assert.match((await retrying).error ?? '', /turned it off/)
+      assert.equal(await retries(), 0)
+      assert.ok(
+        !conn.sent.some(
+          (m) =>
+            m.type === 'thread.retry' && (m.thread as { sessionId: string }).sessionId === failed,
+        ),
+      )
+      assert.deepEqual(
+        (await db.chiefPass.findFirstOrThrow({ where: { id: made.pass.id } })).actions,
+        [],
+      )
+    } finally {
+      release()
+      hub.runnerProtocol = original
+      await retrying?.catch(() => undefined)
+      conn.close()
+    }
+  })
 })
