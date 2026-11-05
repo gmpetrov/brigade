@@ -372,10 +372,26 @@ describe('preview machines', { skip: !database && 'no database answers' }, () =>
     machines.makingMs = 200
     for (let i = 0; i < MACHINES_RUNNING_MAX - 1; i++)
       assert.ok((await machineUp(machines, runner(), await thread('ada'), KEY)).machine)
-    const [a, b] = await Promise.all([
-      machineUp(machines, runner(), await thread('ada'), KEY),
-      machineUp(machines, runner(), await thread('ada'), KEY),
-    ])
+    // Each new row's insert waits half a second (this workspace's only): without the lock, both
+    // starts count four before either row is there.
+    const fn = `preview_machines_slow_${suffix.replace(/-/g, '')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${fn}() RETURNS trigger AS $$ BEGIN IF NEW."workspaceId" = '${ids.workspace}' THEN PERFORM pg_sleep(0.5); END IF; RETURN NEW; END $$ LANGUAGE plpgsql`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${fn} BEFORE INSERT ON "PreviewMachine" FOR EACH ROW EXECUTE FUNCTION ${fn}()`,
+    )
+    const [one, two] = [await thread('ada'), await thread('ada')]
+    let a, b
+    try {
+      ;[a, b] = await Promise.all([
+        machineUp(machines, runner(), one, KEY),
+        machineUp(machines, runner(), two, KEY),
+      ])
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER ${fn} ON "PreviewMachine"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION ${fn}()`)
+    }
     assert.equal([a, b].filter((r) => r.machine).length, 1, 'one gets the last slot')
     assert.match([a, b].find((r) => !r.machine)?.reason ?? '', /cloud computer/)
     assert.equal(
