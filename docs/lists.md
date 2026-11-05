@@ -24,8 +24,9 @@ mission; threads stay where the work happens.
   moves the marker to the next row. Its rows end at a blank row or a block of its own (a list
   line, a heading, a quote, a thematic break, HTML other than a row holding only its marker).
 - **A line's files are under it, in the file.** A file dropped or pasted on a checklist line in
-  the editor goes under it, as a block nested under the line; "Attach to this line" shows where,
-  and it shows small there. Its Markdown is a row of its own after a blank one, indented as the
+  the editor goes under it, as a block nested under the line, and so does a file already in the
+  document moved onto the line by its handle (in one change, which undo takes back); "Attach to
+  this line" shows where, and it shows small there. Its Markdown is a row of its own after a blank one, indented as the
   line's text (`  ![shot.png](asset:<id>)`), which any Markdown viewer reads as part of the line
   and the editor reads back under it (`packages/editor/src/markdown.ts`: BlockNote's own
   conversion would put it after the list). `parseList` reads them as the line's `files`, never

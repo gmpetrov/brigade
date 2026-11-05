@@ -213,18 +213,23 @@ export function DocumentBlockNoteView({
   const box = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<{
     id: string
+    moved: Block[]
     top: number
     left: number
     width: number
     height: number
   } | null>(null)
   const lineUnder = (e: React.DragEvent) => {
-    const line = !readOnly && hasFiles(e) ? checklistLineAt(e.target) : null
+    // Files from the computer, or the document's own files moved by their handle.
+    const moved = hasFiles(e) ? [] : movedFileBlocks(editor)
+    const line = !readOnly && (hasFiles(e) || moved.length) ? checklistLineAt(e.target) : null
     const outer = box.current?.getBoundingClientRect()
-    if (!line || !outer) return null
+    // Not onto one of the blocks moved, nor the line they are already the only files of.
+    if (!line || !outer || moved.some((b) => b.id === line.id)) return null
     const rect = line.element.getBoundingClientRect()
     return {
       id: line.id,
+      moved,
       top: rect.top - outer.top,
       left: rect.left - outer.left,
       width: rect.width,
@@ -265,10 +270,12 @@ export function DocumentBlockNoteView({
         const line = lineUnder(e)
         setTarget((was) => (was?.id === line?.id && was?.top === line?.top ? was : line))
         if (!line) return
-        // Not the editor's: its drop cursor between the lines would say they land beside it.
+        // Not the editor's: its drop cursor between the lines would say they land beside it, so
+        // it goes (as BlockNote hides it, with a dragleave of its own).
         e.preventDefault()
         e.stopPropagation()
-        e.dataTransfer.dropEffect = 'copy'
+        hideDropCursor(editor)
+        e.dataTransfer.dropEffect = line.moved.length ? 'move' : 'copy'
       }}
       onDragOver={(e) => {
         if (hasFiles(e)) e.preventDefault()
@@ -279,9 +286,11 @@ export function DocumentBlockNoteView({
         if (!line) return
         e.preventDefault()
         e.stopPropagation()
+        hideDropCursor(editor)
         depth.current = 0
         setDragging(false)
-        void attachFiles(editor, line.id, Array.from(e.dataTransfer.files))
+        if (line.moved.length) moveUnder(editor, line.id, line.moved)
+        else void attachFiles(editor, line.id, Array.from(e.dataTransfer.files))
       }}
       onPasteCapture={(e) => {
         // A file pasted alone (a screenshot) while the cursor is in a checklist line: under it.
@@ -551,18 +560,8 @@ function checklistLineAt(target: EventTarget | null) {
  */
 async function attachFiles(editor: DocumentBlockEditor, lineId: string, files: File[]) {
   for (const file of files) {
-    const line = editor.getBlock(lineId)
-    if (!line || !editor.uploadFile) return
-    const block = { type: blockFor(file), props: { name: file.name } } as never
-    const under = line.children
-    let after = 0
-    while (after < under.length && FILE_BLOCKS.has(under[after]!.type)) after++
-    const added =
-      after > 0
-        ? editor.insertBlocks([block], under[after - 1]!, 'after')[0]
-        : under.length
-          ? editor.insertBlocks([block], under[0]!, 'before')[0]
-          : editor.updateBlock(line, { children: [block] }).children[0]
+    if (!editor.uploadFile) return
+    const added = placeUnder(editor, lineId, { type: blockFor(file), props: { name: file.name } })
     if (!added) continue
     try {
       const update = await editor.uploadFile(file, added.id)
@@ -575,6 +574,58 @@ async function attachFiles(editor: DocumentBlockEditor, lineId: string, files: F
       editor.removeBlocks([added])
     }
   }
+}
+
+/** The editor's drop cursor gone: the drag is not the editor's to drop. */
+function hideDropCursor(editor: DocumentBlockEditor) {
+  editor.prosemirrorView?.dom.dispatchEvent(new Event('dragleave', { bubbles: false }))
+}
+
+/** A block put under a checklist line, after the files it has and before its nested lines. */
+function placeUnder(editor: DocumentBlockEditor, lineId: string, block: object) {
+  const line = editor.getBlock(lineId)
+  if (!line) return undefined
+  const under = line.children
+  let after = 0
+  while (after < under.length && FILE_BLOCKS.has(under[after]!.type)) after++
+  return after > 0
+    ? editor.insertBlocks([block as never], under[after - 1]!, 'after')[0]
+    : under.length
+      ? editor.insertBlocks([block as never], under[0]!, 'before')[0]
+      : editor.updateBlock(line, { children: [block as never] }).children[0]
+}
+
+type Block = DocumentBlockEditor['document'][number]
+
+/**
+ * The document's own files being moved by their handle (the editor's drag, `view.dragging`):
+ * the blocks dragged, when each is a file with nothing nested under it; else none.
+ */
+function movedFileBlocks(editor: DocumentBlockEditor): Block[] {
+  const slice = editor.prosemirrorView?.dragging?.slice
+  if (!slice) return []
+  const ids: string[] = []
+  slice.content.descendants((node) => {
+    if (node.type.name !== 'blockContainer') return true
+    if (typeof node.attrs.id === 'string') ids.push(node.attrs.id)
+    return false
+  })
+  const blocks = ids.map((id) => editor.getBlock(id))
+  return blocks.length &&
+    blocks.every((b) => b && FILE_BLOCKS.has(b.type) && b.children.length === 0)
+    ? (blocks as Block[])
+    : []
+}
+
+/**
+ * The document's files moved onto a checklist line: under it, as its files (docs/lists.md),
+ * in one change, so that undo puts them back.
+ */
+function moveUnder(editor: DocumentBlockEditor, lineId: string, blocks: Block[]) {
+  editor.transact(() => {
+    editor.removeBlocks(blocks.map((b) => b.id))
+    for (const { id, type, props } of blocks) placeUnder(editor, lineId, { id, type, props })
+  })
 }
 
 /** Files dropped beside the text: a block for each at the end, filled in as each upload lands. */
