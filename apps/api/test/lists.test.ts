@@ -850,6 +850,36 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       (await db.documentAsset.findFirst({ where: { id: file.id } }))?.documentId,
       list.id,
     )
+    // Review of #738, again: a list so long that the file comes past its text kept for search
+    // (400,000 characters) still takes it on, and the sweep finds it there too.
+    const long = await save('Projects/Acme/long.md', '# Long\n')
+    const far = await storeAsset(db, scope, {
+      documentId: long.id,
+      file: new File([Buffer.from('far')], 'far.txt'),
+      memberId: ids.member,
+    })
+    const farSource = await save(
+      'Notes/far-source.md',
+      `# Far\n\n[far.txt](asset:${far.id} "file")\n`,
+    )
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: farSource.id } })
+    const longList = await save(
+      'Projects/Acme/long.md',
+      `${'context '.repeat(50_010)}\n\n* [ ] Read it\n\n  [far.txt](asset:${far.id} "file")\n`,
+    )
+    assert.ok(!longList.text.includes(far.id), 'past the text kept for search')
+    await trashLibraryFile(db, scope, member, farSource.id)
+    const farRow = async () =>
+      (await db.documentAsset.findFirst({ where: { id: far.id } }))?.documentId
+    assert.equal(await farRow(), longList.id)
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: farSource.id } })
+    await sweepAssets([far.id])
+    assert.equal(await farRow(), longList.id)
+    // Its own document deleted for good, a file a long one still refers to is kept, not removed.
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: null } })
+    await sweepAssets([far.id])
+    assert.equal(await farRow(), longList.id)
+    await db.documentAsset.deleteMany({ where: { id: far.id } })
     // A file no live document refers to stays with its document in the trash, for a restore.
     const alone = await save('Notes/alone.md', '# Alone\n')
     const own = await storeAsset(db, scope, {

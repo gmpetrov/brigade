@@ -200,12 +200,11 @@ async function removeAsset(id: string, scope: Scope) {
  * file stays where the library is read (teammates' mirrors, lists). One in the trash keeps it
  * for a restore when no live one refers to it.
  */
-async function holder(row: {
-  id: string
-  organizationId: string
-  workspaceId: string
-  documentId: string | null
-}) {
+async function holder(
+  row: { id: string; organizationId: string; workspaceId: string; documentId: string | null },
+  /** The long documents that refer to it past their text kept for search (laterReferrers). */
+  later: () => Promise<Referrer[]>,
+) {
   const reference = `asset:${row.id}`
   const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
   const own = row.documentId
@@ -219,8 +218,45 @@ async function holder(row: {
     orderBy: { deletedAt: { sort: 'asc', nulls: 'first' } },
   })
   if (other && !other.deletedAt) return other.id
+  const past = (await later()).filter((d) => d.id !== own?.id)
+  const live = past.find((d) => !d.deletedAt)
+  if (live) return live.id
   if (own && ownRefers) return own.id
-  return other?.id ?? null
+  return other?.id ?? past[0]?.id ?? null
+}
+
+/** A document that refers to a file, and whether it is in the trash. */
+type Referrer = { id: string; deletedAt: Date | null }
+
+/** Largest document read for the files it refers to past its text kept for search: as large as the editor opens. */
+const LATER_READ_MAX = 2 * 1024 * 1024
+
+/**
+ * The long Markdown files of the library that refer to these files past their text kept for
+ * search (INDEXED_CHARS), by file: each read once from its bytes, then let go. A file put in one
+ * by the editor is only in one it opens.
+ */
+async function laterReferrers(scope: Scope, ids: string[]) {
+  const found = new Map<string, Referrer[]>()
+  if (ids.length === 0) return found
+  const long = await prisma.document.findMany({
+    where: {
+      ...scope,
+      kind: 'library',
+      contentType: 'text/markdown',
+      size: { gte: INDEXED_CHARS, lte: LATER_READ_MAX },
+    },
+    select: { id: true, deletedAt: true, objectKey: true, size: true },
+  })
+  for (const doc of long) {
+    const bytes = await readLibraryFile(scope, doc).catch(() => null)
+    if (!bytes) continue
+    const text = new TextDecoder().decode(bytes)
+    for (const id of ids)
+      if (text.includes(`asset:${id}`))
+        found.set(id, [...(found.get(id) ?? []), { id: doc.id, deletedAt: doc.deletedAt }])
+  }
+  return found
 }
 
 /** Whether a document refers to the file, as far as can be told. */
@@ -250,8 +286,10 @@ export async function moveFilesOfTrashed(scope: Scope, documentId: string) {
     where: { ...scope, documentId, status: 'ready' },
     select: { id: true },
   })
+  // Long documents are read once, and only when a file's search found no live one.
+  let later: Promise<Map<string, Referrer[]>> | undefined
   for (const row of rows) {
-    const live = await prisma.document.findFirst({
+    const indexed = await prisma.document.findFirst({
       where: {
         ...scope,
         id: { not: documentId },
@@ -260,8 +298,17 @@ export async function moveFilesOfTrashed(scope: Scope, documentId: string) {
       },
       select: { id: true },
     })
+    let live = indexed?.id
+    if (!live) {
+      later ??= laterReferrers(
+        scope,
+        rows.map((r) => r.id),
+      )
+      const past = (await later).get(row.id) ?? []
+      live = past.find((d) => !d.deletedAt && d.id !== documentId)?.id
+    }
     if (live)
-      await prisma.documentAsset.update({ where: { id: row.id }, data: { documentId: live.id } })
+      await prisma.documentAsset.update({ where: { id: row.id }, data: { documentId: live } })
   }
 }
 
@@ -290,10 +337,23 @@ export async function sweepAssets(ids?: string[]) {
     orderBy: { checkedAt: { sort: 'asc', nulls: 'first' } },
     take: 500,
   })
+  // Each workspace's long documents are read once, and only when a file needs them.
+  const later = new Map<string, Promise<Map<string, Referrer[]>>>()
+  const laterFor = (scope: Scope, id: string) => async () => {
+    if (!later.has(scope.workspaceId))
+      later.set(
+        scope.workspaceId,
+        laterReferrers(
+          scope,
+          rows.filter((r) => r.workspaceId === scope.workspaceId).map((r) => r.id),
+        ),
+      )
+    return (await later.get(scope.workspaceId)!).get(id) ?? []
+  }
   let removed = 0
   for (const row of rows) {
     const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
-    const documentId = row.status === 'ready' ? await holder(row) : null
+    const documentId = row.status === 'ready' ? await holder(row, laterFor(scope, row.id)) : null
     if (!documentId) {
       await removeAsset(row.id, scope)
       removed++
