@@ -53,6 +53,7 @@ export type UserCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   attribution: number
+  onboardingAnswers: number
   _all: number
 }
 
@@ -86,6 +87,7 @@ export type UserCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   attribution?: true
+  onboardingAnswers?: true
   _all?: true
 }
 
@@ -170,6 +172,7 @@ export type UserGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   attribution: runtime.JsonValue | null
+  onboardingAnswers: runtime.JsonValue | null
   _count: UserCountAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
@@ -202,6 +205,7 @@ export type UserWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   attribution?: Prisma.JsonNullableFilter<"User">
+  onboardingAnswers?: Prisma.JsonNullableFilter<"User">
   authSessions?: Prisma.AuthSessionListRelationFilter
   authAccounts?: Prisma.AuthAccountListRelationFilter
   members?: Prisma.MemberListRelationFilter
@@ -219,6 +223,7 @@ export type UserOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   attribution?: Prisma.SortOrderInput | Prisma.SortOrder
+  onboardingAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   authSessions?: Prisma.AuthSessionOrderByRelationAggregateInput
   authAccounts?: Prisma.AuthAccountOrderByRelationAggregateInput
   members?: Prisma.MemberOrderByRelationAggregateInput
@@ -239,6 +244,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   attribution?: Prisma.JsonNullableFilter<"User">
+  onboardingAnswers?: Prisma.JsonNullableFilter<"User">
   authSessions?: Prisma.AuthSessionListRelationFilter
   authAccounts?: Prisma.AuthAccountListRelationFilter
   members?: Prisma.MemberListRelationFilter
@@ -256,6 +262,7 @@ export type UserOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   attribution?: Prisma.SortOrderInput | Prisma.SortOrder
+  onboardingAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
@@ -273,6 +280,7 @@ export type UserScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   attribution?: Prisma.JsonNullableWithAggregatesFilter<"User">
+  onboardingAnswers?: Prisma.JsonNullableWithAggregatesFilter<"User">
 }
 
 export type UserCreateInput = {
@@ -284,6 +292,7 @@ export type UserCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
@@ -301,6 +310,7 @@ export type UserUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
@@ -318,6 +328,7 @@ export type UserUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
@@ -335,6 +346,7 @@ export type UserUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
@@ -352,6 +364,7 @@ export type UserCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type UserUpdateManyMutationInput = {
@@ -363,6 +376,7 @@ export type UserUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type UserUncheckedUpdateManyInput = {
@@ -374,6 +388,7 @@ export type UserUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -385,6 +400,7 @@ export type UserCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   attribution?: Prisma.SortOrder
+  onboardingAnswers?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -521,6 +537,7 @@ export type UserCreateWithoutAnalyticsFirstsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
@@ -537,6 +554,7 @@ export type UserUncheckedCreateWithoutAnalyticsFirstsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
@@ -569,6 +587,7 @@ export type UserUpdateWithoutAnalyticsFirstsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
@@ -585,6 +604,7 @@ export type UserUncheckedUpdateWithoutAnalyticsFirstsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
@@ -601,6 +621,7 @@ export type UserCreateWithoutAuthSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutInviterInput
@@ -617,6 +638,7 @@ export type UserUncheckedCreateWithoutAuthSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutInviterInput
@@ -649,6 +671,7 @@ export type UserUpdateWithoutAuthSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutInviterNestedInput
@@ -665,6 +688,7 @@ export type UserUncheckedUpdateWithoutAuthSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutInviterNestedInput
@@ -681,6 +705,7 @@ export type UserCreateWithoutAuthAccountsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutInviterInput
@@ -697,6 +722,7 @@ export type UserUncheckedCreateWithoutAuthAccountsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutInviterInput
@@ -729,6 +755,7 @@ export type UserUpdateWithoutAuthAccountsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutInviterNestedInput
@@ -745,6 +772,7 @@ export type UserUncheckedUpdateWithoutAuthAccountsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutInviterNestedInput
@@ -761,6 +789,7 @@ export type UserCreateWithoutMembersInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutInviterInput
@@ -777,6 +806,7 @@ export type UserUncheckedCreateWithoutMembersInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutInviterInput
@@ -809,6 +839,7 @@ export type UserUpdateWithoutMembersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutInviterNestedInput
@@ -825,6 +856,7 @@ export type UserUncheckedUpdateWithoutMembersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutInviterNestedInput
@@ -841,6 +873,7 @@ export type UserCreateWithoutInvitationsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
@@ -857,6 +890,7 @@ export type UserUncheckedCreateWithoutInvitationsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
@@ -889,6 +923,7 @@ export type UserUpdateWithoutInvitationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
@@ -905,6 +940,7 @@ export type UserUncheckedUpdateWithoutInvitationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
@@ -921,6 +957,7 @@ export type UserCreateWithoutPushDevicesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountCreateNestedManyWithoutUserInput
   members?: Prisma.MemberCreateNestedManyWithoutUserInput
@@ -937,6 +974,7 @@ export type UserUncheckedCreateWithoutPushDevicesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   authAccounts?: Prisma.AuthAccountUncheckedCreateNestedManyWithoutUserInput
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
@@ -969,6 +1007,7 @@ export type UserUpdateWithoutPushDevicesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUpdateManyWithoutUserNestedInput
@@ -985,6 +1024,7 @@ export type UserUncheckedUpdateWithoutPushDevicesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attribution?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  onboardingAnswers?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   authAccounts?: Prisma.AuthAccountUncheckedUpdateManyWithoutUserNestedInput
   members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1077,6 +1117,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   createdAt?: boolean
   updatedAt?: boolean
   attribution?: boolean
+  onboardingAnswers?: boolean
   authSessions?: boolean | Prisma.User$authSessionsArgs<ExtArgs>
   authAccounts?: boolean | Prisma.User$authAccountsArgs<ExtArgs>
   members?: boolean | Prisma.User$membersArgs<ExtArgs>
@@ -1095,6 +1136,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   createdAt?: boolean
   updatedAt?: boolean
   attribution?: boolean
+  onboardingAnswers?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1106,6 +1148,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   createdAt?: boolean
   updatedAt?: boolean
   attribution?: boolean
+  onboardingAnswers?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectScalar = {
@@ -1117,9 +1160,10 @@ export type UserSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   attribution?: boolean
+  onboardingAnswers?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "createdAt" | "updatedAt" | "attribution", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "createdAt" | "updatedAt" | "attribution" | "onboardingAnswers", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   authSessions?: boolean | Prisma.User$authSessionsArgs<ExtArgs>
   authAccounts?: boolean | Prisma.User$authAccountsArgs<ExtArgs>
@@ -1155,6 +1199,12 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      * changed. Utm values, the referrer's host, the first page and the derived channel; no URL.
      */
     attribution: runtime.JsonValue | null
+    /**
+     * What they answered to onboarding's questions (role, team size, first work, where they
+     * heard of Brigade; @brigade/contracts' OnboardingAnswers), set once. `{}`: all skipped;
+     * null: never asked (invited, or here before the questions).
+     */
+    onboardingAnswers: runtime.JsonValue | null
   }, ExtArgs["result"]["user"]>
   composites: {}
 }
@@ -1592,6 +1642,7 @@ export interface UserFieldRefs {
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly attribution: Prisma.FieldRef<"User", 'Json'>
+  readonly onboardingAnswers: Prisma.FieldRef<"User", 'Json'>
 }
     
 

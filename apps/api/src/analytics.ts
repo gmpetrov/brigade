@@ -7,6 +7,7 @@
 // moment later in one request, and a failure is only logged. On Cloudflare the API runs in
 // Durable Objects, which stay up to send them; a run in the Worker's own isolate waits for
 // them before it ends (flushAnalytics, src/worker.ts).
+import type { OnboardingAnswers } from '@brigade/contracts'
 import { getOAuthState } from 'better-auth/api'
 import {
   emissionsOf,
@@ -404,6 +405,37 @@ export async function recordSignup(
     setOnce: signupProperties(source, method),
     set: { internal },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding's questions (POST /me/onboarding)
+// ---------------------------------------------------------------------------
+
+/** Person property and position key of each question, snake_case as PostHog's others. */
+const ONBOARDING_PROPERTIES = {
+  role: 'role',
+  teamSize: 'team_size',
+  firstWork: 'first_work',
+  heardFrom: 'heard_from',
+} as const satisfies Record<keyof OnboardingAnswers, string>
+
+/**
+ * `onboarding_answered`, once: how many were answered and where each answer showed in its
+ * list (`role_position`…: answers shown first should not win more often), and the answers
+ * as the person's properties (`role`, `team_size`, `first_work`, `heard_from`).
+ */
+export function recordOnboardingAnswers(userId: string, answers: OnboardingAnswers) {
+  if (!analyticsOn()) return
+  const properties: AnalyticsProps = { feature: 'onboarding', count: 0 }
+  const set: AnalyticsProps = {}
+  for (const [key, name] of Object.entries(ONBOARDING_PROPERTIES)) {
+    const answer = answers[key as keyof OnboardingAnswers]
+    if (!answer) continue
+    properties.count = (properties.count as number) + 1
+    properties[`${name}_position`] = answer.position
+    set[name] = answer.id
+  }
+  track('onboarding_answered', { distinctId: userId, properties, set })
 }
 
 // ---------------------------------------------------------------------------

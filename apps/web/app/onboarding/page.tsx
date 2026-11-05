@@ -1,5 +1,5 @@
 'use client'
-import { GETTING_STARTED, newListItemId, type ListSummary } from '@brigade/contracts'
+import { GETTING_STARTED, newListItemId, setupMessage, type ListSummary } from '@brigade/contracts'
 import {
   Check,
   Clock,
@@ -14,7 +14,6 @@ import {
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountCard, machineName } from '@/components/account-card'
-import { BrigadeMark } from '@/components/brigade-mark'
 import { HarnessLogo } from '@/components/harness-logo'
 import { StatusBadge } from '@/components/status-badge'
 import { SetupWorkspaceSwitcher } from '@/components/workspace-switcher'
@@ -42,6 +41,8 @@ import { MAC_APP_URL } from '@/lib/mac-app'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
+import { Questions } from './questions'
+import { Shell } from './shell'
 
 const slugify = (name: string) =>
   `${
@@ -51,37 +52,6 @@ const slugify = (name: string) =>
       .replace(/^-|-$/g, '')
       .slice(0, 40) || 'org'
   }-${Math.random().toString(36).slice(2, 6)}`
-
-/** Centered column with the brand mark, shared by every onboarding step. */
-function Shell({
-  title,
-  description,
-  children,
-}: {
-  title?: string
-  description?: string
-  children?: React.ReactNode
-}) {
-  return (
-    <main className="flex min-h-svh items-center justify-center px-4 py-12">
-      <div className="flex w-full max-w-md flex-col gap-7">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <BrigadeMark className="size-14" />
-          {title && (
-            <div className="flex flex-col gap-1.5">
-              <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
-              {description && <p className="text-sm text-muted-foreground">{description}</p>}
-            </div>
-          )}
-        </div>
-        {children}
-      </div>
-    </main>
-  )
-}
-
-/** The first message of a new workspace's setup thread with the chief. */
-const SETUP_MESSAGE = 'Hi Chief, I just started on Brigade. Help me set up my team.'
 
 /**
  * The line of the workspace's Getting started list the setup thread works on, so the list shows
@@ -111,6 +81,8 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false)
   // A member who has a workspace and an AI account came here to add a workspace.
   const [adding, setAdding] = useState<boolean>()
+  // Who just made their project answers onboarding's questions next, once.
+  const [asking, setAsking] = useState(false)
 
   const reload = useCallback(
     () =>
@@ -168,7 +140,8 @@ export default function Onboarding() {
       // Reading /me makes the new organization the session's.
       await api<Me>('/me')
       await api('/workspaces', { body: { name } })
-      await reload()
+      const next = await reload()
+      setAsking(next?.onboardingAnswers === null)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -243,6 +216,16 @@ export default function Onboarding() {
       </Shell>
     )
   }
+
+  if (me.activeWorkspaceId && !adding && asking)
+    return (
+      <Questions
+        onDone={() => {
+          setAsking(false)
+          void reload()
+        }}
+      />
+    )
 
   // Stays up once the account works, while the chief's thread starts.
   if (me.activeWorkspaceId && !adding)
@@ -442,7 +425,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                 teammateId: chief.id,
                 computerId: account.computer.id,
                 accountId: account.id,
-                text: SETUP_MESSAGE,
+                text: setupMessage(me.onboardingAnswers),
                 ...(listLines ? { listLines } : {}),
               },
             })
