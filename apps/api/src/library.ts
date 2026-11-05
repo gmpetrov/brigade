@@ -5,6 +5,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { extname } from 'node:path'
 import {
+  documentFilePath,
   LIBRARY_FILE_MAX,
   LIBRARY_READ_MAX,
   LIBRARY_VIEWS_PROTOCOL,
@@ -24,7 +25,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { copyObject, getObject, putObject } from './bucket.js'
+import { assetKey, copyObject, getObject, putObject } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
@@ -502,6 +503,40 @@ export async function libraryFile(db: ScopedDb, id: string) {
   const row = await db.document.findFirst({ where: { id, kind: 'library', deletedAt: null } })
   if (!row) throw new HTTPException(404, { message: 'File not found' })
   return row
+}
+
+/**
+ * The files put in the library's documents that a teammate's mirror holds, each beside its
+ * document (documentFilePath): those ready and read back, whose SHA-256 the runner checks the
+ * bytes against (files from before that was kept have none, and stay out). `ids`: just those.
+ */
+export async function mirroredAssets(db: ScopedDb, ids?: string[]) {
+  if (ids && ids.length === 0) return []
+  const rows = await db.documentAsset.findMany({
+    where: {
+      ...(ids ? { id: { in: [...new Set(ids)] } } : {}),
+      status: 'ready',
+      sha256: { not: '' },
+      document: { is: { kind: 'library', deletedAt: null } },
+    },
+    select: { id: true, name: true, sha256: true, size: true, document: { select: { path: true } } },
+    orderBy: { id: 'asc' },
+  })
+  return rows.map((row) => ({
+    id: row.id,
+    path: documentFilePath(row.document!.path, row),
+    sha256: row.sha256,
+    size: row.size,
+  }))
+}
+
+/** Where the bytes of a file a runner mirrors are, and their SHA-256: a library file's, or a document's file's. */
+export async function mirroredFile(db: ScopedDb, scope: Scope, id: string) {
+  const row = await db.document.findFirst({ where: { id, kind: 'library', deletedAt: null } })
+  if (row) return { key: fileKey(scope, row), sha256: row.sha256 }
+  const [asset] = await mirroredAssets(db, [id])
+  if (asset) return { key: assetKey(scope, id), sha256: asset.sha256 }
+  throw new HTTPException(404, { message: 'File not found' })
 }
 
 /**
@@ -1202,20 +1237,22 @@ export async function search(
 }
 
 /**
- * What a computer mirrors: the library files, who may read which, and the
- * memory each teammate loads. A runner too old to keep a mirror per teammate
- * gets only the files every teammate may read.
+ * What a computer mirrors: the library files with the files put in its documents (each beside
+ * its document, where a library file of the same path wins), who may read which, and the memory
+ * each teammate loads. A runner too old to keep a mirror per teammate gets only the files every
+ * teammate may read.
  */
 export async function manifest(
   db: ScopedDb,
   runner: { protocolVersion: number | null },
 ): Promise<LibraryManifest> {
-  const [files, memory, teammates, folders] = await Promise.all([
+  const [documents, assets, memory, teammates, folders] = await Promise.all([
     db.document.findMany({
       where: { kind: 'library', deletedAt: null },
       select: { id: true, path: true, sha256: true, size: true },
       orderBy: { path: 'asc' },
     }),
+    mirroredAssets(db),
     db.document.findMany({
       where: { kind: { in: ['workspace_memory', 'teammate_memory', 'project_memory'] } },
       select: {
@@ -1240,6 +1277,8 @@ export async function manifest(
   }
   const shared = (path: string) =>
     access.teammates.every((t) => libraryAccessFor(path, t, folders) !== 'none')
+  const taken = new Set(documents.map((f) => f.path))
+  const files = [...documents, ...assets.filter((a) => !taken.has(a.path))]
   return {
     files:
       (runner.protocolVersion ?? 0) >= LIBRARY_VIEWS_PROTOCOL

@@ -525,16 +525,21 @@ export function handOffMessage(
       (lines.length > 1
         ? `Please take these items of ${mention}:`
         : `Please take this item of ${mention}:`),
-    lines
-      .map((line) => {
-        const { text, files = [] } = typeof line === 'string' ? { text: line } : line
-        return [
-          `- ${plainItemText(text)}`,
-          ...files.map((path) => `${HANDED_FILE}${path.replace(/\s*\n\s*/g, ' ')}`),
-        ].join('\n')
-      })
-      .join('\n'),
+    handedLines(lines),
   ].join('\n\n')
+}
+
+/** Lines handed over as a hand-off message lists them: one each, the files under it below it. */
+export function handedLines(lines: HandedLine[]) {
+  return lines
+    .map((line) => {
+      const { text, files = [] } = typeof line === 'string' ? { text: line } : line
+      return [
+        `- ${plainItemText(text)}`,
+        ...files.map((path) => `${HANDED_FILE}${path.replace(/\s*\n\s*/g, ' ')}`),
+      ].join('\n')
+    })
+    .join('\n')
 }
 
 const HAND_OFF =

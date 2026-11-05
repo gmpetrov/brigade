@@ -25,6 +25,7 @@ import {
   putObject,
 } from './bucket.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
+import { hubs } from './hub.js'
 import { contentTypeFor, isMarkdown, readLibraryFile } from './library.js'
 import { detectType, HEAD_BYTES, inspectObject } from './object-check.js'
 
@@ -111,6 +112,8 @@ export async function finishAssetUpload(db: ScopedDb, scope: Scope, id: string, 
     data: { status: 'ready', sha256: inspected.sha256, contentType: inspected.contentType },
   })
   await auditAdded(scope, memberId, ready)
+  // Teammates' mirrors take it beside its document (docs/lists.md), before a hand-off names it.
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   return ready
 }
 
@@ -143,6 +146,7 @@ export async function storeAsset(
     throw error
   }
   await auditAdded(scope, input.memberId, row)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   return row
 }
 
