@@ -457,7 +457,9 @@ function Review({
           : `${who} asked for changes.`
         : review.changed
           ? `${who} approved it, before its latest commits.`
-          : `${who} approved it.`
+          : review.kept
+            ? `${who} approved it. Resolving its conflicts since left what it adds and removes the same.`
+            : `${who} approved it.`
   const thread = review.threadId
   return (
     <Card className="flex-row flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">

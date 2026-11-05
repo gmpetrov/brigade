@@ -790,7 +790,13 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   request; only owners and admins merge. Teammates merge only when a person asks, or Brigade does for Auto-merge. A pull request that conflicts
   goes back to the teammate that wrote it (Resolve conflicts): when its turn ends, Brigade merges it once GitHub
   allows it, checked every minute; failed checks and new conflicts go back to the author, three turns at most,
-  then a ticket. Merges are squash by default, audited as `pull_request.merged`. A merge leaves a note in the
+  then a ticket. What the author pushed must leave its review's approval standing (`resolverDone`): when the lines
+  the pull request itself adds and removes are as the approval read them (GitHub's compare of its base with each
+  head, without the lines around them, which merging its base in moves), the approval holds for the new head
+  (`PullRequest.approvalCarriedTo`, shown as kept); else Brigade asks the reviewer to look at what was pushed, in
+  its review's thread as `message_thread` would (one of its looks), and the merge waits for that verdict: an
+  approval of its head merges it, changes asked for stop it with a ticket, as does a look it cannot ask (none
+  left, no thread). Merges are squash by default, audited as `pull_request.merged`. A merge leaves a note in the
   thread that opened it, and wakes its teammate once to declare the thread done or say what remains
   (`wakeOnMerge` in `apps/api/src/thread-done.ts`, docs/board.md): a person's or a trigger's thread at the top, not
   at work, done or archived, with no other pull request of it open.
@@ -799,10 +805,13 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   requests teammates opened in that member's threads (that thread, its children, or reviewed there): once the
   thread is done with nothing asked (a child's, once its report reached its parent and the parent is done too), no
   review is starting or under way, its latest review (if any) approved its head, and on GitHub it is open, no draft,
-  without conflicts or a failed check, it is set merging (`PullRequest.autoMergeAt`) and merges once its checks
-  pass, as a merge a person asked for. Unlike one, it never goes back to the author nor opens a ticket: failed
-  checks, conflicts, a rule GitHub enforces, its thread back at work or two hours without GitHub allowing it, and
-  it waits on a person again (`pull_request.auto_merge_stopped`). It does not reach pull requests that already
+  without a failed check, it is set merging (`PullRequest.autoMergeAt`) and merges once its checks pass, as a merge
+  a person asked for. One that conflicts goes back to its author as a person's merge does (`resolving`, three
+  turns at most, then a ticket), and is not in Needs you meanwhile; once resolved, it merges when the resolution
+  kept its approval, else it waits on its review again, which the reviewer's look at the resolution is, and merges
+  once that review approves its head. Otherwise it never goes back to the author nor opens a ticket: failed
+  checks, a rule GitHub enforces, its thread back at work or two hours without GitHub allowing it, and it waits on
+  a person again (`pull_request.auto_merge_stopped`). It does not reach pull requests that already
   waited when it was turned on, until their thread's next turn ends. Checks it cannot read are never taken for
   checks that passed: GitHub failing to list them, it tries again; without the GitHub app's Checks permission, it
   never merges on its own.
