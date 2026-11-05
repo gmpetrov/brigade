@@ -24,6 +24,8 @@ const ALLOWED: Record<string, string> = {
     'desktop sign-ins asked for by the HTTP routes, deduped: never reached from a hub',
   'src/cloud.ts:desktopsPreparing':
     'desktops the HTTP routes found still being set up, to report a stuck one once: never reached from a hub',
+  'src/cloud.ts:tooFullNoted':
+    "when each computer's refused stop was last sent to ops, to send it once an hour: a limit per process",
   'src/desktop-proxy.ts:views': 'desktop relays the HTTP routes open: never reached from a hub',
   'src/designs.ts:editing': 'design edits the HTTP routes make, one at a time: never in a hub',
   'src/teaching.ts:recordings': 'who records on a computer, held by HTTP routes alone',

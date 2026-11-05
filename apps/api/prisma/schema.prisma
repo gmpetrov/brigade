@@ -1197,7 +1197,7 @@ enum MergeStatus {
   none
   /// It stopped and a person has a ticket: the conflicts were not resolved, or GitHub refuses the merge.
   stuck
-  /// A person asked to merge it once its conflicts are resolved: the author teammate's turn.
+  /// A person, or Auto-merge, asked to merge it once its conflicts are resolved: the author teammate's turn.
   resolving
   /// A person asked to merge it: it merges once GitHub allows it, with mergeMethod.
   merging
@@ -1250,10 +1250,14 @@ model PullRequest {
   round               Int                 @default(0)
   /// The head when the author's turn to resolve the conflicts began: unchanged after it, nothing was pushed.
   resolveFromSha      String?             @map("reviewedSha")
+  /// A head the author pushed to resolve its conflicts that left its own changes (the lines it
+  /// adds and removes) as its latest approval read them: that approval holds for this head too.
+  approvalCarriedTo   String?
   /// Why a merge is waiting or stopped, shown on the pull request.
   note                String?
-  /// When Brigade set it merging on its own, for its member's Auto-merge (src/auto-merge.ts): such
-  /// a merge gives up rather than sending it back to the author or asking a person.
+  /// When Brigade set it merging on its own, for its member's Auto-merge (src/pull-requests.ts):
+  /// its conflicts go back to the author, as a person's merge's do; anything else that stops it
+  /// (failed checks, a rule GitHub enforces) gives up and leaves it to a person, with no ticket.
   autoMergeAt         DateTime?
   /// As last seen on GitHub: open, closed or merged.
   state               String              @default("open")

@@ -88,8 +88,10 @@ export default function PreferencesPage() {
               <span className="font-medium">Auto-merge when ready</span>
               <span className="text-muted-foreground text-xs">
                 Once a teammate is done with a pull request, no review is under way or asked for,
-                and its checks pass, Brigade merges it. One with failed checks, conflicts or changes
-                asked for waits for you.
+                and its checks pass, Brigade merges it. One that conflicts goes back to that
+                teammate to resolve, and its reviewer looks again if resolving did more than bring
+                in the base branch&apos;s changes. One with failed checks or changes asked for waits
+                for you.
               </span>
             </Label>
             <Switch id="auto-merge" checked={autoMerge} onCheckedChange={merge} />
