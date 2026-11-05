@@ -68,6 +68,11 @@ export const SAFE_KEYS = new Set([
   'months_active',
   'reason',
   'status',
+  // onboarding_answered: where each answer showed in its shuffled list.
+  'role_position',
+  'team_size_position',
+  'first_work_position',
+  'heard_from_position',
 ])
 
 /** A value of a closed list: a short word, as enums and slugs are. */

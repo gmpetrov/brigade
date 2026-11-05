@@ -38,6 +38,10 @@ model User {
   /// Where the person came from when they signed up (src/signup-source.ts): set once, never
   /// changed. Utm values, the referrer's host, the first page and the derived channel; no URL.
   attribution     Json?
+  /// What they answered to onboarding's questions (role, team size, first work, where they
+  /// heard of Brigade; @brigade/contracts' OnboardingAnswers), set once. `{}`: all skipped;
+  /// null: never asked (invited, or here before the questions).
+  onboardingAnswers Json?
   analyticsFirsts AnalyticsFirst[]
 }
 

@@ -2,6 +2,7 @@ import {
   CreateWorkspace,
   DeleteAccount,
   DeleteWorkspace,
+  OnboardingAnswers,
   SetAutoMerge,
   SetSuggestions,
   SwitchOrganization,
@@ -17,7 +18,8 @@ import { auth } from '../auth.js'
 import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
-import { prisma } from '../db.js'
+import { recordOnboardingAnswers } from '../analytics.js'
+import { prisma, Prisma } from '../db.js'
 import { seedGettingStarted } from '../lists.js'
 import { placeNewHub } from '../platform/node.js'
 import { LOGO_HEADERS, readLogo } from '../logos.js'
@@ -48,7 +50,7 @@ export const workspaces = new Hono<AppEnv>()
     const [user, memberships] = await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: { id: c.var.userId },
-        select: { id: true, name: true, email: true, image: true },
+        select: { id: true, name: true, email: true, image: true, onboardingAnswers: true },
       }),
       prisma.member.findMany({ where: { userId: c.var.userId }, include: { organization: true } }),
     ])
@@ -99,8 +101,11 @@ export const workspaces = new Hono<AppEnv>()
             ],
           },
         })) > 0
+    const { onboardingAnswers, ...person } = user
     return c.json({
-      user,
+      user: person,
+      // What they answered to onboarding's questions; null: never asked.
+      onboardingAnswers: onboardingAnswers as OnboardingAnswers | null,
       aiReady,
       organizations: memberships.map((m) => ({
         id: m.organization.id,
@@ -120,6 +125,20 @@ export const workspaces = new Hono<AppEnv>()
         ...(await featuresOf({ email: user.email, workspaceId: scope?.workspaceId ?? null })),
       ],
     })
+  })
+
+  /**
+   * Onboarding's questions, answered (or skipped: `{}`) by someone who just made their project.
+   * Kept once (User.onboardingAnswers): the first answers stand, a second send changes nothing.
+   */
+  .post('/me/onboarding', async (c) => {
+    const answers = await parseBody(c.req.raw, OnboardingAnswers)
+    const { count } = await prisma.user.updateMany({
+      where: { id: c.var.userId, onboardingAnswers: { equals: Prisma.DbNull } },
+      data: { onboardingAnswers: answers },
+    })
+    if (count > 0) recordOnboardingAnswers(c.var.userId, answers)
+    return c.body(null, 204)
   })
 
   /** The member's message box suggests their next message, or stops (Member.suggestions). */

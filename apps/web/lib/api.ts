@@ -9,6 +9,7 @@ import {
 import type {
   ApiToBrowser,
   ChildReport,
+  OnboardingAnswers,
   Choices,
   ProjectSummary,
   AssetTicket,
@@ -327,6 +328,8 @@ export function useRecheck(at: string | null | undefined, reload: () => Promise<
 // Response shapes used by the dashboard.
 export type Me = {
   user: { id: string; name: string; email: string; image: string | null }
+  /** What they answered to onboarding's questions; null: never asked (POST /me/onboarding). */
+  onboardingAnswers: OnboardingAnswers | null
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
   role: 'owner' | 'admin' | 'member' | 'viewer' | null
