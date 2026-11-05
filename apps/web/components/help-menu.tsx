@@ -32,7 +32,7 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
           ['alt', '↓'],
         ],
       },
-      { label: 'Unfold a folded sidebar row', keys: [['Enter']] },
+      { label: 'Fold or unfold the sidebar row you are on', keys: [['Enter']] },
       { label: 'Settings', keys: [['mod', ',']] },
       { label: 'Keyboard shortcuts', keys: [['shift', '?']] },
       { label: 'Close a dialog', keys: [['Esc']] },
