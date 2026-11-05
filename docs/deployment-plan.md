@@ -52,6 +52,12 @@ Cloudflare shipped first, more simply than the phases below:
       place the front Worker there again until the object exists.
   - pg-cloudflare is patched (`patches/`) to send each query in one write. Before, each
     query waited about 70 ms for Nagle's algorithm and delayed ACKs.
+  - @prisma/client is patched (`patches/`) to decode its schema's parameterization graph
+    once per isolate, shared by every client. Unpatched, each `new PrismaClient` held
+    about 17 MB of it, and the Worker makes a client for each queue batch, cron run and
+    stateless read, a hub for each wake. On Nov 4 2026, 10 queue batches running at once
+    in one isolate went past its 128 MB (`exceededMemory`). Checked by
+    `apps/api/test/prisma-client-memory.test.ts`; keep the patch when upgrading Prisma.
   - The Api object does not use Hyperdrive. It keeps its connections open, so Hyperdrive's
     fast connection setup would not help, and its cache would serve reads older than the
     latest writes. What connects again often (hub objects that wake, the cron, the jobs'
@@ -245,8 +251,8 @@ A client shared across requests hung on every second request.
    AGENTS.md), or `COPY` it in the Dockerfile.
 2. `prisma generate` fails without `DATABASE_URL`, because `apps/api/prisma.config.ts:14`
    calls `env('DATABASE_URL')`. Allow it to be missing for `generate`.
-3. `patches/` only matters to `apps/runner`. The pruned api, web and collab trees have no
-   patched dependencies.
+3. `patches/` matters to `apps/runner` and `apps/api` (pg-cloudflare, @prisma/client): a
+   pruned api tree must keep its patches.
 
 ### File storage
 
