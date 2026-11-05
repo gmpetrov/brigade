@@ -224,7 +224,12 @@ app.route('/hooks', customApps)
 
 /** The workspace a dashboard's socket is for: the session's, or the one it names, if a member's. */
 async function socketScope(c: Context) {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  // No refresh: a socket's answer can't renew the cookie, and a refresh here would leave the next
+  // HTTP call nothing to renew it with (requireUser in src/scope.ts).
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+    query: { disableRefresh: true },
+  })
   if (!session) return null
   const named = c.req.query('workspace')
   const workspace = named

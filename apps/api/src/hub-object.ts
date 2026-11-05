@@ -344,7 +344,11 @@ export class WorkspaceHubObject extends DurableObject<Env> {
         import('./auth.js'),
         import('./scope.js'),
       ])
-      const session = await auth.api.getSession({ headers: request.headers })
+      // No refresh, as in socketScope (src/app.ts): a socket can't renew the cookie.
+      const session = await auth.api.getSession({
+        headers: request.headers,
+        query: { disableRefresh: true },
+      })
       const scope = session
         ? await resolveScope({
             userId: session.user.id,
