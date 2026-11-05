@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::workspaces;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Status {
     /// No runner installed yet, or installed but not linked to a workspace.
@@ -34,7 +36,8 @@ impl Status {
         match self {
             Status::NotConnected => "Not connected to a workspace".into(),
             Status::Installing => "Setting up…".into(),
-            Status::Running { workspace } => format!("● Running for {workspace}"),
+            // Its workspace shows in the Workspace submenu just below.
+            Status::Running { .. } => "● Running".into(),
             Status::Elsewhere => "Runner already running in a terminal".into(),
             Status::Restarting { reason } => format!("Restarting: {reason}"),
             Status::Stopped => "Stopped".into(),
@@ -42,7 +45,8 @@ impl Status {
     }
 }
 
-/// ~/.brigade, or $BRIGADE_HOME.
+/// ~/.brigade, or $BRIGADE_HOME: the runner install, Brigade.app's own files, and the home of
+/// the first workspace linked. Others have homes of their own (workspaces.rs).
 pub fn home() -> PathBuf {
     std::env::var_os("BRIGADE_HOME")
         .map(PathBuf::from)
@@ -59,9 +63,14 @@ pub fn log_file() -> PathBuf {
     home().join("logs/runner.log")
 }
 
-/// The workspace this computer is linked to, from the runner's own config.
+/// The home of the workspace the runner runs for: its runner.json, runner.pid, state.
+fn workspace_home() -> PathBuf {
+    workspaces::home(&workspaces::active())
+}
+
+/// The workspace this computer runs for, from its runner's own config.
 pub fn workspace() -> Option<String> {
-    let text = fs::read_to_string(home().join("runner.json")).ok()?;
+    let text = fs::read_to_string(workspace_home().join("runner.json")).ok()?;
     let config: serde_json::Value = serde_json::from_str(&text).ok()?;
     config.get("workspaceName")?.as_str().map(str::to_owned)
 }
@@ -105,7 +114,7 @@ const ALREADY_RUNNING: i32 = 3;
 /// A runner this app did not start, e.g. in a terminal: the one holding runner.pid
 /// (newer runners), or one `pgrep` finds by its entry point (older ones).
 fn running_elsewhere() -> bool {
-    let holder = fs::read_to_string(home().join("runner.pid"))
+    let holder = fs::read_to_string(workspace_home().join("runner.pid"))
         .ok()
         .and_then(|text| text.trim().parse::<u32>().ok());
     let mut pids: Vec<u32> = holder.into_iter().collect();
@@ -256,6 +265,7 @@ impl Supervisor {
                 if let Some(helper) = &self.helper {
                     command.env("BRIGADE_COMPUTER_USE_APP", helper);
                 }
+                command.env("BRIGADE_HOME", workspace_home());
                 // Its own process group, so stop() reaches node behind the wrapper.
                 command.arg("start").process_group(0).spawn()
             });
@@ -314,31 +324,56 @@ impl Supervisor {
         }
     }
 
-    /// Installs the runner with the API's script (Node.js too when needed), links
-    /// it with a dashboard code, then runs it. Blocking: call from a thread.
-    pub fn connect(self: &Arc<Self>, api: &str, code: &str) -> Result<(), String> {
+    /// Installs the runner with the API's script (Node.js too when needed), links the
+    /// workspace's home (`key`, see workspaces.rs) with a dashboard code, then runs it for
+    /// that workspace. Blocking: call from a thread.
+    pub fn connect(self: &Arc<Self>, api: &str, code: &str, key: &str) -> Result<(), String> {
         self.stop();
         self.set(Status::Installing);
+        let target = workspaces::home(key);
+        let created = !target.exists();
         let result = (|| {
             let installed = command("sh")
                 .and_then(|mut c| {
-                    c.args(["-c", "curl -fsSL \"$1/runner/install.sh\" | sh", "sh", api])
+                    c.env("BRIGADE_INSTALL_DIR", home())
+                        .args(["-c", "curl -fsSL \"$1/runner/install.sh\" | sh", "sh", api])
                         .status()
                 })
                 .map_err(|e| e.to_string())?;
             if !installed.success() {
                 return Err("The runner could not be installed. See the logs.".to_string());
             }
+            fs::create_dir_all(&target).map_err(|e| e.to_string())?;
             let linked = command(wrapper())
-                .and_then(|mut c| c.args(["link", code, "--api", api]).status())
+                .and_then(|mut c| {
+                    c.env("BRIGADE_HOME", &target)
+                        .args(["link", code, "--api", api])
+                        .status()
+                })
                 .map_err(|e| e.to_string())?;
             if !linked.success() {
                 return Err("This link code did not work: it may have expired. Get a new one in the dashboard.".to_string());
             }
             Ok(())
         })();
+        match &result {
+            Ok(()) => workspaces::set_active(key),
+            // A home made for this link and never linked: nothing in it to keep.
+            Err(_) if created && !target.join("runner.json").exists() => {
+                let _ = fs::remove_dir_all(&target);
+            }
+            Err(_) => {}
+        }
         // Linked: run it. Failed: back to whatever this computer was before.
         self.start();
         result
+    }
+
+    /// Runs the runner for another workspace linked here: the current one stops (its turns
+    /// are saved, and carry on when it runs again), then the other's starts.
+    pub fn switch(self: &Arc<Self>, key: &str) {
+        self.stop();
+        workspaces::set_active(key);
+        self.start();
     }
 }

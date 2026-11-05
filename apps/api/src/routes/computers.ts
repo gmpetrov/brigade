@@ -84,6 +84,8 @@ export const computers = new Hono<AppEnv>()
         code,
         api: env.API_URL,
         dashboard: new URL('/app', env.WEB_URL[0]).toString(),
+        // Brigade.app keeps a runner home per workspace: this one's, or a new one beside them.
+        workspace: c.var.scope.workspaceId,
       })}`,
     })
   })

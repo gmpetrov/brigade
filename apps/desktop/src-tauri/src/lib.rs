@@ -7,6 +7,7 @@ mod drag;
 mod escape;
 mod runner;
 mod setup;
+mod workspaces;
 
 use std::path::PathBuf;
 use std::process::{Child, Command};
@@ -75,7 +76,8 @@ fn dashboard() -> String {
 /// The menu items that change.
 struct Items {
     status: MenuItem<Wry>,
-    connect: MenuItem<Wry>,
+    /// "Workspace: <name>", the workspaces linked here to switch to, and one to add.
+    workspaces: Submenu<Wry>,
     update: MenuItem<Wry>,
     login: CheckMenuItem<Wry>,
     awake: CheckMenuItem<Wry>,
@@ -83,11 +85,88 @@ struct Items {
     update_ready: Mutex<bool>,
 }
 
-fn show_status(items: &Items, status: &Status) {
+fn show_status(app: &AppHandle, items: &Items, status: &Status) {
     let _ = items.status.set_text(status.label());
-    let _ = items.connect.set_text(match status {
-        Status::NotConnected => "Connect this computer…",
-        _ => "Connect to another workspace…",
+    show_workspaces(app, items);
+}
+
+/// Menu ids of the workspaces in the submenu: this prefix, then the workspace's key.
+const WORKSPACE_ITEM: &str = "workspace:";
+
+/// The Workspace submenu, built again from the homes linked here: the one running checked.
+fn show_workspaces(app: &AppHandle, items: &Items) {
+    let menu = &items.workspaces;
+    let linked = workspaces::all();
+    let active = workspaces::active();
+    let _ = menu.set_text(match linked.iter().find(|w| w.key == active) {
+        Some(w) => format!("Workspace: {}", w.name),
+        None => "Workspace: not connected".into(),
+    });
+    for item in menu.items().unwrap_or_default() {
+        let _ = menu.remove(&item);
+    }
+    for w in &linked {
+        let id = format!("{WORKSPACE_ITEM}{}", w.key);
+        if let Ok(item) =
+            CheckMenuItem::with_id(app, id, &w.name, true, w.key == active, None::<&str>)
+        {
+            let _ = menu.append(&item);
+        }
+    }
+    if !linked.is_empty() {
+        if let Ok(separator) = PredefinedMenuItem::separator(app) {
+            let _ = menu.append(&separator);
+        }
+    }
+    let label = if linked.is_empty() {
+        "Connect this computer…"
+    } else {
+        "Add a workspace…"
+    };
+    if let Ok(item) = MenuItem::with_id(app, "connect", label, true, None::<&str>) {
+        let _ = menu.append(&item);
+    }
+}
+
+/// From the Workspace submenu: after a yes, the runner runs for that workspace instead.
+fn switch_workspace(app: &AppHandle, key: &str) {
+    let items = app.state::<Arc<Items>>().inner().clone();
+    let linked = workspaces::all();
+    let active = workspaces::active();
+    let Some(target) = linked.iter().find(|w| w.key == key).cloned() else {
+        return show_workspaces(app, &items);
+    };
+    // A click checks or unchecks the item itself: the menu shows the running one again.
+    show_workspaces(app, &items);
+    if key == active {
+        return;
+    }
+    let current = linked
+        .iter()
+        .find(|w| w.key == active)
+        .map(|w| w.name.clone());
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let message = match &current {
+            Some(name) => format!(
+                "This Mac will run {}'s teammates instead of {name}'s. Work {name}'s teammates were doing here is saved and carries on when you switch back.",
+                target.name
+            ),
+            None => format!("This Mac will run {}'s teammates.", target.name),
+        };
+        let confirmed = app
+            .dialog()
+            .message(message)
+            .title(format!("Switch to {}?", target.name))
+            .kind(MessageDialogKind::Info)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Switch".into(),
+                "Cancel".into(),
+            ))
+            .blocking_show();
+        if confirmed {
+            app.state::<Arc<Supervisor>>().switch(&target.key);
+        }
     });
 }
 
@@ -119,7 +198,8 @@ fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
         .show(|_| {});
 }
 
-/// brigade://link?code=…&api=…[&dashboard=…], from "Open in Brigade" in the dashboard.
+/// brigade://link?code=…&api=…[&dashboard=…][&workspace=…], from "Open in Brigade" in the
+/// dashboard. A workspace not linked here yet gets a home of its own, beside the others.
 /// brigade://sign-in?code=…, from the dashboard's page that signs the screenshot window in.
 fn open_link(app: &AppHandle, link: &Url) {
     if link.scheme() != "brigade" {
@@ -151,6 +231,7 @@ fn open_link(app: &AppHandle, link: &Url) {
     }
     let host = api_url.host_str().unwrap_or_default().to_owned();
     let dashboard_url = query("dashboard");
+    let workspace_id = query("workspace");
     let app = app.clone();
     std::thread::spawn(move || {
         // A link alone never connects this computer: its teammates would run commands here.
@@ -167,7 +248,9 @@ fn open_link(app: &AppHandle, link: &Url) {
             return;
         }
         let supervisor = app.state::<Arc<Supervisor>>().inner().clone();
-        match supervisor.connect(api.trim_end_matches('/'), &code) {
+        let api = api.trim_end_matches('/');
+        let (key, _) = workspaces::home_for_link(workspace_id.as_deref(), api);
+        match supervisor.connect(api, &code, &key) {
             Ok(()) => {
                 let mut settings = load_settings();
                 if let Some(url) = dashboard_url
@@ -314,6 +397,9 @@ fn on_menu(app: &AppHandle, id: &str) {
             app.state::<Arc<Supervisor>>().stop();
             app.exit(0);
         }
+        id if id.starts_with(WORKSPACE_ITEM) => {
+            switch_workspace(app, &id[WORKSPACE_ITEM.len()..]);
+        }
         id => {
             for kind in capture::KINDS {
                 if let Some(value) = id.strip_prefix(kind.prefix()) {
@@ -392,7 +478,8 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let status = MenuItem::with_id(app, "status", "Starting…", false, None::<&str>)?;
-    let connect = MenuItem::with_id(app, "connect", "Connect this computer…", true, None::<&str>)?;
+    // Filled in by show_workspaces.
+    let workspaces_menu = Submenu::with_items(app, "Workspace", true, &[])?;
     let update = MenuItem::with_id(app, "update", "Check for updates…", true, None::<&str>)?;
     let awake = CheckMenuItem::with_id(
         app,
@@ -458,12 +545,12 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         app,
         &[
             &status,
+            &workspaces_menu,
             &PredefinedMenuItem::separator(app)?,
             &new_thread,
             &screenshot,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "dashboard", "Open dashboard", true, None::<&str>)?,
-            &connect,
             &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &awake,
@@ -488,7 +575,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let items = Arc::new(Items {
         status,
-        connect,
+        workspaces: workspaces_menu,
         update,
         login,
         awake,
@@ -505,7 +592,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     if settings.keep_awake {
         keep_awake(app.handle(), true);
     }
-    let supervisor = Supervisor::new(helper, move |status| show_status(&items, status));
+    show_workspaces(app.handle(), &items);
+    let handle = app.handle().clone();
+    let supervisor = Supervisor::new(helper, move |status| show_status(&handle, &items, status));
     app.manage(supervisor.clone());
     supervisor.start();
     setup::show_if_needed(app.handle());
