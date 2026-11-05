@@ -203,8 +203,8 @@ model Member {
   autoMerge             Boolean                @default(false)
   /// Chief reads the buttons and choices their teammates end on before they do, and in their name
   /// suggests an answer, or gives it on its own for the kinds in chiefAuto (docs/chief-answers.md).
-  /// Off: none of it, as before.
-  chiefAnswers          Boolean                @default(true)
+  /// Off: none of it, as before. Off for new members for now; members who had it keep theirs.
+  chiefAnswers          Boolean                @default(false)
   /// The kinds of question (ChiefKind) Chief answers on its own for them; it suggests the others.
   chiefAuto             String[]               @default([])
   /// When they last changed chiefAuto themselves: the suggestions before it count no more toward
