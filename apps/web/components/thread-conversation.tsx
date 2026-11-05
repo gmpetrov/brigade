@@ -312,7 +312,7 @@ export function ThreadConversation({
     // It moved while this page was away: the thread again, for its new computer's name and move.
     if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
   })
-  const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq, gaps)
+  const { items, queued, seen, turnId, background, next } = useThreadItems(events, firstSeq, gaps)
   // Opened at once (lib/pending-threads.ts): its first message shows until an event has it.
   const opened = useOpenedMessage(id)
   const delivered = events.some((e) => e.event.type === 'message.user')
@@ -1615,6 +1615,7 @@ export function ThreadConversation({
                     working={busy}
                     starting={current === 'starting'}
                     background={background}
+                    next={next}
                     eventsWaitingSince={eventsWaitingSince}
                     computerDown={machineDown}
                     gapLine={(gap) => (

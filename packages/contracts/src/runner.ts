@@ -770,6 +770,15 @@ export type TurnWaitingMemory = { teammateId: string }
 export const TURN_PREPARING_SOURCE = 'turn.preparing'
 export type TurnPreparing = { teammateId: string; done?: boolean }
 
+/**
+ * A raw event's source for the teammates whose turns wait to answer after another teammate's
+ * (a handoff, a message to several), in the order they answer: its value is a TurnNext, sent
+ * each time that list changes, empty once the last of them started. A dashboard that does not
+ * know it shows nothing of it.
+ */
+export const TURN_NEXT_SOURCE = 'turn.next'
+export type TurnNext = { teammateIds: string[] }
+
 export const ApiToRunner = z.discriminatedUnion('type', [
   /** The answer to a keepalive (RunnerToApi), from a hub object that did not wake for it. */
   z.object({ type: z.literal('keepalive') }),

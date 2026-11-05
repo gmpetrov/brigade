@@ -27,9 +27,11 @@ import {
   STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
+  TURN_NEXT_SOURCE,
   TURN_PREPARING_SOURCE,
   TURN_MEMORY_SOURCE,
   TURN_WAITING_SOURCE,
+  type TurnNext,
   type TurnPreparing,
   type TurnWaiting,
   type TurnWaitingMemory,
@@ -378,6 +380,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     // complete_thread calls waiting for their result: shown only if it refused (closingStep).
     const closing = new Map<string, ClosingCall>()
     let limits: Limits | undefined
+    // Teammates whose turns wait to answer after another's, in order (TURN_NEXT_SOURCE).
+    let next: string[] = []
     // Messages still queued, and every message id the thread has seen (queued, read or cancelled).
     const queued = new Map<string, QueuedMessage>()
     const seen = new Set<string>()
@@ -568,6 +572,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           break
         }
         case 'turn.started':
+          next = next.filter((id) => id !== e.teammateId)
           turnTeammate = e.teammateId
           turnAccount = e.accountId
           // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
@@ -727,6 +732,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(turnAccount && signedOut(e.message) ? { signedOutAccountId: turnAccount } : {}),
           })
           turnFailed = true
+          // The turns queued behind it are not told to go on: nobody answers next now.
+          next = []
           break
         case 'raw':
           if (e.source === 'reasoning' && typeof e.value === 'string')
@@ -749,6 +756,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
               running: 0,
               memory: true,
             })
+          } else if (e.source === TURN_NEXT_SOURCE) {
+            next = (e.value as TurnNext).teammateIds
           } else if (e.source === TURN_PREPARING_SOURCE) {
             const { teammateId, done } = e.value as TurnPreparing
             // Ready, and no turn followed: the wait is over all the same.
@@ -856,6 +865,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           !(i.kind === 'user' && i.side?.status === 'failed'),
       ),
       limits,
+      next,
       // While its side reply is under way, or about to give it to the turn, it shows in the
       // conversation instead.
       queued: [...queued.values()].filter((q) => {
@@ -2335,12 +2345,15 @@ function WorkingLine({
   teammate,
   subThreads = [],
   who,
+  next = [],
   children,
 }: {
   /** When the turn began; unset when how long it worked is not known or not to be said. */
   since?: number
   /** With several teammates in the thread, who works: its pebble is everyone's colour. */
   who?: string
+  /** Who answers after this turn, in order. */
+  next?: string[]
   steps: ActivityItem[]
   background: BackgroundTask[]
   /** Who works: named, with its avatar, when sub-threads hang under its line. */
@@ -2373,6 +2386,7 @@ function WorkingLine({
             <span className="min-w-0 truncate">· {background.length} in background</span>
           )}
           {ms >= 5_000 && <span className="flex-none">· {duration(ms)}</span>}
+          {next.length > 0 && <span className="min-w-0 truncate">· {next.join(', ')} next</span>}
           <ChevronRight
             className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
             aria-hidden
@@ -2390,6 +2404,7 @@ function WorkingLine({
                 ms >= 1_000 && duration(ms),
                 count > 0 && plural(count, '1 step', 'steps'),
                 background.length > 0 && `${background.length} in background`,
+                next.length > 0 && `${next.join(', ')} next`,
               ]
                 .filter(Boolean)
                 .join(' · ') || 'Working'}
@@ -2488,17 +2503,24 @@ function ComputerAway({
  * Between a message and the first thing its teammate does: a line saying how far it got,
  * where the answer will show. It counts up past the first seconds.
  */
+/** How long after a turn ended its next teammate still shows as answering next, not started yet. */
+const NEXT_FRESH_MS = 2 * 60_000
+
 export function Answering({
   teammate,
   phase,
   since,
+  next = [],
 }: {
   teammate: { name: string }
   /** slot: its turn waits for one of that many turns running on its computer to end. */
   /** preparing: its turn gets the thread's files ready on its computer before it starts. */
   /** memory: its turn waits for its computer to have memory for it. */
-  phase: 'starting' | 'reading' | 'thinking' | 'preparing' | 'memory' | { slot: number }
+  /** next: its turn waits for the one before it to end, as asked (a handoff, a message to several). */
+  phase: 'starting' | 'reading' | 'thinking' | 'preparing' | 'memory' | 'next' | { slot: number }
   since?: number
+  /** Who answers after it, in order. */
+  next?: string[]
 }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -2516,12 +2538,15 @@ export function Answering({
           thinking: 'is thinking',
           preparing: "is getting this thread's files ready on this computer",
           memory: 'is waiting for this computer to have memory free',
+          next: 'answers next',
         }[phase]
+  const after = next.join(', ')
   return (
     // Fading in is an animation too: on the line itself it would replace the shimmer.
     <div role="status" className="animate-in self-start text-sm duration-300 fade-in">
       <span className="text-shimmer">
         {teammate.name} {doing}
+        {after && (phase === 'next' ? `, then ${after}` : ` · ${after} next`)}
         {ms >= 5_000 && ` · ${duration(ms)}`}
       </span>
     </div>
@@ -2556,9 +2581,12 @@ export function ThreadItems({
   gapLine,
   onSideAction,
   pending,
+  next = [],
 }: {
   threadId: string
   items: Item[]
+  /** Teammates whose turns wait to answer after another's, in order (useThreadItems). */
+  next?: string[]
   /**
    * The person's messages not read yet (queued, or on their way from here): where its turn will
    * read them, at the end of the thread and above its Working line, as a chat shows what was
@@ -3393,10 +3421,19 @@ export function ThreadItems({
           ?.teammateId ?? '',
       )?.name
     : undefined
+  // Who answers after the turn under way, or the one that just ended: named under it until they start.
+  const nextUp = next.flatMap((id) => byId.get(id) ?? [])
+  const nextNames = nextUp.map((t) => t.name)
+  const lastTurn = items.findLast((it): it is Extract<Item, { kind: 'turn' }> => it.kind === 'turn')
+  // Between turns, the next starts within seconds: a list older than that was lost (a restart).
+  const nextFresh =
+    nextUp.length > 0 &&
+    (working || (lastTurn !== undefined && Date.now() - lastTurn.at < NEXT_FRESH_MS))
   const workingLineNode = workingLine && (
     <WorkingLine
       key="working"
       {...(worker ? { who: worker } : {})}
+      next={nextNames}
       {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
       steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
       background={background}
@@ -3425,13 +3462,17 @@ export function ThreadItems({
               slot.kind !== 'slot' ? 'preparing' : slot.memory ? 'memory' : { slot: slot.running }
             }
             since={slot.at}
+            next={nextNames.filter((name) => name !== slotTeammate.name)}
           />
         ) : waitingFor ? (
           <Answering
             teammate={waitingFor}
             phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
             {...(from !== undefined ? { since: from } : {})}
+            next={nextNames.filter((name) => name !== waitingFor.name)}
           />
+        ) : !workingLineNode && nextFresh ? (
+          <Answering teammate={nextUp[0]!} phase="next" next={nextNames.slice(1)} />
         ) : null}
         {/* Its turn runs without its Working line: its sub-threads at work hang from a line of their own. */}
         {working && !workingLine && teammate && (
