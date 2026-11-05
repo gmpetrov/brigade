@@ -54,6 +54,13 @@ function listRow(threads: ThreadSummary[]): ThreadSummary {
     wakeAt: t.wakeAt ?? null,
     // Its child threads fold under it, as under a thread outside a list.
     children: t.children ?? [],
+    // Its menu, as on its own row in Threads.
+    startedBy: t.startedBy,
+    othersMayPrompt: t.othersMayPrompt,
+    pinnedAt: t.pinnedAt,
+    laterAt: t.laterAt,
+    doneAt: t.doneAt,
+    parent: null,
   }))
   return {
     ...first,

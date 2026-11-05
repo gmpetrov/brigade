@@ -520,6 +520,17 @@ export type SidebarChild = {
   wakeAt?: string | null
   /** Its own child threads, for a thread under a list's row (lib/list-groups.ts). */
   children?: SidebarChild[]
+  /**
+   * What its menu in the sidebar needs (thread-menu.tsx), as a thread's own row has it. Missing
+   * from an API older than the menu: the row shows none then.
+   */
+  startedBy?: { id: string }
+  othersMayPrompt?: boolean
+  pinnedAt?: string | null
+  laterAt?: string | null
+  doneAt?: string | null
+  /** The thread it was started from; none for a list's thread, which is a thread of its own. */
+  parent?: { id: string } | null
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */

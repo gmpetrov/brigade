@@ -20,6 +20,7 @@
 // state: working while one it waits for works, waiting while one waits on a person.
 import {
   Archive,
+  EllipsisVertical,
   ChevronDown,
   Clock,
   ChevronUp,
@@ -53,6 +54,7 @@ import { useThreadPanel } from '@/components/thread-panel'
 import { FadeText } from '@/components/fade-text'
 import { ListGroupRow } from '@/components/list-group-row'
 import { ThreadRow } from '@/components/thread-row'
+import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { WakeupIcon } from '@/components/wakeup-icon'
 import { StreamedTitle } from '@/components/streamed-title'
 import {
@@ -202,6 +204,7 @@ function SubThreads({
   activeId,
   needsYou,
   unfolded,
+  menu,
   noun = 'sub-thread',
 }: {
   items: SidebarChild[]
@@ -211,6 +214,7 @@ function SubThreads({
   activeId: string | null
   needsYou: Record<string, string>
   unfolded: Unfolded
+  menu: SubMenu
   /** What its rows are, for the keyboard's buttons: a list's threads are no sub-threads. */
   noun?: string
 }) {
@@ -226,6 +230,7 @@ function SubThreads({
         activeId={activeId}
         needsYou={needsYou}
         unfolded={unfolded}
+        menu={menu}
         noun={noun}
       />
     </SidebarMenuItem>
@@ -244,6 +249,7 @@ function SubThreadList({
   activeId,
   needsYou,
   unfolded,
+  menu,
   noun,
 }: {
   className: string
@@ -253,10 +259,10 @@ function SubThreadList({
   activeId: string | null
   needsYou: Record<string, string>
   unfolded: Unfolded
+  menu: SubMenu
   noun: string
 }) {
   const [all, setAll] = useState(false)
-  const { openPreview } = useThreadPanel()
   // What waits on this member is more than its own status, as for the list's threads.
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
@@ -276,9 +282,6 @@ function SubThreadList({
             </button>
           </li>
           {shown.map((c) => {
-            const status = { status: c.status, unread: c.unread, ask: c.ask }
-            const group = groupOf(c.status)
-            const state = group !== 'rest' || c.status === 'failed' || c.unread
             const kids = c.children ?? []
             // Folded unless the member unfolded them, or one of them is open.
             const kidsOpen =
@@ -287,70 +290,16 @@ function SubThreadList({
             const toggleKids = () => unfolded.toggle(c.id, kidsOpen)
             return (
               <li key={c.id} className={BRANCH}>
-                <Link
-                  title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
-                  href={`/app/threads/${c.id}`}
-                  data-active={c.id === activeId}
-                  data-nav-stop="link"
-                  {...preloadOnPoint(c.id, c.id === activeId)}
-                  onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
-                  className={SUB_ROW}
-                >
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <FadeText textClassName={cn(group === 'working' && 'text-shimmer-dim')}>
-                      <StreamedTitle threadId={c.id} text={c.title} />
-                    </FadeText>
-                    {/* As after a thread's title in the list (ThreadRow). */}
-                    {kids.length > 0 && (
-                      <span
-                        aria-hidden
-                        // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
-                        data-keeps-sidebar
-                        // Enter on the row does the same (sidebar-keys.tsx).
-                        data-nav-caret
-                        title={
-                          kidsOpen
-                            ? 'Hide sub-threads'
-                            : `Show ${kids.length} sub-thread${kids.length === 1 ? '' : 's'}`
-                        }
-                        className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          toggleKids()
-                        }}
-                      >
-                        <Play
-                          className={cn(
-                            'size-2 fill-current transition-transform',
-                            kidsOpen && 'rotate-90',
-                          )}
-                        />
-                      </span>
-                    )}
-                  </span>
-                  {/* Its preview is up, as on its parent's row: a click opens it. */}
-                  {c.previewRunning && (
-                    <span
-                      title="Open preview"
-                      className="hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        openPreview(c.id)
-                      }}
-                    >
-                      <Globe aria-hidden className="size-3 opacity-50" />
-                      <span className="sr-only">Preview running</span>
-                    </span>
-                  )}
-                  {c.wakeAt && <WakeupIcon at={c.wakeAt} />}
-                  {state ? (
-                    <ThreadStatusIcon {...status} />
-                  ) : (
-                    <span aria-hidden className="size-4 shrink-0" />
-                  )}
-                </Link>
+                <SubThreadRow
+                  thread={c}
+                  active={c.id === activeId}
+                  menu={menu}
+                  caret={
+                    kids.length > 0
+                      ? { open: kidsOpen, count: kids.length, onToggle: toggleKids }
+                      : undefined
+                  }
+                />
                 {kids.length > 0 && (
                   <SubThreadList
                     className={cn('ml-2.5', !kidsOpen && 'sr-only has-focus-visible:not-sr-only')}
@@ -360,6 +309,7 @@ function SubThreadList({
                     activeId={activeId}
                     needsYou={needsYou}
                     unfolded={unfolded}
+                    menu={menu}
                     noun="sub-thread"
                   />
                 )}
@@ -393,6 +343,207 @@ function SubThreadList({
         </li>
       )}
     </ul>
+  )
+}
+
+/** What a row under a thread needs for its menu: the same as a thread's own row (ThreadRow). */
+type SubMenu = {
+  memberId: string | null
+  admin: boolean
+  onChanged: () => void
+  onDeleted: (id: string) => void
+}
+
+/**
+ * A thread under another, or under a list: its title, the caret folding its own child threads,
+ * its preview and wake-up, its dot. Its menu is a thread's (thread-menu.tsx), as on its own row
+ * (ThreadRow): ⋮ on hover in place of its dot, a right-click on the row, or a double-click on
+ * the title to rename it there.
+ */
+function SubThreadRow({
+  thread: c,
+  active,
+  caret,
+  menu,
+}: {
+  thread: SidebarChild & { ask?: string }
+  active: boolean
+  caret?: { open: boolean; count: number; onToggle: () => void }
+  menu: SubMenu
+}) {
+  const { openPreview } = useThreadPanel()
+  const [renaming, setRenaming] = useState(false)
+  const href = `/app/threads/${c.id}`
+  const status = { status: c.status, unread: c.unread, ask: c.ask }
+  const group = groupOf(c.status)
+  const state = group !== 'rest' || c.status === 'failed' || c.unread
+  // From an API older than the menu, a row has none.
+  const startedBy = c.startedBy
+  const thread = {
+    id: c.id,
+    title: c.title,
+    pinnedAt: c.pinnedAt ?? null,
+    laterAt: c.laterAt ?? null,
+    archivedAt: null,
+    doneAt: c.doneAt ?? null,
+    othersMayPrompt: c.othersMayPrompt,
+    previewRunning: c.previewRunning,
+    startedBy: startedBy ?? { id: '' },
+    parent: c.parent ?? null,
+  }
+  const { title, open, setOpen, busy, onMenuKey, content, mayRename } = useThreadMenu({
+    thread,
+    memberId: menu.memberId,
+    admin: menu.admin,
+    onRename: () => setRenaming(true),
+    onChanged: menu.onChanged,
+    onDeleted: menu.onDeleted,
+  })
+  const hasMenu = !!startedBy
+
+  async function rename(next: string) {
+    setRenaming(false)
+    if (await renameThread(c.id, c.title, next)) menu.onChanged()
+  }
+
+  if (renaming)
+    return (
+      <div className="flex h-8 items-center gap-2 rounded-[10px] px-2 ring-1 ring-sidebar-ring">
+        <input
+          autoFocus
+          defaultValue={c.title}
+          aria-label="Thread title"
+          maxLength={200}
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          onFocus={(e) => e.currentTarget.select()}
+          onBlur={(e) => void rename(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            else if (e.key === 'Escape') {
+              e.preventDefault()
+              setRenaming(false)
+            }
+          }}
+        />
+      </div>
+    )
+
+  return (
+    // Its own hover group: not the item's, which holds its child threads too.
+    <div className="group/sub relative">
+      <Link
+        title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
+        href={href}
+        data-active={active}
+        data-nav-stop="link"
+        {...preloadOnPoint(c.id, active)}
+        onClick={(e) => clickInPlace(e, href)}
+        onContextMenu={(e) => {
+          if (!hasMenu) return
+          e.preventDefault()
+          setOpen(true)
+        }}
+        // The first click opened the thread; the second edits its title, as Rename does.
+        onDoubleClick={(e) => {
+          if (!hasMenu || !mayRename) return
+          e.preventDefault()
+          setRenaming(true)
+        }}
+        className={cn(SUB_ROW, busy && 'opacity-60')}
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <FadeText textClassName={cn(group === 'working' && 'text-shimmer-dim')}>
+            <StreamedTitle threadId={c.id} text={c.title} />
+          </FadeText>
+          {/* As after a thread's title in the list (ThreadRow). */}
+          {caret && (
+            <span
+              aria-hidden
+              // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
+              data-keeps-sidebar
+              // Enter on the row does the same (sidebar-keys.tsx).
+              data-nav-caret
+              title={
+                caret.open
+                  ? 'Hide sub-threads'
+                  : `Show ${caret.count} sub-thread${caret.count === 1 ? '' : 's'}`
+              }
+              className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                caret.onToggle()
+              }}
+            >
+              <Play
+                className={cn(
+                  'size-2 fill-current transition-transform',
+                  caret.open && 'rotate-90',
+                )}
+              />
+            </span>
+          )}
+        </span>
+        {/* Its preview is up, as on its parent's row: a click opens it. */}
+        {c.previewRunning && (
+          <span
+            title="Open preview"
+            className="hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              openPreview(c.id)
+            }}
+          >
+            <Globe aria-hidden className="size-3 opacity-50" />
+            <span className="sr-only">Preview running</span>
+          </span>
+        )}
+        {c.wakeAt && <WakeupIcon at={c.wakeAt} />}
+        {/* ⋮ takes the dot's place on hover; on a phone ⋮ is always there, the dot beside it. */}
+        <span
+          className={cn(
+            'flex shrink-0',
+            hasMenu && 'max-md:mr-5 md:group-hover/sub:opacity-0',
+            open && 'opacity-0',
+          )}
+        >
+          {state ? (
+            <ThreadStatusIcon {...status} />
+          ) : (
+            <span aria-hidden className="size-4 shrink-0" />
+          )}
+        </span>
+      </Link>
+      {hasMenu && (
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          {/* Only on the hovered row, or while its menu is open, as on a thread's row. */}
+          <Hint label="More">
+            <DropdownMenuTrigger
+              aria-label={`${title}: more`}
+              className={cn(
+                'text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 outline-hidden focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0',
+                // A larger hit area on a phone.
+                'after:absolute after:-inset-2 md:after:hidden',
+                'data-[state=open]:bg-sidebar-accent focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0 md:group-hover/sub:opacity-100',
+              )}
+            >
+              <EllipsisVertical />
+            </DropdownMenuTrigger>
+          </Hint>
+          <DropdownMenuContent
+            align="start"
+            side="right"
+            className="min-w-44"
+            onKeyDown={onMenuKey}
+            // Not back to ⋮: focused, it would stay shown once the pointer has left the row.
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            {content}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   )
 }
 
@@ -1142,6 +1293,8 @@ export function SidebarWork({
     setOlder((o) => o.filter((t) => t.id !== id))
     if (threadId === id) router.push('/app')
   }
+  /** A sub-thread's or a list's thread's menu, as on a thread's own row. */
+  const subMenu: SubMenu = { memberId, admin, onChanged: changed, onDeleted: deleted }
   /** `dated`: the thread opened from outside the list, which shows its date to say why it is
    * at the top. Other rows give it in their tooltip only. */
   function row(t: ThreadSummary, drag?: ComponentProps<'li'>, dated = false) {
@@ -1195,6 +1348,7 @@ export function SidebarWork({
             activeId={activeChild}
             needsYou={needsYou}
             unfolded={unfolded}
+            menu={subMenu}
             noun="thread"
           />
         </Fragment>
@@ -1233,6 +1387,7 @@ export function SidebarWork({
             activeId={activeChild}
             needsYou={needsYou}
             unfolded={unfolded}
+            menu={subMenu}
           />
         )}
       </Fragment>
