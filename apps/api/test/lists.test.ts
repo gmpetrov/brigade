@@ -695,6 +695,49 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       ),
       new RegExp(`- Music\\n  - File in the library: ${path(brief).replace(/[.]/g, '\\.')}$`),
     )
+    // A file copied from a document in a folder the teammate may not read is not named to it.
+    const secret = await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: 'Private/notes.md', bytes: new TextEncoder().encode('# Notes\n') },
+    )
+    const hidden = await db.documentAsset.create({
+      data: {
+        id: `hidden${suffix}`,
+        documentId: secret.id,
+        name: 'payroll.png',
+        contentType: 'image/png',
+        size: 10,
+        sha256: sha('c'),
+      },
+    } as never)
+    const folder = await db.libraryFolder.create({
+      data: { path: 'Private', restricted: true },
+    } as never)
+    const { threadIds: private_ } = await lists.handOff(db, scope, ids.member, sound.id, {
+      teammateId: ids.riley,
+      items: [{ id: 'musicline123456a', text: 'Music', files: [hidden.id, shot.id] }],
+      mode: 'together',
+    })
+    const third = private_[0]!
+    await until(
+      () =>
+        sent.some(
+          (m) =>
+            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === third,
+        ),
+      'the third prompt',
+    )
+    const thirdText = String(
+      sent.find(
+        (m) =>
+          m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === third,
+      )!.text,
+    )
+    assert.ok(thirdText.endsWith(`- Music\n  - File in the library: ${path(shot)}`), thirdText)
+    await db.libraryFolder.delete({ where: { id: folder.id } })
+    await db.documentAsset.delete({ where: { id: hidden.id } })
     // To a thread that runs already: the message the person sends, with them.
     const linked = await lists.linkToThread(db, scope, ids.member, sound.id, {
       sessionId: thread,

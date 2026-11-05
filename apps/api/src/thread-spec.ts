@@ -323,12 +323,14 @@ export async function specFor(
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
-    // Only those of lists this teammate may read: the thread's items are anyone's who joins it.
-    items: items.filter(
-      (i) =>
-        libraryAccessFor(i.path, { id: teammate.id, library: teammate.libraryAccess }, rules) !==
-        'none',
-    ),
+    // Only those of lists this teammate may read, with the files it may: the thread's items are
+    // anyone's who joins it.
+    items: items.flatMap(({ files, ...item }) => {
+      const who = { id: teammate.id, library: teammate.libraryAccess }
+      if (libraryAccessFor(item.path, who, rules) === 'none') return []
+      const readable = files?.filter((path) => libraryAccessFor(path, who, rules) !== 'none') ?? []
+      return [{ ...item, ...(readable.length ? { files: readable } : {}) }]
+    }),
     designSystems,
     skills,
     builtinSkillsOff: off?.builtinSkillsOff ?? [],

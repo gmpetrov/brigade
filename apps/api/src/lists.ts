@@ -614,9 +614,16 @@ async function filePaths(db: ScopedDb, ids: string[]) {
 
 /**
  * The library paths of the files that go with each line handed over (docs/lists.md): those the
- * person saw under it in the editor, else those under it in the list's file.
+ * person saw under it in the editor, else those under it in the list's file. Only those in
+ * folders the teammate may read (a file copied from another document is beside that one).
  */
-async function handedFiles(scope: Scope, db: ScopedDb, file: FileRow, picked: Picked[]) {
+async function handedFiles(
+  scope: Scope,
+  db: ScopedDb,
+  file: FileRow,
+  picked: Picked[],
+  teammate: Pick<Teammate, 'id' | 'libraryAccess'>,
+) {
   const list = picked.every((p) => p.files)
     ? null
     : parseList(await storedText(scope, file).catch(() => ''))
@@ -625,8 +632,18 @@ async function handedFiles(scope: Scope, db: ScopedDb, file: FileRow, picked: Pi
     const line = list.lines.find((l) => l.id === p.id) ?? findLine(list, p.text)
     return typeof line === 'string' ? [] : line.files.map((f) => f.id)
   })
-  const paths = await filePaths(db, ids.flat())
-  return ids.map((group) => [...new Set(group.flatMap((id) => paths.get(id) ?? []))])
+  const [paths, access] = await Promise.all([
+    filePaths(db, ids.flat()),
+    teammateLibraryAccess(db, teammate),
+  ])
+  return ids.map((group) => [
+    ...new Set(
+      group.flatMap((id) => {
+        const path = paths.get(id)
+        return path && access.of(path) !== 'none' ? [path] : []
+      }),
+    ),
+  ])
 }
 
 // ---- Attaching work -------------------------------------------------------------------------
@@ -737,7 +754,7 @@ export async function handOff(
     input.projectId ?? projectOf(db, file.path),
   ])
   // The files under each line, as they were when it was picked: before its marker is saved.
-  const files = await handedFiles(scope, db, file, input.items)
+  const files = await handedFiles(scope, db, file, input.items, teammate)
   const picked = await itemsFor(db, scope, actor, file, input.items)
   const texts = new Map(input.items.map((p, i) => [picked[i]!, p.text]))
   const filesOf = new Map(input.items.map((_, i) => [picked[i]!, files[i]!]))
@@ -830,7 +847,10 @@ export async function linkToThread(
   // Its teammate reads the lines at its next turn, on its starter's accounts: as a message would.
   if (!(await memberMayWrite(session, memberId)))
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
-  const files = await handedFiles(scope, db, file, input.items)
+  const teammate = await db.teammate.findFirst({ where: { id: session.teammateId } })
+  const files = teammate
+    ? await handedFiles(scope, db, file, input.items, teammate)
+    : input.items.map(() => [])
   const ids = [
     ...new Set(await itemsFor(db, scope, { type: 'member', id: memberId }, file, input.items)),
   ]
@@ -1348,7 +1368,12 @@ export async function handleListCall(
   try {
     if (op.name === 'list_items') {
       if (!op.path) {
-        const items = (await specItems(db, session.id)).filter((i) => access.of(i.path) !== 'none')
+        const items = (await specItems(db, session.id))
+          .filter((i) => access.of(i.path) !== 'none')
+          .map(({ files, ...item }) => {
+            const readable = files?.filter((path) => access.of(path) !== 'none') ?? []
+            return { ...item, ...(readable.length ? { files: readable } : {}) }
+          })
         return {
           items,
           hint: items.length
@@ -1366,6 +1391,7 @@ export async function handleListCall(
         db,
         list.lines.flatMap((l) => l.files.map((f) => f.id)),
       )
+      for (const [id, path] of paths) if (access.of(path) === 'none') paths.delete(id)
       return {
         path: file.path,
         title: titleOf(file.path, list),
