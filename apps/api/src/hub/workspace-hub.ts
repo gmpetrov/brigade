@@ -55,6 +55,12 @@ const PRESENCE_MS = 75_000
 const SETTLE_MS = 300
 /** A computer whose runner connects this many times within a minute is in a reconnect storm. */
 export const STORM_CONNECTS = 10
+/**
+ * How many of the commands that go in order a connection remembers it was sent (sentOn), the
+ * latest: more than wait for its computer (PENDING_PER_COMPUTER). One forgotten is at most sent
+ * again, and the runner takes a command once.
+ */
+export const SENT_REMEMBERED = 500
 
 /** Runner answers settled by request id (askRunner). */
 const ANSWERS = new Set<RunnerToApi['type']>([
@@ -125,7 +131,7 @@ export class WorkspaceHub {
    * answers), being kept or sent: the next waits for it.
    */
   private readonly inOrder = new Map<string, Promise<void>>()
-  /** The commands that go in order each connection was sent (sendOrdered), by commandId. */
+  /** The latest commands that go in order each connection was sent (sendOrdered), by commandId. */
   private readonly sentOn = new WeakMap<RunnerConn, Set<string>>()
 
   constructor(
@@ -518,6 +524,8 @@ export class WorkspaceHub {
     if (orderedThread(kept)) {
       const sent = this.sentOn.get(conn) ?? new Set<string>()
       this.sentOn.set(conn, sent.add(kept.commandId))
+      // The oldest goes: a connection that lasts days would otherwise keep every one.
+      if (sent.size > SENT_REMEMBERED) sent.delete(sent.values().next().value!)
     }
   }
 
