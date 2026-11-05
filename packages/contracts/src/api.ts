@@ -34,10 +34,18 @@ export const UpdateWorkspace = z.object({
   logo: Logo.nullable().optional(),
 })
 
-/** An owner deletes the active workspace for good, typing its name to confirm. */
-export const DeleteWorkspace = z.object({ name: z.string().max(200) })
-/** A person deletes their own account for good, typing their email address to confirm. */
-export const DeleteAccount = z.object({ email: z.string().max(320) })
+/**
+ * An owner deletes the active workspace for good, typing its name to confirm, then the code
+ * mailed to them for it (WorkspaceDeletionCode).
+ */
+export const WorkspaceDeletionCode = z.object({ name: z.string().max(200) })
+export const DeleteWorkspace = WorkspaceDeletionCode.extend({ code: z.string().max(20) })
+/**
+ * A person deletes their own account for good, typing their email address to confirm, then the
+ * code mailed to them for it (AccountDeletionCode).
+ */
+export const AccountDeletionCode = z.object({ email: z.string().max(320) })
+export const DeleteAccount = AccountDeletionCode.extend({ code: z.string().max(20) })
 
 /** Checkout for the Cloud plan, from Settings › Billing or onboarding, where it comes back to. */
 export const BillingCheckout = z.object({

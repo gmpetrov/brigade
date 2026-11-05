@@ -1,6 +1,7 @@
 'use client'
 // Deleting a workspace or one's own account, for good: a section at the foot of its settings
-// page, and a dialog that says what goes and asks for its name (or email) typed out first.
+// page, and a dialog that says what goes, asks for its name (or email) typed out, then for the
+// code mailed to the person (apps/api/src/deletion-code.ts): a session left open is not enough.
 import { Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
@@ -45,6 +46,9 @@ const failureOf = (e: unknown): Failure => {
   }
 }
 
+/** Minutes a mailed code works (CODE_MINUTES in apps/api/src/deletion-code.ts). */
+const CODE_MINUTES = 10
+
 function DeleteDialog({
   open,
   onOpenChange,
@@ -53,7 +57,9 @@ function DeleteDialog({
   goes,
   confirm,
   label,
+  email,
   action,
+  send,
   run,
 }: {
   open: boolean
@@ -65,24 +71,48 @@ function DeleteDialog({
   /** What must be typed to confirm. */
   confirm: string
   label: ReactNode
+  /** Where the code goes: the signed-in person's address. */
+  email: string
   action: string
-  run: () => Promise<void>
+  /** Mail a code for this deletion. */
+  send: () => Promise<void>
+  /** Delete, with the code typed. */
+  run: (code: string) => Promise<void>
 }) {
   const [typed, setTyped] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState<'sending' | 'deleting'>()
   const [failure, setFailure] = useState<Failure>()
   const matches = typed.trim().toLowerCase() === confirm.trim().toLowerCase()
+  const complete = /^\d{6}$/.test(code)
+
+  async function mail() {
+    if (!matches || busy) return
+    setBusy('sending')
+    setFailure(undefined)
+    try {
+      await send()
+      setSent(true)
+      setCode('')
+    } catch (e) {
+      setFailure(failureOf(e))
+    } finally {
+      setBusy(undefined)
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (!matches || busy) return
-    setBusy(true)
+    if (!sent) return void mail()
+    if (!complete || busy) return
+    setBusy('deleting')
     setFailure(undefined)
     try {
-      await run()
+      await run(code)
     } catch (e) {
       setFailure(failureOf(e))
-      setBusy(false)
+      setBusy(undefined)
     }
   }
 
@@ -91,9 +121,11 @@ function DeleteDialog({
       open={open}
       onOpenChange={(next) => {
         // Not while it is being deleted: the answer decides where to go.
-        if (busy) return
+        if (busy === 'deleting') return
         if (!next) {
           setTyped('')
+          setSent(false)
+          setCode('')
           setFailure(undefined)
         }
         onOpenChange(next)
@@ -122,9 +154,40 @@ function DeleteDialog({
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              disabled={busy}
+              // Once the code is sent, it is for this: no changing it.
+              disabled={sent || !!busy}
             />
           </div>
+          {sent && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="delete-code">
+                <span>
+                  Enter the code sent to <span className="font-semibold">{email}</span>
+                </span>
+              </Label>
+              <Input
+                id="delete-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                autoFocus
+                disabled={!!busy}
+              />
+              <p className="text-xs text-muted-foreground">
+                It works for {CODE_MINUTES} minutes.{' '}
+                <button
+                  type="button"
+                  className="underline underline-offset-2 disabled:opacity-50"
+                  disabled={!!busy}
+                  onClick={() => void mail()}
+                >
+                  {busy === 'sending' ? 'Sending…' : 'Send a new code'}
+                </button>
+              </p>
+            </div>
+          )}
           {failure && (
             <p role="alert" className="text-sm text-destructive-text">
               {failure.message}
@@ -142,14 +205,20 @@ function DeleteDialog({
             <Button
               type="button"
               variant="ghost"
-              disabled={busy}
+              disabled={busy === 'deleting'}
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="destructive" disabled={!matches || busy}>
-              {busy ? 'Deleting…' : action}
-            </Button>
+            {sent ? (
+              <Button type="submit" variant="destructive" disabled={!complete || !!busy}>
+                {busy === 'deleting' ? 'Deleting…' : action}
+              </Button>
+            ) : (
+              <Button type="submit" variant="destructive" disabled={!matches || !!busy}>
+                {busy === 'sending' ? 'Sending…' : 'Email me a code'}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
@@ -199,9 +268,13 @@ export function DeleteWorkspace() {
             Type <span className="font-semibold">{workspace.name}</span> to confirm
           </span>
         }
+        email={me.user.email}
         action="Delete workspace"
-        run={async () => {
-          await api('/workspace', { method: 'DELETE', body: { name: workspace.name } })
+        send={() =>
+          api<void>('/workspace/deletion-code', { method: 'POST', body: { name: workspace.name } })
+        }
+        run={async (code) => {
+          await api('/workspace', { method: 'DELETE', body: { name: workspace.name, code } })
           // The session is in another workspace now, or in none: then onboarding.
           window.location.href = '/app'
         }}
@@ -246,9 +319,13 @@ export function DeleteAccount() {
             confirm
           </span>
         }
+        email={me.user.email}
         action="Delete account"
-        run={async () => {
-          await api('/me', { method: 'DELETE', body: { email: me.user.email } })
+        send={() =>
+          api<void>('/me/deletion-code', { method: 'POST', body: { email: me.user.email } })
+        }
+        run={async (code) => {
+          await api('/me', { method: 'DELETE', body: { email: me.user.email, code } })
           markSignedOut()
           window.location.href = '/'
         }}
