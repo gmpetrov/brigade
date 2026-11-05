@@ -141,12 +141,7 @@ import {
   widgetGuideTool,
 } from './tools.js'
 
-export type {
-  ConnectorCaller,
-  LibraryCaller,
-  PreviewTools,
-  ScheduleCaller,
-} from './tools.js'
+export type { ConnectorCaller, LibraryCaller, PreviewTools, ScheduleCaller } from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {

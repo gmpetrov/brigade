@@ -19,7 +19,6 @@ import {
   Monitor,
   Plug,
   Search as SearchIcon,
-  SquareKanban,
   UserRound,
   X,
   Zap,

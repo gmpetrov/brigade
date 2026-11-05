@@ -687,7 +687,7 @@ function threadsOfTheirOwn(spec: ThreadSpec) {
       (spec.parent
         ? ''
         : ' (work whose result must come back here is a child thread: see Child threads)') +
-      ". Its brief stands alone: it does not see this conversation. To hand it lines of a list, give the list " +
+      '. Its brief stands alone: it does not see this conversation. To hand it lines of a list, give the list ' +
       'and those lines: it works on them, as when a person hands them over. To add to it later, `message_thread` ' +
       "with its id. It goes in the list's project, else this thread's; when it belongs to another project" +
       ((spec.projects ?? []).length > 0 ? ' (see Projects)' : '') +

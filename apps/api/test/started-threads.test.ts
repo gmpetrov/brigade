@@ -442,19 +442,16 @@ describe('threads a teammate starts', { skip: !database && 'no database answers'
     assert.equal(a.doneSummary?.length, 300)
     assert.match(a.doneSummary ?? '', /^Shipped the fix\. Shipped the fix\./)
     const b = await row(byNobody)
-    assert.deepEqual([b.doneAt, b.doneByType, b.doneById, b.doneSummary], [
-      at,
-      'system',
-      'brigade',
-      null,
-    ])
+    assert.deepEqual(
+      [b.doneAt, b.doneByType, b.doneById, b.doneSummary],
+      [at, 'system', 'brigade', null],
+    )
     assert.equal((await row(open)).doneAt, null)
     const c = await row(own)
-    assert.deepEqual([c.doneAt, c.doneSummary, c.doneByType], [
-      new Date('2026-11-02T10:00:00Z'),
-      'Its own',
-      'member',
-    ])
+    assert.deepEqual(
+      [c.doneAt, c.doneSummary, c.doneByType],
+      [new Date('2026-11-02T10:00:00Z'), 'Its own', 'member'],
+    )
   })
 })
 

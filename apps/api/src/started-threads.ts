@@ -23,7 +23,10 @@ import { askedBy, findTeammate, loadThread, noSuchTeammate } from './thread-spec
 import { firedInARow } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
-type StartedThreadOperation = Extract<ScheduleOperation, { name: 'start_thread' | 'message_thread' }>
+type StartedThreadOperation = Extract<
+  ScheduleOperation,
+  { name: 'start_thread' | 'message_thread' }
+>
 
 export const isStartedThreadOperation = (op: ScheduleOperation): op is StartedThreadOperation =>
   op.name === 'start_thread' || op.name === 'message_thread'

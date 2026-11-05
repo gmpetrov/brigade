@@ -8,5 +8,9 @@ export default async function Tasks({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { workspace } = await searchParams
-  redirect(typeof workspace === 'string' ? `/app/board?workspace=${encodeURIComponent(workspace)}` : '/app/board')
+  redirect(
+    typeof workspace === 'string'
+      ? `/app/board?workspace=${encodeURIComponent(workspace)}`
+      : '/app/board',
+  )
 }

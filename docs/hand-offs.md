@@ -52,16 +52,16 @@ status, its Needs you, its pull requests). Lists replaced it in the navigation o
 (docs/lists.md), and the Board, computed from lists and threads, came on 2026-11-01
 (docs/board.md). The board went on 2026-11-05, with what still leaned on it replaced:
 
-| Was                                       | Now                                                                    |
-| ----------------------------------------- | ---------------------------------------------------------------------- |
-| `create_task` for a teammate, or oneself  | `start_thread`                                                         |
-| A comment on a task's thread              | `message_thread` to a thread it started                                |
-| `complete_task`                           | The thread declared done (docs/board.md)                               |
-| A playbook's idea in the Backlog          | `file_idea`, a line of the playbook's ideas list                       |
-| The Backlog                               | A list's lines nobody has started (docs/lists.md)                      |
-| Needs you, Doing, Done                    | The Board, the sidebar and Today, from threads and lists               |
-| "X finished a task" pushes                | "X finished" when a teammate declares a thread done (src/notifications.ts) |
-| `/app/tasks`                              | Redirects to the Board (a project's, to the Board on that project)     |
+| Was                                      | Now                                                                        |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| `create_task` for a teammate, or oneself | `start_thread`                                                             |
+| A comment on a task's thread             | `message_thread` to a thread it started                                    |
+| `complete_task`                          | The thread declared done (docs/board.md)                                   |
+| A playbook's idea in the Backlog         | `file_idea`, a line of the playbook's ideas list                           |
+| The Backlog                              | A list's lines nobody has started (docs/lists.md)                          |
+| Needs you, Doing, Done                   | The Board, the sidebar and Today, from threads and lists                   |
+| "X finished a task" pushes               | "X finished" when a teammate declares a thread done (src/notifications.ts) |
+| `/app/tasks`                             | Redirects to the Board (a project's, to the Board on that project)         |
 
 - **Runners update after the API.** A runner before protocol 52 still offers the task tools and
   sends them as `task.call`; the API answers each with what replaced it (`src/legacy-tasks.ts`):

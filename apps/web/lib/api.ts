@@ -679,7 +679,6 @@ export type Schedule = {
   parentSession: { id: string; title: string } | null
 }
 
-
 export type AccountLogin = {
   state: 'starting' | 'open_url' | 'verifying' | 'done' | 'failed'
   url?: string
