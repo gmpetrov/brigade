@@ -285,8 +285,6 @@ function renderMenu<T, P extends object>(
   let unmount: (() => void) | undefined
   let current: SuggestionProps<T, P>
   let selected = 0
-  // The person moved the selection since the query changed: what comes later leaves it on its row.
-  let moved = false
   // The query `later` looks for, until it answers.
   let searching: string | undefined
   let pause: ReturnType<typeof setTimeout> | undefined
@@ -298,7 +296,6 @@ function renderMenu<T, P extends object>(
     onPick: (item) => pick(current, item),
     onHover: (index) => {
       selected = index
-      moved = true
       component?.updateProps(menuProps())
     },
   })
@@ -313,7 +310,8 @@ function renderMenu<T, P extends object>(
       searching = undefined
       if (add) {
         const items = add(current.items)
-        const at = moved ? items.indexOf(current.items[selected]!) : 0
+        // The row selected stays selected, wherever it moves: Enter picks what the person saw.
+        const at = current.items.length ? items.indexOf(current.items[selected]!) : 0
         current = { ...current, items }
         selected = Math.max(at, 0)
         if (items.length) picking.add(current.editor)
@@ -333,7 +331,6 @@ function renderMenu<T, P extends object>(
     onStart(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
-      moved = false
       if (props.items.length) picking.add(props.editor)
       lookLater()
       component = new ReactRenderer(Menu, { props: menuProps(), editor: props.editor })
@@ -353,7 +350,6 @@ function renderMenu<T, P extends object>(
     onUpdate(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
-      moved = false
       if (props.items.length) picking.add(props.editor)
       else picking.delete(props.editor)
       lookLater()
@@ -364,7 +360,6 @@ function renderMenu<T, P extends object>(
       if (!n) return false
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         selected = (selected + (event.key === 'ArrowDown' ? 1 : n - 1)) % n
-        moved = true
         component?.updateProps(menuProps())
         return true
       }
