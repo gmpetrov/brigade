@@ -92,6 +92,11 @@ export type AccountRef = z.infer<typeof AccountRef>
  * turn, and not to be kept, so the next turn asks again.
  */
 export const CATALOG_INCOMPLETE_HEADER = 'x-brigade-catalog-incomplete'
+/**
+ * Set beside CATALOG_INCOMPLETE_HEADER when the server refused the account (an expired key): its
+ * owner must reconnect it, where an incomplete catalog alone means the server did not answer.
+ */
+export const CATALOG_SIGNED_OUT_HEADER = 'x-brigade-catalog-signed-out'
 
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
@@ -100,6 +105,14 @@ export const ConnectorGrant = z.object({
   label: z.string(),
   externalAccount: z.string().nullable(),
   scope: z.enum(['read', 'read_write']),
+  /**
+   * Why the teammate cannot use this account now, told in its instructions so that it asks for a
+   * reconnect, or says the App is down, rather than work around tools it cannot find. signed_out:
+   * the provider refused it (the API sets it from the account's state, the runner from its
+   * catalog, CATALOG_SIGNED_OUT_HEADER). unreachable: its MCP server did not list its tools now
+   * (the runner, from CATALOG_INCOMPLETE_HEADER). Ignored by older runners.
+   */
+  unavailable: z.enum(['signed_out', 'unreachable']).optional(),
   /**
    * CATALOG_PROTOCOL: `operations` is left empty and the runner fetches them, the App's catalog
    * for this scope (GET /runner/catalogs/<connectionId>?scope=<scope>&version=<version>), then

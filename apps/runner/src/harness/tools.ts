@@ -403,6 +403,36 @@ const isObjectSchema = (schema: unknown): schema is JSONSchema7 =>
   (schema as JSONSchema7).type === 'object' &&
   !('oneOf' in schema || 'anyOf' in schema || 'allOf' in schema || '$ref' in schema)
 
+/** The Apps an access ask may name (open_ticket's app.kind): an MCP server added by its URL is mcp. */
+export const TICKET_APP_KINDS = [
+  'gmail',
+  'google_calendar',
+  'google_drive',
+  'google_docs',
+  'google_sheets',
+  'google_search_console',
+  'google_analytics',
+  'stripe',
+  'github',
+  'cloudflare',
+  'google_cloud',
+  'neon',
+  'supabase',
+  'atlassian',
+  'notion',
+  'linear',
+  'mixpanel',
+  'resend',
+  'replicate',
+  'openrouter',
+  'posthog',
+  'dataforseo',
+  'ahrefs',
+  'revenuecat',
+  'expo',
+  'mcp',
+] as const
+
 /**
  * The tools of the Apps granted to a thread. An App with one account: one tool per operation.
  * With several, one tool per operation all the same, whose `account` parameter picks the account
@@ -667,37 +697,7 @@ export const openTicketTool = tool({
               description:
                 'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket. For an MCP server already added, such as one a message mentions as an App, use kind mcp and put its name in what, and its server id when list_apps gives one; the url can be left out',
               properties: {
-                kind: {
-                  type: 'string',
-                  enum: [
-                    'gmail',
-                    'google_calendar',
-                    'google_drive',
-                    'google_docs',
-                    'google_sheets',
-                    'google_search_console',
-                    'google_analytics',
-                    'stripe',
-                    'github',
-                    'cloudflare',
-                    'google_cloud',
-                    'neon',
-                    'supabase',
-                    'atlassian',
-                    'notion',
-                    'linear',
-                    'mixpanel',
-                    'resend',
-                    'replicate',
-                    'openrouter',
-                    'posthog',
-                    'dataforseo',
-                    'ahrefs',
-                    'revenuecat',
-                    'expo',
-                    'mcp',
-                  ],
-                },
+                kind: { type: 'string', enum: [...TICKET_APP_KINDS] },
                 scope: { type: 'string', enum: ['read', 'read_write'] },
                 url: {
                   type: 'string',

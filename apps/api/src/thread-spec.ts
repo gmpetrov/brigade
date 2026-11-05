@@ -262,6 +262,8 @@ export async function specFor(
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
+        // Refused by its provider: the teammate is told to ask for a reconnect (instructions.ts).
+        ...(g.connection.status === 'needs_reauth' ? { unavailable: 'signed_out' as const } : {}),
         // Named by their App's catalog, which the runner fetches once (src/catalogs.ts): listed
         // here, an App's tools came to megabytes in every spec. Whole for an older runner.
         ...(catalogs
