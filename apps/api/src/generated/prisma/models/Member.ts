@@ -3564,7 +3564,7 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     /**
      * Chief reads the buttons and choices their teammates end on before they do, and in their name
      * suggests an answer, or gives it on its own for the kinds in chiefAuto (docs/chief-answers.md).
-     * Off: none of it, as before.
+     * Off: none of it, as before. Off for new members for now; members who had it keep theirs.
      */
     chiefAnswers: boolean
     /**
