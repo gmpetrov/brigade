@@ -3,7 +3,13 @@ import { test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { Hono } from 'hono'
-import { userFrom, type AppEnv } from '../src/scope.js'
+import type { AppEnv } from '../src/scope.js'
+
+// src/scope.js reads the API's config on import; nothing here reaches the database.
+process.env.DATABASE_URL ??= 'postgresql://test@127.0.0.1:1/none'
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
+process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+const { userFrom } = await import('../src/scope.js')
 
 // requireUser (src/scope.ts) keeps the browser's cookie alive with the session: once a day,
 // reading the session renews both, and the renewed cookie must reach the browser. Before, it

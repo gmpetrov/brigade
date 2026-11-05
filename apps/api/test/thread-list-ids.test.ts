@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // GET /api/threads?id=…, repeated: threads as the sidebar's list has them, by id, however old.
 // The sidebar asks for the one open and for those waiting on the member that are older than
@@ -55,14 +56,14 @@ describe('threads by id', { skip: !database && 'no database answers' }, () => {
     ids.riley = (await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)).id
     // Signed in as Ada, without a cookie: the session is the test's.
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: ids.user },
       session: {
         id: `session-${suffix}`,
         activeOrganizationId: ids.org,
         activeWorkspaceId: ids.workspace,
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/threads', threads)
   })

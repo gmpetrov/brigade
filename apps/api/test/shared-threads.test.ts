@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // Who writes in a thread (src/account-sharing.ts, mayWrite): one on the cloud computer runs on
 // the workspace's accounts, so every member but a viewer writes in it, answers it and steers it;
@@ -89,14 +90,14 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     ).id
     riley = (await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)).id
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: user(as) },
       session: {
         id: `s-shared-${suffix}`,
         activeOrganizationId: org,
         activeWorkspaceId: workspaceId,
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/threads', threads)
     app.onError((error, c) =>

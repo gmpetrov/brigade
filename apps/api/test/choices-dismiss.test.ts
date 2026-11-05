@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // POST /api/threads/:id/choices/dismiss: a person closes the choices card open in a thread
 // without picking (docs/board.md). It waits on nobody then, no turn starts, and a later card
@@ -56,14 +57,14 @@ describe('dismissing choices', { skip: !database && 'no database answers' }, () 
     ids.riley = (await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)).id
     // Signed in as Ada, without a cookie: the session is the test's.
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: ids.user },
       session: {
         id: `session-${suffix}`,
         activeOrganizationId: ids.org,
         activeWorkspaceId: ids.workspace,
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/threads', threads)
   })

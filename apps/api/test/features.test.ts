@@ -5,6 +5,7 @@ import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
 import { FEATURES } from '@brigade/contracts'
+import { sessionStub } from './session-stub.js'
 
 // Features hidden until ready (src/features.ts, docs/feature-flags.md):
 // - a row opens its feature to everyone, to addresses (without case), to domains, to workspaces;
@@ -103,18 +104,14 @@ describe(
       const { workspaces } = await import('../src/routes/workspaces.js')
       // Signed in as whoever the x-test-user header names, without a cookie.
       const getSession = auth.api.getSession
-      ;(auth.api as { getSession: unknown }).getSession = async ({
-        headers,
-      }: {
-        headers: Headers
-      }) => ({
+      ;(auth.api as { getSession: unknown }).getSession = sessionStub((headers) => ({
         user: { id: headers.get('x-test-user') },
         session: {
           id: `session-${headers.get('x-test-user')}`,
           activeOrganizationId: org,
           activeWorkspaceId: ids.workspace,
         },
-      })
+      }))
       restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
       app = new Hono().route('/api', workspaces).route('/api/connections', connections)
     })

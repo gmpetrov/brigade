@@ -3,6 +3,7 @@ import { createHmac, generateKeyPairSync, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
+import { sessionStub } from './session-stub.js'
 
 // A repository renamed on GitHub while Brigade tracks its pull requests (src/pull-requests.ts),
 // against the API's development database (apps/api/.env), in an organization of its own removed
@@ -351,14 +352,14 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
     const { pulls } = await import('../src/routes/pulls.js')
     const { Hono } = await import('hono')
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: `u-${owner}` },
       session: {
         id: `s-${owner}`,
         activeOrganizationId: org,
         activeWorkspaceId: scope.workspaceId,
       },
-    })
+    }))
     try {
       const app = new Hono().route('/api/pulls', pulls)
       const id = repository(`acme/card-old-${suffix}`)

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, after, test } from 'node:test'
+import { sessionStub } from './session-stub.js'
 
 // Error tracking (src/error-tracking.ts): the API's errors and the dashboard's reports, sent to
 // PostHog as `$exception` events with their frames, scrubbed of keys, addresses, links' paths and
@@ -271,7 +272,7 @@ const post = (body: BodyInit, headers: Record<string, string> = {}) =>
 test("a report is read only up to its limit, and a person's 31st in a minute not at all", async () => {
   env.POSTHOG_KEY = 'phc_test_key'
   const userId = `user-${unique('limits')}`
-  auth.api.getSession = (async () => ({
+  auth.api.getSession = sessionStub(() => ({
     user: { id: userId },
     session: { id: 'session-1' },
   })) as unknown as typeof auth.api.getSession
