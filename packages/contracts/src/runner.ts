@@ -35,7 +35,7 @@ import {
 import { ThreadPlaybook } from './playbooks.js'
 import { ScheduleOperation } from './schedules.js'
 import { SkillProposal, ThreadSkill } from './skills.js'
-import { TaskOperation } from './tasks.js'
+import { TaskOperation } from './legacy-tasks.js'
 import { TeammateKind } from './chief.js'
 import { UsageRunKind } from './usage.js'
 
@@ -222,8 +222,6 @@ export const ThreadSpec = z.object({
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
   attachments: z.array(ThreadAttachmentRef).default([]),
-  /** The task this thread works on, if it is one. */
-  task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
   /** The list items it works on (docs/lists.md): lines of library files, by id. */
   items: z
     .array(z.object({ id: z.string(), path: z.string(), text: z.string(), done: z.boolean() }))
@@ -574,8 +572,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     ]),
   }),
   /**
-   * A teammate creates a task from its thread, or marks the thread's task
-   * done. The API checks the thread and teammate. Answered like a connector call.
+   * A task tool of a runner before protocol 52 (the Tasks board is gone): the API answers it with
+   * what replaced it (src/legacy-tasks.ts). Answered like a connector call.
    */
   z.object({
     type: z.literal('task.call'),

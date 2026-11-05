@@ -499,8 +499,6 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     /** A cloud computer's new status, when that is what changed. */
     status: z.string().optional(),
   }),
-  /** A task was created, changed or removed: refetch the board. */
-  z.object({ type: z.literal('task.updated'), taskId: z.string() }),
   /** A ticket was opened or resolved: refetch tickets and the badges that count them. */
   z.object({ type: z.literal('tickets.updated') }),
   /** A pull request was adopted, synced or changed: refetch pulls and their badge. */

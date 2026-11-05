@@ -9,6 +9,7 @@ import { ChildOperations } from './children.js'
 import { ListOperations } from './lists.js'
 import { PlaybookOperations } from './playbooks.js'
 import { ReviewOperations } from './reviews.js'
+import { StartedThreadOperations } from './started-threads.js'
 import { DoneOperations } from './thread-done.js'
 import { TriggerOperations } from './triggers.js'
 import { WakeupOperations } from './wakeups.js'
@@ -119,6 +120,7 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
   }),
   ...WakeupOperations,
   ...ChildOperations,
+  ...StartedThreadOperations,
   ...PlaybookOperations,
   ...ReviewOperations,
   ...TriggerOperations,
