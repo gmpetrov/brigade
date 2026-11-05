@@ -40,7 +40,7 @@ test('reads no status from a line in another form or with another word', () => {
 
 test('names the pull requests and the reference a line gives', () => {
   assert.deepEqual(pullNumbersIn(' (#241, #255; see gmpetrov/brigade#12). #241 again'), [241, 255])
-  assert.equal(namesReference(' (#241). Reference: `docs/tasks.md`.'), true)
+  assert.equal(namesReference(' (#241). Reference: `docs/lists.md`.'), true)
   assert.equal(namesReference(' (#241). See [the page](../reference/offer.md).'), true)
   assert.equal(namesReference(' (#105, #114). No page yet, the code is the truth.'), false)
   assert.equal(namesReference(' (#105). The `code` is the truth.'), false)

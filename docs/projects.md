@@ -1,7 +1,7 @@
 # Projects
 
 A project groups the work of one venture or line of work inside a workspace: its threads,
-tasks, library folder, GitHub repositories and their saved previews. It is for organizing
+library folder, GitHub repositories and their saved previews. It is for organizing
 and for context, not for isolation. Every workspace resource stays shared: teammates,
 computers, AI accounts, connections, the vault, caps and members. A teammate works across
 all projects; the **thread** carries the project, and with it the project's context.
@@ -17,11 +17,11 @@ checkout setup, and a GitHub connection made it redundant. The name is free agai
   When it shares those and only separates the work, it is a project.
 - **Not part of scope.** `AuthSession` keeps only the organization and workspace;
   `scoped()` does not change. Pages filter by project through the URL (`?project=<id>`).
-- **Optional everywhere.** `projectId` is nullable. A thread or task without a project
+- **Optional everywhere.** `projectId` is nullable. A thread without a project
   works as one does today, and existing rows need no backfill. Workspaces that never make a
   project see no difference beyond the sidebar section.
 - **Things keep their natural owner; the project collects them.** Only what starts work
-  (threads, tasks, schedules, triggers) stores a `projectId`. Everything else is reached
+  (threads, schedules, triggers) stores a `projectId`. Everything else is reached
   through its thread, its repository or its library folder.
 - **One project per item**, like a folder. Not tags.
 - **A project focuses, it does not restrict.** A project thread is given the project's
@@ -33,10 +33,10 @@ checkout setup, and a GitHub connection made it redundant. The name is free agai
 | Stores `projectId`      | Reached through the thread or repository           | Shared, never grouped                     |
 | ----------------------- | -------------------------------------------------- | ----------------------------------------- |
 | `Session` (threads)     | `Ticket`, via `sessionId`                          | `Teammate`, `Computer`, `Runner`          |
-| `Task`                  | `PullRequest`, via its thread, else its repository | `Account`                                 |
-| `Schedule`              | `PreviewRecipe`, via its repository                | `Connection`, `Grant`, vault, credentials |
-| `Trigger`               | `Attachment`, `Comment`, `SessionEvent`            | `Member`, caps                            |
-| `DesignSystem` (target) | `ConnectionCall`, `AuditEntry`, thread summaries   |                                           |
+| `Schedule`              | `PullRequest`, via its thread, else its repository | `Account`                                 |
+| `Trigger`               | `PreviewRecipe`, via its repository                | `Connection`, `Grant`, vault, credentials |
+| `DesignSystem` (target) | `Attachment`, `Comment`, `SessionEvent`            | `Member`, caps                            |
+|                         | `ConnectionCall`, `AuditEntry`, thread summaries   |                                           |
 |                         | Library files, by path under the project's folder  |                                           |
 
 ## Data
@@ -120,8 +120,9 @@ the same recipe in both. A per-project override (an optional `projectId` on
 - **Design systems** gain the project as a target. The order becomes: named in the
   message, then folder, repository, **project**, teammate, default.
 - **Inheritance.**
-  - A thread started from a project page, or from a task, schedule or trigger with a
-    project, gets that project.
+  - A thread started from a project page, or from a schedule or trigger with a project, gets
+    that project; one a teammate starts (`start_thread`), the project it names, else its list's,
+    else its starting thread's (docs/hand-offs.md).
   - A thread started anywhere else gets none, unless the composer's picker sets one.
 - **Moving a thread** to another project, or out of one, sets `projectId`. Its next turn
   gets the new context. Earlier turns and the thread's summary stay as they were.
@@ -151,7 +152,6 @@ Work
   Today
   Tickets
   Threads
-  Tasks
   Pull requests
   Library
   Routines
@@ -262,7 +262,7 @@ it. Saved previews leave the Computers page: `<SavedPreviews />` comes out of
 
 ### Composer
 
-The new-thread and new-task forms have a project picker, never required. It defaults to
+The new-thread form has a project picker, never required. It defaults to
 the project the person is in, else "No project".
 
 ## From a website
@@ -295,17 +295,17 @@ while they are being filled, so nothing typed is lost; "Fill it in myself" stops
 - `PUT /api/projects/:id/repositories`: replaces the list. Only repositories that
   `workspaceRepositories` returns are accepted.
 - `GET /api/projects/:id/overview`: the overview's sections in one response.
-- `?project=<id|none>` on the threads, tasks, tickets, pull requests, schedules and
-  triggers lists.
-- `PATCH` on a thread or task accepts `projectId`, so items can be moved.
+- `?project=<id|none>` on the threads, tickets, pull requests, schedules and triggers
+  lists.
+- `PATCH` on a thread accepts `projectId`, so items can be moved.
 
 ## Edge cases
 
-- **Archiving a project** keeps its threads, tasks, folder and repository links. Its
+- **Archiving a project** keeps its threads, folder and repository links. Its
   schedules and triggers keep firing; the project page says so, and pausing them is a
   separate action.
-- **Deleting a project** sets `projectId` to null on its threads, tasks, schedules and
-  triggers, and deletes its repository links and memory file. The library folder and the
+- **Deleting a project** sets `projectId` to null on its threads, schedules and triggers,
+  and deletes its repository links and memory file. The library folder and the
   repositories stay.
 - **A project folder moved or renamed** in the library updates `Project.folder` in the
   same transaction as the path rewrite.

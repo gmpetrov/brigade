@@ -309,6 +309,40 @@ function splitBreak(raw: string, goesOn: boolean) {
   return { head, brk: brk ? (brk[1]!.includes('\\') ? ' \\' : '  ') : '' }
 }
 
+/**
+ * Text Brigade writes into a list (a line, a note): no HTML comment in it, so never a marker it was
+ * not given. A marker in a teammate's or a customer's words would take over another line's id, and
+ * an open comment would hide the lines below it.
+ */
+const noComments = (text: string) => text.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<!--|-->/g, ' ')
+
+/**
+ * The headings of a file by row, outside code blocks, as parseList reads them: a heading in a
+ * fenced example is no section of the list.
+ */
+function headingRows(rows: string[]) {
+  const found: { row: number; text: string }[] = []
+  let fence: string | null = null
+  rows.forEach((raw, row) => {
+    const fenced = raw.match(FENCE)
+    if (fenced) {
+      if (!fence) fence = fenced[1]!
+      else if (fenced[1]!.startsWith(fence[0]!) && fenced[1]!.length >= fence.length) fence = null
+      return
+    }
+    if (fence) return
+    const heading = raw.match(HEADING)
+    if (heading) found.push({ row, text: heading[2]! })
+  })
+  return found
+}
+
+/** Whether the file has a heading named `section`, as insertLine finds one (case, spaces and Markdown aside). */
+export function hasHeading(markdown: string, section: string) {
+  const want = normal(section)
+  return headingRows(markdown.split('\n')).some((h) => normal(h.text) === want)
+}
+
 /** A link in a note: italics around it come back from the editor broken, a little more each save. */
 const LINKISH = /(https?:\/\/|www\.|\]\()/i
 
@@ -320,7 +354,7 @@ const LINKISH = /(https?:\/\/|www\.|\]\()/i
 export function setLineDone(markdown: string, line: ListLine, done: boolean, note?: string) {
   return withLine(markdown, line.line, (raw) => {
     let next = raw.replace(/\[( |x|X)\]/, done ? '[x]' : '[ ]')
-    const clean = note
+    const clean = (note === undefined ? undefined : noComments(note))
       ?.replace(/[*_`\n]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
@@ -349,7 +383,10 @@ export function insertLine(
   id: string,
 ) {
   const rows = markdown.split('\n')
-  const clean = text.replace(/\s*\n\s*/g, ' ').trim()
+  const clean = noComments(text)
+    .replace(/\s*\n\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   let index = rows.length
   let indent = 0
   if (at.after) {
@@ -360,12 +397,12 @@ export function insertLine(
     index = (at.nested ? after.end : after.last) + 1
   } else if (at.section) {
     const want = normal(at.section)
-    const start = rows.findIndex((r) => {
-      const h = r.match(HEADING)
-      return h && normal(h[2]!) === want
-    })
+    // Its heading and the next, outside code blocks: never one in a fenced example.
+    const headings = headingRows(rows)
+    const found = headings.findIndex((h) => normal(h.text) === want)
+    const start = found >= 0 ? headings[found]!.row : -1
     if (start >= 0) {
-      const end = rows.findIndex((r, i) => i > start && HEADING.test(r))
+      const end = headings[found + 1]?.row ?? -1
       const inSection = list.lines.filter((l) => l.line > start && (end < 0 || l.line < end))
       // After the last of its lines, and of what is under them (a line's files).
       index = inSection.length ? Math.max(...inSection.map((l) => l.last)) + 1 : start + 1

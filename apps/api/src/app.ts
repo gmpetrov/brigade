@@ -53,7 +53,6 @@ import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
 import { playbooks } from './routes/playbooks.js'
 import { search } from './routes/search.js'
-import { tasks } from './routes/tasks.js'
 import { tickets } from './routes/tickets.js'
 import { customApps, events } from './routes/events.js'
 import { triggers } from './routes/triggers.js'
@@ -174,7 +173,6 @@ app.route('/api/dictation', dictation)
 app.route('/api/credentials', credentials)
 app.route('/api/security', security)
 app.route('/api/tickets', tickets)
-app.route('/api/tasks', tasks)
 app.route('/api/schedules', schedules)
 app.route('/api/playbooks', playbooks)
 app.route('/api/projects', projects)

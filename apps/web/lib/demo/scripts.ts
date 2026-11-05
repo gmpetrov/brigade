@@ -509,12 +509,6 @@ function waiting(ctx: Context): Run {
   return {
     steps: [
       {
-        tool: tool('list_tasks'),
-        input: { column: 'needs_you' },
-        output: { tickets: open.length },
-        takes: 900,
-      },
-      {
         say: open.length
           ? `${open.length} ${open.length === 1 ? 'thing waits' : 'things wait'} on you:\n\n${lines.join('\n')}\n\nEach one is in Tickets, and in its thread.`
           : 'Nothing waits on you right now.',

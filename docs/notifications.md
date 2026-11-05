@@ -9,18 +9,18 @@ in the dashboard.
 
 - **Presets, not a grid of checkboxes.** In Settings, Notifications:
   - _Only when I'm needed_ (default): the Needs you items that are theirs.
-  - _Needed + finished work_: also each task done and pull request merged, as
-    soon as it is (its own push; a merge whose task is done is said once).
-  - _Everything_: also replies in threads they started (not a task's thread).
+  - _Needed + finished work_: also each thread its teammate declared done and
+    each pull request merged, as soon as it is (its own push; a merge whose
+    thread is done by then is said once, by the thread).
+  - _Everything_: also replies in threads they started.
 - **Whose it is.** A ticket notifies who it waits on (`waitsOn` in
   `apps/web/lib/api.ts`), but admins only for what only they decide (spending
-  caps, a credential without an owner) or what has nobody else. A task in Needs
-  you without a ticket (waiting, failed, or a pull request to review) notifies
-  its thread's starter.
+  caps, a credential without an owner) or what has nobody else. A pull request
+  to review notifies who asked for the work, else its thread's starter.
 - **A failed thread waits on whoever started it**, everywhere at once: Today's
   Needs you and the count beside Today, the sidebar (where its dot stays
-  red), the app badge, pushes ("Riley's thread failed"), Tasks' Needs you, a
-  list line's state and the Board. One rule, `apps/api/src/failed.ts`: a
+  red), the app badge, pushes ("Riley's thread failed"), a list line's state
+  and the Board. One rule, `apps/api/src/failed.ts`: a
   thread of the last 14 days, not a child (its parent's teammate hears of it),
   archived, put away for later, a playbook's run nobody joined or a routine's
   run. After an error its runner tries again on its own (the network, an

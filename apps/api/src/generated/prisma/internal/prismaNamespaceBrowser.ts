@@ -507,6 +507,7 @@ export const SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
+  startedFromId: 'startedFromId',
   projectId: 'projectId',
   playbookRunId: 'playbookRunId',
   playbookTeammate: 'playbookTeammate',

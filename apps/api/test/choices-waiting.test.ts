@@ -43,7 +43,6 @@ const { prisma, scoped } = await import('../src/db.js')
 const { choicesWaitingAmong, choicesWaitingOn } = await import('../src/choices-waiting.js')
 const { board } = await import('../src/board.js')
 const { homeFor, homeWaiting } = await import('../src/home.js')
-const { columnOf } = await import('../src/tasks.js')
 const { stateOf } = await import('../src/lists.js')
 const { workspaceItems } = await import('../src/notifications.js')
 
@@ -378,7 +377,4 @@ test('a list item and a task whose thread stopped on choices need you', () => {
   assert.equal(stateOf(true, row as never, none, none, new Set(['t1'])), 'done')
   // Put away for later by the member reading: it no longer waits on them.
   assert.equal(stateOf(false, row as never, none, new Set(['t1']), new Set(['t1'])), 'open')
-  const task = { completedAt: null, session }
-  assert.equal(columnOf(task, false, true), 'needs_you')
-  assert.equal(columnOf(task, false), 'doing')
 })

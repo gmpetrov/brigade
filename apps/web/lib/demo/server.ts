@@ -368,7 +368,6 @@ function newThread(input: {
     origin: 'member',
     parentId: null,
     parentTeammateId: null,
-    taskId: null,
     playbookRunId: null,
     archivedAt: null,
     pinnedAt: null,
@@ -397,7 +396,6 @@ function newThread(input: {
     children: [],
     tickets: [],
     attachments: [],
-    task: null,
     wakeups: [],
     replyWatches: [],
     followers: [],
@@ -711,7 +709,7 @@ function unarchive(threadId: string) {
 
 const OFF = 'That is off in the demo workspace. Sign up to do it for real.'
 const CREATES =
-  /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
+  /^\/(teammates|teammates\/team|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
 
 /** Gets the pattern's groups, the request's JSON body and its URL. */
 const sidebarOrder: Record<'teammates' | 'projects', string[]> = { teammates: [], projects: [] }
@@ -860,7 +858,7 @@ const routes: [string, RegExp, Handler][] = [
           : structuredClone(page(threadId)),
   ],
   ['GET', /^\/threads\/([^/]+)\/prompts$/, () => []],
-  // What makes something new (a teammate, a task, a project, an App, a file) answers with
+  // What makes something new (a teammate, a project, an App, a file) answers with
   // what it made, which the page then opens: in the demo it says it is off, where the
   // page shows errors, rather than open nothing.
   ['POST', CREATES, () => ({ status: 403, body: { error: OFF } })],

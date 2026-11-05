@@ -135,7 +135,7 @@ export function instructions(
     spec.git && code(spec),
     PREVIEWS,
     skills(spec),
-    tasks(spec),
+    threadsOfTheirOwn(spec),
     lists(spec),
     // A child reports, a playbook's run ends with its report, and a schedule's with its turn.
     !spec.parent && !spec.playbook && !scheduledRun(spec) && DONE,
@@ -187,7 +187,7 @@ const CHIEF_ANSWERS = [
     'have, with why and the line of their mandate it goes by. Go on as if the person had picked it.',
   'It is not the person. Anything that leaves Brigade (merging, sending, publishing, deploying, paying, deleting) ' +
     'still waits for them: until they write again, your App writes and the secrets you use ask them, so does the ' +
-    'work you hand on (a sub-thread, a task, a message), and you set up no routine. Never do such a thing another ' +
+    'work you hand on (a sub-thread, a thread of its own, a message), and you set up no routine. Never do such a thing another ' +
     "way (a command, a script) on Chief's word alone: ask them, with a ticket or in your reply. When a " +
     "message says the person marked Chief's answer as wrong, stop what you started on it, undo what you can, and " +
     'wait for what they say next.',
@@ -269,7 +269,7 @@ function projects(spec: ThreadSpec) {
   return [
     '## Projects',
     'The workspace groups its work in projects. A message mentions one as `@[name](project:id)`: ' +
-      'the project with that id below. Its threads, tasks and files are its own; you can reach every one of them' +
+      'the project with that id below. Its threads and files are its own; you can reach every one of them' +
       (spec.project ? ", and work in another than this thread's when the person asks." : '.'),
     list
       .map((p) => {
@@ -320,17 +320,16 @@ function chief(spec: ThreadSpec) {
         : ''),
     [
       '### Answering and routing',
-      '- Answer yourself what one reply settles: questions about the workspace, its team and tasks (`list_tasks`, ' +
-        '`search_workspace`), advice, quick facts.',
+      '- Answer yourself what one reply settles: questions about the workspace and its team ' +
+        '(`search_workspace`), advice, quick facts.',
       "- Work that is a teammate's: hand it on by mentioning them as @Name in your reply, with the ask and what " +
-        'they need to know. They join this thread and answer after you; bigger work they track as a task themselves. ' +
+        'they need to know. They join this thread and answer after you; bigger work they give a thread of its own. ' +
         'Mention only those who must act now: anywhere else, write a name without the @, since an @ brings them in.',
       '- Work whose result should come back to you here, long or in parallel (research, a check across several ' +
         'things, one part each for several teammates): `start_child` with the teammate, one child each, then end ' +
         'your turn. You are woken once all of them reported: put their answers together for the person.',
-      '- Work for a teammate that goes on in its own thread: `create_task` with the ' +
-        'teammate as assignee, one task per goal, never one per step (see Big goals), and say in a line what you ' +
-        'handed to whom.',
+      '- Work for a teammate that goes on in its own thread: `start_thread` with the teammate, one thread per ' +
+        'goal, never one per step (see Big goals), and say in a line what you handed to whom.',
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
@@ -592,16 +591,6 @@ const TEACH_SKILL: ThreadSkill = {
   refs: [],
 }
 
-/** The rest of the board, which any teammate may manage. */
-const boardTools = (spec: ThreadSpec) =>
-  'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
-  "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
-  'person), `move_task` and ' +
-  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person. A task you create ' +
-  "goes in this thread's project; when it belongs to another project" +
-  ((spec.projects ?? []).length > 0 ? ' (see Projects)' : '') +
-  ", give `project` with that project's id, and move one created in the wrong project with `update_task`."
-
 /**
  * Big goals: one deliverable, however big. Nine tasks made a person follow nine
  * pull requests, and planned deliveries still made them review and decide more
@@ -614,10 +603,9 @@ const bigGoals = (spec: ThreadSpec) =>
   'ask them to approve a plan; ask only for what you cannot go on without, such as a decision only they can make, ' +
   'when you reach it.\n\n' +
   'If this thread is about that goal, do it here. If the goal came up while talking about something else, give ' +
-  'it a thread of its own: `create_task` with your own name as assignee and a description that stands alone (the ' +
-  'goal, what done looks like, links to the specs), then say here in a line that it goes on in its own thread, by ' +
-  'its title.\n\n' +
-  'Its parts stay off the board: do them yourself, and start a child thread only as Child threads says.\n\n' +
+  'it a thread of its own: `start_thread` with a brief that stands alone (the goal, what done looks like, links ' +
+  'to the specs), then say here in a line that it goes on in its own thread, by its title.\n\n' +
+  'Its parts get no thread of their own: do them yourself, and start a child thread only as Child threads says.\n\n' +
   'Check it before you hand it over: for code, tests and typecheck pass' +
   (spec.git && reviewPolicy(spec) === 'teammate'
     ? ', and when its pull request deserves a review (see Code), the review came back and you fixed what it found'
@@ -625,15 +613,13 @@ const bigGoals = (spec: ThreadSpec) =>
   '. Then one message: what to try and how, what was checked, and the pull request to merge. When you end a ' +
   'turn before it is ready, say in a line where things stand.'
 
-/** A playbook's run starts no thread outside it: no task for a teammate, no schedule. */
-const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
-  '## Tasks\n\n' +
-  (playbook.dryRun
-    ? '`list_tasks` shows the Tasks board; a dry run changes nothing on it.'
-    : '`list_tasks` shows the Tasks board. `create_task` puts a task in Backlog, assigned to nobody, for a person ' +
-      "to pick up (a customer's idea, say), and `update_task` adds to one already in Backlog. A playbook's run " +
-      'gives no task to a teammate and writes in no thread outside the run: what must be done goes in a child ' +
-      'thread.')
+/** A playbook's run starts no thread outside it, and keeps a customer's idea in a list. */
+const playbookIdeas = (playbook: NonNullable<ThreadSpec['playbook']>) =>
+  '## Ideas\n\n' +
+  "To keep an idea for the team (a customer's feature request), call `file_idea` with one line: it goes to the " +
+  "playbook's ideas list, where a person decides what to do with it, and starts nothing" +
+  (playbook.dryRun ? ' (in a dry run, it only says where the line would go)' : '') +
+  ". A playbook's run starts no thread outside it and writes in none: what must be done goes in a child thread."
 
 /**
  * Done (docs/board.md): the teammate declares the work asked in its thread delivered, and Brigade
@@ -697,39 +683,25 @@ function lists(spec: ThreadSpec) {
   ].join('\n\n')
 }
 
-/** The Tasks board: this thread's task, or when to make one. */
-function tasks(spec: ThreadSpec) {
-  if (spec.playbook) return playbookBoard(spec.playbook)
+/** Threads of their own (start_thread): when to start one, rather than work here or in a child. */
+function threadsOfTheirOwn(spec: ThreadSpec) {
+  if (spec.playbook) return playbookIdeas(spec.playbook)
   return [
-    spec.task
-      ? [
-          '## Your task',
-          `This thread is the task **${spec.task.title}** on the workspace's Tasks board.`,
-          spec.task.description,
-          'Put what you produce where others can reach it: push your branch or open a pull request, attach files ' +
-            'to the thread, or save them to the library. Another teammate may take the task over, and it does not ' +
-            'see your working folder. When the work is finished and delivered, call `complete_task` with a short ' +
-            'summary and links to what you produced' +
-            (spec.parent
-              ? '.'
-              : ': it takes the task off the board but leaves this thread open, so declare the thread done ' +
-                'too (see Done).'),
-          boardTools(spec),
-        ]
-          .filter(Boolean)
-          .join('\n\n')
-      : '## Tasks\n\n' +
-        'Work lives in threads: do it here, without making it a task. Call `create_task` only when the person asks ' +
-        'to track something on the Tasks board, or to start work in a thread of its own: a goal of yours' +
-        (spec.parent ? '' : ' (see Big goals)') +
-        ', or work for another teammate that goes on in its own thread' +
-        (spec.parent
-          ? ''
-          : ' (work whose result must come back here is a child thread: see Child threads)') +
-        '.\n\n' +
-        boardTools(spec),
+    '## Threads of their own\n\n' +
+      'Work lives in threads: do it here. Call `start_thread` only to start work in a thread of its own, in the ' +
+      'sidebar: a goal of yours' +
+      (spec.parent ? '' : ' (see Big goals)') +
+      ', or work for another teammate that goes on in its own thread' +
+      (spec.parent
+        ? ''
+        : ' (work whose result must come back here is a child thread: see Child threads)') +
+      '. Its brief stands alone: it does not see this conversation. To hand it lines of a list, give the list ' +
+      'and those lines: it works on them, as when a person hands them over. To add to it later, `message_thread` ' +
+      "with its id. It goes in the list's project, else this thread's; when it belongs to another project" +
+      ((spec.projects ?? []).length > 0 ? ' (see Projects)' : '') +
+      ", give `project` with that project's id.",
     // A child or a playbook's run does its part: the thread that started it plans.
-    !spec.parent && !spec.playbook && bigGoals(spec),
+    !spec.parent && bigGoals(spec),
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -992,7 +964,7 @@ const playbook = (
     ? '\n\n**This run is a dry run** on a past event, before the playbook is active. Work exactly as you would ' +
       'for real, up to each write: every write you make through an App is recorded for the report and answered ' +
       'with a fake success, nothing is sent, and git refuses every push, so keep code work in your folder. ' +
-      'Nobody answers here: do not open tickets, start child threads or create tasks, whatever else these ' +
+      'Nobody answers here: do not open tickets or start child threads, whatever else these ' +
       "instructions say about them; where you would, say in `playbook_report`'s summary what you would ask or " +
       'start, and end the run.'
     : '') +

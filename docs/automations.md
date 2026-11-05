@@ -9,7 +9,8 @@ do this from events (`apps/api/src/triggers.ts`). This step adds **schedules**: 
 teammate is prompted with the same instructions on a cron schedule. Each firing
 starts a fresh thread.
 
-The name is "schedule" because a **Task** already means an item on the Tasks board.
+The name is "schedule" because a **task** then meant an item on the Tasks board (gone since:
+docs/hand-offs.md).
 
 ## Decisions
 
@@ -113,7 +114,7 @@ It goes in `@brigade/contracts`, so the API and the editor validate the same way
 
 ## Agent tools
 
-Three tools, built like `create_task`. Each is a tool in `harness/tools.ts`, sent from
+Three tools, each a tool in `harness/tools.ts`, sent from
 the runner to the API as `schedule.call { callId, sessionId, teammateId, operation }`,
 handled by `handleScheduleCall` in `schedules.ts`, and answered with `connector.result`.
 

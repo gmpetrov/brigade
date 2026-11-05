@@ -97,7 +97,7 @@ export async function threadObjectKeys(db: ScopedDb, scope: Scope, sessionId: st
 export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, sessionId: string) {
   const thread = await db.session.findFirst({
     where: { id: sessionId },
-    select: { id: true, title: true, status: true, taskId: true, computerId: true },
+    select: { id: true, title: true, status: true, computerId: true },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
   if (BUSY.has(thread.status))
@@ -171,7 +171,6 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
       { type: 'thread.deleted', sessionId },
       { touch: false },
     )
-  return { taskId: thread.taskId }
 }
 
 /**

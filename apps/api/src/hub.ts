@@ -138,9 +138,6 @@ export const threadUpdated = (sessionId: string, status: string): ApiToBrowser =
   status,
 })
 
-/** A task was created, changed or removed. */
-export const taskUpdated = (taskId: string): ApiToBrowser => ({ type: 'task.updated', taskId })
-
 /** A schedule was created, changed, fired or removed. */
 export const scheduleUpdated = (scheduleId: string): ApiToBrowser => ({
   type: 'schedule.updated',

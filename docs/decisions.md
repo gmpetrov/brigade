@@ -59,7 +59,7 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   (`POST /api/teammates/team`): those teammates run on the chief's agent, start with connector writes on `ask`, and
   get the connections they need that the workspace has. The chief answers what one reply settles; a teammate it
   @mentions joins the thread and answers next (only the chief can bring in teammates not yet in a thread, protocol
-  18), and bigger work becomes a task. Onboarding names the project (organization and first workspace), then asks
+  18), and bigger work gets a thread of its own (`start_thread`, docs/hand-offs.md). Onboarding names the project (organization and first workspace), then asks
   for an AI account: the dashboard stays closed until the member has one that has worked in that workspace.
   Chief also answers teammates' buttons and choices in a member's name, suggesting first and alone only for the kinds
   they allow; off, as a member's preference, it does none of it (docs/chief-answers.md).
@@ -211,10 +211,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     of the work: one that called `report` sent its partial result to the parent as the child's final one. Claude Code
     gives a PreToolUse hook `agent_id` only for a sub-agent's call, so the bridge's hook refuses the tools that act for
     the whole thread (`apps/runner/src/harness/thread-tools.ts`, passed as `BRIGADE_THREAD_TOOLS`): its result and
-    end (`report`, `playbook_triage`, `playbook_report`, `complete_task`, `complete_item`), what it waits on and what
+    end (`report`, `playbook_triage`, `playbook_report`, `complete_item`, `complete_thread`), what it waits on and what
     wakes it (`start_child`, `cancel_child`, `set_wakeup`, `cancel_wakeup`, `request_review`, `start_dry_run`), what
-    it says to people and other threads (`open_ticket`, `message_thread`), and work the thread then owns (`create_task`,
-    schedules, triggers, playbooks, and GitHub's create, ready-for-review, review and merge of pull requests, by the
+    it says to people and other threads (`open_ticket`, `message_thread`), and work the thread then owns (`start_thread`,
+    `file_idea`, schedules, triggers, playbooks, and GitHub's create, ready-for-review, review and merge of pull requests, by the
     tool's bare name with one GitHub account and suffixed with several). The refusal says only the thread may call it, and to give the result in the sub-agent's final answer.
     The tools that do the work (files, code, searches, the library, previews, Apps) stay the sub-agent's.
   - **A child's report waits for its own sub-agents.** Called while the thread's own sub-agents are at work, `report`
@@ -402,7 +402,7 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   lists every mailbox's mail across agents, projects and sources (Brigade's addresses, Gmail), with where each went,
   and lets a person mark one done or hand it to a teammate.
 - **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
-  groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
+  groups a workspace's work: threads, schedules and triggers carry a `projectId`; it owns a library folder
   and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,
   memory (`projects/<id>.md`), folder, repositories and preferred connections in its spec; a quiet thread's
   memory run writes project facts there, never for a private thread. Lists take `?project=<id|none>`.
@@ -871,7 +871,7 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   that key) and hands everything to the relay once it runs. The host's tools are kept by their hash and not converted again, and the
   bridge's `start-config.json` no longer holds them. Codex's app-server already stays across turns. Brigade's tools
   that end most turns (`complete_thread`, `open_ticket`, `show_widget`, `widget_guide`, a child's `report`,
-  `complete_task`, `search_workspace`) are always loaded in Claude Code (`alwaysLoad`), never behind a tool search,
+  `search_workspace`) are always loaded in Claude Code (`alwaysLoad`), never behind a tool search,
   which cost a model round trip of its own. And a turn waits for memory only past the first `TURNS_ALWAYS` turns, or
   after the memory guard stopped one lately: the cloud computer's own services hold most of its memory, so it read
   short of it most of the time, and turns waited 6 to 46 s with few others running.
