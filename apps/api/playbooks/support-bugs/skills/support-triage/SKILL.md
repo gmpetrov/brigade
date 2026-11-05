@@ -37,8 +37,7 @@ costs a lot and rarely finds the right cause. Their answer comes back to this th
 still does not say enough, hand it to a person (open a ticket) rather than starting a fix.
 
 Keep a feature request with `file_idea`: one line saying what is asked, why, and who asked (their company).
-It goes to the playbook's ideas list, where a person decides what to do with it; it starts nothing. When the
-list already has the same idea (look with `list_items`), file it only if this customer adds something new.
+It goes to the playbook's ideas list, where a person decides what to do with it; it starts nothing.
 
 A reply in an ongoing conversation continues this thread: read what was already said before answering.
 

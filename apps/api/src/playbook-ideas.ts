@@ -69,12 +69,15 @@ export async function fileIdea(
     },
   })
   if (!run) return { error: 'This playbook run is gone.' }
-  if (run.dryRun)
-    return {
-      error: "A dry run files nothing: say in playbook_report's summary what you would have filed.",
-    }
   const settings = (run.installation.settings ?? {}) as Record<string, unknown>
   const place = ideasPlace(settings.ideas, run.installation.project)
+  // A dry run's writes are simulated: it says where the line would go, and writes nothing.
+  if (run.dryRun)
+    return {
+      simulated: true,
+      wouldFile: { path: place.path, text: op.text },
+      note: 'A dry run files nothing: in a live run, this line would go to that list.',
+    }
   // Only where its teammate may save: a folder people closed to it stays closed.
   if ((await teammateLibraryAccess(db, teammate)).of(place.path) !== 'read_write')
     return {

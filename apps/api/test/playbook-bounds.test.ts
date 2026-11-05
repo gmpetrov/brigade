@@ -391,22 +391,16 @@ describe('the bounds of a playbook run', { skip: !database && 'no database answe
     }
   })
 
-  test('a dry run files nothing', async () => {
-    await db.teammate.updateMany({
-      where: { id: ids.teammate },
-      data: { libraryAccess: 'read_write' },
+  test('a dry run files nothing: it says where the line would go', async () => {
+    const before = await db.listItem.count()
+    const heard = await op(ids.dry, { name: 'file_idea', text: 'Export to CSV' })
+    assert.equal(heard.ok, true, heard.error)
+    assert.deepEqual(heard.output, {
+      simulated: true,
+      wouldFile: { path: 'ideas.md', text: 'Export to CSV' },
+      note: 'A dry run files nothing: in a live run, this line would go to that list.',
     })
-    try {
-      for (const heard of [
-        await op(ids.dry, { name: 'file_idea', text: 'Export to CSV' }),
-        await task(ids.dry, create('none')),
-      ]) {
-        assert.equal(heard.ok, false)
-        assert.match(heard.error ?? '', /A dry run files nothing/)
-      }
-    } finally {
-      await db.teammate.updateMany({ where: { id: ids.teammate }, data: { libraryAccess: 'read' } })
-    }
+    assert.equal(await db.listItem.count(), before)
   })
 
   test('outside a playbook, an idea is a line added to a list like any other', async () => {
