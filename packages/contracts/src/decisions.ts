@@ -179,6 +179,8 @@ export type DecisionFlag = z.infer<typeof DecisionFlag>
 
 /** One of a project's decisions, as the dashboard shows it. */
 export const DecisionView = z.object({
+  /** The library file it is read from: the Markdown file, or the design's design.json. */
+  documentId: z.string(),
   /** The library path: the Markdown file, or the design's folder. */
   path: z.string(),
   type: z.enum(['spec', 'design']),

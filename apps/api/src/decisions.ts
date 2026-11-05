@@ -78,7 +78,7 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
     ORDER BY "updatedAt" DESC
     LIMIT ${DECISIONS_MAX}`
   const inFolder = (path: string, name: string) => path.startsWith(`${prefix}${name}/`)
-  const views: (DecisionView & { documentId: string })[] = []
+  const views: DecisionView[] = []
   for (const row of rows) {
     const updatedAt = row.updatedAt.toISOString()
     if (row.path.endsWith(`/${DESIGN_MANIFEST}`)) {
@@ -137,7 +137,7 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
     const behind = new Set(merged.map((m) => m.documentId))
     for (const v of open) if (behind.has(v.documentId)) v.flags.push('merged_not_shipped')
   }
-  return views.map(({ documentId: _id, ...view }) => view)
+  return views
 }
 
 /**

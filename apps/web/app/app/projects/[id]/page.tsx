@@ -8,6 +8,7 @@ import { LIST_LIVE } from '@/components/list-items'
 import { ListRow } from '@/components/list-row'
 import { NewList } from '@/components/new-list'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
+import { ProjectDecisions } from '@/components/project-decisions'
 import { useProject } from '@/components/project-shell'
 import { describeCron } from '@/components/schedules'
 import { StatusDot } from '@/components/status-badge'
@@ -98,7 +99,7 @@ function routines(
 
 /**
  * A project's page under its header: a box to start a thread in it, then how it moves along —
- * its lists and what runs on its own. What the sidebar, Home or the settings already show
+ * its lists, what runs on its own, and its decisions (specs and designs with their status). What the sidebar, Home or the settings already show
  * (its threads, what needs a person, its context) is not repeated here.
  */
 export default function ProjectOverview() {
@@ -228,6 +229,15 @@ export default function ProjectOverview() {
       )}
 
       {listsFirst ? [listsSection, routinesSection] : [routinesSection, listsSection]}
+
+      <ProjectDecisions
+        projectId={project.id}
+        section={({ action, children }) => (
+          <Section title="Decisions" action={action}>
+            {children}
+          </Section>
+        )}
+      />
 
       {!teammate && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
