@@ -584,7 +584,8 @@ export async function startThread(
           target: { type: 'thread', id: created.id },
           track: {
             origin:
-              input.origin?.kind ?? (input.quiet ? 'email' : input.byTeammateId ? 'task' : 'member'),
+              input.origin?.kind ??
+              (input.quiet ? 'email' : input.byTeammateId ? 'task' : 'member'),
             harness: input.teammate.harness,
           },
           data: {

@@ -223,12 +223,10 @@ export function usePendingThread(id: string | null | undefined) {
  * has them, and the list is to load again.
  */
 export function useUnlistedThreads() {
-  return useSyncExternalStore(
-    subscribe,
-    () => unlistedRows,
-    () => NONE,
-  )
+  return useSyncExternalStore(subscribe, unlistedThreads, () => NONE)
 }
+/** What `useUnlistedThreads` gives, now. */
+export const unlistedThreads = () => unlistedRows
 const NONE: Unlisted[] = []
 
 /**
