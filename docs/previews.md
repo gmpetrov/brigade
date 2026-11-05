@@ -425,21 +425,35 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   - **The API holds the machines** (`PreviewMachine`, one row per thread, no
     foreign key: a deleted thread or workspace leaves its row until the sweep
     destroyed the VM). The runner's `preview.machine` call: `up` makes it (or
-    starts it again, or makes another once the provider lost it), under a
-    claim so two starts make one, and with an idempotency key so a retry makes
-    no second; then lets the runner's SSH key in and gives the address and the
-    host key, which comes over the provider's API and is pinned. `sleep` stops
-    it (its disk kept, free), `touch` says it is used, which pushes back the
-    provider's own stop (2 hours after the last one, should Brigade be gone).
-    At most 5 run at once per workspace: past that, a preview runs on the
-    computer and says why. The sweep (each minute) destroys the machine of a
-    deleted thread and one stopped 12 days (the provider keeps a stopped disk
-    14), stops one its runner said nothing of for 45 minutes, and destroys what
-    a making cut short may have made.
+    starts it again, or makes another once the provider lost it), with an
+    idempotency key so a retry makes no second; then lets the runner's SSH key
+    in and gives the address and the host key, which comes over the provider's
+    API and is pinned. `sleep` stops it (its disk kept, free), `touch` says it
+    is used, which pushes back the provider's own stop (2 hours after the last
+    one, should Brigade be gone). At most 5 are up at once per workspace (being
+    made or running): past that, a preview runs on the computer and says why.
+    The sweep (each minute) destroys the machine of a deleted thread and one
+    stopped 12 days (the provider keeps a stopped disk 14), stops one its
+    runner said nothing of for 45 minutes, and destroys what a making cut short
+    may have made. It reads only the rows with work due, so rows with none
+    never hold others back.
+  - **One operation on a machine at a time.** Whoever makes, starts, stops or
+    destroys a machine holds its row (`claimedUntil`, 3 minutes), taken by a
+    conditional write on the row as it read it: work planned from an older
+    read (a sweep's) never stops or destroys a machine an `up` took since, and
+    an `up` that finds its machine being destroyed waits, then makes a new
+    one. The workspace's slots are taken under a lock on the workspace (an
+    advisory lock), so starts in several threads at once never exceed 5. A
+    stop the provider failed leaves the row running, due for the sweep's next
+    stop: never marked stopped while it runs and bills.
   - **No secret of Brigade's goes there**: the machine is made with none of the
     provider account's (boat's `noEnv`), no Claude or Codex login, no other
     thread's files. It gets the checkout, the preview's settings and variables
-    and the credentials the start released, as the computer's preview does.
+    and the credentials the start released, as the computer's preview does,
+    and those only while the app runs: the run's folder there is made again
+    for each run, and its settings and credentials are deleted as the app
+    stops (it sleeps or ends). Teammates of one thread share its machine: the
+    last start's checkout replaces the copy there.
   - **The code, one way.** The runner holds one SSH connection to the machine
     (OpenSSH's ControlMaster, a socket of its own per link). Over it,
     `preview-sync-reader.ts`, run as the teammate in its thread's namespaces,
@@ -451,7 +465,13 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     one `git check-ignore --stdin`), except `.env` files and the start's env
     file; the machine installs and builds for itself. The receiver deletes only
     what it wrote (its state file lists it), never what the machine made. One
-    way: nothing on the machine can write into the teammate's checkout. A
+    way: nothing on the machine can write into the teammate's checkout, and the
+    machine, whose code nobody here vetted, gets only paths of the reader's own
+    manifest (never a path it names, `../`, a home's logins), read only inside
+    the checkout (a folder replaced by a link out of it is not read). git stops
+    its `check-ignore` for good at a path outside the repository: only paths in
+    the checkout are asked, and one that stopped starts again, its pending
+    answers taken as ignored, so nothing git ignores is sent on a guess. A
     flush (a mark the receiver acknowledges) comes before the app starts and
     before `check_preview`. Measured on November 5, 2026 between two boat VMs
     with Brigade's own preview: an edit here served by the machine 92 to 133 ms
@@ -466,15 +486,22 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     here, where the proxy reaches them (`forward`): the gateway, the address,
     cookies, element picking, the code panel and checks are as for any
     preview. Readiness asks the machine whether the port listens (a forward
-    accepts any connection), then asks for `/` through it.
+    accepts any connection), then asks for `/` through it. Each thread's work on
+    its machine (a launch, a sleep, the cleanup when a preview ends) runs one
+    step after another: a launch a stop cut short gives up before it changes
+    anything there, and a replacement's launch starts after the old preview's
+    cleanup.
   - **Sleep, then wake on the next request.** A machine bills while it runs,
     and waking one takes far longer than thawing a frozen preview, so instead
     of freezing after 5 minutes, it sleeps after 30 (`SLEEP_MS`): the app stops,
     the machine stops with it. The next request through the proxy wakes it and
     goes on at once, so the page says it starts meanwhile; a check wakes it and
-    waits. Waking (measured): the machine is up in about 6 seconds and answers
-    SSH a few later; the app again, without its setup, in 16 to 25 seconds in
-    all for Brigade. A preview unused 4 hours stops, its machine stays stopped.
+    waits. A wake runs the setup again: what it started (a database, a service)
+    stopped with the machine, and a machine made again (the provider lost the
+    old one) has none of it. Waking (measured): the machine is up in about 6
+    seconds and answers SSH a few later; Brigade's app again in 25 to 40
+    seconds, its setup included. A preview unused 4 hours stops, its machine
+    stays stopped.
     A replaced preview, or one the next runner starts again after an update,
     keeps its machine up for it.
   - **Not done**: making a machine from a saved image per repository (a
