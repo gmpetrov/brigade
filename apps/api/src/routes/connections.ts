@@ -68,7 +68,7 @@ import {
   toolPrefix,
   type CustomMcp,
 } from '../mcp-servers.js'
-import { forgetMcpTools } from '../mcp-tools.js'
+import { checkMcpSignIn, forgetMcpTools } from '../mcp-tools.js'
 import { appOpen, featuresOfUser } from '../features.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
@@ -811,6 +811,31 @@ export const connections = new Hono<AppEnv>()
       take: 200,
     })
     return c.json(calls)
+  })
+
+  /**
+   * Whether an account still signs in, checked as a ticket offers to give it. A built-in MCP App's
+   * tools come from its server, and an account it refuses (an expired key) gives a teammate no
+   * tools and no word why: checked, it is marked needs_reauth, and the ticket offers to reconnect
+   * it instead. Brigade's own connectors list their tools whatever the account's state, and a call
+   * refused says to reconnect it. A server that does not answer leaves the account as it is.
+   */
+  .post('/:id/check', async (c) => {
+    const { scope, db } = c.var
+    const connection = await db.connection.findFirst({
+      where: { id: c.req.param('id'), status: { not: 'removed' } },
+    })
+    if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
+    requireAccountManager(scope, connection)
+    if (connection.status === 'active' && connectors[connection.kind]?.mcp)
+      await checkMcpSignIn(db, scope, connection).catch((error: unknown) =>
+        console.warn(`check of ${connection.id}: ${String(error)}`),
+      )
+    const now = await db.connection.findFirst({
+      where: { id: connection.id },
+      select: { status: true },
+    })
+    return c.json({ status: now?.status ?? 'removed' })
   })
 
   /** Rename an account, or change where teammates may use it. */

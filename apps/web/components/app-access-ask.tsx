@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
 import { AppKeyForm } from '@/components/app-key-form'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
@@ -87,6 +87,9 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 
   revenuecat: 'mcp',
 }
 
+/** How long Give waits for its accounts' check before it may be clicked anyway. */
+const CHECK_WAIT_MS = 4000
+
 /**
  * The account a ticket offers first: the one the teammate named, else one at a domain its ask
  * mentions (support@acme.com picks the acme.com account), else the first.
@@ -165,6 +168,30 @@ export function AppAccessAsk({
             // Already connected again beside it, before reconnecting renewed the same row.
             !givable.some((g) => g.externalAccount && g.externalAccount === c.externalAccount),
         )
+  // A built-in MCP App's account may have stopped signing in unseen (OpenRouter's key lasts 7
+  // days): each one this ticket could give is checked once, as it shows. One its server refuses
+  // turns into Reconnect (the API marks it, and the list reloads), rather than an account given
+  // with no tools. Give waits for the check, CHECK_WAIT_MS at most.
+  const toCheck = givable
+    .filter((c) => SIGN_IN[c.kind] === 'mcp')
+    .map((c) => c.id)
+    .join(',')
+  const checked = useRef(new Set<string>())
+  const [checking, setChecking] = useState(0)
+  useEffect(() => {
+    const ids = toCheck.split(',').filter((id) => id && !checked.current.has(id))
+    if (!ids.length) return
+    for (const id of ids) checked.current.add(id)
+    setChecking((n) => n + 1)
+    const checks = Promise.allSettled(
+      ids.map((id) => api(`/connections/${id}/check`, { body: {} })),
+    )
+    void Promise.race([checks, new Promise((done) => setTimeout(done, CHECK_WAIT_MS))]).then(() => {
+      setChecking((n) => n - 1)
+      void data.reload()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checks each account once, as it shows up
+  }, [toCheck])
   const options = [...givable, ...expired]
   const preferred = preferredAccount(options, ask)
   // The installation on the repository's owner, if any, to add the repository to on GitHub. An
@@ -340,7 +367,7 @@ export function AppAccessAsk({
                 </Link>
               </Button>
             ) : (
-              <Button size="sm" onClick={() => give(chosen?.id)}>
+              <Button size="sm" disabled={checking > 0} onClick={() => give(chosen?.id)}>
                 Give {askerName} {access} access
               </Button>
             )}

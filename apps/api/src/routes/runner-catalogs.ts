@@ -5,7 +5,11 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { catalogFor, unsharedCatalog } from '../catalogs.js'
-import { CATALOG_INCOMPLETE_HEADER, CATALOG_SHARED_PARAM } from '@brigade/contracts'
+import {
+  CATALOG_INCOMPLETE_HEADER,
+  CATALOG_SHARED_PARAM,
+  CATALOG_SIGNED_OUT_HEADER,
+} from '@brigade/contracts'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 
@@ -25,10 +29,16 @@ export const runnerCatalogs = new Hono().get('/:connectionId', async (c) => {
   // As it is now, whatever version the spec named: an older one is not kept anywhere. One its
   // server could not list now is empty for this turn, and says so: the runner does not keep it.
   const { text, complete } = await catalogFor(db, scope, connection, grant)
+  // Not listed because its server refused the account (listing marks it so): the teammate is
+  // told to ask for a reconnect, rather than that the App is down.
+  const signedOut =
+    !complete &&
+    (await db.connection.count({ where: { id: connection.id, status: 'needs_reauth' } })) > 0
   // Shared as kept (sharedSubschemas); whole, as before, for a runner that does not ask so.
   const shared = c.req.query(CATALOG_SHARED_PARAM) === 'shared'
   return c.body(shared ? text : unsharedCatalog(text), 200, {
     'content-type': 'application/json',
     ...(complete ? {} : { [CATALOG_INCOMPLETE_HEADER]: '1' }),
+    ...(signedOut ? { [CATALOG_SIGNED_OUT_HEADER]: '1' } : {}),
   })
 })

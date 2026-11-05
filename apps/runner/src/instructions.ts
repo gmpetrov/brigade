@@ -33,6 +33,7 @@ import {
   type LayeredMemory,
   type ThreadMemory,
 } from './memory-layers.js'
+import { TICKET_APP_KINDS } from './harness/tools.js'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
@@ -147,6 +148,7 @@ export function instructions(
       : !spec.parent && INSTALLING,
     // A playbook's run has only the Apps the playbook declares.
     !spec.playbook && APP_ACCOUNTS,
+    unavailableApps(spec),
     credentials(browser),
     ...memoryParts(spec, memory),
     '## Memory',
@@ -1038,6 +1040,38 @@ const APP_ACCOUNTS =
   'the task. When your tools reach the account but a call is refused for a permission it lacks, one the person ' +
   "allows on the provider's consent page (such as Cloudflare's), open the same ask with `permission` naming it: " +
   'the ticket reconnects the account in one click, so do not write the steps yourself.'
+
+/**
+ * The accounts granted here that this turn cannot use (ConnectorGrant.unavailable): said, so that
+ * the teammate asks for a reconnect, or says an App is down, where it would otherwise only find
+ * its tools missing and do the work another way without a word.
+ */
+export function unavailableApps(spec: Pick<ThreadSpec, 'connectors'>) {
+  const lines = spec.connectors.flatMap((grant) => {
+    if (!grant.unavailable) return []
+    const account = grant.externalAccount ?? grant.label
+    const name = grant.externalAccount ? `${grant.label}: ${account}` : grant.label
+    if (grant.unavailable === 'unreachable')
+      return [`- ${name}: its server did not answer, so its tools are missing in this turn.`]
+    // An MCP server added by its URL goes by its tools' prefix: a ticket names it as mcp.
+    const app = (TICKET_APP_KINDS as readonly string[]).includes(grant.kind)
+      ? `\`kind\` ${grant.kind}, \`account\` "${account}"`
+      : `\`kind\` mcp, \`server\` its id as \`list_apps\` gives it`
+    return [
+      `- ${name}: the provider refused its sign-in, so its tools are missing or fail. To reconnect it, ` +
+        `the \`app\` of the access ask is ${app}, \`scope\` ${grant.scope}.`,
+    ]
+  })
+  if (!lines.length) return null
+  return [
+    '## Accounts you cannot use now',
+    lines.join('\n'),
+    'When the work needs one of them, do not do it another way without a word. For an account whose sign-in ' +
+      'was refused, open a ticket (`open_ticket`) with an `access` ask of kind `connection` and the `app` given ' +
+      'above: its owner reconnects it from the ticket, and its tools reach you in this thread. For one whose ' +
+      'server did not answer, say so in your reply, and what you did instead. Ask for none the work does not need.',
+  ].join('\n\n')
+}
 
 /** The vault, and getting a login or key it lacks without stopping the work. */
 const credentials = (browser: Browser) =>
