@@ -96,19 +96,16 @@ export function hostOnly(setCookie: string) {
 
 // A route is read from the database for each request, never kept: a route dropped or taken
 // over in another isolate (a preview stopped, another thread took its address) must stop
-// working at once, or the old thread's cookie would reach the new thread's app. Requests
-// asking at the same time (a page's burst) share one read.
-const reading = new Map<string, Promise<Route | null>>()
-
+// working at once, or the old thread's cookie would reach the new thread's app. Nor is a read
+// shared between requests: in Workers, I/O belongs to the request that started it, and when
+// that request ends (its browser closed the page) its read may never settle. A read shared
+// with the requests at the same time hung each of them, and every later one in the isolate,
+// which waited on it until Cloudflare canceled them: a preview that worked in one tab never
+// loaded in the next, nor for its check (net::ERR_ABORTED after 90 seconds).
 function route(env: Env, id: string): Promise<Route | null> {
-  const pending = reading.get(id)
-  if (pending) return pending
-  const read = env.DB.prepare('SELECT thread, origin, token, nonce FROM previews WHERE id = ?')
+  return env.DB.prepare('SELECT thread, origin, token, nonce FROM previews WHERE id = ?')
     .bind(id)
     .first<Route>()
-    .finally(() => reading.delete(id))
-  reading.set(id, read)
-  return read
 }
 
 const authorized = (request: Request, env: Env) =>
