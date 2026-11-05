@@ -42,6 +42,14 @@ Open in Brigade** opens a `brigade://link?code=…&api=…` link, the app asks b
 running from the menu bar. The runner still updates itself from the API's bundle; the app updates itself from
 GitHub Releases (`apps/desktop/release`). Logs: `~/.brigade/logs/runner.log`.
 
+A Mac can be linked to several workspaces and runs for one at a time, picked in the menu's **Workspace** submenu
+(`apps/desktop/src-tauri/src/workspaces.rs`). Each has a runner home of its own, since a home holds a workspace's
+link, outbox, library mirror and thread folders: the first one linked keeps `~/.brigade`, the others get
+`~/.brigade/workspaces/<key>`, and all share the runner install in `~/.brigade`. The app starts the runner with
+`BRIGADE_HOME` set to the chosen home, named in `~/.brigade/active-workspace`. The dashboard's link names its
+workspace (`&workspace=…`): one already linked here is linked again in its own home, keeping its computer, and
+another gets a new home. Switching stops the runner, which saves its threads, and starts the other workspace's.
+
 Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teammates `computer_screenshot`,
 `computer_click`, `computer_type`, `computer_key`, `computer_scroll`, `computer_drag`, `computer_move`,
 `computer_apps`, `computer_open_app`, `computer_ui_tree` and `computer_run` on the member's Mac. The runner starts it with `open`,
