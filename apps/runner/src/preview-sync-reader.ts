@@ -37,11 +37,17 @@ const baseName = (path: string) => path.slice(path.lastIndexOf('/') + 1)
  * Whether git ignores paths, asked of one `git check-ignore --stdin` that answers each path as
  * it comes. Tracked files are never ignored. Outside a git work tree, nothing is.
  */
+/** One `git check-ignore --stdin`, with the answers it still owes, in order. */
+type Checker = {
+  git: ChildProcessWithoutNullStreams
+  waiting: ((ignored: boolean) => void)[]
+  fields: string[]
+  partial: string
+}
+
 class Ignores {
-  private git?: ChildProcessWithoutNullStreams
-  private waiting: ((ignored: boolean) => void)[] = []
-  private fields: string[] = []
-  private partial = ''
+  private checker?: Checker
+  private inside = false
 
   /** `included`: paths sent even when git ignores them (the app's env file). */
   constructor(
@@ -50,7 +56,7 @@ class Ignores {
   ) {}
 
   async start() {
-    const inside = await new Promise<boolean>((done) => {
+    this.inside = await new Promise<boolean>((done) => {
       const probe = spawn('git', ['-C', this.root, 'rev-parse', '--is-inside-work-tree'], {
         stdio: ['ignore', 'pipe', 'ignore'],
       })
@@ -59,45 +65,44 @@ class Ignores {
       probe.on('error', () => done(false))
       probe.on('close', (code) => done(code === 0 && out.trim() === 'true'))
     })
-    if (inside) this.open()
+    if (this.inside) this.open()
   }
 
   private open() {
     const git = spawn('git', ['-C', this.root, 'check-ignore', '--stdin', '-z', '-n', '-v'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
-    this.git = git
+    const checker: Checker = { git, waiting: [], fields: [], partial: '' }
+    this.checker = checker
     git.stdin.on('error', () => undefined)
     git.stderr.resume()
     git.stdout.on('data', (data: Buffer) => {
-      const parts = (this.partial + data.toString('utf8')).split('\0')
-      this.partial = parts.pop() ?? ''
+      const parts = (checker.partial + data.toString('utf8')).split('\0')
+      checker.partial = parts.pop() ?? ''
       for (const part of parts) {
-        this.fields.push(part)
+        checker.fields.push(part)
         // source, line, pattern, path: ignored when a pattern matched and does not negate.
-        if (this.fields.length === 4) {
-          const pattern = this.fields[2]!
-          this.fields = []
-          this.waiting.shift()?.(pattern !== '' && !pattern.startsWith('!'))
+        if (checker.fields.length === 4) {
+          const pattern = checker.fields[2]!
+          checker.fields = []
+          checker.waiting.shift()?.(pattern !== '' && !pattern.startsWith('!'))
         }
       }
     })
+    git.on('error', () => undefined)
     git.on('close', () => {
       // Gone (git failed, or restarted below): what it did not answer is not ignored.
-      if (this.git === git) this.git = undefined
-      for (const done of this.waiting.splice(0)) done(false)
+      if (this.checker === checker) this.checker = undefined
+      for (const done of checker.waiting.splice(0)) done(false)
     })
   }
 
-  /** A .gitignore changed: git reads them once, so it starts again. */
+  /** A .gitignore changed: git reads them once, so a new one starts; the old answers what it owes. */
   restart() {
-    const old = this.git
-    if (!old) return
-    this.git = undefined
-    this.fields = []
-    this.partial = ''
-    old.stdin.end()
+    if (!this.inside) return
+    const old = this.checker
     this.open()
+    old?.git.stdin.end()
   }
 
   ignored(path: string) {
@@ -105,16 +110,17 @@ class Ignores {
     // A folder on the way to an included path is walked.
     for (const included of this.included)
       if (included.startsWith(`${path}/`)) return Promise.resolve(false)
-    const git = this.git
-    if (!git) return Promise.resolve(false)
+    const checker = this.checker
+    if (!checker) return Promise.resolve(false)
     return new Promise<boolean>((done) => {
-      this.waiting.push(done)
-      git.stdin.write(`${path}\0`)
+      checker.waiting.push(done)
+      checker.git.stdin.write(`${path}\0`)
     })
   }
 
   close() {
-    this.git?.stdin.end()
+    this.inside = false
+    this.checker?.git.stdin.end()
   }
 }
 
@@ -142,15 +148,21 @@ export class Reader {
 
   private readonly warn: (text: string) => void
 
-  /** Walk the root, watching its folders, and send the manifest (mark `id` once the files are sent). */
-  async start() {
-    await this.ignores.start()
-    await this.walk('')
-    await this.sendManifest()
+  /** Walk the root, watching its folders, then send the manifest: the receiver answers with what it lacks. */
+  start() {
+    return this.then(async () => {
+      await this.ignores.start()
+      await this.walk('')
+      await this.manifest()
+    })
   }
 
-  /** The manifest again, from what was sent: the receiver asks for what it lacks. */
+  /** The manifest again, after what is under way: the receiver asks for what it lacks. */
   sendManifest() {
+    return this.then(() => this.manifest())
+  }
+
+  private manifest() {
     const files: [string, number, number, number][] = []
     const links: [string, string][] = []
     for (const [path, entry] of this.index)
@@ -164,7 +176,15 @@ export class Reader {
     clearTimeout(this.timer)
     this.timer = undefined
     this.batch()
-    this.working = this.working.then(() => this.frame({ t: 'mark', id }))
+    return this.then(() => this.frame({ t: 'mark', id }))
+  }
+
+  /** After what is under way: one thing at a time, and a failure does not stop what comes next. */
+  private then(work: () => Promise<unknown>) {
+    this.working = this.working.then(work).then(
+      () => undefined,
+      (error: unknown) => this.warn(`[preview] The sync skipped a change: ${String(error)}`),
+    )
     return this.working
   }
 
@@ -239,7 +259,7 @@ export class Reader {
     if (this.pending.size === 0) return
     const paths = [...this.pending].sort()
     this.pending.clear()
-    this.working = this.working.then(async () => {
+    void this.then(async () => {
       for (const path of paths) await this.check(path, true)
     })
   }
@@ -273,7 +293,8 @@ export class Reader {
     if (stat.isSymbolicLink()) {
       const target = await readlink(join(this.root, path)).catch(() => null)
       if (target === null) return this.gone(path)
-      if (before && 'link' in before && before.link === target) return
+      // Unchanged since sent, unless the receiver asked for it: it lacks it.
+      if (before && 'link' in before && before.link === target && !this.needed) return
       this.index.set(path, { link: target })
       if (send) await this.frame({ t: 'link', p: path, to: target })
       return
@@ -369,7 +390,7 @@ export class Reader {
   }
 
   /** Send these as they are now, changed or not: the receiver lacks them. */
-  async sendAll(paths: string[]) {
+  private async sendAll(paths: string[]) {
     this.needed = true
     try {
       for (const path of paths) await this.check(path, true)
@@ -378,10 +399,9 @@ export class Reader {
     }
   }
 
-  /** Queue sendAll after what is under way. */
+  /** What the receiver lacks, sent after what is under way. */
   answerNeed(paths: string[]) {
-    this.working = this.working.then(() => this.sendAll(paths))
-    return this.working
+    return this.then(() => this.sendAll(paths))
   }
 }
 

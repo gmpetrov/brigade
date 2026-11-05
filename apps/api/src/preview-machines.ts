@@ -256,7 +256,7 @@ export async function machineTouch(
  * runner, which then runs the preview on the computer and says why.
  */
 export async function handlePreviewMachine(
-  runner: Runner,
+  runner: Pick<Runner, 'computerId'>,
   call: Extract<RunnerToApi, { type: 'preview.machine' }>,
   reply: (message: ApiToRunner) => void,
   machines: MachineProvider | null = configured,

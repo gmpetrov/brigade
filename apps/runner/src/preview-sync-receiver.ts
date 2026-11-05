@@ -176,9 +176,26 @@ export class Receiver {
     this.scheduleSave()
   }
 
-  /** Its folder exists, and no folder is where the file goes (a folder became a file). */
+  /**
+   * Its folder exists, and nothing is in the way: no folder where the file goes (a folder became
+   * a file), no file where one of its folders goes (a file became a folder).
+   */
   private async makeRoom(target: string) {
-    await mkdir(dirname(target), { recursive: true })
+    const folder = dirname(target)
+    try {
+      await mkdir(folder, { recursive: true })
+    } catch {
+      const parts = folder.slice(this.root.length + 1).split('/')
+      for (let i = 1; i <= parts.length; i++) {
+        const path = join(this.root, ...parts.slice(0, i))
+        const stat = await lstat(path).catch(() => null)
+        if (stat && !stat.isDirectory()) {
+          await unlink(path)
+          this.synced.delete(parts.slice(0, i).join('/'))
+        }
+      }
+      await mkdir(folder, { recursive: true })
+    }
     const stat = await lstat(target).catch(() => null)
     if (stat?.isDirectory()) await rm(target, { recursive: true, force: true })
   }

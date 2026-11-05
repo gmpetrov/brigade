@@ -5,6 +5,7 @@ import {
   BOAT_REQUEST_MS,
   boatClient,
   boatDeadlineMs,
+  createBoatMachines,
   createBoatProvider,
 } from '../src/boat/index.js'
 import { DesktopNotReady } from '../src/types.js'
@@ -91,4 +92,78 @@ test('a desktop boat is still setting up is not ready after a short wait, not a 
   await assert.rejects(provider.desktopUrl(ref), DesktopNotReady)
   assert.ok(Date.now() - started < 1000)
   assert.ok(asked() > 1, 'it asked again while waiting')
+})
+
+/** A boat answering each request from `answer`, keeping what it was asked. */
+function boatAnswering(answer: (method: string, path: string, body: unknown) => object) {
+  const asked: { method: string; path: string; body: unknown; headers: Headers }[] = []
+  const send = (async (url: string | URL | Request, init?: RequestInit) => {
+    const path = new URL(String(url)).pathname.replace('/api/v1', '')
+    const method = init?.method ?? 'GET'
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
+    asked.push({ method, path, body, headers: new Headers(init?.headers) })
+    return new Response(JSON.stringify(answer(method, path, body)), {
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+  const machines = createBoatMachines({
+    apiKey: 'key',
+    basePath: 'https://boat.test/api/v1',
+    autoStopSeconds: 7200,
+    send,
+  })
+  return { machines, asked }
+}
+
+// Preview machines (docs/previews.md): made with none of Brigade's boat secrets, boat's own stop
+// as a backstop, and a key that makes a retry give the same machine; SSH where boat says.
+test('a preview machine is made large, without secrets, under its key, and named', async () => {
+  const { machines, asked } = boatAnswering((method, path) =>
+    method === 'POST' && path === '/sandboxes'
+      ? { sandbox: { id: 'sb9', state: 'provisioning' } }
+      : { sandbox: { id: 'sb9', state: 'ready' } },
+  )
+  const ref = await machines.create({ name: 'brigade-preview-row1', key: 'brigade-preview-row1-0' })
+  assert.deepEqual(ref, { provider: 'boat', id: 'sb9' })
+  const made = asked.find((a) => a.method === 'POST' && a.path === '/sandboxes')!
+  assert.deepEqual(made.body, { type: 'large', noEnv: true, ttlSeconds: 7200 })
+  assert.equal(made.headers.get('idempotency-key'), 'brigade-preview-row1-0')
+  assert.equal(made.headers.get('authorization'), 'Bearer key', 'its own headers are kept')
+  const named = asked.find((a) => a.method === 'PATCH')!
+  assert.equal(named.path, '/sandboxes/sb9')
+  assert.deepEqual(named.body, { name: 'brigade-preview-row1' })
+  assert.equal(machines.size, '8 vCPU, 16 GB')
+})
+
+test('a key is let into a preview machine, reached where boat says', async () => {
+  const hostKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHostKey'
+  const behindEndpoint = boatAnswering(() => ({
+    machineIp: '2001:db8::2d',
+    sshEndpoint: '147.135.131.27:19045',
+    sshUser: 'user',
+    hostKey: `${hostKey}\n`,
+  }))
+  const ref = { provider: 'boat', id: 'sb9' }
+  assert.deepEqual(await behindEndpoint.machines.authorize(ref, 'ssh-ed25519 AAAAkey runner'), {
+    host: '147.135.131.27',
+    port: 19045,
+    user: 'user',
+    hostKey,
+  })
+  const sent = behindEndpoint.asked[0]!
+  assert.equal(sent.path, '/sandboxes/sb9/sshkey')
+  assert.deepEqual(sent.body, { key: 'ssh-ed25519 AAAAkey runner' })
+
+  // Its own public address: port 22.
+  const direct = boatAnswering(() => ({ machineIp: '51.91.2.48', hostKey }))
+  assert.deepEqual(await direct.machines.authorize(ref, 'ssh-ed25519 AAAAkey'), {
+    host: '51.91.2.48',
+    port: 22,
+    user: 'user',
+    hostKey,
+  })
+
+  // No host key to pin: not connected to blindly.
+  const unpinned = boatAnswering(() => ({ machineIp: '51.91.2.48' }))
+  await assert.rejects(unpinned.machines.authorize(ref, 'ssh-ed25519 AAAAkey'), /no host key/)
 })

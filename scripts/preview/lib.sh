@@ -75,6 +75,17 @@ wait_for_db() {
   return 1
 }
 
+# Docker's port answers as soon as the container starts, before PostgreSQL in it does (a fresh
+# volume initialises first, as on a new machine): ready once the server itself says so.
+wait_for_docker_db() {
+  for _ in $(seq 1 60); do
+    (cd "$REPO" && docker compose exec -T postgres pg_isready -U brigade -d brigade) >/dev/null 2>&1 && return
+    sleep 1
+  done
+  echo "PostgreSQL did not start in Docker" >&2
+  return 1
+}
+
 # Whether the thread's Docker holds the database already: its Compose volume is there.
 docker_holds_db() {
   [ -n "${COMPOSE_PROJECT_NAME:-}" ] && use_docker &&
@@ -127,7 +138,7 @@ start_db() {
     docker=1
   fi
   if [ -n "$docker" ] && (cd "$REPO" && docker compose up -d postgres); then
-    :
+    wait_for_docker_db || return 1
   else
     [ -z "$docker" ] || say "Docker could not start PostgreSQL: using the embedded one"
     download_postgres || return 1

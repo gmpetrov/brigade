@@ -11,7 +11,7 @@
 // The runner's key is its own (never the teammate's): the API lets it into each machine, and
 // gives the machine's host key from the provider's API, so it is pinned before connecting.
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -92,8 +92,13 @@ export class MachineLink {
   ) {
     mkdirSync(stateDir, { recursive: true, mode: 0o700 })
     this.knownHosts = join(stateDir, 'known_hosts')
-    // A socket's path has at most 104 to 108 bytes: a short one, in the runner's own /tmp.
-    const id = createHash('sha256').update(access.id).digest('hex').slice(0, 16)
+    // A socket's path has at most 104 to 108 bytes: a short one, in the runner's own /tmp. Each
+    // link its own, even to the same machine: a link that replaces another (a new start) never
+    // shares, or takes over, a connection the other may still be closing.
+    const id = createHash('sha256')
+      .update(`${access.id}:${randomUUID()}`)
+      .digest('hex')
+      .slice(0, 16)
     this.control = join(tmpdir(), `bpm-${id}`)
   }
 
@@ -279,21 +284,25 @@ export class MachineSync {
   async start(): Promise<number> {
     this.stop()
     await this.link.exec(
-      `mkdir -p ${REMOTE_DIR} && cat > ${REMOTE_DIR}/sync-receiver.mjs`,
+      `mkdir -p ${REMOTE_DIR} && cat > ${REMOTE_DIR}/preview-sync-receiver.mjs`,
       readFileSync(RECEIVER, 'utf8'),
     )
     const state = `${REMOTE_DIR}/sync/${createHash('sha256').update(this.remoteRoot).digest('hex').slice(0, 16)}.json`
     const receiver = this.link.spawn(
-      `node ${REMOTE_DIR}/sync-receiver.mjs ${shellQuote(this.remoteRoot)} ${shellQuote(state)}`,
+      `node ${REMOTE_DIR}/preview-sync-receiver.mjs ${shellQuote(this.remoteRoot)} ${shellQuote(state)}`,
     )
     const reader = this.startReader()
     this.receiver = receiver
     this.reader = reader
     this.broken = false
+    /** What the side that stopped said last, to say why. */
+    let said = ''
+    let cutBy = ''
     const cut = (who: string) => () => {
       if (this.reader !== reader) return
+      cutBy = `${who}${said ? `: ${said}` : ''}`
       this.log(
-        `[preview] The sync with the machine stopped (${who}); it starts again with the next change`,
+        `[preview] The sync with the machine stopped (${cutBy}); it starts again with the next change`,
       )
       this.broken = true
       this.stop()
@@ -305,10 +314,14 @@ export class MachineSync {
     reader.stdout!.pipe(receiver.stdin!)
     receiver.stdin!.on('error', () => undefined)
     reader.stdin!.on('error', () => undefined)
-    reader.stderr!.on('data', (d: Buffer) => this.log(d.toString('utf8').trimEnd()))
-    receiver.stderr!.on('data', (d: Buffer) =>
-      this.log(`[preview] ${d.toString('utf8').trimEnd()}`),
-    )
+    reader.stderr!.on('data', (d: Buffer) => {
+      said = d.toString('utf8').trim().split('\n').pop() ?? ''
+      this.log(d.toString('utf8').trimEnd())
+    })
+    receiver.stderr!.on('data', (d: Buffer) => {
+      said = d.toString('utf8').trim().split('\n').pop() ?? ''
+      this.log(`[preview] ${d.toString('utf8').trimEnd()}`)
+    })
     createInterface({ input: receiver.stdout! }).on('line', (line) => {
       let message: { t?: string; id?: number; paths?: string[]; message?: string }
       try {
@@ -336,9 +349,14 @@ export class MachineSync {
         this.needWaiter = undefined
         done(paths)
       }
+      // Either side stopping stops both (cut): the sync could not start.
       reader.once('close', () => {
         clearTimeout(timer)
-        fail(new Error('The checkout could not be read for the preview’s machine'))
+        fail(
+          new Error(
+            `The sync with the preview’s machine stopped (${cutBy || 'this computer’s side'})`,
+          ),
+        )
       })
     })
     await this.flush(FIRST_SYNC_MS)
@@ -419,13 +437,14 @@ export function remoteScript(input: {
   command: string
   appStarts: string
 }) {
+  // Its files are named from the home folder sshd starts in: sourced before the cd.
   const lines = [
     `echo $$ > ${PID_FILE}`,
-    `cd -- ${shellQuote(input.dir)} || exit 1`,
     'set -a',
-    `. ${RUN_DIR}/env`,
-    ...Array.from({ length: input.envFiles }, (_, i) => `. ${RUN_DIR}/credentials-${i}`),
+    `. ./${RUN_DIR}/env`,
+    ...Array.from({ length: input.envFiles }, (_, i) => `. ./${RUN_DIR}/credentials-${i}`),
     'set +a',
+    `cd -- ${shellQuote(input.dir)} || exit 1`,
   ]
   if (input.setup?.trim())
     lines.push(
@@ -458,7 +477,8 @@ export const runApp = (link: MachineLink) => link.spawn(`exec bash ${RUN_DIR}/ap
 export function signalApp(link: MachineLink, signal: 'TERM' | 'KILL') {
   return link
     .exec(
-      `pg=$(cat ${PID_FILE} 2>/dev/null) && [ -n "$pg" ] && kill -${signal} -- -"$pg" 2>/dev/null; true`,
+      // Not `kill -SIG -- -pg`: dash, the shell commands may run in, refuses its `--`.
+      `pg=$(cat ${PID_FILE} 2>/dev/null) && [ -n "$pg" ] && kill -${signal} -"$pg" 2>/dev/null; true`,
       '',
       15_000,
     )
