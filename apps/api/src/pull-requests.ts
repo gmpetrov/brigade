@@ -1317,14 +1317,18 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
     const asked = await askLook(db, scope, row, p, approval).catch((error: unknown) => ({
       error: error instanceof Error ? error.message : String(error),
     }))
-    if ('error' in asked)
+    if ('error' in asked) {
+      // Worded for the author, who would have asked: for a person, why in a few words.
+      const looks = /took their (\d+) looks/.exec(asked.error)
+      const why = looks ? `its reviews took their ${looks[1]} looks` : asked.error
       return stop(
         db,
         scope,
         row,
         `${approval.reviewer} approved it before what was pushed to merge it, and could not be ` +
-          `asked to look at that (${asked.error}): have it reviewed again, or merge it as it is`,
+          `asked to look at that (${why}): have it reviewed again, or merge it as it is`,
       )
+    }
   }
   if (
     !(await claim(
@@ -1619,38 +1623,61 @@ export async function resolveConflicts(
 }
 
 /**
- * What its review says of a person's merge now: wait while one is under way; stop when its
- * latest verdict asked for changes on its head, or approved only commits before it (pushed since
- * without a look, or a look that ended with no verdict: resolverDone asks one when the author
- * pushed). Nothing when it has no review, its approval holds for its head, or it asked for
- * changes before commits a person merges past.
+ * What its review says of a person's merge now. It waits while a review is under way, such as its
+ * reviewer's look at a conflict resolution. Once done, its latest verdict must hold for its head:
+ * an approval merges, changes asked for stop it. One that read commits before its head stops it
+ * too (pushed since without a look, or a look that ended with no verdict: resolverDone asks one
+ * when the author pushed), unless it asked for changes before the person asked to merge, who
+ * merges past them, as before; while its thread is at work, it waits instead, for the author may
+ * be asking its reviewer to look again at what it just pushed.
  */
 async function reviewHold(
   db: ScopedDb,
   id: string,
   headSha: string,
 ): Promise<{ wait: string } | { stop: string } | null> {
-  const row = await db.pullRequest.findFirst({ where: { id }, include: reviewInclude })
+  const row = await db.pullRequest.findFirst({
+    where: { id },
+    include: { ...reviewInclude, session: { select: { status: true } } },
+  })
   const review = row && reviewOf(row, headSha)
   if (!review || review.state === 'skipped') return null
   const who = review.reviewer?.name ?? 'Its reviewer'
   if (review.state === 'reviewing') return { wait: `Waiting for ${who}'s review` }
   if (!review.changed)
     return review.state === 'changes_requested' ? { stop: `${who} asked for changes` } : null
-  return review.state === 'approved'
-    ? {
-        stop: `Commits came after ${who} approved it: have it reviewed again, or merge it as it is`,
-      }
-    : null
+  if (review.state === 'changes_requested') {
+    const asked = await mergeAskedAt(db, id)
+    if (asked && new Date(review.at) < asked) return null
+  }
+  if (row.session && ['starting', 'running'].includes(row.session.status))
+    return { wait: `Waiting for its thread to finish: commits came after ${who}'s review` }
+  return {
+    stop: `Commits came after ${who}'s review: have it reviewed again, or merge it as it is`,
+  }
 }
+
+/** When a person last asked to merge it once its conflicts are resolved (Resolve conflicts). */
+const mergeAskedAt = async (db: ScopedDb, id: string) =>
+  (
+    await db.auditEntry.findFirst({
+      where: {
+        action: 'pull_request.resolve_requested',
+        targetType: 'pull_request',
+        targetId: id,
+      },
+      orderBy: { at: 'desc' },
+      select: { at: true },
+    })
+  )?.at ?? null
 
 /**
  * Merge a pull request a person asked to merge, or Auto-merge set merging, as soon as GitHub
  * allows it. Checked when it is ready and every minute after. Conflicts go back to its author
  * either way; otherwise an auto-merge gives up, back to waiting on a person, where a person's
  * merge would send it back to its author (failed checks) or ask them. A person's merge also
- * waits for a review under way, such as its reviewer's look at a conflict resolution, and stops
- * when its review asked for changes on its head or approved only commits before it.
+ * goes by its review (reviewHold): it waits for a review under way, such as its reviewer's look
+ * at a conflict resolution, and stops when its latest verdict does not hold for its head.
  */
 async function advanceMerge(scope: Scope, id: string, now = new Date()) {
   const db = scoped(scope)

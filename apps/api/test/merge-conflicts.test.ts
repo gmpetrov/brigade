@@ -312,6 +312,8 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
 
   /** A thread of Riley's, started by a member, where it opened pull request #number. */
   async function opened(number: number, memberId = ids.owner) {
+    // No runner takes what earlier tests sent: past a few, Brigade sends a computer no more.
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.computer } })
     const session = await db.session.create({
       data: {
         teammateId: ids.riley,
@@ -675,6 +677,62 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.deepEqual(await tickets(thread), [`${repo}#9: Kai asked for changes`])
   })
 
+  test("a person's merge waits while the author works on what the look asked, then stops unless it is looked at again", async () => {
+    const { advanceMerges } = await import('../src/pull-requests.js')
+    const thread = await opened(12, ids.admin)
+    pushed(12, 'l1', asOpened, { conflicts: true })
+    const review = await approved(12, thread, 'l1')
+    await resolve(12)
+    pushed(12, 'l2', rewritten)
+    await turnEnded(thread)
+    await until(async () => (await row(12)).note === "Waiting for Kai's review", 'waiting for Kai')
+    await verdict(12, review, 'request_changes', 'l2')
+    await reported(review)
+    // Its report woke the author, which pushes a fix and has yet to ask Kai to look at it.
+    await db.session.updateMany({ where: { id: thread }, data: { status: 'running' } })
+    pushed(12, 'l3', [modified('src/a.ts', ['one', 'base()', 'two'], ['fix(base, 2)'], 4)])
+    await advanceMerges(ids.workspace)
+    assert.ok(!merged.has(12), 'not the fix nobody looked at')
+    assert.equal((await row(12)).mergeStatus, 'merging')
+    assert.match((await row(12)).note ?? '', /^Waiting for its thread to finish/)
+    // Its turn ended without asking Kai again: a person decides.
+    await db.session.updateMany({ where: { id: thread }, data: { status: 'idle' } })
+    await advanceMerges(ids.workspace)
+    assert.ok(!merged.has(12))
+    assert.equal((await row(12)).mergeStatus, 'stuck')
+    assert.deepEqual(await tickets(thread), [
+      `${repo}#12: Commits came after Kai's review: have it reviewed again, or merge it as it is`,
+    ])
+  })
+
+  test("changes asked for before a person's Resolve conflicts are merged past, as before", async () => {
+    const thread = await opened(13, ids.admin)
+    pushed(13, 'm1', asOpened, { conflicts: true })
+    const review = await approved(13, thread, 'm1')
+    const pr = await row(13)
+    // Kai approved, then asked for changes, both before the person asked to merge it.
+    await db.pullRequestReview.updateMany({
+      where: { pullRequestId: pr.id },
+      data: { createdAt: new Date(Date.now() - 60_000) },
+    })
+    await db.pullRequestReview.create({
+      data: {
+        pullRequestId: pr.id,
+        teammateId: ids.kai,
+        sessionId: review,
+        verdict: 'request_changes',
+        body: 'Rename it',
+        sha: 'm1',
+        round: 2,
+        createdAt: new Date(Date.now() - 30_000),
+      } as never,
+    })
+    await resolve(13)
+    pushed(13, 'm2', rewritten)
+    await turnEnded(thread)
+    await until(async () => merged.has(13), '#13 merged')
+  })
+
   test("a person's Resolve conflicts that kept what was approved merges right away", async () => {
     const thread = await opened(10, ids.admin)
     pushed(10, 'j1', asOpened, { conflicts: true })
@@ -699,9 +757,11 @@ describe('a merge that conflicts', { skip: !database && 'no database answers' },
     assert.equal(pr.mergeStatus, 'stuck')
     assert.ok(!merged.has(11))
     const [ticket] = await tickets(thread)
-    assert.match(
-      ticket ?? '',
-      /Kai approved it before what was pushed to merge it, and could not be asked to look at that \(The reviews of #11 took their \d+ looks/,
+    assert.equal(
+      ticket,
+      `${repo}#11: Kai approved it before what was pushed to merge it, and could not be asked to ` +
+        `look at that (its reviews took their ${REVIEW_LOOKS} looks): have it reviewed again, or ` +
+        'merge it as it is',
     )
   })
 })
