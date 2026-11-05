@@ -170,7 +170,6 @@ async function turn(p) {
 }
 
 const schedule = (p, operation) => op('schedule.call', p.sessionId, p.teammateId, operation)
-const task = (p, operation) => op('task.call', p.sessionId, p.teammateId, operation)
 const promptsTo = (id) => prompts.filter((x) => x.sessionId === id && !x.interrupt)
 
 const results = []
@@ -300,8 +299,8 @@ await check('message_thread to a child: it carries on and wakes the parent again
       : undefined,
   )
   const parentTurn = promptsTo(parentId).at(-1)
-  const r = await task(parentTurn, {
-    name: 'comment',
+  const r = await schedule(parentTurn, {
+    name: 'message_thread',
     threadId: children.Beta,
     text: 'Check again please',
   })
@@ -311,7 +310,11 @@ await check('message_thread to a child: it carries on and wakes the parent again
   assert.match(note, /The child thread you were waiting for has finished/)
   assert.match(note, /Beta checked again: merged/)
   // A thread that is not its child is refused.
-  const other = await task(parentTurn, { name: 'comment', threadId: parentId, text: 'x' })
+  const other = await schedule(parentTurn, {
+    name: 'message_thread',
+    threadId: parentId,
+    text: 'x',
+  })
   assert.equal(other.ok, false)
 })
 

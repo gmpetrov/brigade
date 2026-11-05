@@ -191,13 +191,12 @@ describe('threads a teammate starts', { skip: !database && 'no database answers'
     )
     return heard
   }
-  const firstMessage = async (sessionId: string) =>
-    (
-      await db.sessionEvent.findFirst({
-        where: { sessionId, type: 'message.user' },
-        orderBy: { seq: 'asc' },
-      })
-    )?.data as { text?: string; memberId?: string | null } | undefined
+  /** The prompts its computer was sent for a thread, oldest first. */
+  const prompts = (sessionId: string) =>
+    sent.filter(
+      (m) =>
+        m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === sessionId,
+    ) as (Sent & { text: string; memberId: string | null })[]
 
   test('start_thread starts a thread at the top for another teammate, on the lines it names', async () => {
     const heard = await op(ids.from, {
@@ -221,32 +220,20 @@ describe('threads a teammate starts', { skip: !database && 'no database answers'
     assert.equal(thread.startedByMemberId, ids.member)
     assert.equal(thread.askedByMemberId, ids.member)
     assert.equal(thread.projectId, ids.project)
-    // Its first message says who started it and from where; no person typed it.
-    const first = await firstMessage(threadId)
-    assert.equal(first?.memberId ?? null, null)
-    assert.equal(
-      first?.text,
-      '**Riley** started this thread from the thread “Plan the launch”:\n\n' +
-        '**Write the FAQ**\n\nThe ten questions customers ask most. Done when it is live.',
-    )
     // Its line is its item, before its first turn: marked in the file, linked, in its spec.
     const links = await db.listItemThread.findMany({ where: { sessionId: threadId } })
     assert.equal(links.length, 1)
     const item = await db.listItem.findFirstOrThrow({ where: { id: links[0]!.itemId } })
     assert.equal(item.text, 'Write the FAQ')
-    await until(
-      () =>
-        sent.some(
-          (m) =>
-            m.type === 'thread.prompt' &&
-            (m.thread as { sessionId?: string }).sessionId === threadId,
-        ),
-      'its first prompt',
+    await until(() => prompts(threadId).length > 0, 'its first prompt')
+    const prompt = prompts(threadId)[0]!
+    // Its first message says who started it and from where; no person typed it.
+    assert.equal(prompt.memberId, null)
+    assert.equal(
+      prompt.text,
+      '**Riley** started this thread from the thread “Plan the launch”:\n\n' +
+        '**Write the FAQ**\n\nThe ten questions customers ask most. Done when it is live.',
     )
-    const prompt = sent.find(
-      (m) =>
-        m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === threadId,
-    )!
     const items = (prompt.thread as { items?: { id: string }[] }).items
     assert.deepEqual(
       items?.map((i) => i.id),
@@ -318,22 +305,22 @@ describe('threads a teammate starts', { skip: !database && 'no database answers'
       text: 'Also the PDF export.',
     })
     assert.equal(heard.ok, true, heard.error)
-    const last = await db.sessionEvent.findFirst({
-      where: { sessionId: threadId, type: 'message.user' },
-      orderBy: { seq: 'desc' },
-    })
+    await until(() => prompts(threadId).length > 1, 'the message')
+    const message = prompts(threadId).at(-1)!
+    assert.equal(message.memberId, null)
     assert.equal(
-      (last?.data as { text?: string }).text,
+      message.text,
       '**Riley** commented from the thread “Plan the launch”:\n\nAlso the PDF export.',
     )
     // New work in it: no longer done.
     assert.equal((await db.session.findFirstOrThrow({ where: { id: threadId } })).doneAt, null)
-    // From a thread that did not start it: refused, nothing written.
-    const before = await db.sessionEvent.count({ where: { sessionId: threadId } })
+    // From a thread that did not start it: refused, nothing sent.
+    const before = prompts(threadId).length
     const refused = await op(ids.other, { name: 'message_thread', threadId, text: 'Merge it.' })
     assert.equal(refused.ok, false)
     assert.match(refused.error ?? '', /not a child of this thread, nor a thread it started/)
-    assert.equal(await db.sessionEvent.count({ where: { sessionId: threadId } }), before)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(prompts(threadId).length, before)
   })
 
   test("an older runner's task tools are answered with what replaced them", async () => {
