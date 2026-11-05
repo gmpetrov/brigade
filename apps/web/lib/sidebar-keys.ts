@@ -1,6 +1,7 @@
 // Moving through the sidebar from the keyboard (components/sidebar-keys.tsx): ⌥↑ and ⌥↓ (Alt
-// elsewhere) open the row above or below, in the order the sidebar shows them, from the pages
-// at its top (Today, Inbox…) through Pinned to the last thread showing under Threads. A row
+// elsewhere) open the row above or below, in the order the sidebar shows them, from the +
+// that opens the new-thread page and the pages under it (Today, Inbox…) through Pinned to the
+// last thread showing under Threads. A row
 // that folds others (a folded section, a "+N more") is a stop too, only focused; Enter
 // unfolds it. Teammates and projects are no stops: opening one narrows the list being walked.
 
