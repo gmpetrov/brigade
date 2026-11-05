@@ -100,3 +100,29 @@ test("a design's status lives in its design.json, its other keys kept", () => {
   assert.equal(withPullInDesign('[1]', 1, true), null)
   assert.equal(withPullInDesign('{not json', 1, true), null)
 })
+
+test('the status line is the first line with text after the title, never one further down', () => {
+  // A guide whose only status line is an example in a code block is no decision.
+  const guide = '# Writing a spec\n\n```markdown\nSpec, 2026-11-05. Status: draft.\n```\n'
+  assert.equal(parseStatusLine(guide), null)
+  assert.equal(withPullOnStatusLine(guide, 4, true), null)
+  assert.equal(parseStatusLine('# T\nSome text first.\n\nSpec, 2026-11-05. Status: draft.\n'), null)
+  // Blank lines around it are fine, and so is a smaller heading.
+  const spaced = '\n## T\n\n\nSpec, 2026-11-05. Status: draft.\n'
+  assert.equal(parseStatusLine(spaced)?.line, 4)
+  assert.equal(
+    withPullOnStatusLine(spaced, 4, true),
+    '\n## T\n\n\nSpec, 2026-11-05. Status: shipped (#4).\n',
+  )
+})
+
+test('a design.json that is not JSON as a whole still says its title and status', () => {
+  const cut =
+    '{\n  "title": "Sixty \\"boards\\"",\n  "status": "accepted",\n  "boards": [{"file": "a.html"'
+  assert.deepEqual(readDesignStatus(cut), {
+    title: 'Sixty "boards"',
+    status: 'accepted',
+    pullRequests: [],
+  })
+  assert.equal(readDesignStatus('{"status": "done", "boards": [').status, null)
+})

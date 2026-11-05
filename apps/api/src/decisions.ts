@@ -23,15 +23,17 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { teammateLibraryAccess } from './library-folders.js'
-import { saveLibraryFile, withLibraryLock } from './library.js'
+import { saveLibraryFile, StaleMemory, withLibraryLock } from './library.js'
 import { storedText } from './lists.js'
 import { noteInThread } from './thread-notes.js'
 
 /** Files read for a project's decisions, at most: the newest first. */
 const DECISIONS_MAX = 2000
-/** What is read of a Markdown file (its status line is near the top) and of a design.json. */
+/** What is read of a Markdown file: its status line is near the top. A design.json is read whole. */
 const MARKDOWN_HEAD = 2000
-const MANIFEST_HEAD = 20_000
+
+/** Reads and writes of a file that someone else keeps saving, before the sweep tries later. */
+const SAVE_ATTEMPTS = 3
 
 const bullets = (lines: string[]) => lines.map((l) => `- ${l}`).join('\n')
 
@@ -67,7 +69,7 @@ export async function projectDecisions(scope: Scope, folder: string): Promise<De
     { id: string; path: string; updatedAt: Date; head: string }[]
   >`
     SELECT "id", "path", "updatedAt",
-      left("text", CASE WHEN "path" LIKE '%/design.json' THEN ${MANIFEST_HEAD}::int ELSE ${MARKDOWN_HEAD}::int END) AS "head"
+      CASE WHEN "path" LIKE '%/design.json' THEN "text" ELSE left("text", ${MARKDOWN_HEAD}::int) END AS "head"
     FROM "Document"
     WHERE "workspaceId" = ${scope.workspaceId}
       AND "organizationId" = ${scope.organizationId}
@@ -214,29 +216,39 @@ export async function settleSpecsOnMerge(
         })
       try {
         const changed = await withLibraryLock(scope, link.documentId, async (lease) => {
-          const file = await db.document.findFirst({
-            where: { id: link.documentId, kind: 'library', deletedAt: null },
-          })
-          if (!file || !author || access?.of(file.path) !== 'read_write') return 'gone' as const
-          const text = await storedText(scope, file)
-          const next = file.path.endsWith(`/${DESIGN_MANIFEST}`)
-            ? withPullInDesign(text, pull.number, link.ships)
-            : withPullOnStatusLine(text, pull.number, link.ships)
-          if (next === null) return { path: file.path, result: 'unreadable' as const }
-          if (next !== text)
-            await saveLibraryFile(
-              db,
-              scope,
-              { type: 'teammate', id: author.id },
-              {
-                path: file.path,
-                bytes: new TextEncoder().encode(next),
-                contentType: file.contentType,
-              },
-              pull.sessionId ? { sessionId: pull.sessionId } : {},
-              { lease },
-            )
-          return { path: file.path, result: 'done' as const }
+          // A Markdown file's saves wait for this lock; a design.json's do not, so the write is
+          // made only on the text it read (baseSha), and read again when someone saved in between.
+          for (let attempt = 1; ; attempt++) {
+            const file = await db.document.findFirst({
+              where: { id: link.documentId, kind: 'library', deletedAt: null },
+            })
+            if (!file || !author || access?.of(file.path) !== 'read_write') return 'gone' as const
+            const text = await storedText(scope, file)
+            const next = file.path.endsWith(`/${DESIGN_MANIFEST}`)
+              ? withPullInDesign(text, pull.number, link.ships)
+              : withPullOnStatusLine(text, pull.number, link.ships)
+            if (next === null) return { path: file.path, result: 'unreadable' as const }
+            if (next === text) return { path: file.path, result: 'done' as const }
+            try {
+              await saveLibraryFile(
+                db,
+                scope,
+                { type: 'teammate', id: author.id },
+                {
+                  path: file.path,
+                  bytes: new TextEncoder().encode(next),
+                  contentType: file.contentType,
+                },
+                pull.sessionId ? { sessionId: pull.sessionId } : {},
+                { lease, baseSha: file.sha256 },
+              )
+              return { path: file.path, result: 'done' as const }
+            } catch (error) {
+              // Saved by someone else meanwhile: again on what they saved; past a few, the
+              // sweep tries later.
+              if (!(error instanceof StaleMemory) || attempt >= SAVE_ATTEMPTS) throw error
+            }
+          }
         })
         await settle()
         if (changed === 'gone') continue

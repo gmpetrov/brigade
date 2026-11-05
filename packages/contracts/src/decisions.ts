@@ -41,24 +41,33 @@ export type StatusLine = {
 const STATUS_LINE = new RegExp(
   `^([A-Za-z][\\w -]{0,39}), (\\d{4}-\\d{2}-\\d{2})\\. Status: (${DECISION_STATUSES.join('|')})\\b(.*)$`,
 )
-/** The status line is the third; a few lines of slack for a title over two lines. */
-const STATUS_LINE_WITHIN = 6
+/** Lines read for the title and the status line: blank lines around them are allowed. */
+const STATUS_LINE_WITHIN = 12
 
-/** A document's status line, or null when it has none Brigade can read. */
+/**
+ * A document's status line, or null when it has none Brigade can read. It is the first line
+ * with text after the title (the first line with text, a heading): a line further down, such as
+ * an example in a code block, is not one.
+ */
 export function parseStatusLine(text: string): StatusLine | null {
-  const lines = text.split('\n', STATUS_LINE_WITHIN)
-  for (let i = 1; i < lines.length; i++) {
-    const m = STATUS_LINE.exec(lines[i]!.replace(/\r$/, '').trim())
-    if (m)
-      return {
-        kind: m[1]!.trim(),
-        date: m[2]!,
-        status: m[3] as DecisionStatus,
-        rest: m[4]!,
-        line: i,
-      }
+  const lines = text.split('\n', STATUS_LINE_WITHIN).map((l) => l.replace(/\r$/, '').trim())
+  const next = (from: number) => {
+    let i = from
+    while (i < lines.length && !lines[i]) i++
+    return i
   }
-  return null
+  const title = next(0)
+  if (!/^#{1,6}\s+\S/.test(lines[title] ?? '')) return null
+  const line = next(title + 1)
+  const m = STATUS_LINE.exec(lines[line] ?? '')
+  if (!m) return null
+  return {
+    kind: m[1]!.trim(),
+    date: m[2]!,
+    status: m[3] as DecisionStatus,
+    rest: m[4]!,
+    line,
+  }
 }
 
 /** A Markdown document's title: its first heading, else null. */
@@ -119,7 +128,15 @@ export function readDesignStatus(json: string) {
   try {
     parsed = JSON.parse(json)
   } catch {
-    return { title: null, status: null, pullRequests: [] as number[] }
+    // Not JSON as a whole (written by hand, or cut): its top-level title and status, if they
+    // read plainly.
+    const status = /"status"\s*:\s*"([a-z]+)"/.exec(json)?.[1]
+    const title = /"title"\s*:\s*"((?:[^"\\\n]|\\.)*)"/.exec(json)?.[1]
+    return {
+      title: title ? title.replace(/\\(.)/g, '$1') : null,
+      status: DecisionStatus.safeParse(status).success ? (status as DecisionStatus) : null,
+      pullRequests: [] as number[],
+    }
   }
   const object = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
   const read = DesignStatus.safeParse(object)

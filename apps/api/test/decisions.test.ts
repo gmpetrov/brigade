@@ -236,6 +236,84 @@ describe('decisions', { skip: !database && 'no database answers' }, () => {
     assert.equal(await db.specPull.count({ where: { pullRequestId: q.id, settledAt: null } }), 0)
   })
 
+  // A design.json's saves take no lock: one lands right after settlement read the file, or right
+  // before its save commits (after the save read the row it replaces).
+  for (const when of ['read', 'commit'] as const)
+    test(`a design saved meanwhile (${when}) keeps what was saved, and is shipped too`, async () => {
+      const path = `Projects/Acme/designs/race-${when}.design/design.json`
+      const file = await save(path, manifest({ title: 'Original', status: 'accepted' }))
+      const number = when === 'read' ? 400 : 401
+      const p = await pull(number, ids.riley)
+      await decisions.linkPullSpecs(db, p.id, ids.riley, {
+        ships: [`Projects/Acme/designs/race-${when}.design`],
+      })
+      await db.pullRequest.updateMany({ where: { id: p.id }, data: { state: 'merged' } })
+      let saved = false
+      const racing = new Proxy(db, {
+        get(target, key) {
+          if (key !== 'document') return Reflect.get(target, key)
+          return new Proxy(target.document, {
+            get(model, method) {
+              if (method !== 'findFirst') return Reflect.get(model, method)
+              return async (args: { where?: { id?: string; path?: string } }) => {
+                const row = await model.findFirst(args as never)
+                const at =
+                  when === 'read' ? args?.where?.id === file.id : args?.where?.path === path
+                if (at && !saved) {
+                  saved = true
+                  await save(
+                    path,
+                    manifest({
+                      title: 'Saved meanwhile',
+                      status: 'accepted',
+                      boards: [{ file: 'new.html' }],
+                    }),
+                  )
+                }
+                return row
+              }
+            },
+          })
+        },
+      })
+      await decisions.settleSpecsOnMerge(racing as typeof db, scope, {
+        id: p.id,
+        number,
+        sessionId: null,
+      })
+      assert.ok(saved)
+      assert.deepEqual(JSON.parse(await read(path)), {
+        title: 'Saved meanwhile',
+        status: 'shipped',
+        boards: [{ file: 'new.html' }],
+        pullRequests: [number],
+      })
+      assert.equal(await db.specPull.count({ where: { pullRequestId: p.id, settledAt: null } }), 0)
+    })
+
+  test('a large design.json is read whole', async () => {
+    const big = {
+      title: 'Sixty boards',
+      status: 'shipped',
+      pullRequests: [12],
+      boards: Array.from({ length: 60 }, (_, i) => ({
+        file: `${'a'.repeat(170)}${i}.html`,
+        title: 'A'.repeat(120),
+        x: i * 100,
+        y: 0,
+      })),
+    }
+    assert.ok(JSON.stringify(big).length > 20_000)
+    await save('Projects/Acme/big.design/design.json', JSON.stringify(big))
+    const found = (await decisions.projectDecisions(scope, 'Projects/Acme')).find(
+      (d) => d.path === 'Projects/Acme/big.design',
+    )
+    assert.deepEqual(
+      [found?.title, found?.status, found?.pullRequests, found?.flags],
+      ['Sixty boards', 'shipped', [12], []],
+    )
+  })
+
   test('an admin turns brigade-library off and on; the others are always on', async () => {
     const { builtinSkillViews, setBuiltinSkill } = await import('../src/builtin-skills.js')
     const ada = { type: 'member' as const, id: ids.member }
