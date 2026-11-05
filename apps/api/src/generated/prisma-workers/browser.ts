@@ -464,6 +464,15 @@ export type SkillPack = Prisma.SkillPackModel
  */
 export type PreviewRecipe = Prisma.PreviewRecipeModel
 /**
+ * Model PreviewMachine
+ * A thread's preview machine (docs/previews.md, the preview_machines feature): a VM of its own
+ * at the cloud provider, which the thread's preview runs on while the code stays on the cloud
+ * computer. No foreign key to its thread or workspace: deleting either leaves the row, and the
+ * sweep (src/preview-machines.ts) destroys the VM before it removes the row, so none outlives
+ * what it was made for.
+ */
+export type PreviewMachine = Prisma.PreviewMachineModel
+/**
  * Model PreviewVariable
  * A variable people give a repository's preview: each start puts it in the
  * app's environment. A secret's value is sealed in the vault, never shown again.

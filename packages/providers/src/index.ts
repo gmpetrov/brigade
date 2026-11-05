@@ -1,6 +1,6 @@
 // ComputerProvider implementations. No code outside this package names a provider.
-import { createBoatProvider } from './boat/index.js'
-import type { ComputerProvider } from './types.js'
+import { createBoatMachines, createBoatProvider } from './boat/index.js'
+import type { ComputerProvider, MachineProvider } from './types.js'
 
 export { DesktopNotReady } from './types.js'
 
@@ -12,7 +12,9 @@ export type {
   ComputerStatus,
   ExecResult,
   HostedPort,
+  MachineProvider,
   RestoreState,
+  SshAccess,
 } from './types.js'
 
 /** The configured cloud computer provider, or null when none is configured. */
@@ -30,4 +32,20 @@ export function providerFromEnv(env: Record<string, string | undefined>): Comput
     })
   }
   return null
+}
+
+/**
+ * How long a preview machine runs once nothing keeps it alive any more (the API keeps alive
+ * those in use): a backstop should Brigade be gone, not how idle ones stop.
+ */
+export const MACHINE_AUTO_STOP_SECONDS = 2 * 3600
+
+/** The configured provider of preview machines (docs/previews.md), or null when none is. */
+export function machinesFromEnv(env: Record<string, string | undefined>): MachineProvider | null {
+  if (!env.BOAT_API_KEY) return null
+  return createBoatMachines({
+    apiKey: env.BOAT_API_KEY,
+    ...(env.BOAT_BASE_URL ? { basePath: env.BOAT_BASE_URL } : {}),
+    autoStopSeconds: MACHINE_AUTO_STOP_SECONDS,
+  })
 }

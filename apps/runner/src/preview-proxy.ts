@@ -49,6 +49,11 @@ export type PreviewProxyOptions = {
   onUse: () => void
   /** Before a request goes through: a promise while the app is woken (thawed), else nothing. */
   wake?: () => Promise<unknown> | undefined
+  /**
+   * The app runs elsewhere (a preview's own machine, preview-machine.ts): the local port each of
+   * its ports is forwarded to; undefined until it is.
+   */
+  forward?: (port: number) => number | undefined
 }
 
 /** A Set-Cookie value a browser keeps in a cross-site frame: Secure, SameSite=None, partitioned, host-only. */
@@ -152,6 +157,11 @@ export class PreviewProxy {
     this.agent.destroy()
   }
 
+  /** Where the app's port is reached here: itself, or where it is forwarded (port 1, closed, until it is). */
+  private portOf(port: number) {
+    return this.options.forward ? (this.options.forward(port) ?? 1) : port
+  }
+
   private used() {
     // Requests come in bursts: once a second is enough.
     const now = Date.now()
@@ -178,7 +188,7 @@ export class PreviewProxy {
     const upstream = http.request(
       {
         host: this.options.host ?? '127.0.0.1',
-        port: target.port,
+        port: this.portOf(target.port),
         path: target.path,
         method: req.method,
         headers: {
@@ -234,7 +244,7 @@ export class PreviewProxy {
     this.used()
     const target = route(req.url ?? '/', this.options)
     if (!target) return void socket.destroy()
-    const upstream = net.connect(target.port, this.options.host ?? '127.0.0.1', () => {
+    const upstream = net.connect(this.portOf(target.port), this.options.host ?? '127.0.0.1', () => {
       const lines = [`${req.method} ${target.path} HTTP/${req.httpVersion}`]
       const publicHost = this.options.publicHost
       // The preview gateway sends a WebSocket with the provider's origin, which refuses any

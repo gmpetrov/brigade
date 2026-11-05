@@ -2,6 +2,7 @@
 import {
   ApiToRunner,
   KEEPALIVE,
+  PreviewMachineUp,
   PROTOCOL_VERSION,
   type LoggedResponse,
   type RunnerToApi,
@@ -67,6 +68,13 @@ const RESEND_FOR_MS = 24 * 60 * 60_000
 const WAITING_MS = 3 * 60_000
 /** Longest the API takes to keep a usage.responses before it is sent again later. */
 const USAGE_CALL_MS = 60_000
+/**
+ * Longest the API takes to give a preview its machine: making one, or starting a stopped one,
+ * takes seconds; another start making it meanwhile, up to two minutes.
+ */
+const MACHINE_UP_MS = 3 * 60_000
+/** Longest the API takes to stop a preview's machine or note it in use. */
+const MACHINE_CALL_MS = 60_000
 
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 
@@ -411,6 +419,47 @@ export class Connection {
     return (result.output as { origins: Record<number, string> }).origins
   }
 
+  /**
+   * The thread's preview machine, running with this key let in, or null to run the preview here
+   * (preview_machines). An API before it says it could not read the call: the preview runs here.
+   */
+  async previewMachineUp(sessionId: string, publicKey: string): Promise<PreviewMachineUp> {
+    const result = await this.withTimeout(
+      { type: 'preview.machine', sessionId, action: 'up', publicKey },
+      MACHINE_UP_MS,
+    )
+    const parsed = PreviewMachineUp.safeParse(result.output)
+    if (!parsed.success) throw new Error('The API gave no machine')
+    return parsed.data
+  }
+
+  /** The thread's preview machine sleeps (stops, its disk kept), or is still in use. */
+  async previewMachine(sessionId: string, action: 'sleep' | 'touch') {
+    await this.withTimeout({ type: 'preview.machine', sessionId, action }, MACHINE_CALL_MS)
+  }
+
+  /** A call given up after `ms` when the API does not answer it. */
+  private async withTimeout(
+    message: DistributiveOmit<Extract<RunnerToApi, { type: 'preview.machine' }>, 'callId'>,
+    ms: number,
+  ) {
+    const callId = randomUUID()
+    const timer = setTimeout(() => {
+      const call = this.calls.get(callId)
+      this.calls.delete(callId)
+      call?.reject(new Error('The API did not answer in time'))
+    }, ms)
+    try {
+      return await this.call(
+        message,
+        { onPending: () => undefined, onDecision: () => undefined },
+        callId,
+      )
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
   /** What a person opens for a preview port: its address with the token. Never logged. */
   async previewUrl(sessionId: string, port: number): Promise<string> {
     const result = await this.call(
@@ -453,6 +502,7 @@ export class Connection {
             | 'schedule.call'
             | 'preview.expose'
             | 'preview.call'
+            | 'preview.machine'
             | 'usage.responses'
         }
       >,

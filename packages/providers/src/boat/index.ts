@@ -6,6 +6,7 @@ import {
   type ComputerRef,
   type ComputerSize,
   type ComputerStatus,
+  type MachineProvider,
   type RestoreState,
 } from '../types.js'
 
@@ -214,6 +215,69 @@ export function createBoatProvider(options: {
       // hydrated from the start (no `hydratedAt`); one that does not say, as restored.
       if (sandbox.hydrated === false) return { done: false, running: true }
       return { done: true, at: sandbox.hydratedAt?.toISOString() ?? '' }
+    },
+  }
+}
+
+/** A preview machine's size at boat (docs.boat.dev/machines), and what it has, for people. */
+const MACHINE_TYPE = 'large'
+export const MACHINE_SIZE = '8 vCPU, 16 GB'
+
+/**
+ * Preview machines at boat (docs/previews.md): a sandbox of their own for one thread's preview,
+ * with none of Brigade's boat account secrets (noEnv), and boat's own stop as a backstop:
+ * `autoStopSeconds` after it was last kept alive, should Brigade stop keeping it.
+ */
+export function createBoatMachines(options: {
+  apiKey: string
+  basePath?: string
+  autoStopSeconds: number
+  /** Tests: the fetch to use. */
+  send?: typeof fetch
+}): MachineProvider {
+  const boat = boatClient(options.apiKey, options.basePath, options.send)
+  // Starting, stopping, destroying and keeping alive are a cloud computer's.
+  const computers = createBoatProvider(options)
+
+  return {
+    size: MACHINE_SIZE,
+
+    async create({ name, key }) {
+      // Sent again with the same key (a retry after an answer that never came), boat gives the
+      // same sandbox rather than a second one.
+      const created = await boat.create(
+        { type: MACHINE_TYPE, noEnv: true, ttlSeconds: options.autoStopSeconds },
+        async ({ init }) => ({
+          headers: { ...(init.headers as Record<string, string>), 'Idempotency-Key': key },
+        }),
+      )
+      const sandboxId = created.sandbox.id
+      await boat.update({ sandboxId, name })
+      await waitUntilReady(boat, sandboxId)
+      return { provider: PROVIDER, id: sandboxId }
+    },
+
+    start: (ref) => computers.start(ref),
+    stop: (ref) => computers.stop(ref),
+    destroy: (ref) => computers.destroy(ref),
+    status: (ref) => computers.status(ref),
+    keepAlive: (ref) => computers.keepAlive(ref),
+
+    async authorize(ref, publicKey) {
+      // The host key comes over this API, not over SSH: it can be pinned before connecting.
+      const answer = await boat.sshKey({ sandboxId: idOf(ref), key: publicKey })
+      const hostKey = answer.hostKey?.trim()
+      if (!hostKey) throw new Error('boat gave no host key')
+      // A sandbox without a public IPv4 of its own is reached at an endpoint, "host:port".
+      const endpoint = answer.sshEndpoint ? /^(.+):(\d+)$/.exec(answer.sshEndpoint) : null
+      const host = endpoint ? endpoint[1]! : answer.machineIp
+      if (!host) throw new Error('boat gave no address to connect to')
+      return {
+        host,
+        port: endpoint ? Number(endpoint[2]) : 22,
+        user: answer.sshUser || 'user',
+        hostKey,
+      }
     },
   }
 }

@@ -124,6 +124,7 @@ export const ModelName = {
   Skill: 'Skill',
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
+  PreviewMachine: 'PreviewMachine',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -306,6 +307,7 @@ export const MemberScalarFieldEnum = {
   notify: 'notify',
   suggestions: 'suggestions',
   autoMerge: 'autoMerge',
+  previewMachines: 'previewMachines',
   chiefAnswers: 'chiefAnswers',
   chiefAuto: 'chiefAuto',
   chiefAutoChangedAt: 'chiefAutoChangedAt',
@@ -1428,6 +1430,25 @@ export const PreviewRecipeScalarFieldEnum = {
 } as const
 
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
+export const PreviewMachineScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  status: 'status',
+  providerRef: 'providerRef',
+  generation: 'generation',
+  claimedUntil: 'claimedUntil',
+  usedAt: 'usedAt',
+  keptAliveAt: 'keptAliveAt',
+  stoppedAt: 'stoppedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
 
 
 export const PreviewVariableScalarFieldEnum = {

@@ -78,7 +78,8 @@ Accounts already connected keep working, for everyone the workspace gives them t
 
 ## Features now
 
-| Feature        | Why it is hidden                                                                                                                                                                        |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gmail`        | Gmail's restricted scope (`gmail.modify`) needs Google's CASA audit. Until then Google blocks every account that is not a test user of the Google app: open it to those same addresses. |
-| `google_drive` | Drive's full `drive` scope is restricted like Gmail's.                                                                                                                                  |
+| Feature            | Why it is hidden                                                                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gmail`            | Gmail's restricted scope (`gmail.modify`) needs Google's CASA audit. Until then Google blocks every account that is not a test user of the Google app: open it to those same addresses.               |
+| `google_drive`     | Drive's full `drive` scope is restricted like Gmail's.                                                                                                                                                |
+| `preview_machines` | Previews on a machine of their own (docs/previews.md): tried by the team first, before other workspaces. A member who has it sees "Run previews on their own machine" in Preferences, off by default. |

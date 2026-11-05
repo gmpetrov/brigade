@@ -470,6 +470,7 @@ export const ModelName = {
   Skill: 'Skill',
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
+  PreviewMachine: 'PreviewMachine',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -515,7 +516,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5921,6 +5922,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PreviewMachine: {
+      payload: Prisma.$PreviewMachinePayload<ExtArgs>
+      fields: Prisma.PreviewMachineFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreviewMachineFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreviewMachineFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        findFirst: {
+          args: Prisma.PreviewMachineFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreviewMachineFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        findMany: {
+          args: Prisma.PreviewMachineFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        create: {
+          args: Prisma.PreviewMachineCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        createMany: {
+          args: Prisma.PreviewMachineCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreviewMachineCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        delete: {
+          args: Prisma.PreviewMachineDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        update: {
+          args: Prisma.PreviewMachineUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        deleteMany: {
+          args: Prisma.PreviewMachineDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreviewMachineUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreviewMachineUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        upsert: {
+          args: Prisma.PreviewMachineUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        aggregate: {
+          args: Prisma.PreviewMachineAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreviewMachine>
+        }
+        groupBy: {
+          args: Prisma.PreviewMachineGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewMachineGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreviewMachineCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewMachineCountAggregateOutputType> | number
+        }
+      }
+    }
     PreviewVariable: {
       payload: Prisma.$PreviewVariablePayload<ExtArgs>
       fields: Prisma.PreviewVariableFieldRefs
@@ -8314,6 +8389,7 @@ export const MemberScalarFieldEnum = {
   notify: 'notify',
   suggestions: 'suggestions',
   autoMerge: 'autoMerge',
+  previewMachines: 'previewMachines',
   chiefAnswers: 'chiefAnswers',
   chiefAuto: 'chiefAuto',
   chiefAutoChangedAt: 'chiefAutoChangedAt',
@@ -9436,6 +9512,25 @@ export const PreviewRecipeScalarFieldEnum = {
 } as const
 
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
+export const PreviewMachineScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  status: 'status',
+  providerRef: 'providerRef',
+  generation: 'generation',
+  claimedUntil: 'claimedUntil',
+  usedAt: 'usedAt',
+  keptAliveAt: 'keptAliveAt',
+  stoppedAt: 'stoppedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
 
 
 export const PreviewVariableScalarFieldEnum = {
@@ -10566,6 +10661,20 @@ export type ListEnumAttachmentSourceFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'PreviewMachineStatus'
+ */
+export type EnumPreviewMachineStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewMachineStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PreviewMachineStatus[]'
+ */
+export type ListEnumPreviewMachineStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewMachineStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'PreviewVariableKind'
  */
 export type EnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewVariableKind'>
@@ -10970,6 +11079,7 @@ export type GlobalOmitConfig = {
   skill?: Prisma.SkillOmit
   skillPack?: Prisma.SkillPackOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
+  previewMachine?: Prisma.PreviewMachineOmit
   previewVariable?: Prisma.PreviewVariableOmit
   project?: Prisma.ProjectOmit
   projectRepository?: Prisma.ProjectRepositoryOmit

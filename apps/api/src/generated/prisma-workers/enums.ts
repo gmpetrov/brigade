@@ -345,6 +345,17 @@ export const AttachmentStatus = {
 export type AttachmentStatus = (typeof AttachmentStatus)[keyof typeof AttachmentStatus]
 
 
+export const PreviewMachineStatus = {
+  creating: 'creating',
+  running: 'running',
+  stopping: 'stopping',
+  stopped: 'stopped',
+  destroying: 'destroying'
+} as const
+
+export type PreviewMachineStatus = (typeof PreviewMachineStatus)[keyof typeof PreviewMachineStatus]
+
+
 export const PreviewVariableKind = {
   setting: 'setting',
   secret: 'secret',

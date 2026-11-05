@@ -6,6 +6,7 @@ import {
   OnboardingAnswers,
   SetAutoMerge,
   ChiefRuleDecision,
+  SetPreviewMachines,
   SetChief,
   SetSuggestions,
   SwitchOrganization,
@@ -41,7 +42,7 @@ import {
 } from '../scope.js'
 import { deleteWorkspace } from '../workspace-delete.js'
 import { updateWorkspace } from '../workspace-settings.js'
-import { featuresOf } from '../features.js'
+import { featuresOf, featuresOfMember, requireFeature } from '../features.js'
 import { z } from 'zod'
 
 const SetSidebarOrder = z.object({
@@ -151,6 +152,9 @@ export const workspaces = new Hono<AppEnv>()
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
       autoMerge: membership?.autoMerge ?? false,
+      // Their threads' previews run on a machine of their own (docs/previews.md), while they have
+      // the preview_machines feature: the preference shows only to them.
+      previewMachines: membership?.previewMachines ?? false,
       // Chief's daily pass for them (docs/chief-answers.md): Today shows what it did.
       chiefPass: membership?.chiefPass ?? false,
       // Features hidden until ready that this person has (src/features.ts).
@@ -195,6 +199,25 @@ export const workspaces = new Hono<AppEnv>()
       ...scope,
       actor: { type: 'member', id: scope.memberId },
       action: autoMerge ? 'member.auto_merge_on' : 'member.auto_merge_off',
+      target: { type: 'member', id: scope.memberId },
+    })
+    return c.body(null, 204)
+  })
+
+  /**
+   * The previews of the threads this member starts run on a machine of their own, or on the cloud
+   * computer as before (Member.previewMachines, docs/previews.md). Only for members who have the
+   * preview_machines feature: 404 for the others, as if it were not there.
+   */
+  .put('/me/preview-machines', requireWorkspace, async (c) => {
+    const { previewMachines } = await parseBody(c.req.raw, SetPreviewMachines)
+    const { scope } = c.var
+    requireFeature(await featuresOfMember(scope.memberId, scope.workspaceId), 'preview_machines')
+    await prisma.member.update({ where: { id: scope.memberId }, data: { previewMachines } })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: previewMachines ? 'member.preview_machines_on' : 'member.preview_machines_off',
       target: { type: 'member', id: scope.memberId },
     })
     return c.body(null, 204)

@@ -34,6 +34,7 @@ export type MemberMinAggregateOutputType = {
   notify: $Enums.NotifyPreset | null
   suggestions: boolean | null
   autoMerge: boolean | null
+  previewMachines: boolean | null
   chiefAnswers: boolean | null
   chiefAutoChangedAt: Date | null
   chiefPass: boolean | null
@@ -51,6 +52,7 @@ export type MemberMaxAggregateOutputType = {
   notify: $Enums.NotifyPreset | null
   suggestions: boolean | null
   autoMerge: boolean | null
+  previewMachines: boolean | null
   chiefAnswers: boolean | null
   chiefAutoChangedAt: Date | null
   chiefPass: boolean | null
@@ -68,6 +70,7 @@ export type MemberCountAggregateOutputType = {
   notify: number
   suggestions: number
   autoMerge: number
+  previewMachines: number
   chiefAnswers: number
   chiefAuto: number
   chiefAutoChangedAt: number
@@ -89,6 +92,7 @@ export type MemberMinAggregateInputType = {
   notify?: true
   suggestions?: true
   autoMerge?: true
+  previewMachines?: true
   chiefAnswers?: true
   chiefAutoChangedAt?: true
   chiefPass?: true
@@ -106,6 +110,7 @@ export type MemberMaxAggregateInputType = {
   notify?: true
   suggestions?: true
   autoMerge?: true
+  previewMachines?: true
   chiefAnswers?: true
   chiefAutoChangedAt?: true
   chiefPass?: true
@@ -123,6 +128,7 @@ export type MemberCountAggregateInputType = {
   notify?: true
   suggestions?: true
   autoMerge?: true
+  previewMachines?: true
   chiefAnswers?: true
   chiefAuto?: true
   chiefAutoChangedAt?: true
@@ -215,6 +221,7 @@ export type MemberGroupByOutputType = {
   notify: $Enums.NotifyPreset
   suggestions: boolean
   autoMerge: boolean
+  previewMachines: boolean
   chiefAnswers: boolean
   chiefAuto: string[]
   chiefAutoChangedAt: Date | null
@@ -255,6 +262,7 @@ export type MemberWhereInput = {
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
+  previewMachines?: Prisma.BoolFilter<"Member"> | boolean
   chiefAnswers?: Prisma.BoolFilter<"Member"> | boolean
   chiefAuto?: Prisma.StringNullableListFilter<"Member">
   chiefAutoChangedAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
@@ -292,6 +300,7 @@ export type MemberOrderByWithRelationInput = {
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  previewMachines?: Prisma.SortOrder
   chiefAnswers?: Prisma.SortOrder
   chiefAuto?: Prisma.SortOrder
   chiefAutoChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -333,6 +342,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
+  previewMachines?: Prisma.BoolFilter<"Member"> | boolean
   chiefAnswers?: Prisma.BoolFilter<"Member"> | boolean
   chiefAuto?: Prisma.StringNullableListFilter<"Member">
   chiefAutoChangedAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
@@ -370,6 +380,7 @@ export type MemberOrderByWithAggregationInput = {
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  previewMachines?: Prisma.SortOrder
   chiefAnswers?: Prisma.SortOrder
   chiefAuto?: Prisma.SortOrder
   chiefAutoChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -395,6 +406,7 @@ export type MemberScalarWhereWithAggregatesInput = {
   notify?: Prisma.EnumNotifyPresetWithAggregatesFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
+  previewMachines?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
   chiefAnswers?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
   chiefAuto?: Prisma.StringNullableListFilter<"Member">
   chiefAutoChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Member"> | Date | string | null
@@ -412,6 +424,7 @@ export type MemberCreateInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -449,6 +462,7 @@ export type MemberUncheckedCreateInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -482,6 +496,7 @@ export type MemberUpdateInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -519,6 +534,7 @@ export type MemberUncheckedUpdateInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -554,6 +570,7 @@ export type MemberCreateManyInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -571,6 +588,7 @@ export type MemberUpdateManyMutationInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -590,6 +608,7 @@ export type MemberUncheckedUpdateManyInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -632,6 +651,7 @@ export type MemberCountOrderByAggregateInput = {
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  previewMachines?: Prisma.SortOrder
   chiefAnswers?: Prisma.SortOrder
   chiefAuto?: Prisma.SortOrder
   chiefAutoChangedAt?: Prisma.SortOrder
@@ -651,6 +671,7 @@ export type MemberMaxOrderByAggregateInput = {
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  previewMachines?: Prisma.SortOrder
   chiefAnswers?: Prisma.SortOrder
   chiefAutoChangedAt?: Prisma.SortOrder
   chiefPass?: Prisma.SortOrder
@@ -668,6 +689,7 @@ export type MemberMinOrderByAggregateInput = {
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  previewMachines?: Prisma.SortOrder
   chiefAnswers?: Prisma.SortOrder
   chiefAutoChangedAt?: Prisma.SortOrder
   chiefPass?: Prisma.SortOrder
@@ -1025,6 +1047,7 @@ export type MemberCreateWithoutUserInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1060,6 +1083,7 @@ export type MemberUncheckedCreateWithoutUserInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1124,6 +1148,7 @@ export type MemberScalarWhereInput = {
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
+  previewMachines?: Prisma.BoolFilter<"Member"> | boolean
   chiefAnswers?: Prisma.BoolFilter<"Member"> | boolean
   chiefAuto?: Prisma.StringNullableListFilter<"Member">
   chiefAutoChangedAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
@@ -1141,6 +1166,7 @@ export type MemberCreateWithoutOrganizationInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1176,6 +1202,7 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1235,6 +1262,7 @@ export type MemberCreateWithoutComputersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1271,6 +1299,7 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1319,6 +1348,7 @@ export type MemberUpdateWithoutComputersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1355,6 +1385,7 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1387,6 +1418,7 @@ export type MemberCreateWithoutThreadReadsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1423,6 +1455,7 @@ export type MemberUncheckedCreateWithoutThreadReadsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1471,6 +1504,7 @@ export type MemberUpdateWithoutThreadReadsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1507,6 +1541,7 @@ export type MemberUncheckedUpdateWithoutThreadReadsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1539,6 +1574,7 @@ export type MemberCreateWithoutThreadPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1575,6 +1611,7 @@ export type MemberUncheckedCreateWithoutThreadPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1623,6 +1660,7 @@ export type MemberUpdateWithoutThreadPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1659,6 +1697,7 @@ export type MemberUncheckedUpdateWithoutThreadPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1691,6 +1730,7 @@ export type MemberCreateWithoutSidebarOrdersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1727,6 +1767,7 @@ export type MemberUncheckedCreateWithoutSidebarOrdersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1775,6 +1816,7 @@ export type MemberUpdateWithoutSidebarOrdersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1811,6 +1853,7 @@ export type MemberUncheckedUpdateWithoutSidebarOrdersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1843,6 +1886,7 @@ export type MemberCreateWithoutThreadLatersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1879,6 +1923,7 @@ export type MemberUncheckedCreateWithoutThreadLatersInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -1927,6 +1972,7 @@ export type MemberUpdateWithoutThreadLatersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1963,6 +2009,7 @@ export type MemberUncheckedUpdateWithoutThreadLatersInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1995,6 +2042,7 @@ export type MemberCreateWithoutHomeDismissalsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2031,6 +2079,7 @@ export type MemberUncheckedCreateWithoutHomeDismissalsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2079,6 +2128,7 @@ export type MemberUpdateWithoutHomeDismissalsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2115,6 +2165,7 @@ export type MemberUncheckedUpdateWithoutHomeDismissalsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2147,6 +2198,7 @@ export type MemberCreateWithoutSessionsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2183,6 +2235,7 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2231,6 +2284,7 @@ export type MemberUpdateWithoutSessionsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2267,6 +2321,7 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2299,6 +2354,7 @@ export type MemberCreateWithoutTasksInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2335,6 +2391,7 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2383,6 +2440,7 @@ export type MemberUpdateWithoutTasksInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2419,6 +2477,7 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2451,6 +2510,7 @@ export type MemberCreateWithoutSchedulesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2487,6 +2547,7 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2535,6 +2596,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2571,6 +2633,7 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2603,6 +2666,7 @@ export type MemberCreateWithoutChiefDecisionsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2639,6 +2703,7 @@ export type MemberUncheckedCreateWithoutChiefDecisionsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2687,6 +2752,7 @@ export type MemberUpdateWithoutChiefDecisionsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2723,6 +2789,7 @@ export type MemberUncheckedUpdateWithoutChiefDecisionsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2755,6 +2822,7 @@ export type MemberCreateWithoutChiefPassesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2791,6 +2859,7 @@ export type MemberUncheckedCreateWithoutChiefPassesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2839,6 +2908,7 @@ export type MemberUpdateWithoutChiefPassesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2875,6 +2945,7 @@ export type MemberUncheckedUpdateWithoutChiefPassesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2907,6 +2978,7 @@ export type MemberCreateWithoutAccountsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2943,6 +3015,7 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -2991,6 +3064,7 @@ export type MemberUpdateWithoutAccountsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3027,6 +3101,7 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3059,6 +3134,7 @@ export type MemberCreateWithoutListPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3095,6 +3171,7 @@ export type MemberUncheckedCreateWithoutListPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3143,6 +3220,7 @@ export type MemberUpdateWithoutListPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3179,6 +3257,7 @@ export type MemberUncheckedUpdateWithoutListPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3211,6 +3290,7 @@ export type MemberCreateWithoutDocumentPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3247,6 +3327,7 @@ export type MemberUncheckedCreateWithoutDocumentPinsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3295,6 +3376,7 @@ export type MemberUpdateWithoutDocumentPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3331,6 +3413,7 @@ export type MemberUncheckedUpdateWithoutDocumentPinsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3363,6 +3446,7 @@ export type MemberCreateWithoutPushNoticesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3399,6 +3483,7 @@ export type MemberUncheckedCreateWithoutPushNoticesInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3447,6 +3532,7 @@ export type MemberUpdateWithoutPushNoticesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3483,6 +3569,7 @@ export type MemberUncheckedUpdateWithoutPushNoticesInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3515,6 +3602,7 @@ export type MemberCreateWithoutPlaybookInstallationsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3551,6 +3639,7 @@ export type MemberUncheckedCreateWithoutPlaybookInstallationsInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3599,6 +3688,7 @@ export type MemberUpdateWithoutPlaybookInstallationsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3635,6 +3725,7 @@ export type MemberUncheckedUpdateWithoutPlaybookInstallationsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3668,6 +3759,7 @@ export type MemberCreateManyUserInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3685,6 +3777,7 @@ export type MemberUpdateWithoutUserInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3720,6 +3813,7 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3754,6 +3848,7 @@ export type MemberUncheckedUpdateManyWithoutUserInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3772,6 +3867,7 @@ export type MemberCreateManyOrganizationInput = {
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
   chiefAutoChangedAt?: Date | string | null
@@ -3789,6 +3885,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3824,6 +3921,7 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3858,6 +3956,7 @@ export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
   chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4043,6 +4142,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: boolean
   chiefAutoChangedAt?: boolean
@@ -4081,6 +4181,7 @@ export type MemberSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: boolean
   chiefAutoChangedAt?: boolean
@@ -4102,6 +4203,7 @@ export type MemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: boolean
   chiefAutoChangedAt?: boolean
@@ -4123,6 +4225,7 @@ export type MemberSelectScalar = {
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
+  previewMachines?: boolean
   chiefAnswers?: boolean
   chiefAuto?: boolean
   chiefAutoChangedAt?: boolean
@@ -4132,7 +4235,7 @@ export type MemberSelectScalar = {
   timezone?: boolean
 }
 
-export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt" | "removingAt" | "notify" | "suggestions" | "autoMerge" | "chiefAnswers" | "chiefAuto" | "chiefAutoChangedAt" | "chiefPass" | "chiefRules" | "chiefRulesRefused" | "timezone", ExtArgs["result"]["member"]>
+export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt" | "removingAt" | "notify" | "suggestions" | "autoMerge" | "previewMachines" | "chiefAnswers" | "chiefAuto" | "chiefAutoChangedAt" | "chiefPass" | "chiefRules" | "chiefRulesRefused" | "timezone", ExtArgs["result"]["member"]>
 export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -4213,6 +4316,11 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
      * review under way or asked for, and checks passed (src/auto-merge.ts). Owners and admins only.
      */
     autoMerge: boolean
+    /**
+     * The previews of the threads they start run on a machine of their own (docs/previews.md),
+     * while they have the preview_machines feature. Off: on the cloud computer, as before.
+     */
+    previewMachines: boolean
     /**
      * No longer read: Chief read each question their teammates ended on (#724), replaced by their
      * rules and daily pass (docs/chief-answers.md). Kept while an older API may still read it.
@@ -4694,6 +4802,7 @@ export interface MemberFieldRefs {
   readonly notify: Prisma.FieldRef<"Member", 'NotifyPreset'>
   readonly suggestions: Prisma.FieldRef<"Member", 'Boolean'>
   readonly autoMerge: Prisma.FieldRef<"Member", 'Boolean'>
+  readonly previewMachines: Prisma.FieldRef<"Member", 'Boolean'>
   readonly chiefAnswers: Prisma.FieldRef<"Member", 'Boolean'>
   readonly chiefAuto: Prisma.FieldRef<"Member", 'String[]'>
   readonly chiefAutoChangedAt: Prisma.FieldRef<"Member", 'DateTime'>

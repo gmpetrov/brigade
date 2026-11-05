@@ -201,6 +201,9 @@ model Member {
   /// Brigade merges the pull requests teammates open in their threads once they are ready: no
   /// review under way or asked for, and checks passed (src/auto-merge.ts). Owners and admins only.
   autoMerge             Boolean                @default(false)
+  /// The previews of the threads they start run on a machine of their own (docs/previews.md),
+  /// while they have the preview_machines feature. Off: on the cloud computer, as before.
+  previewMachines       Boolean                @default(false)
   /// No longer read: Chief read each question their teammates ended on (#724), replaced by their
   /// rules and daily pass (docs/chief-answers.md). Kept while an older API may still read it.
   chiefAnswers          Boolean                @default(false)
@@ -2464,6 +2467,47 @@ model PreviewRecipe {
 
   @@unique([workspaceId, repository])
   @@index([workspaceId])
+}
+
+/// A thread's preview machine (docs/previews.md, the preview_machines feature): a VM of its own
+/// at the cloud provider, which the thread's preview runs on while the code stays on the cloud
+/// computer. No foreign key to its thread or workspace: deleting either leaves the row, and the
+/// sweep (src/preview-machines.ts) destroys the VM before it removes the row, so none outlives
+/// what it was made for.
+model PreviewMachine {
+  id             String               @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  /// The thread: one machine each.
+  sessionId      String               @unique
+  status         PreviewMachineStatus @default(creating)
+  /// Opaque provider reference (only @brigade/providers reads it); null until it is made.
+  providerRef    Json?
+  /// Counts the VMs made for it: names the next one's making, so a retry makes no second one.
+  generation     Int                  @default(0)
+  /// Whoever makes, starts, stops or destroys it holds it until then: one operation at a time.
+  claimedUntil   DateTime?
+  /// When the runner last said its preview is in use, and when the provider was last told.
+  usedAt         DateTime             @default(now())
+  keptAliveAt    DateTime?
+  /// When it last stopped: one stopped long enough is destroyed, before the provider drops its disk.
+  stoppedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([status])
+}
+
+/// creating: being made. running: up, or being started again. stopping: its stop asked for, not
+/// confirmed yet (still counted as up; the sweep takes it up if its process was lost). stopped: its
+/// disk kept, costing nothing. destroying: being destroyed by the sweep, its row going next.
+enum PreviewMachineStatus {
+  creating
+  running
+  stopping
+  stopped
+  destroying
 }
 
 enum PreviewVariableKind {
