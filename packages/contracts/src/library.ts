@@ -480,6 +480,21 @@ export const DocumentAsset = z.object({
 })
 export type DocumentAsset = z.infer<typeof DocumentAsset>
 
+/**
+ * Where a file put in a document (`asset:<id>` in its text) is in a teammate's mirror of the
+ * library: in a folder beside the document named after it, under its id, so that two files of the
+ * same name never meet and a file's path never changes.
+ */
+export const documentFilePath = (documentPath: string, file: { id: string; name: string }) =>
+  `${documentPath}${DOCUMENT_FILES}${file.id}/${file.name}`
+
+/** What follows a document's path in its files' paths. */
+export const DOCUMENT_FILES = '.files/'
+
+/** The id of the document's file at a path documentFilePath gives; null for any other path. */
+export const documentFileId = (path: string) =>
+  /\.files\/([A-Za-z0-9_-]{1,64})\/[^/]+$/.exec(path)?.[1] ?? null
+
 export const StartAssetUpload = z.object({
   documentId: z.string(),
   name: z.string().trim().min(1).max(255),

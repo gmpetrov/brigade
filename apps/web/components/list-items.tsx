@@ -13,7 +13,7 @@ import {
   type ListThread,
   type ThreadListItems,
 } from '@brigade/contracts'
-import { Check, ChevronDown, GitPullRequest, ListChecks } from 'lucide-react'
+import { Check, ChevronDown, FileText, GitPullRequest, ListChecks } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
-import { api, useApi, type ThreadSummary } from '@/lib/api'
+import { api, documentFileUrl, useApi, type ThreadSummary } from '@/lib/api'
 import { handToThread } from '@/lib/hand-off'
 import type { RecentDay } from '@/lib/recently-done'
 import { groupOf } from '@/lib/sub-threads'
@@ -181,7 +181,28 @@ export function PullChip({ pull }: { pull: ListPull }) {
 // ---- Picking lines --------------------------------------------------------------------------
 
 type Inline = { type: string; text?: string; content?: Inline[]; props?: Record<string, unknown> }
-type LineBlock = { id: string; type: string; content?: unknown; props?: Record<string, unknown> }
+type LineBlock = {
+  id: string
+  type: string
+  content?: unknown
+  props?: Record<string, unknown>
+  children?: LineBlock[]
+}
+
+/** A file under a picked line (docs/lists.md): an upload of the document, which goes with it. */
+export type PickedFile = { id: string; name: string; kind: string; url: string }
+
+const FILE_BLOCKS = new Set(['image', 'video', 'audio', 'file'])
+
+/** The files under a line: the document's uploads among the blocks nested under it. */
+const filesOf = (block: LineBlock): PickedFile[] =>
+  (block.children ?? []).flatMap((child) => {
+    const url = child.props?.url
+    if (!FILE_BLOCKS.has(child.type) || typeof url !== 'string' || !url.startsWith('asset:'))
+      return []
+    const id = url.slice('asset:'.length)
+    return [{ id, name: String(child.props?.name || id), kind: child.type, url }]
+  })
 
 /** The text a line shows, as the API matches it against the file. */
 const textOf = (content: Inline[]): string =>
@@ -203,11 +224,14 @@ const markerOf = (content: Inline[]) =>
 
 /** Lines picked in the editor, given their ids only once they are handed over. */
 export type PickedLines = {
-  lines: { text: string; id?: string }[]
+  lines: { text: string; id?: string; files: PickedFile[] }[]
   /** Ticked lines in the selection, left out: their work is done. */
   ticked: number
-  /** Gives each line without a marker its own, in the document, and returns them all. */
-  assign: () => { id: string; text: string }[]
+  /**
+   * Gives each line without a marker its own, in the document, and returns them all, with the
+   * files under each (by id), which go with it.
+   */
+  assign: () => { id: string; text: string; files: string[] }[]
 }
 
 type MarkableEditor = {
@@ -227,17 +251,19 @@ export function pickLines(editor: MarkableEditor, blocks: LineBlock[]): PickedLi
     blockId: b.id,
     text: textOf(b.content as Inline[]),
     id: markerOf(b.content as Inline[]),
+    files: filesOf(b),
   }))
   return {
-    lines: lines.map(({ text, id }) => ({ text, ...(id ? { id } : {}) })),
+    lines: lines.map(({ text, id, files }) => ({ text, files, ...(id ? { id } : {}) })),
     ticked: all.length - checks.length,
     assign: () =>
       lines.map((line) => {
-        if (line.id) return { id: line.id, text: line.text }
+        const files = line.files.map((f) => f.id)
+        if (line.id) return { id: line.id, text: line.text, files }
         const block = editor.getBlock(line.blockId)
         const content = (block?.content as Inline[] | undefined) ?? []
         const found = markerOf(content)
-        if (found) return { id: found, text: line.text }
+        if (found) return { id: found, text: line.text, files }
         const id = newListItemId()
         const last = content.at(-1)
         const spaced = last?.type === 'text' && /\s$/.test(last.text ?? '')
@@ -248,7 +274,7 @@ export function pickLines(editor: MarkableEditor, blocks: LineBlock[]): PickedLi
             { type: 'item', props: { id } },
           ],
         })
-        return { id, text: line.text }
+        return { id, text: line.text, files }
       }),
   }
 }
@@ -339,8 +365,11 @@ function HandOffDialog({
         </DialogHeader>
         <ul className="flex min-w-0 flex-col gap-1 rounded-lg bg-muted px-3 py-2 text-sm">
           {shown.map((l, i) => (
-            <li key={i} className="min-w-0 truncate" title={plainItemText(l.text)}>
-              {plainItemText(l.text)}
+            <li key={i} className="flex min-w-0 flex-col gap-1.5">
+              <span className="min-w-0 truncate" title={plainItemText(l.text)}>
+                {plainItemText(l.text)}
+              </span>
+              {l.files.length > 0 && <LineFiles files={l.files} />}
             </li>
           ))}
           {count > shown.length && (
@@ -430,6 +459,46 @@ function HandOffDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** How many of a line's files the dialog names; the rest are counted. */
+const FILES_SHOWN = 3
+
+/** The files that go with a line: a small picture of each image, the name of each file. */
+function LineFiles({ files }: { files: PickedFile[] }) {
+  const shown = files.slice(0, FILES_SHOWN)
+  return (
+    <ul aria-label="Files that go with it" className="flex min-w-0 flex-col gap-1 pb-0.5">
+      {shown.map((f) => (
+        <li
+          key={f.id}
+          className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground"
+        >
+          {f.kind === 'image' ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a document's file through the API
+            <img
+              src={documentFileUrl(f.url)}
+              alt=""
+              className="h-6 w-9 shrink-0 rounded border bg-background object-cover"
+            />
+          ) : (
+            <span className="grid h-6 w-9 shrink-0 place-items-center rounded border bg-background">
+              <FileText aria-hidden className="size-3.5" />
+            </span>
+          )}
+          <span className="min-w-0 truncate" title={f.name}>
+            {f.name}
+          </span>
+        </li>
+      ))}
+      {files.length > shown.length && (
+        <li className="text-[13px] text-muted-foreground">
+          and {files.length - shown.length} more{' '}
+          {files.length - shown.length === 1 ? 'file' : 'files'}
+        </li>
+      )}
+    </ul>
   )
 }
 

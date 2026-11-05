@@ -570,7 +570,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   into a document go to the bucket under `<organization>/<workspace>/assets/<id>` (`DocumentAsset`; direct
   uploads with R2, through the API without) and are read through 5-minute signed URLs, so video seeks. The document
   refers to them as `asset:<id>`. The hourly sweep removes files no document refers to after a day (a block copied
-  into another document moves the file there), unfinished uploads after an hour, and a deleted file's at once.
+  into another document moves the file there, as does its own document going to the trash while a live one refers
+  to it: `moveFilesOfTrashed`), unfinished uploads after an hour, and a deleted file's at once. A Markdown file
+  longer than the text kept for search (up to what the editor opens) is read from its bytes, once per sweep, for
+  the files it refers to past that text (`laterReferrers`).
   Mentions: `@` in a document names a library file, teammate, thread, connection or repository, stored as
   `@[label](kind:id)` like messages. `@brigade/editor` (`packages/editor`) holds the editor schema and the Markdown
   forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. It deploys
@@ -588,7 +591,11 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   folders override it: an admin sets a teammate's access to a folder (`LibraryFolderGrant`), and a restricted
   folder reaches only the teammates granted access to it or to a folder inside. The deepest folder with a rule
   wins (`libraryAccessFor` in `@brigade/contracts`). Search, `save_to_library` and the mirror all follow it, and
-  the teammate's instructions name the folders where its access differs. Members see the whole library.
+  the teammate's instructions name the folders where its access differs. Members see the whole library. The
+  files put in a library file's documents are in the manifest too, beside it at `<document>.files/<id>/<name>`
+  (`mirroredAssets`): those read back after their upload, whose SHA-256 the runner checks, fetched by their id
+  from the same route; a library file of the same path wins. An upload that lands tells the runners at once
+  (`library.changed`), so a line handed over right after finds its file (docs/lists.md).
 - **Designs** (`apps/api/src/designs.ts`, `@brigade/contracts` `design.ts`). A design is a library folder named
   `<name>.design` with `index.html` and `design.json` (title, description, design system, viewports, `boards`; a
   deck sets `kind: "slides"` and marks slides with `data-slide` and `data-notes`) at its top, and optionally

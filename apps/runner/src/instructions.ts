@@ -112,7 +112,9 @@ export function instructions(
       `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path; ` +
       `and a design as \`@[path](design:path)\`: the folder at ${libraryDir}/path (its \`${DESIGN_ENTRY}\`, ` +
       `\`${DESIGN_MANIFEST}\`, \`${DESIGN_KNOBS}\` and assets); and a design system as \`@[name](design-system:path)\`: ` +
-      `the one named, its folder at ${libraryDir}/path. Asked to build a design in a product, match it at ` +
+      `the one named, its folder at ${libraryDir}/path. A file put in a document, written \`asset:<id>\` in its ` +
+      `text, is at ${libraryDir}/<the document's path>.files/<id>/<its name>. ` +
+      'Asked to build a design in a product, match it at ' +
       "each of its viewports with the product's own components and conventions, and use the values in its " +
       `\`${DESIGN_KNOBS}\`. ` +
       'Name a library file in your reply by its mention (`save_to_library` returns it) or its whole library path, ' +
@@ -647,7 +649,8 @@ function lists(spec: ThreadSpec) {
     '(`* [ ] …`) is an item, ticked when done. A line work is attached to ends with a hidden marker, ' +
     '`<!-- item:<id> -->`: keep markers as they are when you edit such a file, and never write one yourself. ' +
     '`list_items` reads a list with its ids, `link_items` attaches lines to this thread, `complete_item` ticks ' +
-    'one, `add_item` adds one. When you take on an item, say in a line what done means for it, as points ' +
+    'one, `add_item` adds one. The files indented under a line are its own: `list_items` and a hand-off give ' +
+    'their paths in the library. When you take on an item, say in a line what done means for it, as points ' +
     'anyone can check ("Done when: …"), unless the line says it already; the person corrects you if needed. ' +
     'When you open a pull request for items, its description goes through those points, each done or left, and ' +
     'you name the items by id in its `items`: `closes` for those every point of which holds once it is merged, ' +
@@ -659,8 +662,11 @@ function lists(spec: ThreadSpec) {
     '`remainsOf`) rather than ticking what is half done: Brigade ticks the item once all its remaining lines are, ' +
     'whoever does them.'
   if (!items.length) return `## Lists\n\n${general}`
-  const lines = items.map(
-    (i) => `- [${i.done ? 'x' : ' '}] ${i.text} (id \`${i.id}\`, in ${i.path})`,
+  const lines = items.map((i) =>
+    [
+      `- [${i.done ? 'x' : ' '}] ${i.text} (id \`${i.id}\`, in ${i.path})`,
+      ...(i.files ?? []).map((path) => `  - File in the library: ${path}`),
+    ].join('\n'),
   )
   return [
     '## Your list items',

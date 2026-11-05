@@ -578,6 +578,325 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       /no longer in its list/,
     )
   })
+
+  test('a line handed over takes the files under it, which teammates find beside the list', async () => {
+    const sha = (c: string) => c.repeat(64)
+    const sound = await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: 'Projects/Acme/sound.md', bytes: new TextEncoder().encode('# Sound\n') },
+    )
+    const asset = (id: string, data: Record<string, unknown> = {}) =>
+      db.documentAsset.create({
+        data: {
+          id: `${id}${suffix}`,
+          documentId: sound.id,
+          name: `${id}.png`,
+          contentType: 'image/png',
+          size: 10,
+          sha256: sha('a'),
+          ...data,
+        },
+      } as never)
+    const shot = await asset('shot')
+    const brief = await asset('brief', {
+      name: 'brief.pdf',
+      contentType: 'application/pdf',
+      sha256: sha('b'),
+    })
+    // From before files were read back: no SHA-256 to check, so not in teammates' mirrors.
+    const old = await asset('old', { sha256: '' })
+    const pending = await asset('pending', { status: 'pending' })
+    await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      {
+        path: 'Projects/Acme/sound.md',
+        bytes: new TextEncoder().encode(
+          [
+            '# Sound',
+            '',
+            '* [ ] Voice: Cartesia or Georges',
+            '',
+            `  ![shot.png](asset:${shot.id})`,
+            '',
+            `  [old.png](asset:${old.id} "file")`,
+            '',
+            `  [pending.png](asset:${pending.id} "file")`,
+            '',
+            '* [ ] Music',
+            '',
+            `![brief.pdf](asset:${brief.id})`,
+            '',
+          ].join('\n'),
+        ),
+      },
+    )
+    const path = (row: { id: string; name: string }) =>
+      `Projects/Acme/sound.md.files/${row.id}/${row.name}`
+
+    // Handed over from a list's file: the files under the line go, those mirrored; the one at
+    // the margin is no line's.
+    const { threadIds } = await lists.handOff(db, scope, ids.member, sound.id, {
+      teammateId: ids.riley,
+      items: [
+        { id: 'voiceline123456a', text: 'Voice: Cartesia or Georges' },
+        { id: 'musicline123456a', text: 'Music' },
+      ],
+      mode: 'together',
+    })
+    const thread = threadIds[0]!
+    const prompted = () =>
+      sent.find(
+        (m) =>
+          m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === thread,
+      )
+    await until(() => !!prompted(), 'the first prompt')
+    const prompt = prompted()!
+    assert.equal(
+      String(prompt.text),
+      `Please take these items of @[Projects/Acme/sound.md](document:${sound.id}):\n\n` +
+        `- Voice: Cartesia or Georges\n  - File in the library: ${path(shot)}\n- Music`,
+    )
+    // The thread's items carry them, every turn.
+    assert.deepEqual(
+      (prompt.thread as { items?: { id: string; files?: string[] }[] }).items?.map((i) => [
+        i.id,
+        i.files,
+      ]),
+      [
+        ['voiceline123456a', [path(shot)]],
+        ['musicline123456a', undefined],
+      ],
+    )
+    // As the person saw them in the editor: exactly those, even one at the margin of the file.
+    const { threadIds: picked } = await lists.handOff(db, scope, ids.member, sound.id, {
+      teammateId: ids.riley,
+      items: [{ id: 'musicline123456a', text: 'Music', files: [brief.id, old.id, 'cmnosuchfile'] }],
+      mode: 'together',
+    })
+    const second = picked[0]!
+    await until(
+      () =>
+        sent.some(
+          (m) =>
+            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === second,
+        ),
+      'the second prompt',
+    )
+    assert.match(
+      String(
+        sent.find(
+          (m) =>
+            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === second,
+        )!.text,
+      ),
+      new RegExp(`- Music\\n  - File in the library: ${path(brief).replace(/[.]/g, '\\.')}$`),
+    )
+    // A file copied from a document in a folder the teammate may not read is not named to it.
+    const secret = await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: 'Private/notes.md', bytes: new TextEncoder().encode('# Notes\n') },
+    )
+    const hidden = await db.documentAsset.create({
+      data: {
+        id: `hidden${suffix}`,
+        documentId: secret.id,
+        name: 'payroll.png',
+        contentType: 'image/png',
+        size: 10,
+        sha256: sha('c'),
+      },
+    } as never)
+    const folder = await db.libraryFolder.create({
+      data: { path: 'Private', restricted: true },
+    } as never)
+    const { threadIds: private_ } = await lists.handOff(db, scope, ids.member, sound.id, {
+      teammateId: ids.riley,
+      items: [{ id: 'musicline123456a', text: 'Music', files: [hidden.id, shot.id] }],
+      mode: 'together',
+    })
+    const third = private_[0]!
+    await until(
+      () =>
+        sent.some(
+          (m) =>
+            m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === third,
+        ),
+      'the third prompt',
+    )
+    const thirdText = String(
+      sent.find(
+        (m) =>
+          m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === third,
+      )!.text,
+    )
+    assert.ok(thirdText.endsWith(`- Music\n  - File in the library: ${path(shot)}`), thirdText)
+    await db.libraryFolder.delete({ where: { id: folder.id } })
+    await db.documentAsset.delete({ where: { id: hidden.id } })
+    // To a thread that runs already: the message the person sends, with them.
+    const linked = await lists.linkToThread(db, scope, ids.member, sound.id, {
+      sessionId: thread,
+      items: [{ id: 'voiceline123456a', text: 'Voice: Cartesia or Georges' }],
+      quiet: true,
+      note: 'Look at the screenshot.',
+    })
+    assert.equal(
+      linked.message,
+      `Look at the screenshot.\n\n- Voice: Cartesia or Georges\n  - File in the library: ${path(shot)}`,
+    )
+    // A teammate reading the list sees them too.
+    const read = (await lists.handleListCall(db, scope, { id: thread }, riley, {
+      name: 'list_items',
+      path: 'Projects/Acme/sound.md',
+    })) as { lines: { text: string; files?: string[] }[] }
+    assert.deepEqual(
+      read.lines.map((l) => [l.text, l.files]),
+      [
+        ['Voice: Cartesia or Georges', [path(shot)]],
+        ['Music', undefined],
+      ],
+    )
+
+    // Teammates' mirrors hold the files read back, beside their document; a library file of
+    // the same path wins.
+    const { LIBRARY_VIEWS_PROTOCOL } = await import('@brigade/contracts')
+    const manifest = async () =>
+      (await library.manifest(db, { protocolVersion: LIBRARY_VIEWS_PROTOCOL })).files
+    const mirrored = (await manifest()).filter((f) =>
+      f.path.startsWith('Projects/Acme/sound.md.files/'),
+    )
+    assert.deepEqual(
+      mirrored.map((f) => [f.id, f.path, f.sha256]).sort(),
+      [
+        [brief.id, path(brief), sha('b')],
+        [shot.id, path(shot), sha('a')],
+      ].sort(),
+    )
+    const taken = await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: path(brief), bytes: new TextEncoder().encode('a file of its own') },
+    )
+    const atPath = (await manifest()).filter((f) => f.path === path(brief))
+    assert.deepEqual(
+      atPath.map((f) => f.id),
+      [taken.id],
+    )
+    // The runner fetches one by its id, from where the document keeps it.
+    const { assetKey } = await import('../src/bucket.js')
+    assert.deepEqual(await library.mirroredFile(db, scope, shot.id), {
+      key: assetKey(scope, shot.id),
+      sha256: sha('a'),
+    })
+    await assert.rejects(library.mirroredFile(db, scope, old.id), /File not found/)
+    await assert.rejects(library.mirroredFile(db, scope, pending.id), /File not found/)
+    await db.documentAsset.deleteMany({ where: { documentId: sound.id } })
+  })
+
+  // Review of #738: a file copied under a line from another document stayed that document's, and
+  // went out of teammates' reach once that document was in the trash.
+  test('a file copied under a line from a document then trashed goes on with the list', async () => {
+    const { storeAsset, sweepAssets } = await import('../src/assets.js')
+    const { trashLibraryFile, restoreLibraryFile } = await import('../src/library-history.js')
+    const member = { type: 'member' as const, id: ids.member }
+    const save = (path: string, text: string) =>
+      library.saveLibraryFile(db, scope, member, { path, bytes: new TextEncoder().encode(text) })
+    const source = await save('Notes/source.md', '# Source\n')
+    const file = await storeAsset(db, scope, {
+      documentId: source.id,
+      file: new File([Buffer.from('a brief')], 'brief.txt'),
+      memberId: ids.member,
+    })
+    await save('Notes/source.md', `# Source\n\n[brief.txt](asset:${file.id} "file")\n`)
+    const list = await save(
+      'Projects/Acme/copied.md',
+      `* [ ] Read the brief\n\n  [brief.txt](asset:${file.id} "file")\n`,
+    )
+    const filesOfLine = async () =>
+      (
+        (await lists.handleListCall(db, scope, { id: threadId }, riley, {
+          name: 'list_items',
+          path: 'Projects/Acme/copied.md',
+        })) as { lines: { files?: string[] }[] }
+      ).lines[0]!.files
+    // Still its own document's: found beside it.
+    assert.deepEqual(await filesOfLine(), [`Notes/source.md.files/${file.id}/brief.txt`])
+    // That one in the trash: the list takes it on, and teammates find it beside the list.
+    await trashLibraryFile(db, scope, member, source.id)
+    const beside = `Projects/Acme/copied.md.files/${file.id}/brief.txt`
+    assert.deepEqual(await filesOfLine(), [beside])
+    const { LIBRARY_VIEWS_PROTOCOL } = await import('@brigade/contracts')
+    const mirrored = (await library.manifest(db, { protocolVersion: LIBRARY_VIEWS_PROTOCOL })).files
+    assert.deepEqual(
+      mirrored.filter((f) => f.id === file.id).map((f) => f.path),
+      [beside],
+    )
+    // The sweep keeps it there, rather than going back to the trashed one; and one still with
+    // a document trashed before this moved it (as files were) goes to the live one.
+    await sweepAssets([file.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: file.id } }))?.documentId,
+      list.id,
+    )
+    await db.documentAsset.update({ where: { id: file.id }, data: { documentId: source.id } })
+    await sweepAssets([file.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: file.id } }))?.documentId,
+      list.id,
+    )
+    // Review of #738, again: a list so long that the file comes past its text kept for search
+    // (400,000 characters) still takes it on, and the sweep finds it there too.
+    const long = await save('Projects/Acme/long.md', '# Long\n')
+    const far = await storeAsset(db, scope, {
+      documentId: long.id,
+      file: new File([Buffer.from('far')], 'far.txt'),
+      memberId: ids.member,
+    })
+    const farSource = await save(
+      'Notes/far-source.md',
+      `# Far\n\n[far.txt](asset:${far.id} "file")\n`,
+    )
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: farSource.id } })
+    const longList = await save(
+      'Projects/Acme/long.md',
+      `${'context '.repeat(50_010)}\n\n* [ ] Read it\n\n  [far.txt](asset:${far.id} "file")\n`,
+    )
+    assert.ok(!longList.text.includes(far.id), 'past the text kept for search')
+    await trashLibraryFile(db, scope, member, farSource.id)
+    const farRow = async () =>
+      (await db.documentAsset.findFirst({ where: { id: far.id } }))?.documentId
+    assert.equal(await farRow(), longList.id)
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: farSource.id } })
+    await sweepAssets([far.id])
+    assert.equal(await farRow(), longList.id)
+    // Its own document deleted for good, a file a long one still refers to is kept, not removed.
+    await db.documentAsset.update({ where: { id: far.id }, data: { documentId: null } })
+    await sweepAssets([far.id])
+    assert.equal(await farRow(), longList.id)
+    await db.documentAsset.deleteMany({ where: { id: far.id } })
+    // A file no live document refers to stays with its document in the trash, for a restore.
+    const alone = await save('Notes/alone.md', '# Alone\n')
+    const own = await storeAsset(db, scope, {
+      documentId: alone.id,
+      file: new File([Buffer.from('mine')], 'mine.txt'),
+      memberId: ids.member,
+    })
+    await save('Notes/alone.md', `# Alone\n\n[mine.txt](asset:${own.id} "file")\n`)
+    await trashLibraryFile(db, scope, member, alone.id)
+    await sweepAssets([own.id])
+    assert.equal(
+      (await db.documentAsset.findFirst({ where: { id: own.id } }))?.documentId,
+      alone.id,
+    )
+    await restoreLibraryFile(db, scope, member, alone.id)
+    await db.documentAsset.deleteMany({ where: { id: { in: [file.id, own.id] } } })
+  })
 })
 
 // What a review found (PR #487), each through the code that was fixed:
