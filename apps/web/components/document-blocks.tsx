@@ -40,7 +40,6 @@ import {
   MENTION_GROUPS,
   searchesThreads,
   searchMentions,
-  stillFound,
   THREAD_SEARCH_DELAY,
   withFoundThreads,
   type FoundThreads,
@@ -170,11 +169,14 @@ export function DocumentBlockNoteView({
   const getItems = useCallback(
     async (query: string): Promise<MentionItem[]> => {
       const matched = searchMentions(latest.current, query)
-      let threads = stillFound(found, query)
-      if (searchesThreads(query) && !foundFor(found, query)) {
+      let threads: MentionOption[] = []
+      if (foundFor(found, query)) threads = found.threads
+      else if (searchesThreads(query)) {
         clearTimeout(pause.current)
-        if (matched.length || threads.length)
-          // Once typing pauses. Its answer changes `found`, and so this function: BlockNote asks again.
+        if (matched.length)
+          // Once typing pauses. Its answer changes `found`, and so this function: BlockNote asks
+          // again, and the threads found come below the rows it shows, which keep their place
+          // (BlockNote keeps the selected row by its index).
           pause.current = setTimeout(
             () => void findThreads(query).then(setFound, () => {}),
             THREAD_SEARCH_DELAY,

@@ -23,22 +23,26 @@ export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[]
   { kind: 'computer', title: 'Computers', max: 3 },
 ]
 
-const THREADS_MAX = MENTION_GROUPS.find((g) => g.kind === 'thread')!.max
+/** How many threads the search may add below those the menu shows: as many as it shows. */
+const FOUND_MAX = MENTION_GROUPS.find((g) => g.kind === 'thread')!.max
 
 /** What the menu matches: the query in any case, without the spaces around it. */
 const typed = (query: string) => query.trim().toLowerCase()
 
-/** Matches for a query, grouped by kind; names that start with it first. */
+/** How well a name matches the query: the name itself, then one that starts with it, then one that holds it. */
+const tier = (label: string, q: string) => {
+  const name = label.toLowerCase()
+  return name === q ? 0 : name.startsWith(q) ? 1 : name.includes(q) ? 2 : 3
+}
+
+/** Matches for a query, grouped by kind; the name typed first, then names that start with it. */
 export function searchMentions(options: MentionOption[], query: string) {
   const q = typed(query)
   return MENTION_GROUPS.flatMap((g) =>
     options
       .filter((o) => o.kind === g.kind && o.label.toLowerCase().includes(q))
-      .sort(
-        (a, b) =>
-          Number(!a.label.toLowerCase().startsWith(q)) -
-          Number(!b.label.toLowerCase().startsWith(q)),
-      )
+      // A stable sort: within a tier, the order the page has them in.
+      .sort((a, b) => tier(a.label, q) - tier(b.label, q))
       .slice(0, g.max),
   )
 }
@@ -51,7 +55,7 @@ export const THREAD_SEARCH_DELAY = 150
 /** Whether the menu asks the search for the threads this query names. */
 export const searchesThreads = (query: string) => typed(query).length >= THREAD_SEARCH_MIN
 
-/** The threads the search found for a query, kept for the next ones as long as they still match. */
+/** The threads the search found for a query. */
 export type FoundThreads = { query: string; threads: MentionOption[] }
 
 /** The threads among what the search found for a query, as the menu shows them; never `exclude`. */
@@ -70,34 +74,24 @@ export function foundThreads(
   }
 }
 
-/** Whether the search answered this query already. */
-export const foundFor = (found: FoundThreads | undefined, query: string) =>
+/** Whether these are what the search found for this query. */
+export const foundFor = (found: FoundThreads | undefined, query: string): found is FoundThreads =>
   found?.query === typed(query)
 
 /**
- * The threads found for this query, or for an earlier one those whose title still holds it:
- * typing on keeps them in the menu while the search looks again.
- */
-export function stillFound(found: FoundThreads | undefined, query: string): MentionOption[] {
-  if (!found) return []
-  if (foundFor(found, query)) return found.threads
-  const q = typed(query)
-  return found.threads.filter((t) => t.label.toLowerCase().includes(q))
-}
-
-/**
- * The menu's matches with the threads the search found among its threads: those whose title
- * starts with the query first, then those that hold it, then the rest the search found (despite
- * a typo, or by their summary), each in the order it came (those already shown, then as the
- * search ranked them), as many as the group shows. Threads already shown keep their order.
+ * The menu's matches with the threads the search found that it does not show: below the threads
+ * it shows, which keep their rows, the title typed first, then those that start with it, then
+ * those that hold it, then the rest the search found (despite a typo, or by their summary), as
+ * the search ranked them, as many as the group shows. Nothing the menu shows moves or goes: the
+ * row selected stays the one Enter picks, and an older thread whose title is the query still
+ * shows when recent ones fill the group.
  */
 export function withFoundThreads(
   items: MentionOption[],
   found: MentionOption[],
   query: string,
 ): MentionOption[] {
-  const shown = items.filter((o) => o.kind === 'thread')
-  const ids = new Set(shown.map((o) => o.id))
+  const ids = new Set(items.flatMap((o) => (o.kind === 'thread' ? [o.id] : [])))
   const added: MentionOption[] = []
   for (const o of found)
     if (o.kind === 'thread' && !ids.has(o.id)) {
@@ -106,11 +100,10 @@ export function withFoundThreads(
     }
   if (!added.length) return items
   const q = typed(query)
-  const rank = ({ label }: MentionOption) =>
-    label.toLowerCase().startsWith(q) ? 0 : label.toLowerCase().includes(q) ? 1 : 2
-  // A stable sort: within a rank, the order they came in.
-  const threads = [...shown, ...added].sort((a, b) => rank(a) - rank(b)).slice(0, THREADS_MAX)
-  return MENTION_GROUPS.flatMap((g) =>
-    g.kind === 'thread' ? threads : items.filter((o) => o.kind === g.kind),
-  )
+  // A stable sort: within a tier, as the search ranked them.
+  const best = added.sort((a, b) => tier(a.label, q) - tier(b.label, q)).slice(0, FOUND_MAX)
+  return MENTION_GROUPS.flatMap((g) => {
+    const shown = items.filter((o) => o.kind === g.kind)
+    return g.kind === 'thread' ? [...shown, ...best] : shown
+  })
 }

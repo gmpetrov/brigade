@@ -676,7 +676,8 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   finds its own memory, never another teammate's. The `@` menu (a message's or a library document's) matches what
   the page loaded, which holds only the 100 last active threads, and once typing pauses asks the dashboard's search
   (`/search`) for threads (`apps/web/lib/mention-search.ts`), so any thread can be mentioned, archived ones and
-  sub-threads too. A thread mention opens the thread, and `search_workspace` gives each thread summary its
+  sub-threads too. Those it finds join below the rows shown, which never move or go, so the row selected stays the
+  one Enter picks. A thread mention opens the thread, and `search_workspace` gives each thread summary its
   mention, which teammates name the thread by in a reply.
 - **Code from GitHub** (`apps/api/src/git.ts`, `apps/api/src/routes/git.ts`, `apps/runner/src/repos.ts`). GitHub is
   the source of truth; a computer's disk is a cache. Git reaches GitHub only through the API, which proxies git's

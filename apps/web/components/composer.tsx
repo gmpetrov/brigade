@@ -58,7 +58,6 @@ import {
   MENTION_GROUPS,
   searchesThreads,
   searchMentions,
-  stillFound,
   THREAD_SEARCH_DELAY,
   withFoundThreads,
   type FoundThreads,
@@ -268,7 +267,7 @@ const picking = new WeakSet<object>()
 /**
  * What a menu finds once typing pauses, beyond what it matched at once (the threads the
  * workspace search finds): `wants` says whether to look for a query, and `find` looks, then
- * gives what the menu shows in place of what it shows.
+ * gives what the menu shows in place of what it shows: every row it shows, and more.
  */
 type Later<T> = {
   wants: (query: string) => boolean
@@ -310,7 +309,8 @@ function renderMenu<T, P extends object>(
       searching = undefined
       if (add) {
         const items = add(current.items)
-        // The row selected stays selected, wherever it moves: Enter picks what the person saw.
+        // The row selected stays selected (the groups after it may move): Enter picks what the
+        // person saw.
         const at = current.items.length ? items.indexOf(current.items[selected]!) : 0
         current = { ...current, items }
         selected = Math.max(at, 0)
@@ -723,12 +723,6 @@ export function Composer({
     suggestion,
     threadId,
   }
-  // The threads the workspace search found for what follows `@`, which the menu adds to its own.
-  const found = useRef<FoundThreads | undefined>(undefined)
-  useEffect(() => {
-    // Found while replying in another thread: they may hold this one.
-    found.current = undefined
-  }, [threadId])
   const skillNames = () => latest.current.skills.map((s) => s.name)
   const text = useRef(value)
 
@@ -816,12 +810,7 @@ export function Composer({
         renderText: ({ node }) => formatMention(node.attrs as Mention),
         suggestion: {
           char: '@',
-          items: ({ query }) =>
-            withFoundThreads(
-              searchMentions(latest.current.options, query),
-              stillFound(found.current, query),
-              query,
-            ),
+          items: ({ query }) => searchMentions(latest.current.options, query),
           render: () =>
             renderMenu<Option, Mention>(
               MentionMenu,
@@ -830,9 +819,8 @@ export function Composer({
               {
                 wants: searchesThreads,
                 find: async (query) => {
-                  const threads = await findThreads(query, latest.current.threadId)
-                  found.current = threads
-                  return (shown) => withFoundThreads(shown, threads.threads, query)
+                  const { threads } = await findThreads(query, latest.current.threadId)
+                  return (shown) => withFoundThreads(shown, threads, query)
                 },
               },
             ),
