@@ -105,3 +105,10 @@ test("the card names only the providers that spent, Claude's first", () => {
   } as Parameters<typeof cardText>[0])
   assert.deepEqual(one.providers, ['claude_code'])
 })
+
+test('the hour the clocks go back through twice keeps its tokens, the second time too', () => {
+  // 25 Oct 2026, 02:30 in Paris the second time (winter time, 01:30 UTC).
+  const now = new Date('2026-10-25T01:40:00Z')
+  const grid = cardGrid(1, [{ at: '2026-10-25T01:30:00Z', tokens: 10 }], now)
+  assert.equal(grid.cells[2 * 24 + 23], 10)
+})

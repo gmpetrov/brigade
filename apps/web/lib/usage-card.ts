@@ -33,9 +33,13 @@ export function cardGrid(
   const count = columns * rows
   const cells = new Array<number>(count).fill(0)
   // The last cell is the one now falls in: its hour, or its 3 hours of the day.
-  const last = new Date(now)
-  last.setHours(Math.floor(last.getHours() / hours) * hours, 0, 0, 0)
-  const end = last.getTime() + hours * HOUR_MS
+  // Counted back from now rather than set with setHours, which picks the first of an hour the
+  // clocks go back through twice, and would leave out the second one's tokens.
+  const intoCell =
+    ((now.getHours() % hours) * 60 + now.getMinutes()) * 60_000 +
+    now.getSeconds() * 1000 +
+    now.getMilliseconds()
+  const end = now.getTime() - intoCell + hours * HOUR_MS
   const start = end - count * cellMs
   for (const q of quarters) {
     const index = Math.floor((new Date(q.at).getTime() - start) / cellMs)
