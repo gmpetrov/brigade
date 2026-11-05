@@ -15,6 +15,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { handleAppCall } from './app-calls.js'
 import { audit, type Actor } from './audit.js'
+import { outcomeOf } from './board.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
@@ -50,6 +51,9 @@ type Changes = {
 const findSchedule = (db: ScopedDb, id: string) =>
   db.schedule.findFirst({ where: { id }, include: { teammate: true } })
 
+/** How many of its latest runs a schedule shows, as dots on Routines. */
+const RECENT_RUNS = 8
+
 const LIST = {
   teammate: { select: { id: true, name: true, harness: true, archivedAt: true } },
   owner: { select: { id: true, user: { select: { name: true } } } },
@@ -58,15 +62,22 @@ const LIST = {
   parentSession: { select: { id: true, title: true } },
   sessions: {
     orderBy: { createdAt: 'desc' as const },
-    take: 1,
-    select: { id: true, status: true, createdAt: true },
+    take: RECENT_RUNS,
+    select: { id: true, status: true, report: true, createdAt: true },
   },
 }
 
-const view = ({ sessions, ...schedule }: Awaited<ReturnType<typeof listRows>>[number]) => ({
-  ...schedule,
-  lastRun: sessions[0] ?? null,
-})
+const view = ({ sessions, ...schedule }: Awaited<ReturnType<typeof listRows>>[number]) => {
+  const last = sessions[0]
+  return {
+    ...schedule,
+    lastRun: last ? { id: last.id, status: last.status, createdAt: last.createdAt } : null,
+    /** Its latest runs, oldest first, with how each ended. */
+    recentRuns: sessions
+      .map((s) => ({ id: s.id, outcome: outcomeOf(s), createdAt: s.createdAt }))
+      .reverse(),
+  }
+}
 
 const listRows = (
   db: ScopedDb,

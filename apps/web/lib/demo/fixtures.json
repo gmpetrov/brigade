@@ -7737,7 +7737,14 @@
       "id": "cmvjgicat002ze1lwjhepnrpf",
       "status": "idle",
       "createdAt": "2026-10-21T11:27:29.467Z"
-     }
+     },
+     "recentRuns": [
+      {
+       "id": "cmvjgicat002ze1lwjhepnrpf",
+       "outcome": "report",
+       "createdAt": "2026-10-21T11:27:29.467Z"
+      }
+     ]
     },
     {
      "id": "cmvjgicba0032e1lwv0fmdk8e",
@@ -7773,7 +7780,8 @@
      "createdByTeammate": null,
      "project": null,
      "parentSession": null,
-     "lastRun": null
+     "lastRun": null,
+     "recentRuns": []
     },
     {
      "id": "cmvjgic1q0012e1lw0hadab8e",
@@ -7809,7 +7817,8 @@
      "createdByTeammate": null,
      "project": null,
      "parentSession": null,
-     "lastRun": null
+     "lastRun": null,
+     "recentRuns": []
     },
     {
      "id": "cmvjgic1m0011e1lwdhj5pus3",
@@ -7854,7 +7863,14 @@
       "id": "cmvjgic3p001fe1lww1cgpr3a",
       "status": "idle",
       "createdAt": "2026-10-21T11:27:29.220Z"
-     }
+     },
+     "recentRuns": [
+      {
+       "id": "cmvjgic3p001fe1lww1cgpr3a",
+       "outcome": "report",
+       "createdAt": "2026-10-21T11:27:29.220Z"
+      }
+     ]
     }
    ]
   },
@@ -7910,7 +7926,14 @@
       "id": "cmvjgicat002ze1lwjhepnrpf",
       "status": "idle",
       "createdAt": "2026-10-21T11:27:29.467Z"
-     }
+     },
+     "recentRuns": [
+      {
+       "id": "cmvjgicat002ze1lwjhepnrpf",
+       "outcome": "report",
+       "createdAt": "2026-10-21T11:27:29.467Z"
+      }
+     ]
     }
    ]
   },
@@ -7960,7 +7983,14 @@
       "id": "cmvjgic3p001fe1lww1cgpr3a",
       "status": "idle",
       "createdAt": "2026-10-21T11:27:29.220Z"
-     }
+     },
+     "recentRuns": [
+      {
+       "id": "cmvjgic3p001fe1lww1cgpr3a",
+       "outcome": "report",
+       "createdAt": "2026-10-21T11:27:29.220Z"
+      }
+     ]
     }
    ]
   },

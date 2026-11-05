@@ -25,6 +25,7 @@ import type {
   PlaybookHomeLine,
   PlaybookPromotionPayload,
   PullReview,
+  RunOutcome,
   ReviewPolicy,
   SkillProposalPayload,
   TriggerProposalPayload,
@@ -656,6 +657,8 @@ export type Schedule = {
   project: ProjectRef | null
   /** Its latest thread. */
   lastRun: { id: string; status: string; createdAt: string } | null
+  /** Its latest runs, oldest first, with how each ended. */
+  recentRuns: { id: string; outcome: RunOutcome; createdAt: string }[]
   /** The thread its runs report to, as its children; null: each run is a thread of its own. */
   parentSession: { id: string; title: string } | null
 }
