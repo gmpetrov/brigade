@@ -23,6 +23,7 @@ import {
 } from '@brigade/contracts'
 import { audit } from './audit.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { onChiefsWord } from './chief-answers.js'
 import { holdCall, onDecided, type Decision, type Live, type Resume } from './held-calls.js'
 import { actingTeammate } from './thread-spec.js'
 import { deleteSecret, openSecret, replaceSecret, sealSecret } from './vault.js'
@@ -355,7 +356,10 @@ export async function handleCredentialRequest(
   // with this teammate: only the creator's or an admin's mention does.
   const access = await accessOf(db, row, teammate.id)
   let via: 'grant' | 'mention' | 'thread' | undefined
-  if (access.withoutAsking) via = 'grant'
+  // On Chief's word, not the person's (src/chief-answers.ts): a credential that would go without
+  // asking asks them, as App writes do. What they mentioned or allowed in this thread still holds.
+  const chiefsWord = onChiefsWord(session)
+  if (access.withoutAsking && !chiefsWord) via = 'grant'
   else {
     const mentioners = [...((await threadMentions(db, session.id)).get(row.id) ?? [])]
     const managers = access.allowed
@@ -384,9 +388,11 @@ export async function handleCredentialRequest(
             action: 'use',
             title: `${teammate.name}: use ${credential.name}`,
             target: credential.name,
-            reason: `${teammate.name} asks to ${what}. Nobody mentioned it in this thread.${
-              request.purpose ? ` ${request.purpose}` : ''
-            }`,
+            reason: `${teammate.name} asks to ${what}. ${
+              chiefsWord && access.withoutAsking
+                ? "It acts on Chief's answer in your name: what it uses waits for you."
+                : 'Nobody mentioned it in this thread.'
+            }${request.purpose ? ` ${request.purpose}` : ''}`,
             always: true,
             payload: {
               credentialId: credential.id,

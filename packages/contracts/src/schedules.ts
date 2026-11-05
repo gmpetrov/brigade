@@ -4,6 +4,7 @@
 import { Cron } from 'croner'
 import { z } from 'zod'
 import { AppOperations } from './apps.js'
+import { ChiefOperations } from './chief-answers.js'
 import { ChildOperations } from './children.js'
 import { ListOperations } from './lists.js'
 import { PlaybookOperations } from './playbooks.js'
@@ -124,6 +125,7 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
   ...ListOperations,
   ...AppOperations,
   ...DoneOperations,
+  ...ChiefOperations,
 ])
 export type ScheduleOperation = z.infer<typeof ScheduleOperation>
 

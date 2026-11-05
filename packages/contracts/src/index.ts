@@ -7,6 +7,7 @@ export * from './builtin-skills.js'
 export * from './cards.js'
 export * from './catalog-schemas.js'
 export * from './chief.js'
+export * from './chief-answers.js'
 export * from './children.js'
 export * from './commands.js'
 export * from './credentials.js'
@@ -116,8 +117,16 @@ export * from './usage.js'
  *     (thread.settle, SETTLE_PROTOCOL).
  * 50: a person's message sent during its teammate's turn gets a side reply (message.side), and
  *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
+ * 51: Chief answers for the person (CHIEF_PROTOCOL): its decision threads (the spec's `decision`, and
+ *     chief_decide and chief_decisions as schedule.call operations), and the spec's `chiefAnswers`.
  */
-export const PROTOCOL_VERSION = 50
+export const PROTOCOL_VERSION = 51
+/**
+ * Runners from this version on run Chief's decision threads (ThreadSpec.decision) with its
+ * chief_decide tool, and tell teammates what Chief's answers are (ThreadSpec.chiefAnswers). The API
+ * starts no decision thread on an older one: the question waits for the person, as before.
+ */
+export const CHIEF_PROTOCOL = 51
 /**
  * Runners from this version on answer a person's message sent during its teammate's turn on
  * the side (message.side), and take keep and queue on it. The API refuses those actions to

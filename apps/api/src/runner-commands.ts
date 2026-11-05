@@ -8,6 +8,7 @@
 // opens a ticket. A runner too old to acknowledge takes each command once, as before.
 import { OUTBOX_PROTOCOL, type ApiToRunner } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { chiefGateOf, chiefOpenIn, keepInOrder } from './chief-order.js'
 import { prisma, scoped } from './db.js'
 import { noteFailure } from './ops/failures.js'
 import { movedOf } from './thread-spec.js'
@@ -53,12 +54,23 @@ export const AUTOMATIC_PER_COMPUTER = 25
 const automatic = (message: DurableCommand) =>
   message.type === 'thread.prompt' && message.memberId === null
 
-export type Kept = 'kept' | 'exists'
+/** moot: an answer of Chief's the person's word overtook, never kept (src/chief-order.ts). */
+export type Kept = 'kept' | 'exists' | 'moot'
+
+/**
+ * The thread whose commands this one must reach its computer in order with, kept and sent one at
+ * a time (WorkspaceHub.dispatch): the person's word and Chief's answers (src/chief-order.ts).
+ */
+export const orderedThread = (message: DurableCommand) => {
+  const sessionId = sessionOf(message)
+  return sessionId && chiefGateOf(message) ? sessionId : null
+}
 
 /**
  * Keep a command before it is sent: 'exists' when one with its id is kept already. Each is a turn
  * of its own, an event's too: folded into the one waiting, an event could be lost across a
- * restart, or come after a person's message that answered it. Throws a 503 past the caps.
+ * restart, or come after a person's message that answered it. Throws a 503 past the caps. The
+ * person's word and Chief's answers are kept in the order their thread reads them (keepInOrder).
  */
 export async function keepCommand(
   computer: { id: string; organizationId?: string; workspaceId?: string },
@@ -75,17 +87,21 @@ export async function keepCommand(
   if (await prisma.runnerCommand.count({ where: { id: message.commandId } })) return 'exists'
   // A decision already taken, one per ticket and no turn: never refused, or it would be lost.
   if (message.type !== 'thread.settle') await checkCaps(computer.id, sessionId, message)
+  const row = {
+    id: message.commandId,
+    ...owner,
+    computerId: computer.id,
+    sessionId,
+    type: message.type,
+    message: message as never,
+  }
+  const gate = sessionId ? chiefGateOf(message) : null
   try {
-    await prisma.runnerCommand.create({
-      data: {
-        id: message.commandId,
-        ...owner,
-        computerId: computer.id,
-        sessionId,
-        type: message.type,
-        message: message as never,
-      },
-    })
+    if (gate && sessionId && ('answer' in gate || (await chiefOpenIn(sessionId))))
+      return await keepInOrder({ ...row, sessionId }, gate, (tx, createdAt) =>
+        tx.runnerCommand.create({ data: { ...row, createdAt } }),
+      )
+    await prisma.runnerCommand.create({ data: row })
     return 'kept'
   } catch (error) {
     if ((error as { code?: string }).code === 'P2002') return 'exists'
@@ -120,6 +136,22 @@ async function checkCaps(computerId: string, sessionId: string | null, message: 
   throw new HTTPException(503, {
     message: `Not sent: ${full}. Try again once the computer runs.`,
   })
+}
+
+/**
+ * The thread's commands kept before this one that go in order with it (orderedThread) and still
+ * wait for the runner's acknowledgement, oldest first: a connection that has not had them gets
+ * them before it (WorkspaceHub.sendOrdered).
+ */
+export async function keptBefore(computerId: string, sessionId: string, commandId: string) {
+  const rows = await prisma.$queryRaw<{ id: string; type: string }[]>`
+    SELECT c.id, c.type FROM "RunnerCommand" c
+    JOIN "RunnerCommand" me ON me.id = ${commandId}
+    WHERE c."computerId" = ${computerId} AND c.status = 'pending' AND c."sessionId" = ${sessionId}
+      AND c.id <> me.id AND c."createdAt" < me."createdAt"
+      AND c.type IN ('thread.prompt', 'thread.takeover', 'thread.handback')
+    ORDER BY c."createdAt" ASC`
+  return rows.map((r) => r.id)
 }
 
 /** A command with this id is kept. */

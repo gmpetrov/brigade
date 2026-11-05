@@ -769,6 +769,58 @@ export async function seedGettingStarted(scope: Scope) {
 }
 
 /**
+ * A line added to a list for someone (Chief's work put off in a person's name): the file is made
+ * with `header` when missing, and the line goes at its end, linked to no thread. Its row with it,
+ * under the file's lock, as add_item's.
+ */
+export async function addListLine(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  input: { path: string; header: string; text: string },
+) {
+  let file = await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })
+  if (!file) {
+    // Made once, never over a file made meanwhile (by another call, or a person), which stands
+    // and takes the line: the save only creates (createOnly), and one at the very same time loses
+    // on the path's uniqueness. Nothing is held open while it saves: the save needs connections of
+    // its own from the same pool.
+    await saveLibraryFile(
+      db,
+      scope,
+      actor,
+      { path: input.path, bytes: new TextEncoder().encode(input.header) },
+      {},
+      { createOnly: true },
+    ).catch((error: unknown) => {
+      if ((error as { code?: string }).code !== 'P2002') throw error
+    })
+    file = await listFile(db, { path: input.path })
+  }
+  const documentId = file.id
+  const id = newListItemId()
+  let made = false
+  await editList(
+    db,
+    scope,
+    actor,
+    documentId,
+    {},
+    async (text, list) => {
+      await db.listItem.create({
+        data: { id, documentId, text: plainItemText(input.text).slice(0, 2_000) } as never,
+      })
+      made = true
+      return insertLine(text, list, {}, input.text, id)
+    },
+    async () => {
+      if (made) await db.listItem.deleteMany({ where: { id } })
+    },
+  )
+  return id
+}
+
+/**
  * Attach lines to a thread that runs already. Its teammate is told by a note at its next turn,
  * unless `quiet`: the person sends the hand-off as a message right after, which starts it.
  */

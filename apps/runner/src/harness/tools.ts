@@ -1965,6 +1965,97 @@ const TIMEZONE =
   'IANA timezone the hours are in, e.g. "Europe/Paris". Use the person\'s if you know it.'
 
 /**
+ * Chief answering for the person (docs/chief-answers.md): its decision on one question, in the
+ * thread Brigade starts for it; and, in its own threads, a look back at what it decided.
+ */
+export function chiefTools(
+  call: ScheduleCaller,
+  options: { deciding: boolean },
+): Record<string, Tool> {
+  if (options.deciding)
+    return {
+      chief_decide: tool({
+        description:
+          "Decide the question this thread is about, in the person's name, once; then end your turn without a reply. " +
+          'answer: pick one of its answers. park: pick the one that puts the work off, and say what is put off. ' +
+          'escalate: leave it to the person, with why, and the answer you would pick if you lean one way.',
+        inputSchema: jsonSchema<{
+          verdict: 'answer' | 'park' | 'escalate'
+          option?: number
+          kind: 'next_step' | 'approach' | 'priority' | 'taste' | 'outside'
+          reason: string
+          basis?: string
+          parked?: string
+        }>({
+          type: 'object',
+          properties: {
+            verdict: { type: 'string', enum: ['answer', 'park', 'escalate'] },
+            option: {
+              type: 'number',
+              description:
+                'The answer, by its number in the brief (1 for the first). Required to answer or park.',
+            },
+            kind: {
+              type: 'string',
+              enum: ['next_step', 'approach', 'priority', 'taste', 'outside'],
+              description: 'What kind of question it is (see your instructions)',
+            },
+            reason: { type: 'string', description: 'Why, in a line the person reads' },
+            basis: {
+              type: 'string',
+              description:
+                "The line of the mandate, or the person's decision, it goes by, in their words",
+            },
+            parked: {
+              type: 'string',
+              description: 'Parking: the work put off, in a line for their list',
+            },
+          },
+          required: ['verdict', 'kind', 'reason'],
+        }),
+        execute: (input, { toolCallId }) =>
+          call({
+            operation: {
+              name: 'chief_decide',
+              verdict: input.verdict,
+              kind: input.kind,
+              reason: input.reason,
+              ...(input.option !== undefined ? { option: Math.round(input.option) } : {}),
+              ...(input.basis ? { basis: input.basis } : {}),
+              ...(input.parked ? { parked: input.parked } : {}),
+            },
+            toolCallId,
+            toolName: 'chief_decide',
+            input,
+          }),
+      }),
+    }
+  return {
+    chief_decisions: tool({
+      description:
+        "What you decided in the person's name lately, for your look back with them: each question's thread, its " +
+        'kind, your verdict and answer, whether it went alone or as a suggestion, and how they took it; with totals.',
+      inputSchema: jsonSchema<{ days?: number }>({
+        type: 'object',
+        properties: {
+          days: { type: 'number', description: 'How far back, in days (default 7, at most 31)' },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'chief_decisions',
+            ...(input.days ? { days: Math.min(31, Math.max(1, Math.round(input.days))) } : {}),
+          },
+          toolCallId,
+          toolName: 'chief_decisions',
+          input,
+        }),
+    }),
+  }
+}
+
+/**
  * Lists (docs/lists.md): checklist lines of library Markdown files that work is attached to.
  * A line work is attached to has an id, in a marker at its end (`<!-- item:<id> -->`); the API
  * changes the file itself, credited to this thread, within the teammate's library access.

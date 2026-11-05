@@ -61,6 +61,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   @mentions joins the thread and answers next (only the chief can bring in teammates not yet in a thread, protocol
   18), and bigger work becomes a task. Onboarding names the project (organization and first workspace), then asks
   for an AI account: the dashboard stays closed until the member has one that has worked in that workspace.
+  Chief also answers teammates' buttons and choices in a member's name, suggesting first and alone only for the kinds
+  they allow; off, as a member's preference, it does none of it (docs/chief-answers.md).
 - **Sign-in is Google or a code mailed to the address** (`src/sign-in-code.ts`, better-auth's emailOTP), which
   also signs up a new address: an account is only made by someone who reads its mail, and an invitation is only taken
   by a proven address. Passwords are off (`PASSWORD_SIGN_IN`), except locally and in previews for the dev accounts.
@@ -281,7 +283,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   that is starting wait in the table however long it takes, across API restarts, and a computer that never came up is
   started again each minute. A command not through in 24 hours fails and opens a ticket in its thread (a thread left
   starting goes back to idle); an interrupt or a browser window is dropped after 10 minutes instead, being moot. An
-  older runner takes each command once, as before. Rows are deleted 3 days after they settle.
+  older runner takes each command once, as before. Rows are deleted 3 days after they settle. A thread's person's word
+  and Chief's answers are kept under the thread's lock, and kept and sent one at a time by its hub, so its computer
+  reads them in the order they were kept (`apps/api/src/chief-order.ts`, docs/chief-answers.md).
 - **Vault.** AES-256-GCM, with each organization's key derived (HKDF) from `VAULT_KEY`; the workspace id is bound
   in as authenticated data, so a secret cannot be moved to another workspace. Decrypted only inside the API, per call.
 - **Connector calls** (`apps/api/src/connector-calls.ts`). The runner passes granted operations to `HarnessAgent` as

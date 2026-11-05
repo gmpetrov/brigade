@@ -177,6 +177,12 @@ export type Task = Prisma.TaskModel
  */
 export type Schedule = Prisma.ScheduleModel
 /**
+ * Model ChiefDecision
+ * Chief's decision on a question a teammate ended its reply on: buttons or a choices card, in a
+ * thread of a member who lets Chief answer for them (docs/chief-answers.md, src/chief-answers.ts).
+ */
+export type ChiefDecision = Prisma.ChiefDecisionModel
+/**
  * Model Wakeup
  * A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
  * The API's minute tick fires it into the same thread, with the conversation so far.

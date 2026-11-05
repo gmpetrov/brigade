@@ -22,6 +22,7 @@ import { mcpAppKey } from './mcp-servers.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped, type ScopedDb } from './db.js'
+import { decideChiefPromotion } from './chief-answers.js'
 import { hubs, threadUpdated } from './hub.js'
 import { accountReaching } from './repository-grant.js'
 import type { WorkspaceScope } from './scope.js'
@@ -462,6 +463,8 @@ type TicketPayload = {
   playbookInstallationId?: string
   /** Brigade proposes a playbook's action act on its own: its owner, an owner or an admin decides. */
   playbookPromotion?: PlaybookPromotionPayload
+  /** Brigade offers to let Chief answer a kind of question alone (src/chief-answers.ts): that person decides. */
+  chiefPromotion?: { memberId: string; kind: string; agreed: number; decided: number }
 }
 
 /**
@@ -566,6 +569,11 @@ export async function resolveTicket(
       if (!isAdmin)
         throw new HTTPException(403, { message: 'Only an owner or admin can activate a playbook' })
       await decideActivation(db, scope, ticket, input.approved)
+      return { ok: true, live: false }
+    }
+    if (payload.chiefPromotion) {
+      // In their name: the person Chief answers for decides, nobody else.
+      await decideChiefPromotion(scope, ticket, input.approved)
       return { ok: true, live: false }
     }
     if (payload.playbookPromotion) {

@@ -18,6 +18,8 @@ import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
 import { dueChildren, settleOverdueChildren } from './children.js'
+import { dueDecisions, settleStaleDecisions } from './chief-answers.js'
+import { CHIEF_SOURCE, wakeupCommandId } from './chief-order.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
 
@@ -34,6 +36,9 @@ const MISSED_AFTER_MS = 24 * 60 * 60_000
  * set it, not the teammate, so its note is the prompt itself.
  */
 export const MERGE_SOURCE = 'merged:'
+
+/** An answer of Chief's for the person (src/chief-answers.ts), by its sourceId: `chief:<decision>`. */
+export { CHIEF_SOURCE }
 
 export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation =>
   op.name === 'wake' || op.name === 'list_wakeups' || op.name === 'cancel_wakeup'
@@ -217,6 +222,23 @@ async function fire(wakeup: {
     await settle('missed')
     return changed(scope, thread)
   }
+  // An answer of Chief's for the person (src/chief-answers.ts) the person's word or their
+  // dismissal settled meanwhile: it never goes. Whether it still may is settled as its prompt is
+  // kept, in order with the person's word (src/chief-order.ts): then a moot one is not kept, and
+  // its wake-up is cancelled.
+  const chiefDecision = wakeup.sourceId?.startsWith(CHIEF_SOURCE)
+    ? wakeup.sourceId.slice(CHIEF_SOURCE.length)
+    : null
+  if (
+    chiefDecision &&
+    !(await db.chiefDecision.count({ where: { id: chiefDecision, status: 'answered' } }))
+  ) {
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id, status: 'pending' },
+      data: { status: 'cancelled' },
+    })
+    return changed(scope, thread)
+  }
   // Settled only once its prompt is kept (src/runner-commands.ts): a restart in between fires it
   // again, and the prompt's id, the wake-up's own, keeps it from reaching the thread twice.
   // Archived meanwhile, the thread comes back with the reports and replies, as with a new message.
@@ -236,7 +258,7 @@ async function fire(wakeup: {
       ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
       ...(wakeup.kind === 'report' ? { messageId: wakeupMessageId(wakeup.id) } : {}),
     },
-    { commandId: `wakeup:${wakeup.id}` },
+    { commandId: wakeupCommandId(wakeup.id) },
   ).catch((error: unknown) => {
     console.error(`wake-up ${wakeup.id}: could not prompt`, error)
     return 'offline' as const
@@ -263,7 +285,7 @@ export async function fireNow(id: string) {
 
 /** Workspaces with a wake-up, a child's report or a dry run due now (src/jobs.ts). */
 export async function dueWakeups(now = new Date()) {
-  const [wakeups, children, dryRuns] = await Promise.all([
+  const [wakeups, children, dryRuns, decisions] = await Promise.all([
     prisma.wakeup.findMany({
       where: { status: 'pending', wakeAt: { lte: now } },
       distinct: ['workspaceId'],
@@ -271,8 +293,9 @@ export async function dueWakeups(now = new Date()) {
     }),
     dueChildren(now),
     dueDryRuns(now.getTime()),
+    dueDecisions(now),
   ])
-  return [...wakeups.map((w) => w.workspaceId), ...children, ...dryRuns]
+  return [...wakeups.map((w) => w.workspaceId), ...children, ...dryRuns, ...decisions]
 }
 
 /**
@@ -297,4 +320,6 @@ export async function fireDueWakeups(workspaceId?: string) {
   await settleOverdueChildren(workspaceId)
   // Dry runs' events that took too long: left out, so the report comes.
   await settleOverdueDryRuns(workspaceId)
+  // Chief's decisions it never made: the questions are the person's.
+  await settleStaleDecisions(workspaceId)
 }
