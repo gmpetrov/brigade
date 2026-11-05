@@ -110,7 +110,7 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -193,15 +193,15 @@ export function ScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
+      <DialogContent className="max-h-[90dvh] grid-cols-1 overflow-y-auto sm:max-w-xl">
+        <form onSubmit={(e) => void submit(e)} className="flex min-w-0 flex-col gap-4">
           <DialogHeader>
             <DialogTitle>{schedule ? 'Edit schedule' : 'New schedule'}</DialogTitle>
             <DialogDescription>
               Each run starts a fresh thread with these instructions, on your AI accounts.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Title" htmlFor="schedule-title">
               <Input
                 id="schedule-title"
@@ -268,7 +268,7 @@ export function ScheduleDialog({
             />
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="When" htmlFor="schedule-preset">
               <Select value={when.preset} onValueChange={(v) => set({ preset: v as Preset })}>
                 <SelectTrigger id="schedule-preset" className="w-full">
@@ -320,7 +320,7 @@ export function ScheduleDialog({
             )}
           </div>
           {when.preset === 'weekly' && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="On" htmlFor="schedule-day">
                 <Select value={when.day} onValueChange={(day) => set({ day })}>
                   <SelectTrigger id="schedule-day" className="w-full">
