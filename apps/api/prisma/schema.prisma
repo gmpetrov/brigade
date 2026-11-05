@@ -2428,7 +2428,7 @@ model PreviewMachine {
   providerRef    Json?
   /// Counts the VMs made for it: names the next one's making, so a retry makes no second one.
   generation     Int                  @default(0)
-  /// Whoever makes it holds it until then: one making at a time.
+  /// Whoever makes, starts, stops or destroys it holds it until then: one operation at a time.
   claimedUntil   DateTime?
   /// When the runner last said its preview is in use, and when the provider was last told.
   usedAt         DateTime             @default(now())
@@ -2442,11 +2442,13 @@ model PreviewMachine {
   @@index([status])
 }
 
-/// creating: being made. running: up, or being started again. stopped: its disk kept, costing nothing.
+/// creating: being made. running: up, or being started again. stopped: its disk kept, costing
+/// nothing. destroying: being destroyed by the sweep, its row going next.
 enum PreviewMachineStatus {
   creating
   running
   stopped
+  destroying
 }
 
 enum PreviewVariableKind {

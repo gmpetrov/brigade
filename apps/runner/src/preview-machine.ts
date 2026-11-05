@@ -456,18 +456,31 @@ export function remoteScript(input: {
   return `${lines.join('\n')}\n`
 }
 
-/** Write the app's environment and script on the machine: by stdin, never on a command line. */
+/**
+ * Write the app's environment and script on the machine: by stdin, never on a command line, in
+ * a folder made again for each run, so nothing of an earlier run (its credentials, which a later
+ * run may not have been given) is left for this one.
+ */
 export async function writeRun(
   link: MachineLink,
   env: Record<string, string>,
   credentials: string[],
   script: string,
 ) {
+  await link.exec(`rm -rf ${RUN_DIR} && mkdir -p -m 700 ${RUN_DIR}`)
   const write = (file: string, text: string) =>
-    link.exec(`umask 077 && mkdir -p ${RUN_DIR} && cat > ${RUN_DIR}/${file}`, text)
+    link.exec(`umask 077 && cat > ${RUN_DIR}/${file}`, text)
   await write('env', envFileText(env))
   for (const [i, text] of credentials.entries()) await write(`credentials-${i}`, text)
   await write('app.sh', script)
+}
+
+/** The app stopped: its settings and credentials leave the machine. As far as it can: best effort. */
+export function clearRun(link: MachineLink) {
+  return link
+    .exec(`rm -f ${RUN_DIR}/env ${RUN_DIR}/credentials-*`, '', 15_000)
+    .then(() => undefined)
+    .catch(() => undefined)
 }
 
 /** Start the app on the machine: its output comes back on the child's stdout and stderr. */

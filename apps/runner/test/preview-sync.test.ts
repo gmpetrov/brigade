@@ -6,6 +6,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   renameSync,
@@ -27,7 +28,9 @@ import { Receiver, safePath } from '../src/preview-sync-receiver.js'
 // - each change goes as it happens: edits, new folders, deletions, renames, a file that became
 //   a folder; a new ignored file does not;
 // - what the machine made itself (dependencies, its database) is never touched;
-// - after a cut, a new reader sends only what changed meanwhile, and deletes what went.
+// - after a cut, a new reader sends only what changed meanwhile, and deletes what went;
+// - what the machine asks for is sent only when it is in the reader's own manifest, and never
+//   read through a link out of the checkout: code on the machine cannot fetch other files.
 
 const made: string[] = []
 after(() => {
@@ -220,6 +223,61 @@ test('after a cut, only what changed meanwhile goes, and what went is deleted', 
   assert.ok(there(copy, 'src/c.ts'))
   assert.ok(!there(copy, 'README.md'), 'deleted there too')
   assert.equal(text(copy, 'node_modules/y.js'), 'installed on the machine\n', 'never sent: kept')
+})
+
+test('the machine gets only what the manifest has, never a file out of the checkout', async () => {
+  const home = temp()
+  const root = join(home, 'checkout')
+  mkdirSync(root)
+  execFileSync('git', ['init', '-q', root])
+  write(root, 'src/a.ts', 'export const a = 1\n')
+  write(root, 'node_modules/x/index.js', 'never sent\n')
+  write(home, 'outside.env', 'OUTSIDE_ONLY\n')
+  write(home, 'elsewhere/a.ts', 'OUTSIDE_ONLY\n')
+  const out = new PassThrough()
+  const sent: Buffer[] = []
+  out.on('data', (d: Buffer) => sent.push(d))
+  const reader = new Reader(root, out, { warn: () => undefined })
+  try {
+    await reader.start()
+    await reader.answerNeed(['../outside.env', '/etc/passwd', 'node_modules/x/index.js', 42])
+    // A folder of the manifest that became a link to elsewhere: its file is not read there.
+    rmSync(join(root, 'src'), { recursive: true })
+    symlinkSync(join(home, 'elsewhere'), join(root, 'src'))
+    await reader.answerNeed(['src/a.ts'])
+    await reader.flush(1)
+  } finally {
+    reader.close()
+  }
+  const text = Buffer.concat(sent).toString()
+  assert.ok(!text.includes('OUTSIDE_ONLY'), 'nothing from outside the checkout')
+  assert.ok(!text.includes('never sent'))
+})
+
+test('a path git refuses does not make the reader send what git ignores', async () => {
+  const root = temp()
+  execFileSync('git', ['init', '-q', root])
+  write(root, '.gitignore', 'dist/\n')
+  write(root, 'src/a.ts', 'export const a = 1\n')
+  const copy = temp()
+  const sync = pair(root, copy, join(temp(), 'state.json'))
+  await sync.start()
+  try {
+    // git's check-ignore stops for good at a path outside the repository (a file that exists).
+    const outside = `${root}-outside`
+    writeFileSync(outside, 'OUTSIDE_ONLY\n')
+    made.push(outside)
+    await sync.reader.answerNeed([`../${outside.split('/').pop()}`])
+    await new Promise((done) => setTimeout(done, 300))
+    write(root, 'dist/built.js', 'IGNORED_BUILD\n')
+    write(root, 'src/b.ts', 'export const b = 1\n')
+    await eventually(() => there(copy, 'src/b.ts'), 'a change after it')
+    await sync.flush()
+    assert.ok(!there(copy, 'dist/built.js'), 'what git ignores is still left out')
+    assert.ok(!readdirSync(dirname(copy)).some((f) => f.endsWith('-outside') && there(copy, f)))
+  } finally {
+    sync.reader.close()
+  }
 })
 
 test('the receiver writes only inside its copy', () => {

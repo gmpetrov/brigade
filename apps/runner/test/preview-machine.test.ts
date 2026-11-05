@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, test } from 'node:test'
 import {
+  clearRun,
   envFileText,
   MachineSync,
   remoteScript,
@@ -175,6 +176,21 @@ test('the app runs with its settings and credentials, its setup only when asked'
   const again = await output(runApp(link))
   assert.doesNotMatch(again, /setup/, 'a restart runs no setup')
   assert.match(again, /token=again/)
+})
+
+test('a run never finds an earlier run’s credentials, and none stay once the app stopped', async () => {
+  const home = temp()
+  const link = fakeLink(home)
+  const credential = join(home, '.brigade/run/credentials-0')
+  await writeRun(link, {}, ['PRIVATE=first-run-only\n'], 'true\n')
+  assert.ok(existsSync(credential))
+  // A later run, by a teammate the vault gave nothing to.
+  await writeRun(link, {}, [], 'true\n')
+  assert.ok(!existsSync(credential), 'the earlier run’s credentials are gone')
+  await writeRun(link, { TOKEN: 'x' }, ['PRIVATE=again\n'], 'true\n')
+  await clearRun(link)
+  assert.ok(!existsSync(credential))
+  assert.ok(!existsSync(join(home, '.brigade/run/env')))
 })
 
 test('a signal reaches the app’s whole process group, what it started included', async () => {

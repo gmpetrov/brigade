@@ -13,7 +13,7 @@
 // ignores (builds, caches, the preview's own database), except .env files, which the app reads.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { watch, type FSWatcher } from 'node:fs'
-import { lstat, readFile, readdir, readlink } from 'node:fs/promises'
+import { lstat, readFile, readdir, readlink, realpath } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import { createInterface } from 'node:readline'
 
@@ -91,11 +91,20 @@ class Ignores {
     })
     git.on('error', () => undefined)
     git.on('close', () => {
-      // Gone (git failed, or restarted below): what it did not answer is not ignored.
-      if (this.checker === checker) this.checker = undefined
-      for (const done of checker.waiting.splice(0)) done(false)
+      // Its answers owed are given as ignored: nothing is sent on a guess. Gone on its own (git
+      // failed): another one starts, so what git ignores stays left out.
+      for (const done of checker.waiting.splice(0)) done(true)
+      if (this.checker !== checker) return
+      this.checker = undefined
+      if (this.inside && Date.now() - this.restarted > 1000) {
+        this.restarted = Date.now()
+        this.open()
+      }
     })
   }
+
+  /** When a checker last started again on its own: not more than once a second. */
+  private restarted = 0
 
   /** A .gitignore changed: git reads them once, so a new one starts; the old answers what it owes. */
   restart() {
@@ -106,12 +115,16 @@ class Ignores {
   }
 
   ignored(path: string) {
+    // Only paths in the root are asked about (git stops at one outside it); any other is left out.
+    if (!path.split('/').every((part) => part !== '' && part !== '.' && part !== '..'))
+      return Promise.resolve(true)
     if (ENV_FILE.test(baseName(path)) || this.included.has(path)) return Promise.resolve(false)
     // A folder on the way to an included path is walked.
     for (const included of this.included)
       if (included.startsWith(`${path}/`)) return Promise.resolve(false)
     const checker = this.checker
-    if (!checker) return Promise.resolve(false)
+    // Outside a git work tree nothing is ignored; inside one, a checker restarting answers none.
+    if (!checker) return Promise.resolve(this.inside)
     return new Promise<boolean>((done) => {
       checker.waiting.push(done)
       checker.git.stdin.write(`${path}\0`)
@@ -148,9 +161,13 @@ export class Reader {
 
   private readonly warn: (text: string) => void
 
+  /** The root, links resolved: nothing read lies outside it. */
+  private rootReal = ''
+
   /** Walk the root, watching its folders, then send the manifest: the receiver answers with what it lacks. */
   start() {
     return this.then(async () => {
+      this.rootReal = await realpath(this.root)
       await this.ignores.start()
       await this.walk('')
       await this.manifest()
@@ -318,6 +335,8 @@ export class Reader {
     if (same && !this.needed) return
     this.index.set(path, entry)
     if (!send) return
+    // A folder on its way that became a link to elsewhere: nothing there is read.
+    if (!(await this.inside(path))) return
     let body: Buffer
     try {
       body = await readFile(join(this.root, path))
@@ -331,6 +350,7 @@ export class Reader {
   private needed = false
 
   private async walkSending(dir: string) {
+    if (!(await this.inside(dir))) return
     this.watchDir(dir)
     let entries
     try {
@@ -399,9 +419,20 @@ export class Reader {
     }
   }
 
-  /** What the receiver lacks, sent after what is under way. */
-  answerNeed(paths: string[]) {
-    return this.then(() => this.sendAll(paths))
+  /**
+   * What the receiver lacks, sent after what is under way: only paths of the manifest, the
+   * reader's own. The receiver's machine runs code nobody here vetted, so what it asks for is
+   * never a path to read as is (`../`, a home's logins).
+   */
+  answerNeed(paths: unknown[]) {
+    const known = paths.filter((p): p is string => typeof p === 'string' && this.index.has(p))
+    return this.then(() => this.sendAll(known))
+  }
+
+  /** Whether a path, links resolved, is in the root: what is read never lies outside it. */
+  private async inside(path: string) {
+    const real = await realpath(join(this.root, path)).catch(() => null)
+    return real !== null && (real === this.rootReal || real.startsWith(`${this.rootReal}${sep}`))
   }
 }
 

@@ -67,6 +67,7 @@ import {
   type PreviewCgroup,
 } from './preview-cgroup.js'
 import {
+  clearRun,
   MachineLink,
   MachineSync,
   machineKey,
@@ -113,6 +114,8 @@ const FROZEN_TTL_MS = Number(process.env.BRIGADE_PREVIEW_FROZEN_TTL_MS) || 4 * 6
 const SLEEP_MS = Number(process.env.BRIGADE_PREVIEW_SLEEP_MS) || 30 * 60_000
 /** While it is up, the API is told this often that a preview's machine is in use. */
 const TOUCH_MS = 5 * 60_000
+/** Longest a stop waits for a launch on the machine to give up (one SSH step, at most). */
+const REMOTE_STEP_MS = 20_000
 /** Frozen previews stop, longest unused first, while swap is this full or memory this short. */
 const SWAP_FULL = 0.8
 const MEMORY_SHORT = 0.1
@@ -282,6 +285,8 @@ type Remote = {
   touchedAt: number
   /** It ends with its machine left running: another start takes it on (a replacement, an update). */
   keepAwake?: boolean
+  /** Its launch on the machine while under way: a stop waits for it to give up. */
+  launching?: Promise<void>
   /** Its lines in the preview's log. */
   log: (line: string) => void
 }
@@ -378,6 +383,13 @@ function httpStatus(port: number, host = '127.0.0.1', timeoutMs = 10_000) {
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
+/** Once `work` is over, or `ms` passed, whichever comes first (its timer then cleared). */
+async function within(work: Promise<unknown>, ms: number) {
+  let timer: NodeJS.Timeout | undefined
+  await Promise.race([work, new Promise((done) => (timer = setTimeout(done, ms)))])
+  clearTimeout(timer)
+}
+
 export class Previews {
   private previews = new Map<string, Preview>()
   private readonly timer: NodeJS.Timeout
@@ -430,6 +442,12 @@ export class Previews {
   }
 
   private lastStarts = new Map<string, LastStart>()
+  /**
+   * What is under way on each thread's machine (a launch, a stop, a sleep), the last of it: one
+   * thing at a time on a machine, so a launch a stop cut short, or the cleanup of the preview a
+   * new one replaces, never acts on the machine once the next one's launch has begun there.
+   */
+  private readonly machineWork = new Map<string, Promise<void>>()
   private readonly pressureTimer: NodeJS.Timeout
   private readonly pressure = new PressureWatch<Preview>()
   /** Containers paused for frozen previews, by user: unpaused at the next start should the runner stop first. */
@@ -738,6 +756,9 @@ export class Previews {
     const preview = this.previews.get(sessionId)
     if (!preview) return false
     preview.stopping = { status, reason }
+    // A launch on its machine under way gives up at its next step: waited for, so it is over
+    // before anything takes its place there (a replacement's launch waits for it too).
+    if (preview.remote?.launching) await within(preview.remote.launching, REMOTE_STEP_MS)
     // A frozen process only gets to its SIGTERM handler once thawed.
     await this.thaw(preview)
     this.kill(preview, 'TERM')
@@ -1356,13 +1377,43 @@ export class Previews {
    * Run the app on its machine: connected, its copy of the code up to date, its ports forwarded
    * here, what an earlier run left stopped, then its setup (unless it restarts) and command there.
    */
-  private async launchRemote(preview: Preview, withSetup: boolean) {
+  private launchRemote(preview: Preview, withSetup: boolean) {
+    const launching = this.onMachine(preview.seat.sessionId, () =>
+      this.launchRemoteNow(preview, withSetup),
+    )
+    preview.remote!.launching = launching
+    return launching
+  }
+
+  /** Work on a thread's machine, once what is under way there is over: one thing at a time. */
+  private onMachine(sessionId: string, work: () => Promise<void>) {
+    const before = this.machineWork.get(sessionId)
+    const next = (async () => {
+      await before
+      await work()
+    })().catch((error: unknown) =>
+      console.warn(`preview of ${sessionId}: on its machine: ${String(error)}`),
+    )
+    this.machineWork.set(sessionId, next)
+    void next.finally(() => {
+      if (this.machineWork.get(sessionId) === next) this.machineWork.delete(sessionId)
+    })
+    return next
+  }
+
+  /**
+   * After the thread's launch before it: it gives up, before it changes anything on the machine,
+   * as soon as the preview is stopped or replaced (each step on the machine takes a while).
+   */
+  private async launchRemoteNow(preview: Preview, withSetup: boolean) {
     const remote = preview.remote!
     const { sessionId, runAs } = preview.seat
     const current = () =>
       this.previews.get(sessionId) === preview && !preview.stopping && !remote.asleep
     try {
+      if (!current()) return
       await remote.link.connect()
+      if (!current()) return
       const sent = await remote.sync.flush()
       if (sent !== undefined)
         remote.log(
@@ -1370,13 +1421,18 @@ export class Previews {
             ? `[preview] Sent the code to its machine (${sent} file${sent === 1 ? '' : 's'}); changes go as they happen`
             : '[preview] Its machine has the code; changes go as they happen',
         )
-      for (const port of [preview.input.port, ...preview.info.ports])
+      for (const port of [preview.input.port, ...preview.info.ports]) {
+        if (!current()) return
         await remote.link.forward(port)
-      // What an earlier run left (a runner that stopped short) would hold its ports.
-      await signalApp(remote.link, 'KILL')
+      }
       const credentials = await Promise.all(
         preview.envFiles.map((file) => runAsUser(['cat', '--', file], runAs)),
       )
+      if (!current()) return
+      // What an earlier run left (a runner that stopped short) would hold its ports. Only this
+      // launch is under way on the machine: the one before it ended first.
+      await signalApp(remote.link, 'KILL')
+      if (!current()) return
       const setup = withSetup ? preview.input.setup?.trim() : undefined
       await writeRun(
         remote.link,
@@ -1457,17 +1513,20 @@ export class Previews {
       `[preview] Asleep after ${Math.round(SLEEP_MS / 60_000)} minutes without use: its machine stopped, ` +
         'and the next visit wakes it in about half a minute\n',
     )
-    remote.sleeping = (async () => {
+    remote.sleeping = this.onMachine(preview.seat.sessionId, async () => {
       remote.sync.stop()
       await signalApp(remote.link, 'TERM')
       preview.child?.kill('SIGKILL')
+      // Its settings and credentials are on the machine while the app runs only: written again
+      // when it wakes.
+      await clearRun(remote.link)
       remote.link.close()
       await this.options.machines?.sleep(preview.seat.sessionId).catch((error: unknown) => {
         console.warn(
           `preview of ${preview.seat.sessionId}: its machine did not stop: ${String(error)}`,
         )
       })
-    })()
+    })
     await remote.sleeping
   }
 
@@ -1501,7 +1560,9 @@ export class Previews {
       }
       remote.asleep = false
       preview.lastUsed = remote.touchedAt = Date.now()
-      this.launch(preview, false)
+      // With its setup: what it started (a database, a service) stopped with the machine, and a
+      // machine made again (the provider lost the old one) has none of it yet.
+      this.launch(preview, true)
       await this.untilReady(preview, SETUP_START_MS)
     })().finally(() => {
       remote.waking = undefined
@@ -1510,14 +1571,22 @@ export class Previews {
   }
 
   /** It ended: its connection closes, and its machine stops unless another start takes it on. */
-  private async endRemote(preview: Preview, remote: Remote) {
+  private endRemote(preview: Preview, remote: Remote) {
     remote.sync.stop()
-    remote.link.close()
-    if (remote.asleep || remote.keepAwake) return
-    await this.options.machines?.sleep(preview.seat.sessionId).catch((error: unknown) => {
-      console.warn(
-        `preview of ${preview.seat.sessionId}: its machine did not stop: ${String(error)}`,
-      )
+    // After its launch gave up, before a replacement's starts: its app and its settings and
+    // credentials leave the machine (asleep, they already did).
+    return this.onMachine(preview.seat.sessionId, async () => {
+      if (!remote.asleep) {
+        await signalApp(remote.link, 'KILL')
+        await clearRun(remote.link)
+      }
+      remote.link.close()
+      if (remote.asleep || remote.keepAwake) return
+      await this.options.machines?.sleep(preview.seat.sessionId).catch((error: unknown) => {
+        console.warn(
+          `preview of ${preview.seat.sessionId}: its machine did not stop: ${String(error)}`,
+        )
+      })
     })
   }
 

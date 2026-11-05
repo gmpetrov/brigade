@@ -8,33 +8,46 @@
 // making it, starting it again, letting the runner's key in, stopping it, and the sweep that
 // destroys the machines whose thread is gone or that slept long enough. Everything is in the
 // database (PreviewMachine), nothing in memory: any hub or job may pick up where another left.
+//
+// One operation on a machine at a time: whoever makes, starts, stops or destroys it holds its row
+// (claimedUntil) for as long, and takes it with a conditional write on the row as it read it, so
+// work planned from an older read (a sweep's) never acts on a machine an `up` took meanwhile. The
+// workspace's slots are taken under a lock on the workspace: starts at the same time in several
+// threads never run more machines than MACHINES_RUNNING_MAX.
 import type { ApiToRunner, PreviewMachineUp, RunnerToApi } from '@brigade/contracts'
 import { machinesFromEnv, type ComputerRef, type MachineProvider } from '@brigade/providers'
 import { Prisma, prisma } from './db.js'
 import { featuresOfMember } from './features.js'
 import type { PreviewMachine, Runner } from './generated/prisma/client.js'
+import type { PreviewMachineStatus } from './generated/prisma/enums.js'
 
 /** The configured provider of preview machines; null without one (no cloud provider). */
 const configured = machinesFromEnv(process.env)
 
-/** Machines one workspace may have running at once: past that, a preview runs on the computer. */
+/** Machines one workspace may have up at once: past that, a preview runs on the computer. */
 export const MACHINES_RUNNING_MAX = 5
-/** How long whoever makes a machine holds the making: another `up` meanwhile waits for it. */
-export const MAKING_CLAIM_MS = 3 * 60_000
-/** How long an `up` waits for a machine another `up` is making, asking every MAKING_POLL_MS. */
-export const MAKING_WAIT_MS = 2 * 60_000
-const MAKING_POLL_MS = 2_000
+/** How long an operation on a machine holds it (making, starting, stopping, destroying). */
+export const CLAIM_MS = 3 * 60_000
+/** How long an `up` waits for another operation on its machine, asking every POLL_MS. */
+export const BUSY_WAIT_MS = 2 * 60_000
+const POLL_MS = 2_000
 /** The provider's own stop is pushed back at most this often, while the runner says it is used. */
 export const KEEP_ALIVE_EVERY_MS = 10 * 60_000
 /**
  * A running machine the runner said nothing of for this long is stopped by the sweep: its
- * runner sleeps it after 30 minutes without use, so this one was forgotten (a runner gone).
+ * runner sleeps it after 30 minutes without use, so this one was forgotten (a runner gone), or
+ * its stop failed (which leaves it running and due).
  */
 export const UNUSED_STOP_MS = 45 * 60_000
 /** A machine stopped this long is destroyed: the provider keeps a stopped disk for 14 days. */
 export const STOPPED_DESTROY_MS = 12 * 24 * 3600_000
-/** A making abandoned this long (its claim ran out, no machine recorded) is cleaned up. */
-const ABANDONED_MS = 30 * 60_000
+/** A making left this long without a machine recorded (cut short) is undone. */
+export const ABANDONED_MS = 30 * 60_000
+/** Rows one sweep looks at: only those with work due, the least recently touched first. */
+const SWEEP_BATCH = 100
+
+/** What holds one of the workspace's slots: a machine up, or being made or started. */
+const UP: PreviewMachineStatus[] = ['creating', 'running']
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
@@ -48,6 +61,17 @@ function refOf(value: unknown): ComputerRef | null {
 /** The provider no longer has it (deleted, or never made). */
 const missing = (error: unknown) =>
   (error as { response?: { status?: number } } | null)?.response?.status === 404
+
+/** Rows nobody holds, or whose holder's time ran out (a process that died mid-way). */
+const unclaimed = (now: Date) => ({
+  OR: [{ claimedUntil: null }, { claimedUntil: { lt: now } }],
+})
+
+/** The provider's name for a thread's machine, and the key that makes a retry give the same one. */
+const making = (row: Pick<PreviewMachine, 'id' | 'generation'>) => ({
+  name: `brigade-preview-${row.id}`,
+  key: `brigade-preview-${row.id}-${row.generation}`,
+})
 
 /**
  * Whether the thread's preview runs on a machine of its own: its starter has the feature and
@@ -63,104 +87,112 @@ export async function wantsMachine(session: { startedByMemberId: string; workspa
   return features.has('preview_machines')
 }
 
-/** The thread's row, made the first time (one per thread: two at once find the same). */
-async function rowFor(session: { id: string; organizationId: string; workspaceId: string }) {
-  const found = await prisma.previewMachine.findUnique({ where: { sessionId: session.id } })
-  if (found) return found
-  try {
-    return await prisma.previewMachine.create({
-      data: {
-        organizationId: session.organizationId,
-        workspaceId: session.workspaceId,
-        sessionId: session.id,
-      },
-    })
-  } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
-      throw error
-    return prisma.previewMachine.findUniqueOrThrow({ where: { sessionId: session.id } })
-  }
-}
-
-/** The provider's name for a thread's machine, and the key that makes a retry give the same one. */
-const making = (row: Pick<PreviewMachine, 'id' | 'generation'>) => ({
-  name: `brigade-preview-${row.id}`,
-  key: `brigade-preview-${row.id}-${row.generation}`,
-})
+type Session = { id: string; organizationId: string; workspaceId: string }
 
 /**
- * The thread's machine, running: made the first time (or again, when the provider no longer has
- * it), started again when it was stopped. One making at a time: an `up` that finds another making
- * it waits for that one.
+ * Under a lock on the workspace: the thread's row, made the first time, held by this `up` while
+ * it brings the machine up. `busy`: another operation holds it (a making, a stop, a destroy), so
+ * the `up` waits; `over`: it needs a slot and the workspace has none free.
  */
-export async function runningMachine(machines: MachineProvider, rowId: string) {
-  const waitUntil = Date.now() + MAKING_WAIT_MS
-  for (;;) {
-    const row = await prisma.previewMachine.findUniqueOrThrow({ where: { id: rowId } })
-    const ref = refOf(row.providerRef)
+async function reserve(
+  session: Session,
+): Promise<{ row: PreviewMachine } | { busy: true } | { over: number }> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`preview-machines:${session.workspaceId}`}))`
+    const now = new Date()
+    const row = await tx.previewMachine.findUnique({ where: { sessionId: session.id } })
+    if (row && (row.status === 'destroying' || (row.claimedUntil && row.claimedUntil > now)))
+      return { busy: true }
+    if (!row || !UP.includes(row.status)) {
+      const others = await tx.previewMachine.count({
+        where: {
+          workspaceId: session.workspaceId,
+          status: { in: UP },
+          sessionId: { not: session.id },
+        },
+      })
+      if (others >= MACHINES_RUNNING_MAX) return { over: others }
+    }
+    const held = { claimedUntil: new Date(now.getTime() + CLAIM_MS), usedAt: now }
+    if (!row)
+      return {
+        row: await tx.previewMachine.create({
+          data: {
+            organizationId: session.organizationId,
+            workspaceId: session.workspaceId,
+            sessionId: session.id,
+            status: 'creating',
+            ...held,
+          },
+        }),
+      }
+    return {
+      row: await tx.previewMachine.update({
+        where: { id: row.id },
+        data: {
+          ...held,
+          ...(UP.includes(row.status)
+            ? {}
+            : { status: refOf(row.providerRef) ? 'running' : 'creating', stoppedAt: null }),
+        },
+      }),
+    }
+  })
+}
+
+/**
+ * Holding the row `reserve` gave: the machine running, made (or made again under a new key,
+ * once the provider lost it) or started again. The row is released either way: after a failure,
+ * the next `up` tries again, and a making's key gives the machine it may have made.
+ */
+async function bringUp(machines: MachineProvider, held: PreviewMachine) {
+  const claim = held.claimedUntil!
+  const mine = { id: held.id, claimedUntil: claim }
+  try {
+    let ref = refOf(held.providerRef)
     if (ref) {
       const status = await machines.status(ref).catch((error: unknown) => {
         if (missing(error)) return 'destroyed' as const
         throw error
       })
       if (status === 'destroyed') {
-        // Gone at the provider (its disk expired, or someone deleted it): the next one is made
-        // under a new key, and only by the `up` that cleared this one.
-        await prisma.previewMachine.updateMany({
-          where: {
-            id: row.id,
-            generation: row.generation,
-            providerRef: { equals: row.providerRef! },
-          },
+        // Lost at the provider (its disk expired, or someone deleted it): the next one is made
+        // under a new key, written down before it is made, as the sweep undoes it by that key.
+        const { count } = await prisma.previewMachine.updateMany({
+          where: mine,
           data: {
             providerRef: Prisma.DbNull,
             status: 'creating',
             generation: { increment: 1 },
-            claimedUntil: null,
           },
         })
-        continue
+        if (count === 0) throw new Error('The preview machine was taken over meanwhile')
+        held = await prisma.previewMachine.findUniqueOrThrow({ where: { id: held.id } })
+        ref = null
+      } else if (status !== 'running') {
+        // Stopped, stopping or in error: the provider starts it again (boat's remedy for an
+        // error is a resume), and waits for a stop under way to end first.
+        await machines.start(ref)
       }
-      // Stopped, stopping or in error: the provider starts it again (boat's remedy for an error
-      // is a resume), and waits for a stop under way to end first.
-      if (status !== 'running') await machines.start(ref)
-      await prisma.previewMachine.update({
-        where: { id: row.id },
-        data: { status: 'running', stoppedAt: null, usedAt: new Date() },
-      })
-      return ref
     }
-
-    // None yet: whoever claims the making makes it.
-    const now = new Date()
-    const claimed = await prisma.previewMachine.updateMany({
-      where: {
-        id: row.id,
-        generation: row.generation,
-        providerRef: { equals: Prisma.DbNull },
-        OR: [{ claimedUntil: null }, { claimedUntil: { lt: now } }],
-      },
-      data: { status: 'creating', claimedUntil: new Date(now.getTime() + MAKING_CLAIM_MS) },
-    })
-    if (claimed.count === 0) {
-      if (Date.now() > waitUntil)
-        throw new Error('The preview machine is still being made: try again in a moment')
-      await sleep(MAKING_POLL_MS)
-      continue
-    }
-    const made = await machines.create(making(row))
-    await prisma.previewMachine.update({
-      where: { id: row.id },
+    const made = !ref
+    if (!ref) ref = await machines.create(making(held))
+    const { count } = await prisma.previewMachine.updateMany({
+      where: mine,
       data: {
-        providerRef: made as unknown as Prisma.InputJsonValue,
+        providerRef: ref as unknown as Prisma.InputJsonValue,
         status: 'running',
         claimedUntil: null,
-        usedAt: new Date(),
-        keptAliveAt: new Date(),
         stoppedAt: null,
+        usedAt: new Date(),
+        ...(made ? { keptAliveAt: new Date() } : {}),
       },
     })
-    return made
+    if (count === 0) throw new Error('The preview machine was taken over meanwhile')
+    return ref
+  } catch (error) {
+    await prisma.previewMachine.updateMany({ where: mine, data: { claimedUntil: null } })
+    throw error
   }
 }
 
@@ -192,24 +224,62 @@ export async function machineUp(
   if (!session) throw new Error('Unknown thread')
   if (!machines || session.computer.kind !== 'cloud') return { machine: null }
   if (!(await wantsMachine(session))) return { machine: null }
-  const others = await prisma.previewMachine.count({
-    where: {
-      workspaceId: session.workspaceId,
-      status: { in: ['creating', 'running'] },
-      sessionId: { not: sessionId },
-    },
-  })
-  if (others >= MACHINES_RUNNING_MAX)
-    return {
-      machine: null,
-      reason:
-        `${others} previews already run on machines of their own in this workspace, the most at ` +
-        'once: this one runs on the cloud computer',
+  const waitUntil = Date.now() + BUSY_WAIT_MS
+  for (;;) {
+    const reserved = await reserve(session)
+    if ('busy' in reserved) {
+      if (Date.now() > waitUntil)
+        throw new Error('The preview machine is busy (being made, stopped or removed): try again')
+      await sleep(POLL_MS)
+      continue
     }
-  const row = await rowFor(session)
-  const ref = await runningMachine(machines, row.id)
-  const access = await machines.authorize(ref, publicKey)
-  return { machine: { id: row.id, ...access, size: machines.size } }
+    if ('over' in reserved)
+      return {
+        machine: null,
+        reason:
+          `${reserved.over} previews already run on machines of their own in this workspace, the ` +
+          'most at once: this one runs on the cloud computer',
+      }
+    const ref = await bringUp(machines, reserved.row)
+    const access = await machines.authorize(ref, publicKey)
+    return { machine: { id: reserved.row.id, ...access, size: machines.size } }
+  }
+}
+
+/**
+ * Stop a running machine, holding it meanwhile. Taken only as it was read (`updatedAt`): a row
+ * that changed since (an `up` took it) is left alone. When the provider fails, it is running
+ * again, and due for the sweep's next stop; true once stopped.
+ */
+export async function stopMachine(machines: MachineProvider, row: PreviewMachine, now: Date) {
+  const ref = refOf(row.providerRef)
+  if (!ref || row.status !== 'running') return false
+  const claim = new Date(now.getTime() + CLAIM_MS)
+  const { count } = await prisma.previewMachine.updateMany({
+    where: { id: row.id, status: 'running', updatedAt: row.updatedAt, ...unclaimed(now) },
+    data: { status: 'stopped', stoppedAt: now, claimedUntil: claim },
+  })
+  if (count === 0) return false
+  const mine = { id: row.id, claimedUntil: claim }
+  try {
+    await machines.stop(ref).catch((error: unknown) => {
+      if (!missing(error)) throw error
+    })
+  } catch (error) {
+    await prisma.previewMachine.updateMany({
+      where: mine,
+      data: {
+        status: 'running',
+        stoppedAt: null,
+        claimedUntil: null,
+        // Due for the sweep's next stop, whenever it runs.
+        usedAt: new Date(now.getTime() - UNUSED_STOP_MS - 60_000),
+      },
+    })
+    throw error
+  }
+  await prisma.previewMachine.updateMany({ where: mine, data: { claimedUntil: null } })
+  return true
 }
 
 /** `sleep`: nobody used the preview for a while, or it stopped. Its disk is kept, at no cost. */
@@ -219,17 +289,13 @@ export async function machineSleep(
   sessionId: string,
 ) {
   if (!machines || !(await threadOf(runner, sessionId))) return
-  const row = await prisma.previewMachine.findUnique({ where: { sessionId } })
-  const ref = refOf(row?.providerRef)
-  if (!row || !ref) return
-  const { count } = await prisma.previewMachine.updateMany({
-    where: { id: row.id, status: 'running' },
-    data: { status: 'stopped', stoppedAt: new Date() },
-  })
-  if (count === 0) return
-  await machines.stop(ref).catch((error: unknown) => {
-    if (!missing(error)) throw error
-  })
+  // A touch may land between the read and the stop: read again then.
+  for (let i = 0; i < 3; i++) {
+    const row = await prisma.previewMachine.findUnique({ where: { sessionId } })
+    if (!row || row.status !== 'running') return
+    if (await stopMachine(machines, row, new Date())) return
+    await sleep(200)
+  }
 }
 
 /** `touch`: the preview is in use; the provider's own stop is pushed back now and then. */
@@ -244,8 +310,8 @@ export async function machineTouch(
   const ref = refOf(row?.providerRef)
   if (!row || !ref || row.status !== 'running') return
   const due = !row.keptAliveAt || now.getTime() - row.keptAliveAt.getTime() >= KEEP_ALIVE_EVERY_MS
-  await prisma.previewMachine.update({
-    where: { id: row.id },
+  await prisma.previewMachine.updateMany({
+    where: { id: row.id, status: 'running' },
     data: { usedAt: now, ...(due ? { keptAliveAt: now } : {}) },
   })
   if (due) await machines.keepAlive(ref)
@@ -279,25 +345,55 @@ export async function handlePreviewMachine(
   }
 }
 
-/** Destroy a machine at the provider, unless it no longer has it. */
-async function destroyed(machines: MachineProvider, ref: ComputerRef) {
+/**
+ * Destroy a machine and its row, holding the row as it was read: a row an `up` took meanwhile is
+ * left alone, and an `up` that comes later waits for the row to go, then makes a new machine.
+ * A making cut short is destroyed by its key, which gives the machine it may have made. When
+ * the provider fails, the row stays `destroying`, due for the next sweep.
+ */
+export async function destroyMachine(machines: MachineProvider, row: PreviewMachine, now: Date) {
+  const { count } = await prisma.previewMachine.updateMany({
+    where: { id: row.id, updatedAt: row.updatedAt, ...unclaimed(now) },
+    data: { status: 'destroying', claimedUntil: new Date(now.getTime() + CLAIM_MS) },
+  })
+  if (count === 0) return
+  const ref = refOf(row.providerRef) ?? (await machines.create(making(row)))
   await machines.destroy(ref).catch((error: unknown) => {
     if (!missing(error)) throw error
   })
+  await prisma.previewMachine.deleteMany({ where: { id: row.id, status: 'destroying' } })
 }
 
 /**
- * Each minute: a machine whose thread is gone (deleted, or its workspace) is destroyed, then its
- * row; one stopped for STOPPED_DESTROY_MS too; a running one its runner forgot is stopped; a
- * making abandoned without a machine recorded is undone. A failure is tried again next minute.
+ * Each minute, the rows with work due, and those only (so rows with none never hold others
+ * back): a machine whose thread is gone (deleted, or its workspace) is destroyed, then its row;
+ * one stopped for STOPPED_DESTROY_MS too; a running one its runner forgot (or whose stop failed)
+ * is stopped; a making cut short is undone; a destruction that failed is tried again. A failure
+ * leaves its row due, tried again next minute after the others.
  */
 export async function sweepPreviewMachines(
   now = new Date(),
   machines: MachineProvider | null = configured,
 ) {
   if (!machines) return
-  const rows = await prisma.previewMachine.findMany({ orderBy: { updatedAt: 'asc' }, take: 500 })
-  if (rows.length === 0) return
+  const ago = (ms: number) => new Date(now.getTime() - ms)
+  const due = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT pm."id" FROM "PreviewMachine" pm
+    WHERE (pm."claimedUntil" IS NULL OR pm."claimedUntil" < ${now})
+      AND (
+        NOT EXISTS (SELECT 1 FROM "Session" s WHERE s."id" = pm."sessionId")
+        OR pm."status" = 'destroying'
+        OR (pm."status" = 'stopped' AND pm."stoppedAt" < ${ago(STOPPED_DESTROY_MS)})
+        OR (pm."status" = 'running' AND pm."usedAt" < ${ago(UNUSED_STOP_MS)})
+        OR (pm."status" = 'creating' AND pm."providerRef" IS NULL AND pm."updatedAt" < ${ago(ABANDONED_MS)})
+      )
+    ORDER BY pm."updatedAt" ASC
+    LIMIT ${SWEEP_BATCH}`
+  if (due.length === 0) return
+  const rows = await prisma.previewMachine.findMany({
+    where: { id: { in: due.map((r) => r.id) } },
+    orderBy: { updatedAt: 'asc' },
+  })
   const alive = new Set(
     (
       await prisma.session.findMany({
@@ -308,59 +404,16 @@ export async function sweepPreviewMachines(
   )
   for (const row of rows) {
     try {
-      await sweepOne(machines, row, alive.has(row.sessionId), now)
+      const stale =
+        !alive.has(row.sessionId) ||
+        row.status === 'destroying' ||
+        row.status === 'creating' ||
+        (row.status === 'stopped' &&
+          (row.stoppedAt?.getTime() ?? 0) < ago(STOPPED_DESTROY_MS).getTime())
+      if (stale) await destroyMachine(machines, row, now)
+      else if (row.status === 'running') await stopMachine(machines, row, now)
     } catch (error) {
       console.warn(`preview machine ${row.id}: sweep failed`, error)
     }
-  }
-}
-
-async function sweepOne(
-  machines: MachineProvider,
-  row: PreviewMachine,
-  threadAlive: boolean,
-  now: Date,
-) {
-  const ref = refOf(row.providerRef)
-  const since = (at: Date | null) => (at ? now.getTime() - at.getTime() : 0)
-  const claimed = row.claimedUntil !== null && row.claimedUntil.getTime() > now.getTime()
-
-  if (!ref) {
-    // Being made right now: left to its making.
-    if (claimed) return
-    if (row.claimedUntil !== null && (threadAlive ? since(row.updatedAt) >= ABANDONED_MS : true)) {
-      // A making that may have reached the provider before it was cut short: asked again under
-      // the same key, the provider gives that machine (or makes one), which is destroyed.
-      const { count } = await prisma.previewMachine.updateMany({
-        where: { id: row.id, updatedAt: row.updatedAt },
-        data: { claimedUntil: new Date(now.getTime() + MAKING_CLAIM_MS) },
-      })
-      if (count === 0) return
-      const made = await machines.create(making(row))
-      await destroyed(machines, made)
-      await prisma.previewMachine.deleteMany({ where: { id: row.id } })
-      return
-    }
-    // Never made, and its thread gone: nothing to destroy.
-    if (!threadAlive)
-      await prisma.previewMachine.deleteMany({ where: { id: row.id, updatedAt: row.updatedAt } })
-    return
-  }
-
-  if (!threadAlive || (row.status === 'stopped' && since(row.stoppedAt) >= STOPPED_DESTROY_MS)) {
-    await destroyed(machines, ref)
-    await prisma.previewMachine.deleteMany({ where: { id: row.id, updatedAt: row.updatedAt } })
-    return
-  }
-
-  if (row.status === 'running' && since(row.usedAt) >= UNUSED_STOP_MS) {
-    const { count } = await prisma.previewMachine.updateMany({
-      where: { id: row.id, updatedAt: row.updatedAt },
-      data: { status: 'stopped', stoppedAt: now },
-    })
-    if (count > 0)
-      await machines.stop(ref).catch((error: unknown) => {
-        if (!missing(error)) throw error
-      })
   }
 }
