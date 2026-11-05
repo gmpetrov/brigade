@@ -438,14 +438,17 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     may have made. It reads only the rows with work due, so rows with none
     never hold others back.
   - **One operation on a machine at a time.** Whoever makes, starts, stops or
-    destroys a machine holds its row (`claimedUntil`, 3 minutes), taken by a
-    conditional write on the row as it read it: work planned from an older
-    read (a sweep's) never stops or destroys a machine an `up` took since, and
-    an `up` that finds its machine being destroyed waits, then makes a new
-    one. The workspace's slots are taken under a lock on the workspace (an
-    advisory lock), so starts in several threads at once never exceed 5. A
-    stop the provider failed leaves the row running, due for the sweep's next
-    stop: never marked stopped while it runs and bills.
+    destroys a machine holds its row (`claimedUntil`, 3 minutes); the provider's
+    work is done holding it. Every change of who holds a machine (an `up`'s
+    reserve, a stop, a destroy) is decided under one lock per workspace (an
+    advisory lock), on the row read under that lock: a destroy never slips
+    between a reserve's read and its write, the sweep judges each row it listed
+    again as it acts (an `up` since then wins), and an `up` that finds its
+    machine being destroyed waits, then makes a new one. Starts in several
+    threads at once never exceed 5 machines up. A stop holds its row as
+    `stopping`, still counted as up, until the provider confirms it: a stop the
+    provider failed leaves it running and due for the sweep's next stop, and
+    one whose process was lost is taken up by the sweep once its claim ran out.
   - **No secret of Brigade's goes there**: the machine is made with none of the
     provider account's (boat's `noEnv`), no Claude or Codex login, no other
     thread's files. It gets the checkout, the preview's settings and variables
