@@ -91,7 +91,7 @@ import {
   type OutgoingDraft,
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
-import { chaseStep, followIn, glides, leavesEnd } from '@/lib/end-follow'
+import { EndFollower } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
 import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
@@ -669,141 +669,63 @@ export function ThreadConversation({
 
   // At the end, the thread follows what comes in, streamed words included. Scrolled up to
   // read, nothing moves: a button goes back down. An older page above does not move the view.
-  const following = useRef(true)
   const [atEnd, setAtEnd] = useState(true)
   const loaded = !!thread.data
-  // Once the thread is in, what comes at its end glides into view rather than jumping there.
-  const gliding = useRef(false)
-  const glideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const followedIn = useRef(false)
-  // When the person last scrolled themselves (wheel, touch, keys): their scroll wins.
-  const theirsAt = useRef(-Infinity)
-  // What came while they scrolled, followed once they stop.
-  const followLater = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const measured = useRef<() => void>(undefined)
-  // Following what grows at the end: one frame loop easing the view down to it (chaseStep), so
-  // a reply written line by line moves the view as it grows, not in starts and stops.
-  const chase = useRef<number>(undefined)
-  const stopChase = () => {
-    if (chase.current !== undefined) cancelAnimationFrame(chase.current)
-    chase.current = undefined
-  }
+  // Following the end, the person's own scrolling always winning (lib/end-follow.ts).
+  const [follower] = useState(
+    () =>
+      new EndFollower(
+        () => scroller.current,
+        {
+          now: () => performance.now(),
+          frame: (run) => requestAnimationFrame(run),
+          cancelFrame: (id) => cancelAnimationFrame(id),
+          after: (run, ms) => setTimeout(run, ms),
+          cancel: (handle) => clearTimeout(handle),
+        },
+        setAtEnd,
+        END_SLACK,
+        QUIET_MS,
+      ),
+  )
   useEffect(() => {
     const view = scroller.current
     if (!view) return
-    const measure = () => {
-      // Gliding to the end on its own (toEnd): where it is on the way says nothing of the person.
-      if (gliding.current) return
-      const end = view.scrollHeight - view.clientHeight - view.scrollTop < END_SLACK
-      following.current = end
-      setAtEnd(end)
-    }
-    measured.current = measure
+    const measure = () => follower.measure()
     // Opening or closing a fold moves the end too, without a scroll.
     const afterClick = () => requestAnimationFrame(measure)
-    // The person scrolls: a glide on its way stops where it is, and where they take it says
-    // where they want to read. Up, they leave the end at once, so nothing glides them back.
-    const theirs = (event: Event) => {
-      theirsAt.current = performance.now()
-      if (gliding.current) {
-        gliding.current = false
-        clearTimeout(glideTimer.current)
-        stopChase()
-        view.scrollTo({ top: view.scrollTop, behavior: 'instant' })
-      }
-      if (
-        leavesEnd({
-          type: event.type,
-          ...(event instanceof WheelEvent ? { deltaY: event.deltaY } : {}),
-          ...(event instanceof KeyboardEvent ? { key: event.key } : {}),
-        })
-      ) {
-        following.current = false
-        setAtEnd(false)
-      }
-    }
+    const theirs = (event: Event) =>
+      follower.theirs({
+        type: event.type,
+        ...(event instanceof WheelEvent ? { deltaY: event.deltaY } : {}),
+        ...(event instanceof KeyboardEvent ? { key: event.key } : {}),
+      })
     view.addEventListener('scroll', measure, { passive: true })
     view.addEventListener('click', afterClick)
     for (const type of ['wheel', 'touchstart', 'keydown'] as const)
       view.addEventListener(type, theirs, { passive: true })
     return () => {
-      stopChase()
+      follower.dispose()
       view.removeEventListener('scroll', measure)
       view.removeEventListener('click', afterClick)
       for (const type of ['wheel', 'touchstart', 'keydown'] as const)
         view.removeEventListener(type, theirs)
     }
-  }, [loaded])
-  const toEnd = (behavior: ScrollBehavior = 'instant') => {
-    following.current = true
-    const view = scroller.current
-    if (!view) return
-    if (behavior === 'smooth') {
-      gliding.current = true
-      clearTimeout(glideTimer.current)
-      // Once there, where it is is read again (the button back to the end goes).
-      glideTimer.current = setTimeout(() => {
-        gliding.current = false
-        measured.current?.()
-      }, GLIDE_MS)
-    }
-    view.scrollTo({ top: view.scrollHeight, behavior })
-  }
-  /** Eases the view down to the end, frame after frame, while it follows and the end moves on. */
-  const chaseEnd = () => {
-    following.current = true
-    gliding.current = true
-    if (chase.current !== undefined) return
-    let last = performance.now()
-    const frame = (now: number) => {
-      const view = scroller.current
-      if (!view || !gliding.current) return void (chase.current = undefined)
-      const distance = view.scrollHeight - view.clientHeight - view.scrollTop
-      const step = chaseStep(distance, (now - last) / 1000)
-      last = now
-      if (step === 0) {
-        // There: where it is is read again (the button back to the end goes).
-        chase.current = undefined
-        gliding.current = false
-        measured.current?.()
-        return
-      }
-      view.scrollTop += step
-      chase.current = requestAnimationFrame(frame)
-    }
-    chase.current = requestAnimationFrame(frame)
-  }
-  const followEnd = () => {
-    const wait = followIn(following.current, performance.now(), theirsAt.current, GLIDE_MS)
-    if (wait === undefined) return
-    clearTimeout(followLater.current)
-    if (wait > 0) return void (followLater.current = setTimeout(followEnd, wait))
-    const view = scroller.current
-    const distance = view ? view.scrollHeight - view.clientHeight - view.scrollTop : 0
-    if (glides(distance, view?.clientHeight ?? 0, followedIn.current)) chaseEnd()
-    else {
-      stopChase()
-      gliding.current = false
-      toEnd('instant')
-    }
-  }
+  }, [loaded, follower])
   const lastKey = items.at(-1)?.key
   const lastSeq = events.at(-1)?.seq
   useEffect(() => {
-    followEnd()
-    followedIn.current = loaded
-  }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded]) // eslint-disable-line react-hooks/exhaustive-deps
+    follower.follow()
+    follower.settle(loaded)
+  }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded, follower])
   // A reply revealed word by word grows between events (lib/stream-text.ts): followed as it grows.
   useEffect(() => {
     const content = scroller.current?.firstElementChild
     if (!content) return
-    const grown = new ResizeObserver(() => followEnd())
+    const grown = new ResizeObserver(() => follower.follow())
     grown.observe(content)
-    return () => {
-      grown.disconnect()
-      clearTimeout(followLater.current)
-    }
-  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps -- followEnd reads refs only
+    return () => grown.disconnect()
+  }, [loaded, follower])
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
   const loadEarlier = () =>
@@ -848,13 +770,13 @@ export function ThreadConversation({
       jumping !== undefined && view?.querySelector<HTMLElement>(`[data-seq="${jumping}"]`)
     if (!view || !node) return
     setJumping(undefined)
-    following.current = false
+    follower.leave()
     // Folded away (a turn's Aside), it opens where it is.
     revealSeq(jumping!)
     // Below the bar floating over the top of the conversation.
     const top = node.getBoundingClientRect().top - view.getBoundingClientRect().top
     view.scrollTo({ top: view.scrollTop + top - JUMP_MARGIN })
-  }, [jumping, events, gaps])
+  }, [jumping, events, gaps, follower])
   useEffect(() => {
     const view = scroller.current
     if (!view || settled) return
@@ -1231,7 +1153,7 @@ export function ThreadConversation({
     // Sent again, it takes the place of the one that did not get through.
     setOutgoing((list) => [...list.filter((o) => o.messageId !== message.messageId), message])
     // Sending goes back to the end, to see the answer come.
-    following.current = true
+    follower.following = true
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
         body: {
@@ -1788,7 +1710,7 @@ export function ThreadConversation({
         <div className={cn(column, 'relative shrink-0 pt-2 pb-4')}>
           {t.controlledByMemberId ? (
             <>
-              {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
+              {!atEnd && <JumpToEnd onClick={() => follower.toEnd(true)} />}
               <Takeover
                 thread={t}
                 memberId={me.memberId ?? ''}
@@ -1798,7 +1720,7 @@ export function ThreadConversation({
             </>
           ) : t.mayPrompt ? (
             <>
-              {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
+              {!atEnd && <JumpToEnd onClick={() => follower.toEnd(true)} />}
               <MessagesOnTheirWay
                 outgoing={pendingOut}
                 onRetry={retryOutgoing}
@@ -2050,7 +1972,7 @@ export function ThreadConversation({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
+              {!atEnd && <JumpToEnd onClick={() => follower.toEnd(true)} />}
               {t.startedBy.user.name} started this thread and writes in it. You can watch it live.
             </p>
           )}
@@ -2067,8 +1989,8 @@ export function ThreadConversation({
  */
 /** How near the end still counts as there: a reader this close keeps following. */
 const END_SLACK = 48
-/** How long a glide to the end lasts at most: the browser's own smooth scroll, a few hundred ms. */
-const GLIDE_MS = 600
+/** After the person's own scrolling, this long their scroll decides before anything follows. */
+const QUIET_MS = 600
 
 /** Back down to the latest, while reading higher up. */
 /** Over the whole conversation while files are dragged on it: dropping attaches them. */
