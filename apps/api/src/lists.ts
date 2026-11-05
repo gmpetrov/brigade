@@ -114,6 +114,18 @@ async function editList(
 }
 
 /**
+ * The file with a line added, refused when the line would not read as one of the list's (below a
+ * code block left open, say): an item never sits where nobody sees it.
+ */
+function landed(next: string, id: string, path: string) {
+  if (!parseList(next).lines.some((l) => l.id === id))
+    throw new HTTPException(409, {
+      message: `The line would not read as part of ${path}: the file may have a code block left open above it.`,
+    })
+  return next
+}
+
+/**
  * A list's text as last saved: the bytes its row points to. A file at the legacy key, from before
  * objects per save, may hold bytes a save past its lease wrote over: then what its row says they
  * are (its full text, or its saved version), until they are saved again (repairBytes). Never bytes
@@ -880,12 +892,16 @@ export async function addListLine(
         data: { id, documentId, text: plainItemText(input.text).slice(0, 2_000) } as never,
       })
       made = true
-      return insertLine(
-        markdown,
-        markdown === text ? list : parseList(markdown),
-        section ? { section } : {},
-        input.text,
+      return landed(
+        insertLine(
+          markdown,
+          markdown === text ? list : parseList(markdown),
+          section ? { section } : {},
+          input.text,
+          id,
+        ),
         id,
+        input.path,
       )
     },
     async () => {
@@ -1601,18 +1617,22 @@ export async function handleListCall(
           } as never,
         })
         made = true
-        return insertLine(
-          text,
-          list,
-          remainsOf
-            ? { after: after!, nested: true }
-            : {
-                ...(after ? { after } : {}),
-                ...(op.nested ? { nested: true } : {}),
-                ...(op.section ? { section: op.section } : {}),
-              },
-          op.text,
+        return landed(
+          insertLine(
+            text,
+            list,
+            remainsOf
+              ? { after: after!, nested: true }
+              : {
+                  ...(after ? { after } : {}),
+                  ...(op.nested ? { nested: true } : {}),
+                  ...(op.section ? { section: op.section } : {}),
+                },
+            op.text,
+            id,
+          ),
           id,
+          file.path,
         )
       },
       // Not written: no row without its line, gone before anyone else may read the file.

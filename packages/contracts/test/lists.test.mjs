@@ -137,6 +137,36 @@ test('a heading is found by its name, case, spaces and Markdown aside', () => {
   assert.equal(hasHeading(doc, 'SECURITY.md'), false)
 })
 
+test('a heading in a fenced example is no section: neither found nor written under', () => {
+  const fenced = [
+    '# Backlog',
+    '',
+    '```md',
+    '## Ideas',
+    '```',
+    '',
+    '## To Do',
+    '',
+    '* [ ] Approved',
+  ].join('\n')
+  assert.equal(hasHeading(fenced, 'Ideas'), false)
+  // An example before the real heading: the line goes under the real one.
+  const both = `${fenced}\n\n## Ideas\n`
+  assert.equal(hasHeading(both, 'Ideas'), true)
+  const added = insertLine(
+    both,
+    parseList(both),
+    { section: 'Ideas' },
+    'An idea',
+    'iiiiiiiiiiiiiiii',
+  )
+  const line = parseList(added).lines.find((l) => l.id === 'iiiiiiiiiiiiiiii')
+  assert.equal(line?.section, 'Ideas')
+  assert.ok(added.endsWith('## Ideas\n\n* [ ] An idea <!-- item:iiiiiiiiiiiiiiii -->\n'))
+  // The fenced example's heading stays as it was, with nothing put in the block.
+  assert.deepEqual(added.split('\n').slice(2, 5), ['```md', '## Ideas', '```'])
+})
+
 test('new ids are 16 characters of [a-z0-9]', () => {
   const id = newListItemId()
   assert.match(id, /^[a-z0-9]{16}$/)

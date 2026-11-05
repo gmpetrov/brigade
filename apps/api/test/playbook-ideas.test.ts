@@ -205,6 +205,43 @@ describe("a playbook's ideas in a list", { skip: !database && 'no database answe
     assert.doesNotMatch(idea.text, /<!--|-->/)
   })
 
+  test('a heading in a fenced example takes no idea: it goes under a real one', async () => {
+    await setting('backlog.md#Ideas')
+    // The only "Ideas" heading is in an example: a real one is added at the end.
+    await save('# Backlog\n\n```md\n## Ideas\n```\n\n## To Do\n\n* [ ] Approved feature\n')
+    const filed = await ideas.fileIdea(db, scope, session, teammate, { text: 'Customer request' })
+    assert.ok('filed' in filed, JSON.stringify(filed))
+    const id = (filed as { filed: { id: string } }).filed.id
+    const idea = (await lines()).find((l) => l.id === id)
+    assert.equal(idea?.section, 'Ideas')
+    assert.equal(idea?.text, 'Customer request (from “Customer request”)')
+    // An example before the real heading: under the real one.
+    await save(
+      '# Backlog\n\n```md\n## Ideas\n```\n\n## Ideas\n\n## To Do\n\n* [ ] Approved feature\n',
+    )
+    const second = await ideas.fileIdea(db, scope, session, teammate, { text: 'Another request' })
+    const secondId = (second as { filed: { id: string } }).filed.id
+    const all = await lines()
+    assert.equal(all.find((l) => l.id === secondId)?.section, 'Ideas')
+    assert.deepEqual(
+      all.filter((l) => l.section === 'To Do').map((l) => l.text),
+      ['Approved feature'],
+    )
+  })
+
+  test('a code block left open above takes no idea either: it is refused, and nothing is kept', async () => {
+    await setting('backlog.md#Ideas')
+    await save(
+      '# Backlog\n\n## To Do\n\n* [ ] Approved feature\n\n```md\nan example never closed\n',
+    )
+    const before = await db.listItem.count()
+    const refused = await ideas.fileIdea(db, scope, session, teammate, { text: 'Lost request' })
+    assert.ok('error' in refused, JSON.stringify(refused))
+    assert.match((refused as { error: string }).error, /code block left open/)
+    assert.equal(await db.listItem.count(), before)
+    assert.ok(!(await lines()).some((l) => l.text.startsWith('Lost request')))
+  })
+
   test("a merged pull request is told unless its thread's done, told with it, says it", async () => {
     const { workspaceItems } = await import('../src/notifications.js')
     const now = new Date()
