@@ -94,7 +94,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold tracking-tight">{greeting(me.user.name)}</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">good evening ca fonctione trop bien !!!!!</h1>
         {summaryReady && (
           <TeamSummary
             working={working}
