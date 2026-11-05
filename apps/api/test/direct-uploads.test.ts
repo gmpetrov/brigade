@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test'
 import { strToU8, zipSync } from 'fflate'
 import { Hono } from 'hono'
 import pg from 'pg'
+import { sessionStub } from './session-stub.js'
 
 // Files uploaded straight to the bucket, then checked and used by their id (src/uploads.ts):
 // a member's (routes/uploads.ts, then the library, a design's picture, a skill import, a
@@ -157,14 +158,14 @@ before(async () => {
     memberId: ids.member,
     role: 'owner',
   }
-  ;(auth.api as { getSession: unknown }).getSession = async () => ({
+  ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
     user: { id: ids.user },
     session: {
       id: `session-${id}`,
       activeOrganizationId: ids.organization,
       activeWorkspaceId: workspace.id,
     },
-  })
+  }))
   const where = { organizationId: ids.organization, workspaceId: workspace.id }
   const teammate = await prisma.teammate.create({
     data: { ...where, name: 'Riley', libraryAccess: 'read_write' },

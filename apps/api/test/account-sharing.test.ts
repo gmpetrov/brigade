@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, before, test } from 'node:test'
 import pg from 'pg'
+import { sessionStub } from './session-stub.js'
 
 // The AI accounts on the cloud computer are the workspace's (src/account-sharing.ts): every
 // member's work there runs on them, those on a member's own computer stay theirs. Against the
@@ -113,10 +114,10 @@ before(async () => {
     ).id)
   await account('adaCloud', 'ada', cloud)
   await account('adaMac', 'ada', adaMac)
-  ;(auth.api as { getSession: unknown }).getSession = async () => ({
+  ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
     user: { id: user(as) },
     session: { id: `s-share-${run}`, activeOrganizationId: org, activeWorkspaceId: workspaceId },
-  })
+  }))
 })
 
 after(async () => {

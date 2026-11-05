@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
+import { sessionStub } from './session-stub.js'
 
 // A quiet thread's events kept cold (src/cold-events.ts), and what threads write counted as it is
 // stored (src/event-volume.ts), against a real database: the local one of apps/api/.env, with
@@ -332,14 +333,14 @@ describe('cold events', { skip }, () => {
     const { threads } = await import('../src/routes/threads.js')
     const { Hono } = await import('hono')
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: ids.user },
       session: {
         id: `s-cold-${id}`,
         activeOrganizationId: scope.organizationId,
         activeWorkspaceId: scope.workspaceId,
       },
-    })
+    }))
     try {
       const app = new Hono().route('/api/threads', threads)
       const get = async (path: string) => {

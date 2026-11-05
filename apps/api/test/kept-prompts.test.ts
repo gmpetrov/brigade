@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // A thread whose id the browser chose (POST /api/threads with `id`), so that it opens before it
 // exists, against the API's development database (apps/api/.env), in an organization of its own
@@ -113,14 +114,14 @@ describe(
       ids.riley = (await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)).id
       // Signed in as Ada, without a cookie: the session is the test's.
       const getSession = auth.api.getSession
-      ;(auth.api as { getSession: unknown }).getSession = async () => ({
+      ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
         user: { id: ids.user },
         session: {
           id: `session-${suffix}`,
           activeOrganizationId: ids.org,
           activeWorkspaceId: ids.workspace,
         },
-      })
+      }))
       restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
       app = new Hono().route('/api/threads', threads)
       sent = []

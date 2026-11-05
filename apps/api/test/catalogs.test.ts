@@ -6,6 +6,7 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // An App's catalog (src/catalogs.ts, CATALOG_PROTOCOL): a thread's spec names each granted App's
 // catalog by a version instead of carrying its operations, and the runner fetches it (GET
@@ -117,14 +118,14 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     } as never)
     // Signed in as Ada, without a cookie: the session is the test's.
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: ids.user },
       session: {
         id: `session-${suffix}`,
         activeOrganizationId: ids.org,
         activeWorkspaceId: ids.workspace,
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     threadsApp = new Hono().route('/api/threads', threads)
     catalogsApp = new Hono().route('/runner/catalogs', runnerCatalogs)

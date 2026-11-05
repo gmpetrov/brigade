@@ -5,6 +5,7 @@ import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { SCORE, type SearchResult } from '@brigade/contracts'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // The dashboard's ⌘K search (src/routes/search.ts) against the API's development database
 // (apps/api/.env), in two organizations of its own removed at the end; skipped when no database
@@ -100,14 +101,14 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     // Same names elsewhere: never shown here.
     await workspace(orgs[1]!, ['Launch checklist elsewhere'], ['launch-checklist.md'])
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: user },
       session: {
         id: `session-${suffix}`,
         activeOrganizationId: orgs[0],
         activeWorkspaceId: workspaces[0],
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/search', search)
   })

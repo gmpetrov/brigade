@@ -5,6 +5,7 @@ import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import type { ScheduleOperation } from '@brigade/contracts'
 import { Hono } from 'hono'
+import { sessionStub } from './session-stub.js'
 
 // A thread's done (src/thread-done.ts, docs/board.md), against the API's development database
 // (apps/api/.env), in an organization of its own removed at the end; skipped when no database
@@ -96,14 +97,14 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
     } as never)
     riley = (await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)).id
     const getSession = auth.api.getSession
-    ;(auth.api as { getSession: unknown }).getSession = async () => ({
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
       user: { id: user(as) },
       session: {
         id: `s-done-${suffix}`,
         activeOrganizationId: org,
         activeWorkspaceId: workspaceId,
       },
-    })
+    }))
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/threads', threads)
     app.onError((error, c) =>

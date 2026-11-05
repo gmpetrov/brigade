@@ -27,19 +27,38 @@ export type AppEnv = {
   }
 }
 
-/** Resolve the signed-in user from the session cookie. */
-export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session) throw new HTTPException(401, { message: 'Sign in first' })
-  c.set('userId', session.user.id)
-  c.set('authSessionId', session.session.id)
-  c.set('activeOrganizationId', session.session.activeOrganizationId ?? null)
-  c.set(
-    'activeWorkspaceId',
-    (session.session as { activeWorkspaceId?: string | null }).activeWorkspaceId ?? null,
-  )
-  await next()
-})
+/** A request's session, with the headers Better Auth answered it with (src/auth.ts). */
+type SessionReader = (headers: Headers) => Promise<{
+  headers: Headers
+  response: {
+    user: { id: string }
+    session: { id: string; activeOrganizationId?: string | null; activeWorkspaceId?: string | null }
+  } | null
+}>
+
+/**
+ * Resolve the signed-in user from the session cookie, and keep the cookie alive with the session.
+ * About once a day, reading the session pushes its end back 7 days in the database and renews
+ * the cookie to match; called as a function, Better Auth only returns that cookie, so it goes on
+ * this response here. Without it, the dashboard (which never calls /api/auth/get-session) lost
+ * its cookie 7 days after signing in, however often the person came back.
+ */
+export const userFrom = (read: SessionReader) =>
+  createMiddleware<AppEnv>(async (c, next) => {
+    const { headers, response: session } = await read(c.req.raw.headers)
+    if (!session) throw new HTTPException(401, { message: 'Sign in first' })
+    c.set('userId', session.user.id)
+    c.set('authSessionId', session.session.id)
+    c.set('activeOrganizationId', session.session.activeOrganizationId ?? null)
+    c.set('activeWorkspaceId', session.session.activeWorkspaceId ?? null)
+    await next()
+    // After next: a handler may answer with a Response of its own, which drops headers set before.
+    for (const cookie of headers.getSetCookie()) c.header('set-cookie', cookie, { append: true })
+  })
+
+export const requireUser = userFrom((headers) =>
+  auth.api.getSession({ headers, returnHeaders: true }),
+)
 
 /**
  * Before requireUser on the pages a provider sends the browser back to after its sign-in
@@ -47,7 +66,12 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
  * never signed in to Brigade, Brigade's sign-in, which comes back here to finish.
  */
 export const signInFirst = createMiddleware<AppEnv>(async (c, next) => {
-  if (c.req.method === 'GET' && !(await auth.api.getSession({ headers: c.req.raw.headers }))) {
+  // Only whether there is one, no refresh: requireUser, after it, renews the session and its cookie.
+  const query = { disableRefresh: true }
+  if (
+    c.req.method === 'GET' &&
+    !(await auth.api.getSession({ headers: c.req.raw.headers, query }))
+  ) {
     const here = `${env.API_URL}${c.req.path}${new URL(c.req.url).search}`
     return c.redirect(`${env.WEB_URL[0]}/sign-in?next=${encodeURIComponent(here)}`)
   }

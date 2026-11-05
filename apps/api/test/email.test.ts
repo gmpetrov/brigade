@@ -3,6 +3,7 @@ import { createHmac, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, before, beforeEach, describe, test } from 'node:test'
 import pg from 'pg'
+import { sessionStub } from './session-stub.js'
 
 // The Email App (src/mail/) against a real database, with Resend played by a fake fetch: the
 // local database of apps/api/.env, in two organizations of its own (names must be unique across
@@ -1512,14 +1513,14 @@ describe('rule preview privacy', { skip }, () => {
     })
     const realSession = auth.api.getSession
     const previousFetch = globalThis.fetch
-    ;(auth.api as any).getSession = async () => ({
+    ;(auth.api as any).getSession = sessionStub(() => ({
       user: { id: users[1]! },
       session: {
         id: 'test-session',
         activeOrganizationId: a.organizationId,
         activeWorkspaceId: a.workspaceId,
       },
-    })
+    }))
     globalThis.fetch = (async () =>
       json({
         messages: [{ id: 'private-email' }],
@@ -1613,14 +1614,14 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
     const { senderOfBox } = await import('../src/mail/addresses.js')
     const realSession = auth.api.getSession
     const previousFetch = globalThis.fetch
-    ;(auth.api as any).getSession = async () => ({
+    ;(auth.api as any).getSession = sessionStub(() => ({
       user: { id: users[0]! },
       session: {
         id: 'test-session',
         activeOrganizationId: a.organizationId,
         activeWorkspaceId: a.workspaceId,
       },
-    })
+    }))
     const forward = `forward-${id}.test`
     const direct = `direct-${id}.test`
     const refused = `refused-${id}.test`
