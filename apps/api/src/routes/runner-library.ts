@@ -5,8 +5,7 @@ import { HTTPException } from 'hono/http-exception'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 import { directUploads, presignGet, streamObject } from '../bucket.js'
-import { libraryFile, manifest } from '../library.js'
-import { fileKey } from '../library-objects.js'
+import { manifest, mirroredFile } from '../library.js'
 
 export const runnerLibrary = new Hono<{
   Variables: { runner: NonNullable<Awaited<ReturnType<typeof authenticateRunner>>> }
@@ -23,12 +22,12 @@ export const runnerLibrary = new Hono<{
   /**
    * A file's bytes, as they stream: a file can be hundreds of MB. From the bucket's short-lived
    * URL when there is one (fetch drops the token on the way there); the runner checks the bytes
-   * against the file's SHA-256 in the manifest.
+   * against the file's SHA-256 in the manifest. A library file, or a file put in one of its
+   * documents, which the manifest lists beside it.
    */
   .get('/files/:id', async (c) => {
     const { runner } = c.var
-    const row = await libraryFile(scoped(runner), c.req.param('id'))
-    const key = fileKey(runner, row)
+    const { key, sha256 } = await mirroredFile(scoped(runner), runner, c.req.param('id'))
     if (directUploads) {
       const signed = await presignGet(key, {
         contentType: 'application/octet-stream',
@@ -40,6 +39,6 @@ export const runnerLibrary = new Hono<{
     if (!body) throw new HTTPException(404, { message: 'The file is missing from storage' })
     return c.body(body, 200, {
       'content-type': 'application/octet-stream',
-      'x-sha256': row.sha256,
+      'x-sha256': sha256,
     })
   })

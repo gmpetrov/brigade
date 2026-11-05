@@ -37,7 +37,7 @@ import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { markOnChiefsWord } from './chief-answers.js'
 import { looksTaken } from './review-state.js'
-import { askedBy, loadThread } from './thread-spec.js'
+import { askedBy, loadThread, noSuchTeammate } from './thread-spec.js'
 import { fireNow, firedInARow } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
@@ -920,7 +920,7 @@ export async function messageChild(
   if (!child)
     return {
       error:
-        'That is not a child of this thread. message_thread writes only in your child threads (list_children) or a started task’s thread (taskId).',
+        'That is not a child of this thread, nor a thread it started. message_thread writes only in your child threads (list_children) and the threads you started (start_thread).',
     }
   // A review whose pull request is merged or closed: work it is asked for now is another pull
   // request's, which Brigade would show as unreviewed, with Merge. That one gets its own review.
@@ -1167,7 +1167,7 @@ export async function handleChildCall(
           where: { name: { equals: ref, mode: 'insensitive' }, archivedAt: null },
         })))
       : await db.teammate.findFirst({ where: { id: teammate.id } })
-  if (!assignee) return { error: `No teammate is called "${ref}"; list_tasks lists them` }
+  if (!assignee) return { error: await noSuchTeammate(db, ref ?? teammate.name) }
   const parent = await loadThread(db, session.id)
   try {
     const { thread, outcome } = await startThread(db, scope, {

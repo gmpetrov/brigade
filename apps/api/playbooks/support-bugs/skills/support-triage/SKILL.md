@@ -18,7 +18,7 @@ Give the mail exactly one case:
 | `account_problem`     | "My articles are no longer published"           | Look at the customer's account (read only), explain what you found. |
 | `bug`                 | "Error 500 when I export"                       | Acknowledge, then start a child thread that fixes it (see bug-fix). |
 | `needs_details`       | "Big bug", "I can't add the extension"          | Ask for what is missing (see below); start nothing else.            |
-| `feature_request`     | "It would be great if…"                         | Thank them, and add or complete a task in the backlog.              |
+| `feature_request`     | "It would be great if…"                         | Thank them, and keep the idea for the team (see below).             |
 | `sales`               | Prices, quotes, partnerships                    | Hand over to a person with a short summary (open a ticket).         |
 | `angry`               | Legal threats, the press, an angry customer     | Escalate at once (open a ticket); no automatic answer.              |
 | `billing_or_data`     | Refunds, cancellations, data export or deletion | Escalate: these belong to a future billing playbook.                |
@@ -35,6 +35,9 @@ missing (the step where it fails, the exact error or a screenshot, and their acc
 who they are). Do not say the team is already working on it, and start no child thread: a fix searched for blindly
 costs a lot and rarely finds the right cause. Their answer comes back to this thread; sort it again then. If it
 still does not say enough, hand it to a person (open a ticket) rather than starting a fix.
+
+Keep a feature request with `file_idea`: one line saying what is asked, why, and who asked (their company).
+It goes to the playbook's ideas list, where a person decides what to do with it; it starts nothing.
 
 A reply in an ongoing conversation continues this thread: read what was already said before answering.
 

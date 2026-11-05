@@ -297,7 +297,7 @@ test('the 1.0.0 Support and bugs against the current template', () => {
   assert.equal(diff.entries[0]!.kind, 'same')
   assert.deepEqual(
     diff.settings.added.map((s) => s.key),
-    ['support', 'developer', 'analytics'],
+    ['support', 'developer', 'analytics', 'ideas'],
   )
   assert.deepEqual(
     diff.apps.removed.map((r) => r.name),
@@ -573,6 +573,7 @@ describe('updating an installed playbook', { skip: !database && 'no database ans
       [
         ['developer', false],
         ['analytics', true],
+        ['ideas', true],
       ],
     )
     assert.ok(

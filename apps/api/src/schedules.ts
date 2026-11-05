@@ -19,6 +19,8 @@ import { audit, type Actor } from './audit.js'
 import { outcomeOf } from './board.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
+import { fileIdea } from './playbook-ideas.js'
+import { handleStartedThreadCall, isStartedThreadOperation } from './started-threads.js'
 import { onChiefsWord } from './chief-answers.js'
 import { handleChiefCall } from './chief-pass.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
@@ -541,6 +543,11 @@ export async function handleScheduleCall(
     const output = await handleChildCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
+  // And threads it starts at the top, for itself or another teammate, and writes in later.
+  if (isStartedThreadOperation(op)) {
+    const output = await handleStartedThreadCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
   // And a review of a pull request this thread opened.
   if (isReviewOperation(op)) {
     const output = await handleReviewCall(db, scope, session, teammate, op)
@@ -563,6 +570,11 @@ export async function handleScheduleCall(
   }
   if (op.name === 'playbook_report') {
     const output = await reportRun(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And an idea a live run keeps for the team, in the playbook's ideas list.
+  if (op.name === 'file_idea') {
+    const output = await fileIdea(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And installing a playbook from the chat.

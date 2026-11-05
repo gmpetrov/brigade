@@ -4,7 +4,7 @@
 // under a path no live file can have, until a restore or the sweep 30 days on.
 import { LIBRARY_READ_MAX, TRASH_DAYS, VERSIONS_KEPT, type LibraryActor } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { sweepAssets } from './assets.js'
+import { moveFilesOfTrashed, sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
 import { copyObject, deleteObject, documentKey, getObject, versionKey } from './bucket.js'
 import { notifyCollab } from './collab.js'
@@ -240,6 +240,10 @@ export async function trashLibraryFile(
       deletedById: actor.id,
     },
   })
+  // Its files that a live document refers to too go on with that one (docs/lists.md).
+  await moveFilesOfTrashed(scope, id).catch((error) =>
+    console.warn(`library: files of ${id} not moved: ${String(error)}`),
+  )
   if (options.quiet) return
   await audit({
     ...scope,

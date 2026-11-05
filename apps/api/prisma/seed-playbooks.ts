@@ -16,6 +16,7 @@ import {
   childPrompt,
   DRY_RUN_HEAD,
   followNote,
+  newListItemId,
   nextRun,
   type AgentEvent,
   type ChildReport,
@@ -31,6 +32,8 @@ import {
   fill,
   templates,
 } from '../src/playbooks.js'
+import { saveLibraryFile } from '../src/library.js'
+import { ideasHeader, ideasPlace } from '../src/playbook-ideas.js'
 import { createSchedule, localTime, memberTimezone } from '../src/schedules.js'
 import { savePack } from '../src/skills.js'
 import { eventMessage } from '../src/triggers.js'
@@ -458,7 +461,17 @@ export async function seedPlaybooks(input: PlaybookSeed) {
   // -------------------------------------------------------------------------
   const calls: Prisma.ConnectionCallCreateManyInput[] = []
   const tickets: Prisma.TicketCreateManyInput[] = []
-  const tasks: Prisma.TaskCreateManyInput[] = []
+  /** The playbook's ideas list (src/playbook-ideas.ts), in the Support project's folder. */
+  const ideas = {
+    path: ideasPlace(
+      undefined,
+      await prisma.project.findUniqueOrThrow({
+        where: { id: input.projectId },
+        select: { name: true, folder: true },
+      }),
+    ).path,
+    lines: [] as string[],
+  }
   /** People's decisions on the reply action, newest last: the latest one earns the proposal. */
   const replyDecisions: { at: Date; sessionId: string; counted: boolean }[] = []
 
@@ -1051,26 +1064,18 @@ export async function seedPlaybooks(input: PlaybookSeed) {
   const childrenNote = (child: Child) =>
     batchNote([{ id: child.id, title: child.title, teammate: sam.name, report: child.report! }], [])
 
-  /** A feature request goes in the backlog: create_task, as the teammate's tool does. */
-  const backlog = (run: Run, title: string, description: string) => {
-    const taskId = randomUUID()
+  /** A feature request kept for the team: file_idea, as the teammate's tool does. */
+  const fileIdea = (run: Run, text: string) => {
     run.tl.tool(
-      harness('create_task'),
-      { title, description, priority: 'medium', assignee: 'none' },
-      { taskId, column: 'backlog', note: 'In Backlog, assigned to nobody.' },
+      harness('file_idea'),
+      { text },
+      {
+        filed: { path: ideas.path, id: newListItemId() },
+        note: `Kept as a line of ${ideas.path}: it starts nothing, a person decides what to do with it.`,
+      },
       2_000,
     )
-    tasks.push({
-      ...inWorkspace,
-      id: taskId,
-      title,
-      description,
-      priority: 'medium',
-      createdByMemberId: ada.memberId,
-      createdByTeammateId: sam.id,
-      projectId: input.projectId,
-      createdAt: run.tl.now,
-    })
+    ideas.lines.push(`${text} (from “${run.title}”)`)
   }
 
   // -------------------------------------------------------------------------
@@ -2046,10 +2051,9 @@ export async function seedPlaybooks(input: PlaybookSeed) {
     )
     const m = run.first!
     run.triage('feature_request')
-    backlog(
+    fileIdea(
       run,
-      'Recurring tasks',
-      'Customers ask for tasks that repeat on a schedule, such as a planning task every Monday. First asked by Sofia at Vandelay.',
+      'Recurring tasks: tasks that repeat on a schedule, such as a planning task every Monday. First asked by Sofia at Vandelay.',
     )
     run.label(m, 'idea')
     run.reply(
@@ -2063,9 +2067,9 @@ export async function seedPlaybooks(input: PlaybookSeed) {
     run.report(
       'feature_request',
       'resolved',
-      'Added "Recurring tasks" to the backlog and thanked Sofia.',
+      'Kept "Recurring tasks" in the ideas list and thanked Sofia.',
     )
-    run.tl.say('Added recurring tasks to the backlog and thanked Sofia.')
+    run.tl.say('Kept recurring tasks in the ideas list and thanked Sofia.')
     run.tl.end()
   }
   {
@@ -2530,10 +2534,9 @@ export async function seedPlaybooks(input: PlaybookSeed) {
     )
     const m = run.first!
     run.triage('feature_request')
-    backlog(
+    fileIdea(
       run,
-      'Timeline view for projects',
-      'A timeline (Gantt) view of a project, to plan launches across several teams. First asked by Ines at Duff.',
+      'Timeline view for projects: a Gantt view, to plan launches across several teams. First asked by Ines at Duff.',
     )
     run.label(m, 'idea')
     run.reply(
@@ -2551,7 +2554,21 @@ export async function seedPlaybooks(input: PlaybookSeed) {
   // -------------------------------------------------------------------------
   runs.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
   for (const run of runs) await run.save()
-  await prisma.task.createMany({ data: tasks })
+  // The ideas file_idea kept, as lines of the playbook's ideas list.
+  if (ideas.lines.length) {
+    const scope = { organizationId: input.organizationId, workspaceId: input.workspaceId }
+    await saveLibraryFile(
+      scoped(scope),
+      scope,
+      { type: 'teammate', id: sam.id },
+      {
+        path: ideas.path,
+        bytes: new TextEncoder().encode(
+          `${ideasHeader('Support and bugs')}\n${ideas.lines.map((l) => `* [ ] ${l}`).join('\n')}\n`,
+        ),
+      },
+    )
+  }
   await prisma.connectionCall.createMany({ data: calls })
   await prisma.ticket.createMany({ data: tickets })
 

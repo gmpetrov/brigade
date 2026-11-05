@@ -42,7 +42,6 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 const { prisma, scoped } = await import('../src/db.js')
 const { failedThreadsOf, failedWaitingAmong, failingRoutines, failuresWaitingOn } =
   await import('../src/failed.js')
-const { columnOf } = await import('../src/tasks.js')
 const { stateOf } = await import('../src/lists.js')
 const { workspaceItems } = await import('../src/notifications.js')
 
@@ -281,16 +280,6 @@ const session = (status: string, pull = false) => ({
   status,
   _count: { tickets: 0 },
   pullRequests: pull ? [{ state: 'open', mergeStatus: 'none', reviewSession: null }] : [],
-})
-
-test('Tasks: a failed thread that waits is Needs you, its pull request with it', () => {
-  const task = (s: ReturnType<typeof session>) => ({ completedAt: null, session: s })
-  assert.equal(columnOf(task(session('failed')), true), 'needs_you')
-  assert.equal(columnOf(task(session('failed', true)), true), 'needs_you')
-  // A retry of its own may still come: Doing, its pull request too.
-  assert.equal(columnOf(task(session('failed')), false), 'doing')
-  assert.equal(columnOf(task(session('failed', true)), false), 'doing')
-  assert.equal(columnOf(task(session('idle', true)), false), 'needs_you')
 })
 
 test('a list item whose thread failed and waits needs you', () => {

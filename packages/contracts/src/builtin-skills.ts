@@ -64,7 +64,7 @@ A design's status is in its \`design.json\`: \`"status": "draft"\`, with the sam
 
 1. **New**: write it as \`draft\` and save it.
 2. **Decided**: set \`accepted\`, with the date.
-3. **Built**: when you open the pull request that builds it, name it in the pull request's \`specs\`: \`ships\` for the specs and designs it builds whole, \`partOf\` for those it is one step of. Brigade marks each one it ships \`shipped\` with the pull request's number once it is merged, and names the pull request on the others. In that same pull request, update the repository's docs to describe what was built. Once it is merged, add that reference to the spec's line, its path in backticks, as in: Status: shipped (#241). Reference: \`docs/tasks.md\`.
+3. **Built**: when you open the pull request that builds it, name it in the pull request's \`specs\`: \`ships\` for the specs and designs it builds whole, \`partOf\` for those it is one step of. Brigade marks each one it ships \`shipped\` with the pull request's number once it is merged, and names the pull request on the others. In that same pull request, update the repository's docs to describe what was built. Once it is merged, add that reference to the spec's line, its path in backticks, as in: Status: shipped (#241). Reference: \`docs/lists.md\`.
 4. **Changed after shipping**: do not rewrite a shipped spec. Write a new one, and add a line to the old one pointing to it.
 5. **Paused, dropped or replaced**: set the status, with the reason or the document that takes over.
 

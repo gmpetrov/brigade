@@ -1024,7 +1024,7 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
     )
   })
 
-  test('work handed on from Chief’s word goes on it too: a sub-thread, a task, a message', async () => {
+  test('work handed on from Chief’s word goes on it too: a sub-thread, a thread, a message', async () => {
     const { loadThread } = await import('../src/thread-spec.js')
     const { handleChildCall } = await import('../src/children.js')
     const id = await thread()
@@ -1061,79 +1061,52 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
         chiefAnswers.onChiefsWord(await db.session.findFirstOrThrow({ where: { id: child.id } })),
       )
 
-      // A task it starts for a teammate: its thread goes on Chief's word too.
-      const { handleTaskCall } = await import('../src/tasks.js')
-      const replies: { ok: boolean; error?: string; output?: { threadId?: string } }[] = []
-      await handleTaskCall(
-        { computerId: cloud, organizationId: org, workspaceId } as never,
-        {
-          type: 'task.call',
-          callId: `call-${randomUUID()}`,
-          sessionId: id,
-          teammateId: riley,
-          operation: {
-            name: 'create',
-            title: 'Archive the old mail',
-            description: '',
-            priority: 'medium',
-            assignee: riley,
-          },
-        } as never,
-        (m) => void replies.push(m as never),
+      // A thread it starts for a teammate (start_thread): its work goes on Chief's word too.
+      const { startThreadFrom } = await import('../src/started-threads.js')
+      const handed = (await startThreadFrom(db, scope, parent, parent.teammate, {
+        name: 'start_thread',
+        title: 'Archive the old mail',
+        brief: 'Everything before 2024.',
+        teammate: riley,
+      })) as { threadId?: string; error?: string }
+      assert.ok(handed.threadId, JSON.stringify(handed))
+      assert.ok(
+        chiefAnswers.onChiefsWord(
+          await db.session.findFirstOrThrow({ where: { id: handed.threadId } }),
+        ),
       )
-      assert.equal(replies[0]?.ok, true, JSON.stringify(replies))
-      const task = await db.session.findFirstOrThrow({
-        where: { task: { title: 'Archive the old mail' } },
-      })
-      assert.ok(chiefAnswers.onChiefsWord(task))
     } finally {
       conn.close()
     }
   })
 
-  test('a task handed to another teammate from Chief’s word goes on it too', async () => {
-    const { handleTaskCall } = await import('../src/tasks.js')
-    const max = (await db.teammate.create({ data: { name: `Max ${suffix}` } } as never)).id
+  test('a thread started on a person’s word goes on Chief’s once written in from it', async () => {
+    const { loadThread } = await import('../src/thread-spec.js')
+    const { messageThread, startThreadFrom } = await import('../src/started-threads.js')
     const conn = await runner()
     try {
-      const task = async (sessionId: string, operation: Record<string, unknown>) => {
-        const replies: { ok: boolean; error?: string }[] = []
-        await handleTaskCall(
-          { computerId: cloud, organizationId: org, workspaceId } as never,
-          {
-            type: 'task.call',
-            callId: `call-${randomUUID()}`,
-            sessionId,
-            teammateId: riley,
-            operation,
-          } as never,
-          (m) => void replies.push(m as never),
-        )
-        assert.equal(replies[0]?.ok, true, JSON.stringify(replies))
-      }
       // Started from a thread of Ada's own word: not on Chief's.
       const plain = await thread()
-      await person(plain, 'Make a task to tidy the docs.')
-      const title = `Tidy the docs ${randomUUID().slice(0, 4)}`
-      await task(plain, {
-        name: 'create',
-        title,
-        description: '',
-        priority: 'medium',
-        assignee: riley,
+      await person(plain, 'Hand the docs to Riley.')
+      const from = await loadThread(db, plain)
+      const handed = (await startThreadFrom(db, scope, from, from.teammate, {
+        name: 'start_thread',
+        title: `Tidy the docs ${randomUUID().slice(0, 4)}`,
+        brief: 'Every page of the guide.',
+        teammate: riley,
+      })) as { threadId?: string; error?: string }
+      assert.ok(handed.threadId, JSON.stringify(handed))
+      const started = () => db.session.findFirstOrThrow({ where: { id: handed.threadId } })
+      assert.equal(chiefAnswers.onChiefsWord(await started()), false)
+      await db.session.updateMany({ where: { id: handed.threadId }, data: { status: 'idle' } })
+      // Chief answers in the thread that started it, which then writes there: on Chief's word now.
+      await answered(plain)
+      const sent = await messageThread(db, scope, await loadThread(db, plain), from.teammate, {
+        threadId: handed.threadId!,
+        text: 'The FAQ too.',
       })
-      const taskThread = await db.session.findFirstOrThrow({ where: { task: { title } } })
-      assert.equal(chiefAnswers.onChiefsWord(taskThread), false)
-      await db.session.updateMany({ where: { id: taskThread.id }, data: { status: 'idle' } })
-      // Handed to Max from a thread on Chief's word: its work goes on it now.
-      const marked = await thread()
-      await answered(marked)
-      await task(marked, { name: 'assign', taskId: taskThread.taskId, teammateId: max, reason: '' })
-      assert.ok(
-        chiefAnswers.onChiefsWord(
-          await db.session.findFirstOrThrow({ where: { id: taskThread.id } }),
-        ),
-      )
+      assert.ok('ok' in sent, JSON.stringify(sent))
+      assert.ok(chiefAnswers.onChiefsWord(await started()))
     } finally {
       conn.close()
     }

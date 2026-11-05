@@ -28,6 +28,26 @@ import { folderRules } from './library-folders.js'
 import { projectCatalog, threadProject } from './projects.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
 
+/** A teammate of the workspace by id or name, so "Ada" works as well as its id. */
+export async function findTeammate(db: ScopedDb, ref: string) {
+  return (
+    (await db.teammate.findFirst({ where: { id: ref, archivedAt: null } })) ??
+    (await db.teammate.findFirst({
+      where: { name: { equals: ref.trim(), mode: 'insensitive' }, archivedAt: null },
+    }))
+  )
+}
+
+/** Why no teammate has that name, with the names it may be: the team, as a teammate reads it. */
+export async function noSuchTeammate(db: ScopedDb, ref: string) {
+  const team = await db.teammate.findMany({
+    where: { archivedAt: null },
+    select: { name: true },
+    orderBy: { name: 'asc' },
+  })
+  return `No teammate is called "${ref}". The team: ${team.map((t) => t.name).join(', ')}.`
+}
+
 /**
  * Harness permission mode for a thread: built-in tools run without asking, on
  * any computer. Brigade does not ask before an action unless the teammate
@@ -44,7 +64,6 @@ export async function loadThread(db: ScopedDb, id: string) {
       teammate: true,
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
-      task: { select: { id: true, title: true, description: true, completedAt: true } },
       parent: { select: { id: true, title: true } },
       startedBy: { select: { suggestions: true } },
     },
@@ -262,6 +281,8 @@ export async function specFor(
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
+        // Refused by its provider: the teammate is told to ask for a reconnect (instructions.ts).
+        ...(g.connection.status === 'needs_reauth' ? { unavailable: 'signed_out' as const } : {}),
         // Named by their App's catalog, which the runner fetches once (src/catalogs.ts): listed
         // here, an App's tools came to megabytes in every spec. Whole for an older runner.
         ...(catalogs
@@ -340,15 +361,14 @@ export async function specFor(
         }
       : null,
     attachments,
-    task: thread.task
-      ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
-      : null,
-    // Only those of lists this teammate may read: the thread's items are anyone's who joins it.
-    items: items.filter(
-      (i) =>
-        libraryAccessFor(i.path, { id: teammate.id, library: teammate.libraryAccess }, rules) !==
-        'none',
-    ),
+    // Only those of lists this teammate may read, with the files it may: the thread's items are
+    // anyone's who joins it.
+    items: items.flatMap(({ files, ...item }) => {
+      const who = { id: teammate.id, library: teammate.libraryAccess }
+      if (libraryAccessFor(item.path, who, rules) === 'none') return []
+      const readable = files?.filter((path) => libraryAccessFor(path, who, rules) !== 'none') ?? []
+      return [{ ...item, ...(readable.length ? { files: readable } : {}) }]
+    }),
     designSystems,
     skills,
     builtinSkillsOff: off?.builtinSkillsOff ?? [],

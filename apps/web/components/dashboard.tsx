@@ -112,7 +112,6 @@ import {
   type Me,
   type ProjectSummary,
   type PullWaiting,
-  type Task,
   type Teammate,
   type Ticket,
 } from '@/lib/api'
@@ -264,10 +263,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Tickets waiting on this member, live and refreshed as the member moves around.
   const tickets = useApi<Ticket[]>('/tickets', ['tickets.updated'])
   const reloadTickets = tickets.reload
-  // Tasks that need a person, the same way: a task's column follows its thread's status and
-  // open tickets.
-  const tasks = useApi<Task[]>('/tasks', ['task.updated', 'thread.updated', 'tickets.updated'])
-  const reloadTasks = tasks.reload
   // Pull requests waiting on a person: with the tickets, what Home's Needs you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention', ['pulls.updated'])
   const reloadPulls = pulls.reload
@@ -312,11 +307,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (counted.current === pathname) return
     counted.current = pathname
     void reloadTickets()
-    void reloadTasks()
     void reloadPulls()
     void reloadFailures()
     void reloadInboxCount()
-  }, [pathname, reloadTickets, reloadTasks, reloadPulls, reloadFailures, reloadInboxCount])
+  }, [pathname, reloadTickets, reloadPulls, reloadFailures, reloadInboxCount])
 
   useEffect(() => {
     if (me.error?.status === 401) {
@@ -415,17 +409,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     needsYou[c.id] ??= 'pick one'
     badge.add(c.id)
   }
-  // And threads whose task is in Needs you, so the list agrees with the board.
-  for (const t of tasks.data ?? [])
-    if (t.column === 'needs_you' && t.thread && !t.thread.later) {
-      needsYou[t.thread.id] ??=
-        t.thread.status === 'failed'
-          ? 'failed'
-          : t.thread.openPullRequests.length
-            ? 'review PR'
-            : 'needs you'
-      badge.add(t.thread.id)
-    }
 
   async function signOut() {
     // The demo has no account to leave: the way out is signing up for real.

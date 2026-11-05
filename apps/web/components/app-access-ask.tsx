@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
 import { AppKeyForm } from '@/components/app-key-form'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
@@ -87,6 +87,9 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 
   revenuecat: 'mcp',
 }
 
+/** How long Give waits for its accounts' check before it may be clicked anyway. */
+const CHECK_WAIT_MS = 4000
+
 /**
  * The account a ticket offers first: the one the teammate named, else one at a domain its ask
  * mentions (support@acme.com picks the acme.com account), else the first.
@@ -153,18 +156,43 @@ export function AppAccessAsk({
   // their threads. The API checks again that the account is usable in this thread.
   const givable = accounts.filter(mayGive)
   // The person's own accounts whose sign-in expired: reconnecting one here gives it. Not for a
-  // server added by its URL (its card signs in) nor a GitHub repository (its installation reaches it).
-  const expired =
-    repository || serverId || serverUrl || server
-      ? []
-      : (data.data?.connections ?? []).filter(
-          (c) =>
-            c.kind === kind &&
-            c.status === 'needs_reauth' &&
-            c.createdByMemberId === me.memberId &&
-            // Already connected again beside it, before reconnecting renewed the same row.
-            !givable.some((g) => g.externalAccount && g.externalAccount === c.externalAccount),
-        )
+  // GitHub repository (its installation reaches it); for an MCP server added by its URL, only
+  // its own accounts, as for the active ones (one not added yet has none: its card signs in).
+  const expired = repository
+    ? []
+    : (data.data?.connections ?? []).filter(
+        (c) =>
+          c.kind === kind &&
+          c.status === 'needs_reauth' &&
+          c.createdByMemberId === me.memberId &&
+          (!(serverId || serverUrl || server) || c.appId === server?.id) &&
+          // Already connected again beside it, before reconnecting renewed the same row.
+          !givable.some((g) => g.externalAccount && g.externalAccount === c.externalAccount),
+      )
+  // A built-in MCP App's account may have stopped signing in unseen (OpenRouter's key lasts 7
+  // days): each one this ticket could give is checked once, as it shows. One its server refuses
+  // turns into Reconnect (the API marks it, and the list reloads), rather than an account given
+  // with no tools. Give waits for the check, CHECK_WAIT_MS at most.
+  const toCheck = givable
+    .filter((c) => SIGN_IN[c.kind] === 'mcp')
+    .map((c) => c.id)
+    .join(',')
+  const checked = useRef(new Set<string>())
+  const [checking, setChecking] = useState(0)
+  useEffect(() => {
+    const ids = toCheck.split(',').filter((id) => id && !checked.current.has(id))
+    if (!ids.length) return
+    for (const id of ids) checked.current.add(id)
+    setChecking((n) => n + 1)
+    const checks = Promise.allSettled(
+      ids.map((id) => api(`/connections/${id}/check`, { body: {} })),
+    )
+    void Promise.race([checks, new Promise((done) => setTimeout(done, CHECK_WAIT_MS))]).then(() => {
+      setChecking((n) => n - 1)
+      void data.reload()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checks each account once, as it shows up
+  }, [toCheck])
   const options = [...givable, ...expired]
   const preferred = preferredAccount(options, ask)
   // The installation on the repository's owner, if any, to add the repository to on GitHub. An
@@ -194,7 +222,8 @@ export function AppAccessAsk({
   const signInAgain =
     !!chosen &&
     (customOAuth
-      ? !!permission && chosen.createdByMemberId === me.memberId
+      ? (chosen.status === 'needs_reauth' || !!permission) &&
+        chosen.createdByMemberId === me.memberId
       : !!SIGN_IN[kind] &&
         (chosen.status === 'needs_reauth' ||
           (!!permission && !repository && chosen.createdByMemberId === me.memberId)))
@@ -332,15 +361,15 @@ export function AppAccessAsk({
               <span className="text-sm text-muted-foreground">
                 Only {chosenOwner} can reconnect {chosen?.externalAccount ?? name} to allow it.
               </span>
-            ) : permission && kind === 'mcp' ? (
-              // Signed in with a key: the access alone would not allow it.
+            ) : (permission || chosen?.status === 'needs_reauth') && kind === 'mcp' ? (
+              // Signed in with a key: the access alone would not allow it, nor renew a key refused.
               <Button size="sm" variant="outline" asChild>
                 <Link href="/app/connections" target="_blank" rel="noreferrer">
                   Connect {name} again in Apps
                 </Link>
               </Button>
             ) : (
-              <Button size="sm" onClick={() => give(chosen?.id)}>
+              <Button size="sm" disabled={checking > 0} onClick={() => give(chosen?.id)}>
                 Give {askerName} {access} access
               </Button>
             )}

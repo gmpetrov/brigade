@@ -26,7 +26,7 @@
       },
       {
         "group": "Organize work",
-        "pages": ["projects", "tasks", "lists", "library", "memory", "skills"]
+        "pages": ["projects", "lists", "library", "memory", "skills"]
       },
       {
         "group": "Automate",
@@ -54,6 +54,7 @@
       }
     ]
   },
+  "redirects": [{ "source": "/tasks", "destination": "/lists" }],
   "navbar": {
     "links": [
       {

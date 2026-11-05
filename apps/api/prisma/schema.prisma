@@ -699,9 +699,15 @@ model Session {
   pins                 ThreadPin[]
   /// The members who put it away for later.
   laters               ThreadLater[]
-  /// The task this thread works on. One thread per task for now.
+  /// The Tasks board's task it was (the board is gone: docs/hand-offs.md). Nothing reads it; it
+  /// goes in a later deploy, with Task.
   taskId               String?            @unique
   task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  /// The thread a teammate started it from (start_thread): this one stands at the top, not as its
+  /// child, and that thread may still write in it (message_thread). Null for any other.
+  startedFromId        String?
+  startedFrom          Session?           @relation("StartedThreads", fields: [startedFromId], references: [id], onDelete: SetNull)
+  startedThreads       Session[]          @relation("StartedThreads")
   /// The project the thread works in: its brief, memory, folder and repositories come with each turn.
   projectId            String?
   project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -770,6 +776,7 @@ model Session {
   @@index([reportDueAt])
   @@index([playbookRunId])
   @@index([workspaceId, doneAt])
+  @@index([startedFromId])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
@@ -782,9 +789,8 @@ enum TaskPriority {
   urgent
 }
 
-/// Work to see finished, on the Tasks board. Its thread is its comments and
-/// progress; the column comes from the thread (none: backlog) and completedAt.
-/// Assigning a teammate starts the thread, so a task has a teammate once it has one.
+/// Work to see finished, on the Tasks board, which is gone (docs/hand-offs.md): nothing reads or
+/// writes it any more. It goes in a later deploy, once no API running reads it.
 model Task {
   id                  String       @id @default(cuid())
   organizationId      String

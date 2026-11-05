@@ -44,7 +44,8 @@ export * from './secrets.js'
 export * from './skills.js'
 export * from './onboarding.js'
 export * from './suggestions.js'
-export * from './tasks.js'
+export * from './legacy-tasks.js'
+export * from './started-threads.js'
 export * from './thread-done.js'
 export * from './thread-history.js'
 export * from './trigger-events.js'
@@ -118,17 +119,20 @@ export * from './usage.js'
  * 50: a person's message sent during its teammate's turn gets a side reply (message.side), and
  *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
  * 51: Chief answered teammates' questions for the person in decision threads of its own (the spec's
- *     `decision`), and the spec's `chiefAnswers`: no longer sent from 52 on.
- * 52: Chief for the person (CHIEF_PASS_PROTOCOL, docs/chief-answers.md): its daily pass threads (the spec's
- *     `pass`, with chief_answer, chief_retry and chief_report as schedule.call operations), the
+ *     `decision`, chief_decide and chief_decisions), and the spec's `chiefAnswers`: no longer sent
+ *     from 53 on.
+ * 52: no Tasks board: start_thread, message_thread and a playbook's file_idea as schedule.call
+ *     operations, and no task.call (the API still answers older runners' task tools: src/legacy-tasks.ts).
+ * 53: Chief for the person (CHIEF_PASS_PROTOCOL, docs/chief-answers.md): its daily pass threads (the
+ *     spec's `pass`, with chief_answer, chief_retry and chief_report as schedule.call operations), the
  *     person's rules in teammates' instructions (the spec's `rules`), and chief_rules.
  */
-export const PROTOCOL_VERSION = 52
+export const PROTOCOL_VERSION = 53
 /**
  * Runners from this version on run Chief's daily pass (ThreadSpec.pass) with its tools. The API
  * starts no pass on an older one: what waits on the person waits, as before.
  */
-export const CHIEF_PASS_PROTOCOL = 52
+export const CHIEF_PASS_PROTOCOL = 53
 /**
  * Runners from this version on answer a person's message sent during its teammate's turn on
  * the side (message.side), and take keep and queue on it. The API refuses those actions to

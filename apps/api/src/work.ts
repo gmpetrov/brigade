@@ -418,6 +418,51 @@ const childOf = (
 })
 
 /**
+ * Where a member's new thread runs when nothing else says (a list's lines handed over, a thread a
+ * teammate starts for another on a computer that cannot run it): the workspace computer, else one
+ * of their own machines that is online; the first where they have an account with usage left for
+ * the teammate's harness.
+ */
+export async function computerFor(
+  db: ScopedDb,
+  memberId: string,
+  harness: 'claude_code' | 'codex',
+) {
+  const machines = await db.computer.findMany({
+    where: { kind: 'member_machine', memberId },
+    orderBy: { updatedAt: 'desc' },
+  })
+  const presence = machines.length
+    ? await hubs.get(machines[0]!.workspaceId).presence(machines.map((c) => c.id))
+    : {}
+  const candidates = [
+    ...(await db.computer.findMany({
+      where: { kind: 'cloud', status: { in: ['running', 'stopped', 'starting'] } },
+    })),
+    ...machines.filter((c) => presence[c.id]?.online),
+  ]
+  // One with usage left first; else one whose accounts are out of usage, which a
+  // new turn tries again (the plan may have been upgraded since).
+  let fallback: (typeof candidates)[number] | undefined
+  for (const computer of candidates) {
+    const accounts = await usableAccounts(db, {
+      memberId,
+      computerId: computer.id,
+      provider: harness,
+    })
+    if (accounts.some((a) => !a.exhaustedUntil || a.exhaustedUntil <= new Date())) return computer
+    if (accounts.length) fallback ??= computer
+  }
+  if (fallback) return fallback
+  const name = harness === 'codex' ? 'Codex' : 'Claude'
+  throw new HTTPException(409, {
+    message: candidates.length
+      ? `No ${name} account you can use is ready on the computers it could run on. Add or sign in to one under Accounts.`
+      : 'No computer is online to run it. Start your runner, or set up the cloud computer.',
+  })
+}
+
+/**
  * A new thread with a fresh context, on the starting member's accounts. For a
  * trigger, the member who set it up; for a schedule, its owner; for a child,
  * its parent's starter. Throws when they have no usable account.
@@ -453,16 +498,16 @@ export async function startThread(
           playbookTeammate?: string | null
         }
     /**
-     * A teammate started it for the member (a task it created): the first message is the
-     * teammate's, not the member's, though the thread runs on the member's accounts.
+     * A teammate started it for the member (start_thread): the first message is the teammate's,
+     * not the member's, though the thread runs on the member's accounts.
      */
     byTeammateId?: string
+    /** The thread that teammate started it from (start_thread), which may still write in it. */
+    startedFromId?: string
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
     /** The files came from a connection (a member's email to an agent), not the member's uploads. */
     connectorFiles?: boolean
-    /** The task this thread works on, linked before its first turn so the teammate knows. */
-    taskId?: string
     /** The list items it works on (docs/lists.md), linked before its first turn so the teammate knows. */
     listItemIds?: string[]
     /** The project it works in; its context comes with the first turn. */
@@ -507,7 +552,7 @@ export async function startThread(
     chiefWord?: boolean
   },
 ) {
-  // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
+  // Nor a new thread, before its row is made (members, triggers, schedules, teammates, children).
   await refuseWhileDeleting(scope.workspaceId)
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
   const teammateIds = [
@@ -543,7 +588,7 @@ export async function startThread(
         computerId: input.computer.id,
         accountId: account.id,
         title: input.title.slice(0, 120),
-        ...(input.taskId ? { taskId: input.taskId } : {}),
+        ...(input.startedFromId ? { startedFromId: input.startedFromId } : {}),
         ...(input.projectId ? { projectId: input.projectId } : {}),
         ...(input.effort ? { effort: input.effort } : {}),
         ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
@@ -647,7 +692,7 @@ export async function startThread(
           track: {
             origin:
               input.origin?.kind ??
-              (input.quiet ? 'email' : input.byTeammateId ? 'task' : 'member'),
+              (input.quiet ? 'email' : input.byTeammateId ? 'teammate' : 'member'),
             harness: input.teammate.harness,
           },
           data: {
