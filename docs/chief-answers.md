@@ -24,7 +24,8 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   `failed` as it changes their row, in every workspace, every call of a pass checks it is still on
   (`passOn`), and an answer reads it under their row's lock, so one being kept as they turn it off
   is kept first or not at all. `Member.chiefAnswers` and `chiefAuto` of #724 are no longer read,
-  kept while an older API may (migrations only add), and were turned off for everyone first.
+  kept while an older API may (migrations only add), and were turned off for everyone first
+  (`20261105233000_chief_answers_off_for_all`, #739).
 - **Rules are a text in the person's words, not a library file.** `Member.chiefRules`, at most
   `CHIEF_RULES_MAX` characters, private to them and their teammates: one per person, whatever the
   workspace's folders. The person writes them in Preferences, with Chief in a thread (**Write them
