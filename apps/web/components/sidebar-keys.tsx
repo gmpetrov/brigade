@@ -9,7 +9,7 @@
 // its own ⌥↑ / ⌥↓, and so do menus, dialogs, a remote screen and a terminal.
 import { useEffect } from 'react'
 import { editable, OPEN_LAYER } from '@/components/side-panel'
-import { stepTo, walkKey, type Relation } from '@/lib/sidebar-keys'
+import { enterAt, stepTo, walkKey, type Relation } from '@/lib/sidebar-keys'
 
 const SIDEBAR = '[data-sidebar="sidebar"]'
 const STOPS = `${SIDEBAR} [data-nav-stop]`
@@ -71,7 +71,9 @@ export function useSidebarKeys() {
         const stops = shownStops()
         if (!stops.length) return
         const start = from(stops)
-        const to = stepTo(stops, start ? (s) => relation(s, start) : undefined, dir)
+        const to = start
+          ? stepTo(stops, (s) => relation(s, start), dir)
+          : enterAt(stops, (s) => s.hasAttribute('data-nav-top'), dir)
         // At either end, nothing; the composer's caret does not move either.
         e.preventDefault()
         if (to) go(to)

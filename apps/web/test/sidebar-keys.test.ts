@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { stepTo, walkKey, type Relation } from '../lib/sidebar-keys'
+import { enterAt, stepTo, walkKey, type Relation } from '../lib/sidebar-keys'
 
 const key = (
   key: string,
@@ -23,7 +23,7 @@ test('⌥↑ and ⌥↓ walk the sidebar; the arrows alone or with another modif
 })
 
 // The sidebar's stops in order, and where each is from the row the walk starts at.
-const stops = ['today', 'inbox', 'pinned-a', 'thread-a', 'thread-b', '+3 more']
+const stops = ['+', 'pinned-a', 'pinned-b', 'thread-a', 'thread-b', '+3 more']
 const at =
   (start: string) =>
   (s: string): Relation => {
@@ -33,24 +33,29 @@ const at =
   }
 
 test('the walk goes to the next stop down or the previous one up', () => {
-  assert.equal(stepTo(stops, at('inbox'), 1), 'pinned-a')
-  assert.equal(stepTo(stops, at('pinned-a'), -1), 'inbox')
+  assert.equal(stepTo(stops, at('pinned-a'), 1), 'pinned-b')
+  assert.equal(stepTo(stops, at('pinned-a'), -1), '+')
   assert.equal(stepTo(stops, at('thread-b'), 1), '+3 more')
 })
 
 test('it stops at either end, without going round', () => {
-  assert.equal(stepTo(stops, at('today'), -1), undefined)
+  assert.equal(stepTo(stops, at('+'), -1), undefined)
   assert.equal(stepTo(stops, at('+3 more'), 1), undefined)
 })
 
-test('from no row (a page not in the sidebar), down starts at the top and up at the bottom', () => {
-  assert.equal(stepTo(stops, undefined, 1), 'today')
-  assert.equal(stepTo(stops, undefined, -1), '+3 more')
+test('from a page the walk does not reach, down opens the first conversation and up the +', () => {
+  const isTop = (s: string) => s === '+'
+  assert.equal(enterAt(stops, isTop, 1), 'pinned-a')
+  assert.equal(enterAt(stops, isTop, -1), '+')
+  // A viewer has no +: down is the first stop, up the last.
+  const viewer = stops.slice(1)
+  assert.equal(enterAt(viewer, isTop, 1), 'pinned-a')
+  assert.equal(enterAt(viewer, isTop, -1), '+3 more')
 })
 
 test('from a row that is no stop (a section unfolded with Enter), the walk goes on past it', () => {
-  // The Pinned label sits between Inbox and the pinned thread once unfolded.
-  const label = (s: string): Relation => (stops.indexOf(s) >= 2 ? 'after' : 'before')
-  assert.equal(stepTo(stops, label, 1), 'pinned-a')
-  assert.equal(stepTo(stops, label, -1), 'inbox')
+  // The Threads label sits between the last pinned row and the first thread once unfolded.
+  const label = (s: string): Relation => (stops.indexOf(s) >= 3 ? 'after' : 'before')
+  assert.equal(stepTo(stops, label, 1), 'thread-a')
+  assert.equal(stepTo(stops, label, -1), 'pinned-b')
 })
