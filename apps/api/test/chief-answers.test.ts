@@ -447,6 +447,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
         rules: '- Go ahead on fixes',
       } as never) as Promise<{ ok?: boolean; error?: string }>
     assert.match((await write(own, { id: riley, kind: 'teammate' })).error ?? '', /Only Chief/)
+    // Not before she agreed, in her own words.
+    assert.match((await write(own)).error ?? '', /right after they agreed/)
+    await person(own.id, 'Yes, save these rules.')
     assert.equal((await write(own)).ok, true)
     const ada = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
     assert.equal(ada.chiefRules, '- Go ahead on fixes')
@@ -456,6 +459,16 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       data: { askedByMemberId: '*' },
     })
     assert.match((await write(shared)).error ?? '', /not one person/)
+    // What a wake-up or an event brought in is not her word.
+    const back = await db.session.update({
+      where: { id: own.id },
+      data: { askedByMemberId: member('ada') },
+    })
+    await say(own.id, { type: 'message.user', text: 'Wake-up: check CI', memberId: null })
+    assert.match((await write(back)).error ?? '', /right after they agreed/)
+    await person(own.id, 'Save them.')
+    await db.session.updateMany({ where: { id: own.id }, data: { origin: 'trigger' } })
+    assert.match((await write(back)).error ?? '', /right after they agreed/)
     const made = await pending(await thread(), 1)
     assert.match((await write(made.child as never)).error ?? '', /Not in a pass/)
   })
@@ -838,6 +851,8 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       (await db.chiefPass.findFirstOrThrow({ where: { id: made.pass.id } })).status,
       'failed',
     )
+    // Its thread, over: archived.
+    assert.ok((await db.session.findFirstOrThrow({ where: { id: made.child.id } })).archivedAt)
     // One that never started after a restart: over once it ran too long.
     const stuck = await pending(id, 1)
     await db.chiefPass.updateMany({
@@ -850,6 +865,7 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       (await db.chiefPass.findFirstOrThrow({ where: { id: stuck.pass.id } })).status,
       'failed',
     )
+    assert.ok((await db.session.findFirstOrThrow({ where: { id: stuck.child.id } })).archivedAt)
   })
 
   test('an answer reaches the teammate in the person’s name, by their rule', async () => {

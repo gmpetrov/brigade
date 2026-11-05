@@ -156,14 +156,31 @@ export async function runDuePasses(workspaceId?: string, now = new Date()) {
 
 /** Passes whose thread stopped without reporting, or never started after a restart: failed. */
 async function settleStalePasses(workspaceId: string | undefined, now: Date) {
-  await prisma.chiefPass.updateMany({
+  const stale = await prisma.chiefPass.findMany({
     where: {
       status: 'running',
       createdAt: { lt: new Date(now.getTime() - PASS_MINUTES * 60_000) },
       ...(workspaceId ? { workspaceId } : {}),
     },
-    data: { status: 'failed', finishedAt: now },
+    select: { id: true, organizationId: true, workspaceId: true, sessionId: true },
+    take: 100,
   })
+  for (const pass of stale) {
+    const { count } = await prisma.chiefPass.updateMany({
+      where: { id: pass.id, status: 'running' },
+      data: { status: 'failed', finishedAt: now },
+    })
+    if (count) await archivePassThread(pass, pass.sessionId)
+  }
+}
+
+/** A pass's thread, once the pass is over: archived, as nobody comes back to it but from Today. */
+async function archivePassThread(scope: Scope, sessionId: string | null) {
+  if (!sessionId) return
+  const { setThreadArchived } = await import('./thread-archive.js')
+  await setThreadArchived(scope, sessionId, true).catch((error: unknown) =>
+    console.warn(`chief pass thread ${sessionId}: not archived: ${String(error)}`),
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -416,8 +433,8 @@ export async function startPass(scope: Scope, memberId: string, day: string, now
         items,
         answers,
       }),
-      // A read and a few calls, not work: as quick as Chief's harness goes.
-      effort: 'low',
+      // A read and a few calls, not work; but each a judgment made in their name.
+      effort: 'medium',
       // Out of every list: Today links it.
       quiet: true,
       commandId: `chief-pass:${pass.id}`,
@@ -449,6 +466,8 @@ export async function notePassEvents(
     where: { id: session.chiefPassId, status: 'running' },
     data: { status: 'failed', finishedAt: new Date() },
   })
+  // Done or not, it is over: out of the way, as its thread was from the start.
+  await archivePassThread(scope, session.id)
   if (count) void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, 'idle'))
 }
 
@@ -488,6 +507,26 @@ export async function handleChiefCall(
       }
     const asker = await askedBy(db, session.id)
     const person = asker === SEVERAL_ASKERS ? null : (asker ?? session.startedByMemberId)
+    // Rules give a person's teammates leave to act: written only in a thread of theirs, right after
+    // they wrote, never from what a routine, a trigger, an email or another teammate brought in.
+    const [thread, last] = await Promise.all([
+      db.session.findFirst({
+        where: { id: session.id },
+        select: { origin: true, parentId: true, playbookRunId: true, quiet: true },
+      }),
+      db.sessionEvent.findFirst({
+        where: { sessionId: session.id, type: 'message.user' },
+        orderBy: { seq: 'desc' },
+        select: { data: true },
+      }),
+    ])
+    const own =
+      thread?.origin === 'member' && !thread.parentId && !thread.playbookRunId && !thread.quiet
+    if (person && (!own || (last?.data as { memberId?: string } | null)?.memberId !== person))
+      return {
+        error:
+          'Save their rules only in a thread of theirs, right after they agreed to them in their own words: ask them first.',
+      }
     return setRulesByChief(db, scope, person, op.rules)
   }
   if (!session.chiefPassId)

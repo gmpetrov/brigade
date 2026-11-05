@@ -25,9 +25,10 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
 - **Rules are a text in the person's words, not a library file.** `Member.chiefRules`, at most
   `CHIEF_RULES_MAX` characters, private to them and their teammates: one per person, whatever the
   workspace's folders. The person writes them in Preferences, with Chief in a thread (**Write them
-  with Chief**, then `chief_rules` once they agree, only for that thread's one person), or takes
-  the lines a pass proposes (`POST /me/chief/rules`; a refused line is kept in
-  `chiefRulesRefused` and never proposed again).
+  with Chief**, then `chief_rules` once they agree: only in a member's own thread of theirs, right
+  after they wrote, never from what a routine, a trigger or an email brought in, as rules give
+  their teammates leave to act), or takes the lines a pass proposes (`POST /me/chief/rules`; a
+  refused line is kept in `chiefRulesRefused` and never proposed again).
 - **Every teammate working for the person reads them** (`specFor`): the thread's person is its
   asker (`askedBy`), or its starter when nobody asked (a routine's, a trigger's run); none in a
   thread several people ask in, a playbook's run, or a pass. The runner puts them in the
@@ -42,10 +43,11 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   idle, active in the last week, not put away, not Chief's own, not answered before), their failed
   threads, their tickets and pull requests, numbered, at most 30. Nothing waits: the pass is
   `idle`, and no turn is spent.
-- **A pass is a thread of Chief's that no list shows** (`Session.chiefPassId`, quiet, on the
-  person's account and the workspace's cloud computer, else their own machine; runners older than
-  `CHIEF_PASS_PROTOCOL` get none). Its brief (`chiefPassBrief`) has their rules, the numbered items
-  and their recent answers to cards (`recentAnswers`, the last two weeks), and what they refused.
+- **A pass is a thread of Chief's that no list shows** (`Session.chiefPassId`, quiet, archived once
+  the pass is over, at medium effort on the person's account and the workspace's cloud computer,
+  else their own machine; runners older than `CHIEF_PASS_PROTOCOL` get none). Its brief
+  (`chiefPassBrief`) has their rules, the numbered items and their recent answers to cards
+  (`recentAnswers`, the last two weeks), and what they refused.
   Its only tools are `search_workspace`, `list_items` and its three calls, which act only on the
   brief's items, by number:
   - `chief_answer`: answers a question item in their name, citing the rule that settles it. Refused
