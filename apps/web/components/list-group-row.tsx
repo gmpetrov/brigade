@@ -71,6 +71,7 @@ export function ListGroupRow({
       >
         <Link
           href={href}
+          data-nav-stop="link"
           title={hint ? `${title} · ${hint}` : title}
           onContextMenu={(e) => {
             e.preventDefault()

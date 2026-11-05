@@ -49,6 +49,7 @@ import { ConnectAppsDialog, openConnectApps } from '@/components/connect-apps'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { KeptPreviews } from '@/components/kept-previews'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
+import { useSidebarKeys } from '@/components/sidebar-keys'
 import { PebbleAvatar } from '@/components/pebble-avatar'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { useAppNotifications } from '@/components/notifications'
@@ -357,6 +358,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [me.error, reloadMe])
 
   useSettingsShortcut()
+  // ⌥↑ / ⌥↓ through the sidebar, Enter unfolds a folded row.
+  useSidebarKeys()
 
   // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
   // So does the page that signs that window in, in the browser.
@@ -511,7 +514,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild tooltip="Today" isActive={pathname === '/app'}>
-                        <Link href="/app">
+                        <Link href="/app" data-nav-stop="link">
                           <Sun />
                           <span>Today</span>
                           {waitingOnYou > 0 && (
@@ -530,7 +533,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Inbox"
                         isActive={pathname.startsWith('/app/inbox')}
                       >
-                        <Link href="/app/inbox">
+                        <Link href="/app/inbox" data-nav-stop="link">
                           <Mail />
                           <span>Inbox</span>
                           {inboxWaiting > 0 && (
@@ -552,7 +555,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Board"
                         isActive={pathname.startsWith('/app/board')}
                       >
-                        <Link href="/app/board">
+                        <Link href="/app/board" data-nav-stop="link">
                           <SquareKanban />
                           <span>Board</span>
                         </Link>
@@ -564,7 +567,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Lists"
                         isActive={pathname.startsWith('/app/lists')}
                       >
-                        <Link href="/app/lists">
+                        <Link href="/app/lists" data-nav-stop="link">
                           <ListChecks />
                           <span>Lists</span>
                         </Link>
@@ -576,7 +579,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         tooltip="Library"
                         isActive={pathname.startsWith('/app/library')}
                       >
-                        <Link href="/app/library">
+                        <Link href="/app/library" data-nav-stop="link">
                           <Library />
                           <span>Library</span>
                         </Link>

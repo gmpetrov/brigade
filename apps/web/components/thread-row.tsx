@@ -116,6 +116,7 @@ export function ThreadRow({
       >
         <Link
           href={href}
+          data-nav-stop="link"
           title={hint ? `${title} · ${hint}` : title}
           {...preloadOnPoint(thread.id, active)}
           onClick={(e) => clickInPlace(e, href)}

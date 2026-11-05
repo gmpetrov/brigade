@@ -16,7 +16,7 @@ const typing = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
 
-/** `mod` is ⌘ on a Mac, Ctrl elsewhere; each entry is one way to press it. */
+/** `mod` is ⌘ on a Mac, Ctrl elsewhere, `alt` ⌥ or Alt; each entry is one way to press it. */
 const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }[] = [
   {
     title: 'General',
@@ -25,6 +25,14 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
       { label: 'New thread', keys: [['mod', 'shift', 'K']] },
       { label: 'Show or hide threads', keys: [['mod', 'J']] },
       { label: 'Toggle the sidebar', keys: [['mod', 'B']] },
+      {
+        label: 'Up or down the sidebar',
+        keys: [
+          ['alt', '↑'],
+          ['alt', '↓'],
+        ],
+      },
+      { label: 'Unfold a folded sidebar row', keys: [['Enter']] },
       { label: 'Settings', keys: [['mod', ',']] },
       { label: 'Keyboard shortcuts', keys: [['shift', '?']] },
       { label: 'Close a dialog', keys: [['Esc']] },
@@ -43,8 +51,8 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
 
 function Keys({ keys, mac }: { keys: string[]; mac: boolean }) {
   const names: Record<string, string> = mac
-    ? { mod: '⌘', shift: '⇧', Enter: '↵' }
-    : { mod: 'Ctrl', shift: 'Shift', Enter: 'Enter' }
+    ? { mod: '⌘', shift: '⇧', alt: '⌥', Enter: '↵' }
+    : { mod: 'Ctrl', shift: 'Shift', alt: 'Alt', Enter: 'Enter' }
   return (
     <span className="flex items-center gap-1">
       {keys.map((k) => (
