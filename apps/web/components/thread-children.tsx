@@ -17,6 +17,7 @@ import { TeammateAvatar } from '@/components/dashboard'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Hint } from '@/components/ui/tooltip'
 import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -144,17 +145,74 @@ const plain = (markdown: string) =>
     .replace(/(\*\*|__|~~|`)/g, '')
     .trim()
 
-/** "Verdict posted on GitHub: changes requested (#698, commit 945a87d)." (verdictLine) */
-const VERDICT = /^Verdict posted on GitHub: (approved|changes requested) \([^)]*\)\.\s*/
+/**
+ * "Verdict posted on GitHub: changes requested (#698, commit 945a87d)." or "No verdict posted
+ * on GitHub (#698)." (verdictLine): what Brigade puts ahead of a review's report.
+ */
+const VERDICT =
+  /^(?:Verdict posted on GitHub: (approved|changes requested) \([^)]*\)|No verdict posted on GitHub \([^)]*\))\.\s*/
+
+/** What a review's line says happened, by how it ended. */
+const REVIEW_ENDS: Record<string, string> = {
+  report: 'came in',
+  nothing: 'came in',
+  needs_person: 'needs you',
+  failed: 'failed',
+  cancelled: 'was cancelled',
+}
 
 /**
- * A thread a report note tells about, as one card that opens it: its dot, who, its title,
- * then the start of what it said, which Show more unfolds in place.
+ * A review's report, as a plain grey line like Worked's: its pull request's card says the
+ * verdict already, so the line only says the review came in, and unfolds what it said.
+ */
+function ReviewReported({ thread, summary }: { thread: NoteThread; summary: string }) {
+  const who = thread.teammate ? `${thread.teammate}'s review` : 'The review'
+  const end = thread.status ? (REVIEW_ENDS[thread.status] ?? thread.status) : 'is under way'
+  return (
+    <Collapsible className="flex flex-col gap-2">
+      <CollapsibleTrigger
+        disabled={!summary}
+        className="group flex items-center gap-1 self-start text-left text-xs text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
+      >
+        {who} {end}
+        {summary && (
+          <ChevronRight
+            className="size-3 flex-none transition-transform group-data-[state=open]:rotate-90"
+            aria-hidden
+          />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-2">
+        <Markdown text={summary} className="text-sm text-muted-foreground" />
+        <Link
+          href={`/app/threads/${thread.id}`}
+          className="flex items-center gap-1 self-start text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          Open the review
+          <ChevronRight aria-hidden className="size-3" />
+        </Link>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+/**
+ * A thread a report note tells about: a review as a grey line, any other as a card that opens
+ * it (ReportCard).
  */
 export function ReportedThread({ thread }: { thread: NoteThread }) {
-  // A review's verdict, which Brigade puts ahead of its report (verdictLine), is its state.
+  // A review's verdict, which Brigade puts ahead of its report (verdictLine), says it is one.
   const verdict = VERDICT.exec(thread.summary.trim())
   const summary = (verdict ? thread.summary.trim().slice(verdict[0].length) : thread.summary).trim()
+  if (verdict) return <ReviewReported thread={thread} summary={summary} />
+  return <ReportCard thread={thread} summary={summary} />
+}
+
+/**
+ * Any other thread a report note tells about, as one card that opens it: its dot, who, its
+ * title, then the start of what it said, which Show more unfolds in place.
+ */
+function ReportCard({ thread, summary }: { thread: NoteThread; summary: string }) {
   const [open, setOpen] = useState(false)
   // Show more only when the report runs past its two lines.
   const [long, setLong] = useState(false)
@@ -169,13 +227,11 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
     return () => observer.disconnect()
   }, [summary, open])
   // Reported is the usual end: only another one is said in words.
-  const state = verdict
-    ? verdict[1]!
-    : !thread.status
-      ? 'working'
-      : thread.status === 'report'
-        ? null
-        : (REPORTS[thread.status] ?? thread.status)
+  const state = !thread.status
+    ? 'working'
+    : thread.status === 'report'
+      ? null
+      : (REPORTS[thread.status] ?? thread.status)
   return (
     <div
       className={cn(
@@ -212,20 +268,7 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
           <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>
         )}
         <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
-        {state && (
-          <span
-            className={cn(
-              'shrink-0 text-xs',
-              state === 'changes requested'
-                ? 'text-warning'
-                : state === 'approved'
-                  ? 'text-success'
-                  : 'text-muted-foreground',
-            )}
-          >
-            {state}
-          </span>
-        )}
+        {state && <span className="shrink-0 text-xs text-muted-foreground">{state}</span>}
         <ChevronRight aria-label="Open" className="size-4 shrink-0 text-muted-foreground" />
       </Link>
       {summary &&

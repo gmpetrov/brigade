@@ -507,7 +507,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   computer and the starter's accounts; each teammate runs its own harness session, in its own directory and Linux user,
   on an account of its own harness. Before each turn the runner tells the teammate what was said since its last one
   (members' messages and the other teammates' replies, kept in `~/.brigade/state/<thread>.team.json`); a thread with
-  one teammate reads exactly as before. Harness events carry `teammateId`, and each turn starts with `turn.started`
+  one teammate reads exactly as before. A message Brigade wrote to a teammate (a sub-thread's report, a wake-up, a
+  routine's run) reaches it as it is, and the others as a note from Brigade, never as a person's message, which
+  alone can approve a merge or a send. A teammate told the report of a sub-thread it ran itself (a review) hears that
+  it is its own, which it does not remember there, and that `read_child` gives it whole. Harness events carry `teammateId`, and each turn starts with `turn.started`
   (teammate and account), so tickets, connector grants, caps, usage and the timeline are each teammate's own. A
   trigger's event summons nobody. On a runner below protocol 2 the API sends turns only to the starting teammate.
 - **Runner updates** (`apps/runner/src/updater.ts`). The API's runner bundle is the only version that counts: a
@@ -805,7 +808,9 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   pull request stops its review; one merged meanwhile keeps it, as what it finds is still worth a follow-up. Every
   teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a review is
   a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring an
-  approving review needs a person to approve on GitHub, or the app allowed to bypass the rule.
+  approving review needs a person to approve on GitHub, or the app allowed to bypass the rule. In the thread, the
+  report shows as a grey line ("Cody's review came in ›", like Worked's) that unfolds what the reviewer said and
+  opens the review: the pull request's card already says the verdict, so the line never repeats it.
 - **A teammate's reply costs little more than its harness's own time.** Claude Code's process stays from one turn
   to the next in its thread's bridge (the patched bridge's `liveQuery`): a turn answered with nothing left running
   leaves it waiting, its input open, and the next turn with the same options (tools, model, effort, instructions,

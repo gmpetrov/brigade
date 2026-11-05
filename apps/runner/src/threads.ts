@@ -60,7 +60,7 @@ import type { Previews } from './previews.js'
 import { memoryRun } from './memory.js'
 import { memoryNews, threadMemory } from './memory-layers.js'
 import { tidyRun, type TidyFile } from './memory-tidy.js'
-import { MARKS_RULE, missedLines, type Indexed, type LogEntry } from './said.js'
+import { MARKS_RULE, missedLines, ownReports, type Indexed, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { keepReplyImages, type StoreImage } from './reply-images.js'
 import { backgroundTasks } from './harness/background.js'
@@ -351,7 +351,8 @@ type Log = {
 /** The first thing a person said in the thread, when the log still knows it. */
 function firstAsk(log: Log): Indexed | undefined {
   if (log.ask || log.start > 0) return log.ask
-  const i = log.entries.findIndex((e) => e.by === null && !e.note)
+  // A message Brigade wrote to a teammate can be it: a sub-thread's brief, a routine's run.
+  const i = log.entries.findIndex((e) => e.by === null && (!e.note || !!e.to))
   return i < 0 ? undefined : { ...log.entries[i]!, at: i }
 }
 
@@ -1557,7 +1558,17 @@ export class Threads {
         ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
         : {}),
     })
-    message.upTo = this.note(spec, null, 'A member', this.promptText(message, spec))
+    // Nobody typed it: Brigade wrote it to this teammate (a report, a wake-up, a routine's run).
+    message.upTo =
+      message.memberId === null
+        ? this.note(
+            spec,
+            null,
+            `Brigade, to ${spec.teammate.name}`,
+            this.promptText(message, spec),
+            spec.teammate.id,
+          )
+        : this.note(spec, null, 'A member', this.promptText(message, spec))
     return message.upTo
   }
 
@@ -2225,8 +2236,14 @@ export class Threads {
     if (onlyNew && unseen.length === 0) return ''
     const others = spec.teammates.filter((t) => t.id !== me).map((t) => t.name)
     const last = unseen.at(-1)
-    // A person's message alone, to a teammate that knows the thread: as they wrote it.
-    if ((known || others.length === 0) && unseen.length === 1 && last?.by === null && !last.note)
+    // A person's message alone, to a teammate that knows the thread: as they wrote it. So is
+    // one Brigade wrote to this teammate.
+    if (
+      (known || others.length === 0) &&
+      unseen.length === 1 &&
+      last?.by === null &&
+      (!last.note || last.to === me)
+    )
       return last.text
 
     const ask = firstAsk(log)
@@ -2241,6 +2258,7 @@ export class Threads {
           `To have a teammate answer after you, mention them as @Name in your reply; mention one only when you need them to act now.`,
       lines.length > 0 && MARKS_RULE,
       lines.length > 0 && lines.join('\n\n'),
+      ownReports(unseen, spec.teammate),
       `Reply to the latest message as ${spec.teammate.name}.`,
     ]
       .filter(Boolean)
@@ -2249,12 +2267,12 @@ export class Threads {
 
   /**
    * Remember what was said in the thread, for the teammates that did not see
-   * it. Resolves to the log's end just after it.
+   * it. Resolves to the log's end just after it. `to`: Brigade wrote it, to that teammate.
    */
-  private note(spec: ThreadSpec, by: string | null, name: string, text: string) {
+  private note(spec: ThreadSpec, by: string | null, name: string, text: string, to?: string) {
     const thread = this.thread(spec.sessionId)
     const log = thread.log.then((log) => {
-      push(log, { by, name, text })
+      push(log, to ? { by, name, text, note: true, to } : { by, name, text })
       // What the speaker has seen moves only when it is told (catchUp): a message
       // that came in while it was replying is still unseen. Its own lines are skipped there.
       if (by && !(by in log.seen)) log.seen[by] = log.start + log.entries.length
