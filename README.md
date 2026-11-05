@@ -186,8 +186,8 @@ for.
 </tr>
 <tr>
 <td align="center" valign="top">
-<h3>📋 Tasks and projects</h3>
-A Tasks board for the work in flight, and projects that keep each product's threads, files and repositories apart.
+<h3>📋 Lists, Board and projects</h3>
+Checklists you hand to teammates line by line, a Board of what moves, and projects that keep each product's threads, files and repositories apart.
 </td>
 <td align="center" valign="top">
 <h3>✉️ Email of its own</h3>
@@ -225,7 +225,7 @@ hours and writes to each App.
   You, on the    │                      BRIGADE  (this repo)                 │
   web or your ──►│                                                           │
   phone          │  Dashboard ── API ── PostgreSQL                           │
-                 │  threads · Needs you · tasks · library · memory · vault   │
+                 │  threads · Needs you · lists · library · memory · vault   │
                  │  Apps · triggers · routines · usage and caps              │
                  └──────────────┬──────────────────────────────┬─────────────┘
                                 │ WebSocket                    │ MCP tools
@@ -349,7 +349,7 @@ pnpm format       # Prettier
 | Memory                             | [docs/memory.md](docs/memory.md)                   |
 | Skills                             | [docs/skills.md](docs/skills.md)                   |
 | Projects                           | [docs/projects.md](docs/projects.md)               |
-| Tasks                              | [docs/tasks.md](docs/tasks.md)                     |
+| Threads teammates start            | [docs/hand-offs.md](docs/hand-offs.md)             |
 | Previews                           | [docs/previews.md](docs/previews.md)               |
 | Email                              | [docs/email.md](docs/email.md)                     |
 | Notifications                      | [docs/notifications.md](docs/notifications.md)     |
@@ -400,7 +400,7 @@ terms of your plan.
 
 **Can my team see the work?**
 
-Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing sits in one person's chat
+Yes. Invite them to your workspace: threads, lists and files are shared, so nothing sits in one person's chat
 history.
 
 <br/>

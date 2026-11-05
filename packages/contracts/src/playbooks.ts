@@ -379,6 +379,11 @@ export const PlaybookOperations = [
     outcome: PlaybookOutcome,
     summary: z.string().trim().max(2_000).optional(),
   }),
+  /**
+   * A live run keeps an idea for the team (a customer's feature request): a line at the end of the
+   * playbook's ideas list, which starts nothing (src/playbook-ideas.ts).
+   */
+  z.object({ name: z.literal('file_idea'), text: z.string().trim().min(1).max(1_000) }),
   /** The catalog, or one playbook as a card in the thread. */
   z.object({ name: z.literal('show_playbook'), playbookKey: z.string().trim().min(1).optional() }),
   /** Start installing one (playbookKey), or go on with it (installationId): answers, checked by type. */

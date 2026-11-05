@@ -13,7 +13,8 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
 ## Decisions
 
 - **Off is Brigade as before.** It is a member's preference (`Member.chiefAnswers`, off for
-  new members for now, turned on in Preferences; `PUT /me/chief`). Off, no decision starts, the spec says nothing of it
+  every member since `20261105233000_chief_answers_off_for_all`, turned on in Preferences;
+  `PUT /me/chief`). Off, no decision starts, the spec says nothing of it
   (`ThreadSpec.chiefAnswers` false, no `decision`), so every teammate's instructions are as they
   were, and questions wait for the person.
 - **Where it reads.** A member's own top-level thread (origin `member`, no parent, no playbook,
@@ -62,9 +63,9 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
   request, marking one ready); a vault credential that would go without asking asks too
   (`credentials.ts`), with what the person mentioned or allowed in the thread still holding; and
   no routine is set up or changed (`schedules.ts`). The work handed on carries the mark: a
-  sub-thread it starts (`startThread`'s `chiefWord`), a task it starts for a teammate or hands to
-  another (`assignTask`), a message to a sub-thread or a task's thread (`markOnChiefsWord`, from
-  that thread's latest event on); not a review, which Brigade starts. Teammates are told the same
+  sub-thread it starts (`startThread`'s `chiefWord`), a thread it starts for a teammate
+  (`start_thread`, the same), a message to a sub-thread or a thread it started (`markOnChiefsWord`,
+  from that thread's latest event on); not a review, which Brigade starts. Teammates are told the same
   of what Brigade cannot hold back: never deploy, publish, send, pay or delete another way (a
   command, a script) on Chief's word alone. That part is instructions, not a guard.
 - **The thread reads an answer of Chief's before the person's word, or never.** Both reach its

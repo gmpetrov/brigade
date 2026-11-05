@@ -23,6 +23,7 @@ const spec = (extra: Partial<Record<keyof ThreadSpec, unknown>>) =>
     teammates: [],
     projects: [],
     skills: [],
+    connectors: [],
     git: { token: 'x' },
     ...extra,
   }) as unknown as ThreadSpec

@@ -96,6 +96,52 @@ test('a thread asks for an App account it lacks with a ticket, rather than guess
   assert.doesNotMatch(text, /does not show at all/)
 })
 
+test('an account it cannot use now is named, with the ticket that reconnects it', () => {
+  const grant = (connectionId: string, kind: string, label: string, account: string | null) => ({
+    connectionId,
+    kind,
+    label,
+    externalAccount: account,
+    scope: 'read_write',
+    operations: [],
+  })
+  const spec = ThreadSpec.parse({
+    ...testSpec(''),
+    connectors: [
+      { ...grant('c1', 'openrouter', 'OpenRouter', 'Personal account'), unavailable: 'signed_out' },
+      // An MCP server added by its URL goes by its tools' prefix: its ticket names it as mcp.
+      { ...grant('c2', 'notes', 'Team Notes', null), unavailable: 'signed_out' },
+      { ...grant('c3', 'linear', 'Linear', 'Acme'), unavailable: 'unreachable' },
+      grant('c4', 'gmail', 'Gmail', 'ada@acme.com'),
+    ],
+  })
+  const text = instructions(
+    spec,
+    threadMemory(spec, { workspace: '', teammate: '', lines: {} }, '/threads/s1', now),
+    '/library',
+    { ready: true },
+  )
+  const section = text.slice(text.indexOf('## Accounts you cannot use now'))
+  assert.ok(text.includes('## Accounts you cannot use now'))
+  assert.match(
+    section,
+    /- OpenRouter: Personal account: the provider refused its sign-in.*`kind` openrouter, `account` "Personal account", `scope` read_write\./,
+  )
+  assert.match(
+    section,
+    /- Team Notes: the provider refused.*`kind` mcp, `server` its id as `list_apps` gives it, `account` "Team Notes"/,
+  )
+  assert.match(section, /- Linear: Acme: its server did not answer/)
+  assert.doesNotMatch(section.split('## Credentials')[0]!, /Gmail/)
+  assert.match(section, /do not do it another way without a word/)
+
+  // Every account usable: no such section.
+  assert.doesNotMatch(
+    textFor({ connectors: [grant('c4', 'gmail', 'Gmail', 'ada@acme.com')] }),
+    /cannot use now/,
+  )
+})
+
 // What a thread is told follows what Brigade lets it do there: schedules, triggers and wake-ups
 // only where a person started it, no Done in a schedule's run, no child threads in a dry run, and
 // no "see X" pointing to a section the thread does not get.
@@ -166,9 +212,29 @@ test('no "see X" points to a section the thread does not get', () => {
   assert.match(listed, /see Projects/)
 })
 
-test("a task's thread is told to declare itself done too, besides completing the task", () => {
-  const task = { id: 't1', title: 'Add CSV export', description: 'Export invoices as CSV.' }
-  assert.match(textFor({ task }), /leaves this thread open, so declare the thread done too/)
+test('work goes on in a thread of its own with start_thread; no Tasks board is left to tell of', () => {
+  const top = textFor({})
+  assert.match(top, /## Threads of their own/)
+  assert.match(top, /Call `start_thread` only to start work in a thread of its own/)
+  assert.match(top, /## Big goals[\s\S]*give it a thread of its own: `start_thread`/)
+  assert.match(top, /To add to it later, `message_thread`/)
+  for (const text of [top, textFor({ origin: 'child', parent: { id: 'p', title: 'Parent' } })])
+    assert.doesNotMatch(text, /create_task|list_tasks|complete_task|Tasks board/)
+  // A child does its part: the thread that started it plans the big goal.
+  const child = textFor({ origin: 'child', parent: { id: 'p', title: 'Parent' } })
+  assert.match(child, /## Threads of their own/)
+  assert.doesNotMatch(child, /## Big goals/)
+})
+
+test("a playbook's run keeps a customer's idea with file_idea, and starts no thread outside it", () => {
+  const playbook = { installationId: 'i', runId: 'r', name: 'Support', apps: ['gmail'] }
+  const live = textFor({ origin: 'trigger', playbook })
+  assert.match(live, /## Ideas/)
+  assert.match(live, /call `file_idea` with one line/)
+  assert.match(live, /starts no thread outside it and writes in none/)
+  assert.doesNotMatch(live, /## Threads of their own|`start_thread`|create_task|Tasks board/)
+  const dry = textFor({ origin: 'trigger', playbook: { ...playbook, dryRun: true } })
+  assert.match(dry, /in a dry run, it only says where the line would go/)
 })
 
 test('a teammate calls child threads sub-threads, as people see them, in a parent and in a child', () => {

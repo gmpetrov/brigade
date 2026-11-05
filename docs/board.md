@@ -10,8 +10,8 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 
 - **A view, not a store.** The API computes it on each read (`GET /api/board`,
   `apps/api/src/board.ts`) from the lists (`workspaceLists`, the same reading as the Lists page),
-  the threads and the schedules. It keeps nothing of its own, so it can't fall behind them. The
-  old Tasks board stays at `/app/tasks` with its data while the Board settles (docs/tasks.md).
+  the threads and the schedules. It keeps nothing of its own, so it can't fall behind them. It
+  replaced the Tasks board, gone since (docs/hand-offs.md); `/app/tasks` opens it.
 - **Three columns, all computed.** Needs you, In progress, Done (the last 7 days). Nobody drags a
   card: where it stands follows from its threads, tickets and pull requests. There is no "To do"
   column: work is planned in a list's file, where the order of the lines matters.
@@ -26,8 +26,8 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 - **Needs you is the same everywhere**: an open ticket or question in the thread or its
   children, a teammate waiting on an answer (or a person who took the thread over), a pull
   request ready for a person to merge or decide, choices nobody picked (below), a failed thread
-  or routine (src/failed.ts). The sidebar, Today, the app badge, notifications, the Tasks board
-  and a list's Needs you tab count the same things. The Board is the workspace's, like a list's
+  or routine (src/failed.ts). The sidebar, Today, the app badge, notifications and a list's
+  Needs you tab count the same things. The Board is the workspace's, like a list's
   tab; Today and the badge are the member's own.
 - **Choices wait on a person** (src/choices-waiting.ts). A teammate that ends its reply on a
   choices card offered alternatives for someone to pick, and the thread stops there: without
@@ -47,6 +47,10 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   so it holds while the teammate's computer is off. A card answered or offered after the one a
   person saw is not theirs to dismiss: refused, so a stale page never closes choices nobody
   read. Chosen over Mark done, which ends the thread: a person may come back to it.
+- **A thread to do later is put away.** Its ⋮ menu's Do later takes it out of the member's list
+  and of what waits on them (Today, sidebar, app badge, notifications), for them only, like a pin;
+  the sidebar filter's Later lists them, with how many. Anything new in it (a message, or a ticket
+  or pull request in it or a child) brings it back (`src/later.ts`).
 - **What a member put away for later is not theirs to see here.** A thread they put away
   (Do later, `src/later.ts`) no longer waits on them anywhere, so on their Board it is like an
   archived one: no card in Needs you or In progress, not Stopped, and a list's line it alone
@@ -64,8 +68,8 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   back on its own.
 - **Done** is a line ticked through Brigade (a teammate's `complete_item`, a merged pull request
   that closes it) or a thread declared done (below), in the last 7 days. A line a person ticks in
-  the file has no date, so it shows only in its list. A thread whose task was completed on the
-  old board counts as done too.
+  the file has no date, so it shows only in its list. A thread whose task was done on the old
+  Tasks board was declared done when the board went (docs/hand-offs.md).
 - **Stopped, then closed.** A thread that is idle, not done, with nothing pending is not lost: it
   shows under the columns as Stopped, with Mark done and Archive for who may write in it. After 7
   days without activity it leaves the Board as closed with no activity, listed under Done apart
@@ -94,7 +98,7 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   ("Project Brigade", "List Backlog +1") that reopens its choices, with an × to remove it, and
   Clear appears once two are set. The list choices show their counts and stay open while ticked.
 - **Live**, reloaded once a burst of changes settles (threads, tickets, pull requests, lists,
-  schedules, tasks), not on each one.
+  schedules), not on each one.
 - **On a phone**, one column at a time, chosen like a list's tabs; this browser remembers the last
   one chosen, per workspace.
 

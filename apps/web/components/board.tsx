@@ -35,7 +35,6 @@ const LIVE = new Set([
   'pulls.updated',
   'lists.updated',
   'schedule.updated',
-  'task.updated',
 ])
 const SETTLE_MS = 1500
 /** Done cards shown before Show more. */

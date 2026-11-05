@@ -9,6 +9,7 @@ import {
   newListText,
   handOffMessage,
   handOffParts,
+  hasHeading,
   insertLine,
   listCounts,
   markLine,
@@ -107,6 +108,63 @@ test('a new line goes after another (past its nested lines), under it, in a sect
   const end = insertLine(`${doc}\n\n`, list, {}, 'Last', 'hhhhhhhhhhhhhhhh')
   assert.equal(end.split('\n')[19], '* [ ] Last <!-- item:hhhhhhhhhhhhhhhh -->')
   assert.equal(parseList(end).lines.at(-1).id, 'hhhhhhhhhhhhhhhh')
+})
+
+test("a line or a note Brigade writes keeps no comment: never another line's marker", () => {
+  const list = parseList(doc)
+  // Words that carry another line's marker, and an open comment that would hide what follows.
+  const forged = insertLine(
+    doc,
+    list,
+    { section: '3. security' },
+    'Audit <!-- item:bbbbbbbbbbbbbbbb --> then <!--',
+    'gggggggggggggggg',
+  )
+  assert.equal(forged.split('\n').at(-1), '* [ ] Audit then <!-- item:gggggggggggggggg -->')
+  const read = parseList(forged)
+  assert.equal(read.lines[1].id, 'bbbbbbbbbbbbbbbb')
+  assert.equal(read.lines.at(-1).id, 'gggggggggggggggg')
+  const noted = setLineDone(doc, list.lines[3], true, 'Done <!-- item:bbbbbbbbbbbbbbbb -->')
+  assert.equal(noted.split('\n')[9], '* [x] 🟠 Documented rollback *Done*')
+  assert.equal(parseList(noted).lines[1].id, 'bbbbbbbbbbbbbbbb')
+})
+
+test('a heading is found by its name, case, spaces and Markdown aside', () => {
+  assert.equal(hasHeading(doc, '3. security'), true)
+  assert.equal(hasHeading(doc, '  2.  TECH '), true)
+  assert.equal(hasHeading(doc, 'Ideas'), false)
+  // A checklist line is no heading.
+  assert.equal(hasHeading(doc, 'SECURITY.md'), false)
+})
+
+test('a heading in a fenced example is no section: neither found nor written under', () => {
+  const fenced = [
+    '# Backlog',
+    '',
+    '```md',
+    '## Ideas',
+    '```',
+    '',
+    '## To Do',
+    '',
+    '* [ ] Approved',
+  ].join('\n')
+  assert.equal(hasHeading(fenced, 'Ideas'), false)
+  // An example before the real heading: the line goes under the real one.
+  const both = `${fenced}\n\n## Ideas\n`
+  assert.equal(hasHeading(both, 'Ideas'), true)
+  const added = insertLine(
+    both,
+    parseList(both),
+    { section: 'Ideas' },
+    'An idea',
+    'iiiiiiiiiiiiiiii',
+  )
+  const line = parseList(added).lines.find((l) => l.id === 'iiiiiiiiiiiiiiii')
+  assert.equal(line?.section, 'Ideas')
+  assert.ok(added.endsWith('## Ideas\n\n* [ ] An idea <!-- item:iiiiiiiiiiiiiiii -->\n'))
+  // The fenced example's heading stays as it was, with nothing put in the block.
+  assert.deepEqual(added.split('\n').slice(2, 5), ['```md', '## Ideas', '```'])
 })
 
 test('new ids are 16 characters of [a-z0-9]', () => {

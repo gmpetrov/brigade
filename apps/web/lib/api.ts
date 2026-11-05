@@ -32,8 +32,6 @@ import type {
   ReviewPolicy,
   SkillProposalPayload,
   TriggerProposalPayload,
-  TaskColumn,
-  TaskPriority,
   UploadPurpose,
   UploadTicket,
 } from '@brigade/contracts'
@@ -607,8 +605,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
   /** Every file given to the thread, oldest first. */
   attachments: AttachmentInfo[]
-  /** The task this thread works on, if it is one. */
-  task: { id: string; title: string; completedAt: string | null } | null
+  /** The thread a teammate started it from (start_thread), while there is one. */
+  startedFrom?: { id: string; title: string } | null
   /** The project it works in: its brief, memory and folder come with each turn. */
   project: ProjectSummary | null
   /** When its teammates asked to be prompted here again, soonest first. */
@@ -658,8 +656,6 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   } | null
 }
 
-export type { TaskColumn, TaskPriority } from '@brigade/contracts'
-
 /** A teammate prompted with the same instructions on a cron schedule, on its owner's accounts. */
 export type Schedule = {
   id: string
@@ -686,63 +682,6 @@ export type Schedule = {
   recentRuns: { id: string; outcome: RunOutcome; createdAt: string }[]
   /** The thread its runs report to, as its children; null: each run is a thread of its own. */
   parentSession: { id: string; title: string } | null
-}
-
-/** A task on the board, with its thread if it has started. */
-export type Task = {
-  id: string
-  title: string
-  description: string
-  priority: TaskPriority
-  column: TaskColumn
-  /** Unset in the backlog: assigning a teammate starts its thread. */
-  teammate: { id: string; name: string; harness: Teammate['harness'] } | null
-  projectId: string | null
-  project: ProjectRef | null
-  /** The mission it is in: a task that groups it with others on the board. */
-  parentId: string | null
-  parent: { id: string; title: string } | null
-  /** Who asked: the member, or the thread's starter when a teammate created it. */
-  createdBy: { id: string; user: { name: string; image: string | null } }
-  createdByMemberId: string
-  /** The teammate that created it with its task tools, if one did. */
-  createdByTeammate: { id: string; name: string } | null
-  summary: string | null
-  deliverables: { label: string; url: string }[]
-  completedAt: string | null
-  /** Put away off the board; reopening brings it back. */
-  archivedAt: string | null
-  /** In the Trash: off the board; restoring brings it back. */
-  trashedAt: string | null
-  createdAt: string
-  updatedAt: string
-  thread: {
-    id: string
-    status: string
-    updatedAt: string
-    computerId: string
-    startedByMemberId: string
-    openTickets: number
-    /** What it opened that waits on review and merge. */
-    openPullRequests: { repository: string; number: number }[]
-    /** This member put it away for later: it does not count as needing them. */
-    later?: boolean
-  } | null
-}
-
-export type TaskDetail = Task & {
-  /** On create with a teammate: why its thread could not start, so it waits in Backlog. */
-  startError?: string
-  /** A mission's tasks, in the order they were made; none for a task of its own. */
-  children: Task[]
-  pullRequests: {
-    id: string
-    repository: string
-    number: number
-    title: string
-    state: string
-    headRef: string
-  }[]
 }
 
 export type AccountLogin = {

@@ -8254,468 +8254,6 @@
     }
    ]
   },
-  "GET /tasks": {
-   "status": 200,
-   "body": [
-    {
-     "id": "a7e34d43-9787-424e-a6a7-ff8cdcb78319",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Recurring tasks",
-     "description": "Customers ask for tasks that repeat on a schedule, such as a planning task every Monday. First asked by Sofia at Vandelay.",
-     "priority": "medium",
-     "teammateId": null,
-     "createdByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-     "createdByTeammateId": "cmvjgibyv0008e1lw48m4l690",
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzi000de1lwmdjoai11",
-     "parentId": null,
-     "createdAt": "2026-10-18T04:28:58.357Z",
-     "updatedAt": "2026-10-22T11:27:30.767Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibzi000de1lwmdjoai11",
-      "name": "Support",
-      "icon": "S",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "user": {
-       "name": "Ada",
-       "image": null
-      }
-     },
-     "createdByTeammate": {
-      "id": "cmvjgibyv0008e1lw48m4l690",
-      "name": "Sam"
-     },
-     "parent": null,
-     "column": "backlog",
-     "thread": null
-    },
-    {
-     "id": "19dbecba-e325-4751-9c7e-9e103e06ae50",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Timeline view for projects",
-     "description": "A timeline (Gantt) view of a project, to plan launches across several teams. First asked by Ines at Duff.",
-     "priority": "medium",
-     "teammateId": null,
-     "createdByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-     "createdByTeammateId": "cmvjgibyv0008e1lw48m4l690",
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzi000de1lwmdjoai11",
-     "parentId": null,
-     "createdAt": "2026-10-22T10:36:58.359Z",
-     "updatedAt": "2026-10-22T11:27:30.767Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibzi000de1lwmdjoai11",
-      "name": "Support",
-      "icon": "S",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "user": {
-       "name": "Ada",
-       "image": null
-      }
-     },
-     "createdByTeammate": {
-      "id": "cmvjgibyv0008e1lw48m4l690",
-      "name": "Sam"
-     },
-     "parent": null,
-     "column": "backlog",
-     "thread": null
-    },
-    {
-     "id": "cmvjgic53001pe1lw6z6iubhi",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Speed up checkout on mobile",
-     "description": "Checkout takes 6 s to show on phones; get it under 2.5 s LCP.",
-     "priority": "urgent",
-     "teammateId": "cmvjgibyo0006e1lwe553annw",
-     "createdByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-     "createdByTeammateId": null,
-     "summary": "Stripe.js now loads only on /checkout, after the form: LCP 1.9 s on a mid-range phone.",
-     "deliverables": [
-      {
-       "url": "https://github.com/acme/web/pull/121",
-       "label": "acme/web#121"
-      },
-      {
-       "url": "Projects/Website/checkout-performance.md",
-       "label": "Checkout performance notes"
-      }
-     ],
-     "completedAt": "2026-10-20T11:27:29.269Z",
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibz8000be1lwj67k8nxp",
-     "parentId": null,
-     "createdAt": "2026-10-19T11:27:29.269Z",
-     "updatedAt": "2026-10-22T11:27:29.271Z",
-     "teammate": {
-      "id": "cmvjgibyo0006e1lwe553annw",
-      "name": "Riley",
-      "harness": "claude_code"
-     },
-     "project": {
-      "id": "cmvjgibz8000be1lwj67k8nxp",
-      "name": "Website",
-      "icon": "W",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "user": {
-       "name": "Ada",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": null,
-     "column": "done",
-     "thread": {
-      "id": "cmvjgic3b001de1lwhbc52bht",
-      "status": "idle",
-      "updatedAt": "2026-10-19T11:36:53.207Z",
-      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
-      "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "openTickets": 0,
-      "openPullRequests": []
-     }
-    },
-    {
-     "id": "cmvjgic4w001oe1lw7mtlqtnq",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "October newsletter",
-     "description": "Announce Acme Teams to the newsletter list, approved by Bob before sending.",
-     "priority": "medium",
-     "teammateId": "cmvjgibz10009e1lw1joe3or1",
-     "createdByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
-     "parentId": "cmvjgic47001je1lwvefwjvxf",
-     "createdAt": "2026-10-22T09:27:29.263Z",
-     "updatedAt": "2026-10-22T11:27:29.264Z",
-     "teammate": {
-      "id": "cmvjgibz10009e1lw1joe3or1",
-      "name": "Maya",
-      "harness": "claude_code"
-     },
-     "project": {
-      "id": "cmvjgibzl000fe1lw3q5wyoxg",
-      "name": "Fall launch",
-      "icon": "L",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "user": {
-       "name": "Bob",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": {
-      "id": "cmvjgic47001je1lwvefwjvxf",
-      "title": "Launch Acme Teams"
-     },
-     "column": "needs_you",
-     "thread": {
-      "id": "cmvjgic2y0019e1lwuabx1c5v",
-      "status": "waiting",
-      "updatedAt": "2026-10-22T09:31:24.193Z",
-      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
-      "startedByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "openTickets": 1,
-      "openPullRequests": []
-     }
-    },
-    {
-     "id": "cmvjgic4q001ne1lwuw1yr436",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Upgrade Next.js to 16",
-     "description": "Move acme/web to Next.js 16 and fix what breaks; the tests must pass.",
-     "priority": "medium",
-     "teammateId": "cmvjgibyo0006e1lwe553annw",
-     "createdByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibz8000be1lwj67k8nxp",
-     "parentId": null,
-     "createdAt": "2026-10-21T15:27:29.256Z",
-     "updatedAt": "2026-10-22T11:27:29.258Z",
-     "teammate": {
-      "id": "cmvjgibyo0006e1lwe553annw",
-      "name": "Riley",
-      "harness": "claude_code"
-     },
-     "project": {
-      "id": "cmvjgibz8000be1lwj67k8nxp",
-      "name": "Website",
-      "icon": "W",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "user": {
-       "name": "Bob",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": null,
-     "column": "doing",
-     "thread": {
-      "id": "cmvjgic3u001ge1lwbpe2ol6g",
-      "status": "failed",
-      "updatedAt": "2026-10-21T15:31:24.225Z",
-      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
-      "startedByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "openTickets": 0,
-      "openPullRequests": []
-     }
-    },
-    {
-     "id": "cmvjgic4f001me1lwygnijyuu",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Add dark mode to the pricing page",
-     "description": "The pricing cards stay white in dark mode. Done when the PR is merged.",
-     "priority": "high",
-     "teammateId": "cmvjgibyo0006e1lwe553annw",
-     "createdByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibz8000be1lwj67k8nxp",
-     "parentId": null,
-     "createdAt": "2026-10-22T06:27:29.246Z",
-     "updatedAt": "2026-10-22T11:27:29.247Z",
-     "teammate": {
-      "id": "cmvjgibyo0006e1lwe553annw",
-      "name": "Riley",
-      "harness": "claude_code"
-     },
-     "project": {
-      "id": "cmvjgibz8000be1lwj67k8nxp",
-      "name": "Website",
-      "icon": "W",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "user": {
-       "name": "Ada",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": null,
-     "column": "needs_you",
-     "thread": {
-      "id": "cmvjgic1t0013e1lwodkccic1",
-      "status": "idle",
-      "updatedAt": "2026-10-22T06:43:09.151Z",
-      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
-      "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "openTickets": 0,
-      "openPullRequests": [
-       {
-        "repository": "acme/web",
-        "number": 128
-       }
-      ]
-     }
-    },
-    {
-     "id": "cmvjgic4b001le1lwvb84f2tt",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Write the Acme Teams sales deck",
-     "description": "10 slides for sales calls: problem, Teams, pricing, security, customer quotes.",
-     "priority": "low",
-     "teammateId": null,
-     "createdByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
-     "parentId": "cmvjgic47001je1lwvefwjvxf",
-     "createdAt": "2026-10-20T11:27:29.243Z",
-     "updatedAt": "2026-10-22T11:27:29.243Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibzl000fe1lw3q5wyoxg",
-      "name": "Fall launch",
-      "icon": "L",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "user": {
-       "name": "Bob",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": {
-      "id": "cmvjgic47001je1lwvefwjvxf",
-      "title": "Launch Acme Teams"
-     },
-     "column": "backlog",
-     "thread": null
-    },
-    {
-     "id": "cmvjgic49001ke1lwoh9rhncf",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Publish the launch blog post",
-     "description": "A post on acme.com/blog announcing Teams, with the pricing and two customer quotes.",
-     "priority": "medium",
-     "teammateId": null,
-     "createdByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
-     "parentId": "cmvjgic47001je1lwvefwjvxf",
-     "createdAt": "2026-10-20T11:27:29.241Z",
-     "updatedAt": "2026-10-22T11:27:29.241Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibzl000fe1lw3q5wyoxg",
-      "name": "Fall launch",
-      "icon": "L",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "user": {
-       "name": "Bob",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": {
-      "id": "cmvjgic47001je1lwvefwjvxf",
-      "title": "Launch Acme Teams"
-     },
-     "column": "backlog",
-     "thread": null
-    },
-    {
-     "id": "cmvjgic47001je1lwvefwjvxf",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Launch Acme Teams",
-     "description": "Everything for the Teams launch on November 4: the sales deck, the newsletter and the blog post.",
-     "priority": "medium",
-     "teammateId": null,
-     "createdByMemberId": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
-     "parentId": null,
-     "createdAt": "2026-10-19T11:27:29.239Z",
-     "updatedAt": "2026-10-22T11:27:29.239Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibzl000fe1lw3q5wyoxg",
-      "name": "Fall launch",
-      "icon": "L",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "9e50a3a4-09a8-4e6a-90a3-e32b4e45cb11",
-      "user": {
-       "name": "Bob",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": null,
-     "column": "backlog",
-     "thread": null
-    },
-    {
-     "id": "cmvjgic45001ie1lwembtmw27",
-     "organizationId": "0899b980-64ea-4f6e-b8a6-7e8a447ac74c",
-     "workspaceId": "cmvjgibwc0000e1lwgirm2bn2",
-     "title": "Add CSV export to the billing page",
-     "description": "Customers ask for their invoices as CSV. One button on /billing, all invoices of the year.",
-     "priority": "medium",
-     "teammateId": null,
-     "createdByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
-     "createdByTeammateId": null,
-     "summary": null,
-     "deliverables": [],
-     "completedAt": null,
-     "archivedAt": null,
-     "trashedAt": null,
-     "projectId": "cmvjgibz8000be1lwj67k8nxp",
-     "parentId": null,
-     "createdAt": "2026-10-18T11:27:29.236Z",
-     "updatedAt": "2026-10-22T11:27:29.237Z",
-     "teammate": null,
-     "project": {
-      "id": "cmvjgibz8000be1lwj67k8nxp",
-      "name": "Website",
-      "icon": "W",
-      "logo": null
-     },
-     "createdBy": {
-      "id": "790b3199-3137-41a0-b10f-f5f18a054969",
-      "user": {
-       "name": "Ada",
-       "image": null
-      }
-     },
-     "createdByTeammate": null,
-     "parent": null,
-     "column": "backlog",
-     "thread": null
-    }
-   ]
-  },
   "GET /teammates": {
    "status": 200,
    "body": [
@@ -9142,7 +8680,6 @@
      "effort": null,
      "createdAt": "2026-10-22T11:12:29.201Z",
      "updatedAt": "2026-10-22T11:14:50.201Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9213,7 +8750,6 @@
      "effort": null,
      "createdAt": "2026-10-22T10:47:29.175Z",
      "updatedAt": "2026-10-22T10:54:32.175Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9284,7 +8820,6 @@
      "effort": null,
      "createdAt": "2026-10-22T09:27:29.484Z",
      "updatedAt": "2026-10-22T09:32:11.484Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9355,7 +8890,6 @@
      "effort": null,
      "createdAt": "2026-10-22T09:27:29.193Z",
      "updatedAt": "2026-10-22T09:31:24.193Z",
-     "taskId": "cmvjgic4w001oe1lw7mtlqtnq",
      "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9426,7 +8960,6 @@
      "effort": null,
      "createdAt": "2026-10-22T08:27:29.489Z",
      "updatedAt": "2026-10-22T08:31:24.489Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9497,7 +9030,6 @@
      "effort": null,
      "createdAt": "2026-10-22T06:27:29.151Z",
      "updatedAt": "2026-10-22T06:43:09.151Z",
-     "taskId": "cmvjgic4f001me1lwygnijyuu",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9568,7 +9100,6 @@
      "effort": null,
      "createdAt": "2026-10-21T15:27:29.225Z",
      "updatedAt": "2026-10-21T15:31:24.225Z",
-     "taskId": "cmvjgic4q001ne1lwuw1yr436",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9639,7 +9170,6 @@
      "effort": null,
      "createdAt": "2026-10-21T11:27:29.220Z",
      "updatedAt": "2026-10-21T11:32:11.220Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9710,7 +9240,6 @@
      "effort": null,
      "createdAt": "2026-10-21T05:27:29.230Z",
      "updatedAt": "2026-10-21T05:33:45.230Z",
-     "taskId": null,
      "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9787,7 +9316,6 @@
      "effort": null,
      "createdAt": "2026-10-19T13:28:10.357Z",
      "updatedAt": "2026-10-19T20:36:39.357Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": "7460cb86-eec8-40fd-9908-02d3958c8ef3",
      "playbookTeammate": null,
@@ -9858,7 +9386,6 @@
      "effort": null,
      "createdAt": "2026-10-19T11:27:29.438Z",
      "updatedAt": "2026-10-19T11:40:01.438Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -9929,7 +9456,6 @@
      "effort": null,
      "createdAt": "2026-10-19T11:27:29.207Z",
      "updatedAt": "2026-10-19T11:36:53.207Z",
-     "taskId": "cmvjgic53001pe1lw6z6iubhi",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10000,7 +9526,6 @@
      "effort": null,
      "createdAt": "2026-09-28T07:27:29.539Z",
      "updatedAt": "2026-09-28T08:15:31.539Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10071,7 +9596,6 @@
      "effort": null,
      "createdAt": "2026-09-23T11:27:29.214Z",
      "updatedAt": "2026-09-23T11:30:37.214Z",
-     "taskId": "cmvjgic5c001qe1lw9osyyzci",
      "projectId": null,
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10151,7 +9675,6 @@
      "effort": null,
      "createdAt": "2026-10-22T09:27:29.484Z",
      "updatedAt": "2026-10-22T09:32:11.484Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10222,7 +9745,6 @@
      "effort": null,
      "createdAt": "2026-10-22T08:27:29.489Z",
      "updatedAt": "2026-10-22T08:31:24.489Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10293,7 +9815,6 @@
      "effort": null,
      "createdAt": "2026-10-22T06:27:29.151Z",
      "updatedAt": "2026-10-22T06:43:09.151Z",
-     "taskId": "cmvjgic4f001me1lwygnijyuu",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10364,7 +9885,6 @@
      "effort": null,
      "createdAt": "2026-10-21T15:27:29.225Z",
      "updatedAt": "2026-10-21T15:31:24.225Z",
-     "taskId": "cmvjgic4q001ne1lwuw1yr436",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10435,7 +9955,6 @@
      "effort": null,
      "createdAt": "2026-10-19T11:27:29.438Z",
      "updatedAt": "2026-10-19T11:40:01.438Z",
-     "taskId": null,
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10506,7 +10025,6 @@
      "effort": null,
      "createdAt": "2026-10-19T11:27:29.207Z",
      "updatedAt": "2026-10-19T11:36:53.207Z",
-     "taskId": "cmvjgic53001pe1lw6z6iubhi",
      "projectId": "cmvjgibz8000be1lwj67k8nxp",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10582,7 +10100,6 @@
      "effort": null,
      "createdAt": "2026-10-22T11:12:29.201Z",
      "updatedAt": "2026-10-22T11:14:50.201Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10653,7 +10170,6 @@
      "effort": null,
      "createdAt": "2026-10-22T10:47:29.175Z",
      "updatedAt": "2026-10-22T10:54:32.175Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10724,7 +10240,6 @@
      "effort": null,
      "createdAt": "2026-10-21T11:27:29.220Z",
      "updatedAt": "2026-10-21T11:32:11.220Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10795,7 +10310,6 @@
      "effort": null,
      "createdAt": "2026-10-19T13:28:10.357Z",
      "updatedAt": "2026-10-19T20:36:39.357Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": "7460cb86-eec8-40fd-9908-02d3958c8ef3",
      "playbookTeammate": null,
@@ -10866,7 +10380,6 @@
      "effort": null,
      "createdAt": "2026-09-28T07:27:29.539Z",
      "updatedAt": "2026-09-28T08:15:31.539Z",
-     "taskId": null,
      "projectId": "cmvjgibzi000de1lwmdjoai11",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -10942,7 +10455,6 @@
      "effort": null,
      "createdAt": "2026-10-22T09:27:29.193Z",
      "updatedAt": "2026-10-22T09:31:24.193Z",
-     "taskId": "cmvjgic4w001oe1lw7mtlqtnq",
      "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -11013,7 +10525,6 @@
      "effort": null,
      "createdAt": "2026-10-21T05:27:29.230Z",
      "updatedAt": "2026-10-21T05:33:45.230Z",
-     "taskId": null,
      "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
      "playbookRunId": null,
      "playbookTeammate": null,
@@ -11094,7 +10605,6 @@
     "effort": null,
     "createdAt": "2026-10-14T13:52:10.356Z",
     "updatedAt": "2026-10-14T14:02:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "b66139dc-7d5f-4ad4-a665-1c6064820fca",
     "playbookTeammate": null,
@@ -11148,7 +10658,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -11413,7 +10922,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:36:37.539Z",
     "updatedAt": "2026-09-28T07:38:06.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "347dbef2-8862-4189-b9dc-bcad43e9738f",
     "playbookTeammate": null,
@@ -11467,7 +10975,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -11733,7 +11240,6 @@
     "effort": null,
     "createdAt": "2026-10-18T04:28:10.357Z",
     "updatedAt": "2026-10-18T05:20:18.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "6882b2a8-cd19-4852-ae8b-c73b31db7df1",
     "playbookTeammate": null,
@@ -11787,7 +11293,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -11870,12 +11375,9 @@
        "at": "2026-10-18T04:28:39.357Z",
        "type": "tool.started",
        "input": {
-        "title": "Recurring tasks",
-        "assignee": "none",
-        "priority": "medium",
-        "description": "Customers ask for tasks that repeat on a schedule, such as a planning task every Monday. First asked by Sofia at Vandelay."
+        "text": "Recurring tasks: tasks that repeat on a schedule, such as a planning task every Monday. First asked by Sofia at Vandelay."
        },
-       "toolName": "mcp__harness-tools__create_task",
+       "toolName": "mcp__harness-tools__file_idea",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
        "toolCallId": "call_4d185a62c7140c46"
       }
@@ -11887,12 +11389,14 @@
        "at": "2026-10-18T04:28:43.357Z",
        "type": "tool.finished",
        "output": {
-        "note": "In Backlog, assigned to nobody.",
-        "column": "backlog",
-        "taskId": "a7e34d43-9787-424e-a6a7-ff8cdcb78319"
+        "filed": {
+         "path": "Projects/Support/ideas.md",
+         "id": "a7e34d439787424e"
+        },
+        "note": "Kept as a line of Projects/Support/ideas.md: it starts nothing, a person decides what to do with it."
        },
        "isError": false,
-       "toolName": "mcp__harness-tools__create_task",
+       "toolName": "mcp__harness-tools__file_idea",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
        "toolCallId": "call_4d185a62c7140c46"
       }
@@ -12070,7 +11574,7 @@
        "input": {
         "case": "feature_request",
         "outcome": "resolved",
-        "summary": "Added \"Recurring tasks\" to the backlog and thanked Sofia."
+        "summary": "Kept \"Recurring tasks\" in the ideas list and thanked Sofia."
        },
        "toolName": "mcp__harness-tools__playbook_report",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
@@ -12102,7 +11606,7 @@
       "event": {
        "at": "2026-10-18T05:20:16.357Z",
        "id": "8e7e832af25bb292",
-       "text": "Added recurring tasks to the backlog and thanked Sofia.",
+       "text": "Kept recurring tasks in the ideas list and thanked Sofia.",
        "type": "message.done",
        "teammateId": "cmvjgibyv0008e1lw48m4l690"
       }
@@ -12155,7 +11659,6 @@
     "effort": null,
     "createdAt": "2026-10-09T13:52:10.356Z",
     "updatedAt": "2026-10-09T13:53:39.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "1f56f682-fa2f-480d-af3b-1fb7d8004b9c",
     "playbookTeammate": null,
@@ -12209,7 +11712,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -12477,7 +11979,6 @@
     "effort": null,
     "createdAt": "2026-10-17T00:28:10.357Z",
     "updatedAt": "2026-10-17T01:00:59.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "c2331331-89ef-4973-a20f-35e3c8dc2d4d",
     "playbookTeammate": null,
@@ -12531,7 +12032,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -12841,7 +12341,6 @@
     "effort": null,
     "createdAt": "2026-10-16T06:38:39.356Z",
     "updatedAt": "2026-10-16T10:33:55.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "410f344b-f060-4bea-bda1-02b613553907",
     "playbookTeammate": null,
@@ -12903,7 +12402,6 @@
     ],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -13294,7 +12792,6 @@
     "effort": null,
     "createdAt": "2026-10-16T06:28:10.356Z",
     "updatedAt": "2026-10-16T10:48:49.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "410f344b-f060-4bea-bda1-02b613553907",
     "playbookTeammate": null,
@@ -13371,7 +12868,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -13847,7 +13343,6 @@
     "effort": null,
     "createdAt": "2026-10-12T18:40:10.356Z",
     "updatedAt": "2026-10-12T19:45:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "18d41856-bbd0-4fb3-b159-4668fb9c7ca1",
     "playbookTeammate": null,
@@ -13901,7 +13396,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -14166,7 +13660,6 @@
     "effort": null,
     "createdAt": "2026-10-20T18:28:10.357Z",
     "updatedAt": "2026-10-20T22:28:10.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "189d38ad-52cd-4e71-8c41-06aaed323c25",
     "playbookTeammate": null,
@@ -14220,7 +13713,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -14582,7 +14074,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:36:29.539Z",
     "updatedAt": "2026-09-28T07:38:00.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "777e507a-da07-4550-a52e-f9436de25d36",
     "playbookTeammate": null,
@@ -14636,7 +14127,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -14870,7 +14360,6 @@
     "effort": null,
     "createdAt": "2026-10-12T01:52:10.356Z",
     "updatedAt": "2026-10-12T02:12:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "eb620244-c98e-43c4-9b57-555dcf93a9e3",
     "playbookTeammate": null,
@@ -14924,7 +14413,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -15193,7 +14681,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:38:02.539Z",
     "updatedAt": "2026-09-28T07:42:37.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
     "playbookTeammate": null,
@@ -15246,7 +14733,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -15548,7 +15034,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:36:33.539Z",
     "updatedAt": "2026-09-28T07:43:13.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
     "playbookTeammate": null,
@@ -15625,7 +15110,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -15999,7 +15483,6 @@
     "effort": null,
     "createdAt": "2026-10-15T21:28:10.356Z",
     "updatedAt": "2026-10-15T21:51:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "f482fd22-a251-4c67-8654-fb25ed264125",
     "playbookTeammate": null,
@@ -16053,7 +15536,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -16318,7 +15800,6 @@
     "effort": null,
     "createdAt": "2026-10-11T06:40:10.356Z",
     "updatedAt": "2026-10-11T07:07:59.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "948c02f1-98c0-4bd1-aaff-ca328bdf6ff5",
     "playbookTeammate": null,
@@ -16372,7 +15853,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -16676,7 +16156,6 @@
     "effort": null,
     "createdAt": "2026-10-08T16:16:10.356Z",
     "updatedAt": "2026-10-08T16:50:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "483e8a1f-6090-4e6c-af7b-a36b2f3f69de",
     "playbookTeammate": null,
@@ -16730,7 +16209,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -16995,7 +16473,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:48:29.539Z",
     "updatedAt": "2026-09-28T07:50:18.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "cd4bc526-9a4f-4f2a-aa4e-d1506562a86d",
     "playbookTeammate": null,
@@ -17049,7 +16526,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -17323,7 +16799,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:42:29.539Z",
     "updatedAt": "2026-09-28T07:44:18.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "a4bc1e1f-60ba-41f8-86f2-d12e21ab79e0",
     "playbookTeammate": null,
@@ -17377,7 +16852,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -17676,7 +17150,6 @@
     "effort": null,
     "createdAt": "2026-10-19T13:28:10.357Z",
     "updatedAt": "2026-10-19T20:36:39.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "7460cb86-eec8-40fd-9908-02d3958c8ef3",
     "playbookTeammate": null,
@@ -17730,7 +17203,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -18324,7 +17796,6 @@
     "effort": null,
     "createdAt": "2026-10-15T04:16:10.356Z",
     "updatedAt": "2026-10-15T04:40:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "1b979404-1293-4f00-b09a-8dfeca56cdaa",
     "playbookTeammate": null,
@@ -18378,7 +17849,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -18643,7 +18113,6 @@
     "effort": null,
     "createdAt": "2026-10-22T10:36:10.359Z",
     "updatedAt": "2026-10-22T10:37:40.359Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "9dbaf736-5c2b-46d6-95b6-54c2361c99fe",
     "playbookTeammate": null,
@@ -18721,7 +18190,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -18804,12 +18272,9 @@
        "at": "2026-10-22T10:36:39.359Z",
        "type": "tool.started",
        "input": {
-        "title": "Timeline view for projects",
-        "assignee": "none",
-        "priority": "medium",
-        "description": "A timeline (Gantt) view of a project, to plan launches across several teams. First asked by Ines at Duff."
+        "text": "Timeline view for projects: a Gantt view, to plan launches across several teams. First asked by Ines at Duff."
        },
-       "toolName": "mcp__harness-tools__create_task",
+       "toolName": "mcp__harness-tools__file_idea",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
        "toolCallId": "call_c44a1d2604dae9a6"
       }
@@ -18821,12 +18286,14 @@
        "at": "2026-10-22T10:36:43.359Z",
        "type": "tool.finished",
        "output": {
-        "note": "In Backlog, assigned to nobody.",
-        "column": "backlog",
-        "taskId": "19dbecba-e325-4751-9c7e-9e103e06ae50"
+        "filed": {
+         "path": "Projects/Support/ideas.md",
+         "id": "19dbecbae3254751"
+        },
+        "note": "Kept as a line of Projects/Support/ideas.md: it starts nothing, a person decides what to do with it."
        },
        "isError": false,
-       "toolName": "mcp__harness-tools__create_task",
+       "toolName": "mcp__harness-tools__file_idea",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
        "toolCallId": "call_c44a1d2604dae9a6"
       }
@@ -19005,7 +18472,6 @@
     "effort": null,
     "createdAt": "2026-10-21T13:48:10.357Z",
     "updatedAt": "2026-10-21T14:28:18.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "f5cfcd02-d847-4c27-8548-a69424756d15",
     "playbookTeammate": null,
@@ -19104,7 +18570,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -19478,7 +18943,6 @@
     "effort": null,
     "createdAt": "2026-10-13T11:28:10.356Z",
     "updatedAt": "2026-10-13T11:29:39.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "69a56189-63f0-43d1-a4ed-e8fd9b47b2b6",
     "playbookTeammate": null,
@@ -19532,7 +18996,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -19800,7 +19263,6 @@
     "effort": null,
     "createdAt": "2026-10-20T06:28:10.357Z",
     "updatedAt": "2026-10-20T22:28:10.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "2f1f3449-4cd5-40c0-80df-31630983ebd0",
     "playbookTeammate": null,
@@ -19854,7 +19316,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -20119,7 +19580,6 @@
     "effort": null,
     "createdAt": "2026-10-19T06:00:00.000Z",
     "updatedAt": "2026-10-19T06:00:51.000Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "f7f20869-c913-41e2-9af1-4e07d091ac15",
     "playbookTeammate": null,
@@ -20172,7 +19632,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -20439,7 +19898,6 @@
     "effort": null,
     "createdAt": "2026-10-20T16:28:10.357Z",
     "updatedAt": "2026-10-20T22:28:10.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "69d7f8b0-d29d-4eb1-afc7-590103c1b8bd",
     "playbookTeammate": null,
@@ -20493,7 +19951,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -20758,7 +20215,6 @@
     "effort": null,
     "createdAt": "2026-10-06T21:04:10.356Z",
     "updatedAt": "2026-10-06T21:49:59.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "42d1263d-677d-4afd-a785-287d07d63761",
     "playbookTeammate": null,
@@ -20812,7 +20268,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -21117,7 +20572,6 @@
     "effort": null,
     "createdAt": "2026-09-28T07:27:29.539Z",
     "updatedAt": "2026-09-28T08:15:31.539Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -21167,7 +20621,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -21710,7 +21163,6 @@
     "effort": null,
     "createdAt": "2026-10-14T01:52:10.356Z",
     "updatedAt": "2026-10-14T02:10:59.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "fa19d571-65d2-4582-8c3c-8381ffcce9cd",
     "playbookTeammate": null,
@@ -21764,7 +21216,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -22068,7 +21519,6 @@
     "effort": null,
     "createdAt": "2026-10-22T08:23:10.359Z",
     "updatedAt": "2026-10-22T08:24:21.359Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "669599f7-7457-40f2-a177-6f3d710ac92c",
     "playbookTeammate": null,
@@ -22146,7 +21596,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -22368,7 +21817,6 @@
     "effort": null,
     "createdAt": "2026-10-17T09:28:10.357Z",
     "updatedAt": "2026-10-17T09:29:39.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "c4273610-8f6f-43ef-9390-79d83f5d325f",
     "playbookTeammate": null,
@@ -22422,7 +21870,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -22690,7 +22137,6 @@
     "effort": null,
     "createdAt": "2026-10-22T06:27:29.151Z",
     "updatedAt": "2026-10-22T06:43:09.151Z",
-    "taskId": "cmvjgic4f001me1lwygnijyuu",
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -22763,11 +22209,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": {
-     "id": "cmvjgic4f001me1lwygnijyuu",
-     "title": "Add dark mode to the pricing page",
-     "completedAt": null
-    },
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -23106,7 +22547,6 @@
     "effort": null,
     "createdAt": "2026-10-22T10:47:29.175Z",
     "updatedAt": "2026-10-22T10:54:32.175Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -23182,7 +22622,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -23401,7 +22840,6 @@
     "effort": null,
     "createdAt": "2026-10-22T09:27:29.193Z",
     "updatedAt": "2026-10-22T09:31:24.193Z",
-    "taskId": "cmvjgic4w001oe1lw7mtlqtnq",
     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -23486,11 +22924,6 @@
      }
     ],
     "attachments": [],
-    "task": {
-     "id": "cmvjgic4w001oe1lw7mtlqtnq",
-     "title": "October newsletter",
-     "completedAt": null
-    },
     "project": {
      "id": "cmvjgibzl000fe1lw3q5wyoxg",
      "name": "Fall launch",
@@ -23633,7 +23066,6 @@
     "effort": null,
     "createdAt": "2026-10-22T11:12:29.201Z",
     "updatedAt": "2026-10-22T11:14:50.201Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -23712,7 +23144,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -23821,7 +23252,6 @@
     "effort": null,
     "createdAt": "2026-10-19T11:27:29.207Z",
     "updatedAt": "2026-10-19T11:36:53.207Z",
-    "taskId": "cmvjgic53001pe1lw6z6iubhi",
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -23871,11 +23301,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": {
-     "id": "cmvjgic53001pe1lw6z6iubhi",
-     "title": "Speed up checkout on mobile",
-     "completedAt": "2026-10-20T11:27:29.269Z"
-    },
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -24076,7 +23501,6 @@
     "effort": null,
     "createdAt": "2026-09-23T11:27:29.214Z",
     "updatedAt": "2026-09-23T11:30:37.214Z",
-    "taskId": "cmvjgic5c001qe1lw9osyyzci",
     "projectId": null,
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -24126,11 +23550,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": {
-     "id": "cmvjgic5c001qe1lw9osyyzci",
-     "title": "Set up the team",
-     "completedAt": "2026-09-23T11:27:29.279Z"
-    },
     "project": null,
     "wakeups": [],
     "replyWatches": [],
@@ -24227,7 +23646,6 @@
     "effort": null,
     "createdAt": "2026-10-21T11:27:29.220Z",
     "updatedAt": "2026-10-21T11:32:11.220Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -24280,7 +23698,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -24412,7 +23829,6 @@
     "effort": null,
     "createdAt": "2026-10-21T15:27:29.225Z",
     "updatedAt": "2026-10-21T15:31:24.225Z",
-    "taskId": "cmvjgic4q001ne1lwuw1yr436",
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -24462,11 +23878,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": {
-     "id": "cmvjgic4q001ne1lwuw1yr436",
-     "title": "Upgrade Next.js to 16",
-     "completedAt": null
-    },
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -24584,7 +23995,6 @@
     "effort": null,
     "createdAt": "2026-10-21T05:27:29.230Z",
     "updatedAt": "2026-10-21T05:33:45.230Z",
-    "taskId": null,
     "projectId": "cmvjgibzl000fe1lw3q5wyoxg",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -24644,7 +24054,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzl000fe1lw3q5wyoxg",
      "name": "Fall launch",
@@ -24793,7 +24202,6 @@
     "effort": null,
     "createdAt": "2026-10-21T11:27:29.467Z",
     "updatedAt": "2026-10-21T11:30:37.467Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -24849,7 +24257,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -24952,7 +24359,6 @@
     "effort": null,
     "createdAt": "2026-10-22T09:27:29.484Z",
     "updatedAt": "2026-10-22T09:32:11.484Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -25002,7 +24408,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -25135,7 +24540,6 @@
     "effort": null,
     "createdAt": "2026-10-22T08:27:29.489Z",
     "updatedAt": "2026-10-22T08:31:24.489Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -25185,7 +24589,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -25308,7 +24711,6 @@
     "effort": null,
     "createdAt": "2026-10-19T02:28:10.357Z",
     "updatedAt": "2026-10-19T05:05:07.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "28f45515-8a87-42e8-8aa1-b70fa28e2566",
     "playbookTeammate": null,
@@ -25362,7 +24764,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -25964,7 +25365,6 @@
     "effort": null,
     "createdAt": "2026-10-22T06:18:10.359Z",
     "updatedAt": "2026-10-22T06:19:03.359Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "1f8e92cb-e33a-4905-a53c-a7afb894d046",
     "playbookTeammate": null,
@@ -26042,7 +25442,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -26223,7 +25622,6 @@
     "effort": null,
     "createdAt": "2026-10-18T13:28:10.357Z",
     "updatedAt": "2026-10-18T13:45:59.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "ffe75072-0a93-4150-ab40-374190a4ecda",
     "playbookTeammate": null,
@@ -26277,7 +25675,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -26606,7 +26003,6 @@
     "effort": null,
     "createdAt": "2026-10-21T06:28:10.357Z",
     "updatedAt": "2026-10-21T06:29:39.357Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "19b9b6a2-9dad-490d-9052-20f76f61b2b2",
     "playbookTeammate": null,
@@ -26660,7 +26056,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -26928,7 +26323,6 @@
     "effort": null,
     "createdAt": "2026-10-16T07:48:10.357Z",
     "updatedAt": "2026-10-16T10:53:09.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "bea195aa-7e38-4297-b2b2-3705b69bfe9d",
     "playbookTeammate": null,
@@ -26982,7 +26376,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -27501,7 +26894,6 @@
     "effort": null,
     "createdAt": "2026-10-16T08:58:10.357Z",
     "updatedAt": "2026-10-16T11:00:29.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "297928bf-39b6-4ed7-8f13-b683843083eb",
     "playbookTeammate": null,
@@ -27555,7 +26947,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -28074,7 +27465,6 @@
     "effort": null,
     "createdAt": "2026-10-10T09:04:10.356Z",
     "updatedAt": "2026-10-10T09:16:41.356Z",
-    "taskId": null,
     "projectId": "cmvjgibzi000de1lwmdjoai11",
     "playbookRunId": "bf86e0b3-6f79-4978-a180-552a0007aa1e",
     "playbookTeammate": null,
@@ -28128,7 +27518,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibzi000de1lwmdjoai11",
      "name": "Support",
@@ -28393,7 +27782,6 @@
     "effort": null,
     "createdAt": "2026-10-19T11:27:29.438Z",
     "updatedAt": "2026-10-19T11:40:01.438Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -28551,7 +27939,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -28808,7 +28195,6 @@
     "effort": null,
     "createdAt": "2026-10-19T11:27:29.445Z",
     "updatedAt": "2026-10-19T11:38:27.445Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -28861,7 +28247,6 @@
     "followers": [],
     "tickets": [],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",
@@ -29097,7 +28482,6 @@
     "effort": null,
     "createdAt": "2026-10-19T11:27:29.453Z",
     "updatedAt": "2026-10-19T11:31:24.453Z",
-    "taskId": null,
     "projectId": "cmvjgibz8000be1lwj67k8nxp",
     "playbookRunId": null,
     "playbookTeammate": null,
@@ -29179,7 +28563,6 @@
      }
     ],
     "attachments": [],
-    "task": null,
     "project": {
      "id": "cmvjgibz8000be1lwj67k8nxp",
      "name": "Website",

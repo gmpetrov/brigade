@@ -71,7 +71,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
   let db: ReturnType<typeof scoped>
   let scope: { organizationId: string; workspaceId: string }
   /** A thread of Riley's in a project, that started with a request (and is a task's, given one). */
-  let thread: (projectId: string, ask: string, taskId?: string) => Promise<string>
+  let thread: (projectId: string, ask: string) => Promise<string>
   const realFetch = globalThis.fetch
   /** Pull requests GitHub knows, by number: open unless said. */
   const closed = new Set<number>()
@@ -185,7 +185,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         data: { name: `Quiet ${suffix}`, reviewPolicy: 'manual' } as never,
       })
     ).id
-    thread = async (projectId: string, ask: string, taskId?: string) => {
+    thread = async (projectId: string, ask: string) => {
       const session = await db.session.create({
         data: {
           teammateId: ids.riley,
@@ -195,7 +195,6 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
           projectId,
           status: 'idle',
           lastSeq: 1,
-          ...(taskId ? { taskId } : {}),
         } as never,
       })
       await db.threadTeammate.create({
@@ -435,38 +434,17 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.equal((await row(18)).reviewClaimedAt, null)
   })
 
-  test('a task whose pull request is in review stays in Doing until the review is done', async () => {
-    const { listTasks } = await import('../src/tasks.js')
-    const task = await db.task.create({
-      data: { title: 'Dark pricing cards', createdByMemberId: ids.owner } as never,
-    })
-    const taskThread = await thread(ids.web, 'Dark pricing cards', task.id)
-    await open(taskThread, 19, { wanted: true, reason: 'Every card changes' })
-    const column = async () => (await listTasks(db)).find((t) => t.id === task.id)?.column
-    assert.equal(await column(), 'doing')
-    const child = (await row(19)).reviewSessionId!
-    await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
-    assert.equal(await column(), 'needs_you')
-  })
-
   test('a pull request whose thread failed before it was done waits with its thread, not on its own', async () => {
-    const { listTasks } = await import('../src/tasks.js')
-    const task = await db.task.create({
-      data: { title: 'Design options', createdByMemberId: ids.owner } as never,
-    })
-    const taskThread = await thread(ids.web, 'Design options', task.id)
-    await open(taskThread, 23, { wanted: true, reason: 'Several files' })
+    const designThread = await thread(ids.web, 'Design options')
+    await open(designThread, 23, { wanted: true, reason: 'Several files' })
     const child = (await row(23)).reviewSessionId!
     await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
-    const column = async () => (await listTasks(db)).find((t) => t.id === task.id)?.column
     // Fixing what the review found, its turn stopped on an error: the thread waits on a person
     // (src/failed.ts), once, and its pull request does not count apart from it.
-    await db.session.updateMany({ where: { id: taskThread }, data: { status: 'failed' } })
-    assert.equal(await column(), 'needs_you')
+    await db.session.updateMany({ where: { id: designThread }, data: { status: 'failed' } })
     assert.ok(!(await waiting()).includes(23))
     // It went on and stopped: the pull request is the person's.
-    await db.session.updateMany({ where: { id: taskThread }, data: { status: 'idle' } })
-    assert.equal(await column(), 'needs_you')
+    await db.session.updateMany({ where: { id: designThread }, data: { status: 'idle' } })
     assert.ok((await waiting()).includes(23))
   })
 

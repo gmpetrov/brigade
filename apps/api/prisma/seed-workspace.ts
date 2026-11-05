@@ -1,6 +1,6 @@
 // Sample data for a local Brigade or a preview: the "Acme" organization, with
 // Ada (owner), Bob (admin) and Carol (member) in its workspace, its teammates,
-// projects, threads in each state, tasks in each column, tickets, library files,
+// projects, threads in each state, tickets, library files,
 // memory, connections, credentials, a schedule, a pull request and a playbook with
 // its runs (seed-playbooks.ts). Nothing in it reaches an outside service:
 // connection and credential secrets are placeholders.
@@ -473,7 +473,7 @@ export async function seedWorkspace(users: Users) {
     events: longThreadEvents(riley.id, adaAccount.id, ada.id),
   })
 
-  // Done, with a pull request waiting for review: its task is in Needs you.
+  // Done, with a pull request waiting for review: it needs you.
   const darkMode = await thread({
     title: 'Add dark mode to the pricing page',
     teammateId: riley.id,
@@ -819,7 +819,7 @@ export async function seedWorkspace(users: Users) {
     },
   })
 
-  // Finished long ago, with a summary: its task is done.
+  // Finished long ago, with a summary: its teammate declared it done (below).
   const checkout = await thread({
     title: 'Why is checkout slow on mobile?',
     teammateId: riley.id,
@@ -914,7 +914,7 @@ export async function seedWorkspace(users: Users) {
     ),
   })
 
-  // Failed: the computer stopped mid-turn. Its task stays in Doing.
+  // Failed: the computer stopped mid-turn.
   const upgrade = await thread({
     title: 'Upgrade Next.js to 16',
     teammateId: riley.id,
@@ -974,141 +974,29 @@ export async function seedWorkspace(users: Users) {
   })
 
   // -------------------------------------------------------------------------
-  // Tasks, one per column
+  // Threads their teammate declared done (docs/board.md)
   // -------------------------------------------------------------------------
-  const task = (data: {
-    title: string
-    description: string
-    priority?: 'low' | 'medium' | 'high' | 'urgent'
-    teammateId?: string
-    projectId?: string
-    createdByMemberId?: string
-    completedAt?: Date
-    archivedAt?: Date
-    trashedAt?: Date
-    summary?: string
-    deliverables?: { label: string; url: string }[]
-    sessionId?: string
-    parentId?: string
-    createdAt: Date
-  }) => {
-    const { sessionId, ...rest } = data
-    return prisma.task
-      .create({ data: { ...inWorkspace, createdByMemberId: ada.id, ...rest } })
-      .then(async (row) => {
-        if (sessionId)
-          await prisma.session.update({
-            where: { id: sessionId },
-            // Keep when it last moved: thread lists sort by it.
-            data: {
-              taskId: row.id,
-              updatedAt: (await prisma.session.findUniqueOrThrow({ where: { id: sessionId } }))
-                .updatedAt,
-            },
-          })
-        return row
-      })
+  const declaredDone = async (id: string, at: Date, summary: string, teammateId: string) => {
+    const { updatedAt } = await prisma.session.findUniqueOrThrow({ where: { id } })
+    await prisma.session.update({
+      where: { id },
+      // Keep when it last moved: thread lists sort by it.
+      data: {
+        doneAt: at,
+        doneSummary: summary,
+        doneByType: 'teammate',
+        doneById: teammateId,
+        updatedAt,
+      },
+    })
   }
-  await task({
-    title: 'Add CSV export to the billing page',
-    description:
-      'Customers ask for their invoices as CSV. One button on /billing, all invoices of the year.',
-    priority: 'medium',
-    projectId: website.id,
-    createdAt: days(4),
-  })
-  // A mission: one card on the board for the launch's tasks.
-  const launchMission = await task({
-    title: 'Launch Acme Teams',
-    description:
-      'Everything for the Teams launch on November 4: the sales deck, the newsletter and the blog post.',
-    priority: 'medium',
-    projectId: launch.id,
-    createdByMemberId: bob.id,
-    createdAt: days(3),
-  })
-  await task({
-    title: 'Publish the launch blog post',
-    description:
-      'A post on acme.com/blog announcing Teams, with the pricing and two customer quotes.',
-    priority: 'medium',
-    projectId: launch.id,
-    createdByMemberId: bob.id,
-    parentId: launchMission.id,
-    createdAt: days(2),
-  })
-  await task({
-    title: 'Write the Acme Teams sales deck',
-    description: '10 slides for sales calls: problem, Teams, pricing, security, customer quotes.',
-    priority: 'low',
-    projectId: launch.id,
-    createdByMemberId: bob.id,
-    parentId: launchMission.id,
-    createdAt: days(2),
-  })
-  await task({
-    title: 'Add dark mode to the pricing page',
-    description: 'The pricing cards stay white in dark mode. Done when the PR is merged.',
-    priority: 'high',
-    teammateId: riley.id,
-    projectId: website.id,
-    sessionId: darkMode.id,
-    createdAt: hours(5),
-  })
-  await task({
-    title: 'Upgrade Next.js to 16',
-    description: 'Move acme/web to Next.js 16 and fix what breaks; the tests must pass.',
-    priority: 'medium',
-    teammateId: riley.id,
-    projectId: website.id,
-    createdByMemberId: bob.id,
-    sessionId: upgrade.id,
-    createdAt: hours(20),
-  })
-  await task({
-    title: 'October newsletter',
-    description: 'Announce Acme Teams to the newsletter list, approved by Bob before sending.',
-    priority: 'medium',
-    teammateId: maya.id,
-    projectId: launch.id,
-    createdByMemberId: bob.id,
-    sessionId: newsletter.id,
-    parentId: launchMission.id,
-    createdAt: hours(2),
-  })
-  await task({
-    title: 'Speed up checkout on mobile',
-    description: 'Checkout takes 6 s to show on phones; get it under 2.5 s LCP.',
-    priority: 'urgent',
-    teammateId: riley.id,
-    projectId: website.id,
-    sessionId: checkout.id,
-    completedAt: days(2),
-    summary:
-      'Stripe.js now loads only on /checkout, after the form: LCP 1.9 s on a mid-range phone.',
-    deliverables: [
-      { label: 'acme/web#121', url: 'https://github.com/acme/web/pull/121' },
-      { label: 'Checkout performance notes', url: 'Projects/Website/checkout-performance.md' },
-    ],
-    createdAt: days(3),
-  })
-  await task({
-    title: 'Set up the team',
-    description: 'Teammates for engineering, support and marketing.',
-    teammateId: chief.id,
-    sessionId: setup.id,
-    completedAt: days(29),
-    archivedAt: days(20),
-    summary: 'Riley, Sam and Maya created.',
-    createdAt: days(29),
-  })
-  await task({
-    title: 'Try a chatbot on the docs',
-    description: 'Dropped: the docs search is enough for now.',
-    priority: 'low',
-    trashedAt: days(6),
-    createdAt: days(12),
-  })
+  await declaredDone(
+    checkout.id,
+    days(2),
+    'Stripe.js now loads only on /checkout, after the form: LCP 1.9 s on a mid-range phone.',
+    riley.id,
+  )
+  await declaredDone(setup.id, days(29), 'Riley, Sam and Maya created.', chief.id)
 
   // -------------------------------------------------------------------------
   // The pull request Riley opened, approved by Kai's review

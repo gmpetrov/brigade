@@ -384,17 +384,6 @@ export class Connection {
     return result.output
   }
 
-  /** Create a task from a thread, or complete its task. The API checks the thread. */
-  async callTask(
-    request: Omit<Extract<RunnerToApi, { type: 'task.call' }>, 'type' | 'callId'>,
-  ): Promise<unknown> {
-    const result = await this.call(
-      { type: 'task.call', ...request },
-      { onPending: () => undefined, onDecision: () => undefined },
-    )
-    return result.output
-  }
-
   /**
    * Create, list or change the teammate's schedules. The API checks the thread. A trigger
    * waits for an admin's approval, which the hooks show in the thread.
@@ -510,7 +499,6 @@ export class Connection {
             | 'connector.call'
             | 'credential.request'
             | 'library.call'
-            | 'task.call'
             | 'schedule.call'
             | 'preview.expose'
             | 'preview.call'

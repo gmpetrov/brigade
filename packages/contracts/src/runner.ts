@@ -37,7 +37,7 @@ import {
 import { ThreadPlaybook } from './playbooks.js'
 import { ScheduleOperation } from './schedules.js'
 import { SkillProposal, ThreadSkill } from './skills.js'
-import { TaskOperation } from './tasks.js'
+import { TaskOperation } from './legacy-tasks.js'
 import { TeammateKind } from './chief.js'
 import { UsageRunKind } from './usage.js'
 
@@ -94,6 +94,11 @@ export type AccountRef = z.infer<typeof AccountRef>
  * turn, and not to be kept, so the next turn asks again.
  */
 export const CATALOG_INCOMPLETE_HEADER = 'x-brigade-catalog-incomplete'
+/**
+ * Set beside CATALOG_INCOMPLETE_HEADER when the server refused the account (an expired key): its
+ * owner must reconnect it, where an incomplete catalog alone means the server did not answer.
+ */
+export const CATALOG_SIGNED_OUT_HEADER = 'x-brigade-catalog-signed-out'
 
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
@@ -102,6 +107,14 @@ export const ConnectorGrant = z.object({
   label: z.string(),
   externalAccount: z.string().nullable(),
   scope: z.enum(['read', 'read_write']),
+  /**
+   * Why the teammate cannot use this account now, told in its instructions so that it asks for a
+   * reconnect, or says the App is down, rather than work around tools it cannot find. signed_out:
+   * the provider refused it (the API sets it from the account's state, the runner from its
+   * catalog, CATALOG_SIGNED_OUT_HEADER). unreachable: its MCP server did not list its tools now
+   * (the runner, from CATALOG_INCOMPLETE_HEADER). Ignored by older runners.
+   */
+  unavailable: z.enum(['signed_out', 'unreachable']).optional(),
   /**
    * CATALOG_PROTOCOL: `operations` is left empty and the runner fetches them, the App's catalog
    * for this scope (GET /runner/catalogs/<connectionId>?scope=<scope>&version=<version>), then
@@ -224,8 +237,6 @@ export const ThreadSpec = z.object({
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
   attachments: z.array(ThreadAttachmentRef).default([]),
-  /** The task this thread works on, if it is one. */
-  task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
   /**
    * The list items it works on (docs/lists.md): lines of library files, by id, with the library
    * paths of the files under each (documentFilePath).
@@ -587,8 +598,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     ]),
   }),
   /**
-   * A teammate creates a task from its thread, or marks the thread's task
-   * done. The API checks the thread and teammate. Answered like a connector call.
+   * A task tool of a runner before protocol 52 (the Tasks board is gone): the API answers it with
+   * what replaced it (src/legacy-tasks.ts). Answered like a connector call.
    */
   z.object({
     type: z.literal('task.call'),

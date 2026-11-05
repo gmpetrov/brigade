@@ -24,8 +24,9 @@ mission; threads stay where the work happens.
   moves the marker to the next row. Its rows end at a blank row or a block of its own (a list
   line, a heading, a quote, a thematic break, HTML other than a row holding only its marker).
 - **A line's files are under it, in the file.** A file dropped or pasted on a checklist line in
-  the editor goes under it, as a block nested under the line; "Attach to this line" shows where,
-  and it shows small there. Its Markdown is a row of its own after a blank one, indented as the
+  the editor goes under it, as a block nested under the line, and so does a file already in the
+  document moved onto the line by its handle (in one change, which undo takes back); "Attach to
+  this line" shows where, and it shows small there. Its Markdown is a row of its own after a blank one, indented as the
   line's text (`  ![shot.png](asset:<id>)`), which any Markdown viewer reads as part of the line
   and the editor reads back under it (`packages/editor/src/markdown.ts`: BlockNote's own
   conversion would put it after the list). `parseList` reads them as the line's `files`, never
@@ -79,7 +80,9 @@ mission; threads stay where the work happens.
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did
   it. A note holding a link goes without italics (`— Live at www.example.com`): the editor
   saves italics around a link back broken, with more asterisks each time. Brigade writes the file only to mark, tick or add a line; the collab server applies the
-  change to the lines it touches, so people's live edits elsewhere stay.
+  change to the lines it touches, so people's live edits elsewhere stay. A line or a note Brigade
+  writes keeps no HTML comment (`insertLine`, `setLineDone`): a marker in someone's words would take
+  over another line's id, and an open comment would hide the lines below it.
 - **Done means checks anyone can verify.** When a teammate takes on an item, it says in a line what
   done means for it ("Done when: …"), unless the line says it; the person corrects it. A pull
   request's description goes through those points, each done or left. People write lines fast,
@@ -135,8 +138,10 @@ mission; threads stay where the work happens.
   with Chief", is the one the onboarding's setup thread with the chief starts on (StartThread's
   `listLines`), so the list shows it in progress at once. It is an ordinary list: people edit it,
   hand its lines over or delete it, and nothing brings it back.
-- **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
-  stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
+- **Lists are the backlog.** A line nobody has started is the backlog, planned in its file, where
+  the order of the lines and their sections matter; the Board has no "To do" column. Lists replaced
+  the Tasks board, gone since (docs/hand-offs.md). A teammate hands lines to a teammate in a thread
+  of its own with `start_thread` (its `list` and `items`), as a person's Hand to does.
 - **The Board shows the lines that move** (docs/board.md): every list's lines with work on them,
   across Needs you, In progress and Done, with the threads on no list and the routines. A list's
   page links to the Board on that list. Its lines are planned here, in the file.
