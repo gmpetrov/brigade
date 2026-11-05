@@ -127,7 +127,6 @@ const THREAD_SELECT = {
   doneSummary: true,
   doneByType: true,
   doneById: true,
-  task: { select: { completedAt: true, summary: true } },
   _count: { select: { tickets: { where: { status: 'open' } } } },
   pullRequests: {
     select: {
@@ -169,7 +168,6 @@ async function threadRows(db: ScopedDb, now: Date) {
               { pullRequests: { some: { state: 'open' } } },
               { wakeups: { some: { status: 'pending', kind: 'wakeup' } } },
               { doneAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } },
-              { task: { completedAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } } },
             ],
           },
         ],
@@ -465,7 +463,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   const working = new Set(childrenWorking.map((c) => c.parentId))
   // ---- Threads on no list ----
   for (const t of offList) {
-    const doneAt = t.doneAt ?? t.task?.completedAt ?? null
+    const doneAt = t.doneAt
     const doneRecently = doneAt && now.getTime() - doneAt.getTime() < DONE_DAYS * DAY
     const base = {
       key: `thread:${t.id}`,
@@ -483,18 +481,18 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       })),
       wakeAt: wakeAtOf([t.id]),
     }
-    if (t.doneAt || t.task?.completedAt) {
+    if (doneAt) {
       if (doneRecently)
         cards.push({
           ...base,
           column: 'done',
           reason: null,
           wakeAt: null,
-          note: oneLine(t.doneAt ? t.doneSummary : t.task?.summary),
-          at: doneAt!.toISOString(),
+          note: oneLine(t.doneSummary),
+          at: doneAt.toISOString(),
           done: {
-            at: doneAt!.toISOString(),
-            by: t.doneAt ? (names(t.doneByType, t.doneById)?.name ?? null) : null,
+            at: doneAt.toISOString(),
+            by: names(t.doneByType, t.doneById)?.name ?? null,
           },
         })
       continue

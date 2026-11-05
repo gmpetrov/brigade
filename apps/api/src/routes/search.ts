@@ -137,7 +137,6 @@ export const search = new Hono<AppEnv>()
     const [
       threadIds,
       teammates,
-      taskIds,
       schedules,
       ticketIds,
       pullIds,
@@ -160,13 +159,6 @@ export const search = new Hono<AppEnv>()
         select: { id: true, name: true, harness: true },
         orderBy: { createdAt: 'asc' },
         take: EACH,
-      }),
-      nearly(scope, {
-        table: 'Task',
-        near: 'title',
-        fields: ['title', 'description'],
-        words,
-        order: '"updatedAt" DESC',
       }),
       db.schedule.findMany({
         where: matching(words, ['title', 'instructions']),
@@ -228,25 +220,13 @@ export const search = new Hono<AppEnv>()
       }),
       searchDocuments(scope, { query, limit: EACH * 2, memberId: scope.memberId }),
     ])
-    const [threads, tasks, tickets, pulls] = await Promise.all([
+    const [threads, tickets, pulls] = await Promise.all([
       db.session
         .findMany({
           where: { id: { in: threadIds } },
           select: { id: true, title: true, teammate: { select: { name: true } } },
         })
         .then((rows) => inOrder(threadIds, rows)),
-      db.task
-        .findMany({
-          where: { id: { in: taskIds } },
-          select: {
-            id: true,
-            title: true,
-            completedAt: true,
-            trashedAt: true,
-            teammate: { select: { name: true } },
-          },
-        })
-        .then((rows) => inOrder(taskIds, rows)),
       db.ticket
         .findMany({
           where: { id: { in: ticketIds } },
@@ -356,23 +336,6 @@ export const search = new Hono<AppEnv>()
         }),
       ),
       ...ranked(threadResults),
-      ...ranked(
-        tasks.map((t) =>
-          result({
-            kind: 'task',
-            id: t.id,
-            title: t.title,
-            detail: [
-              t.teammate?.name ?? 'Backlog',
-              t.completedAt && 'done',
-              t.trashedAt && 'in the Trash',
-            ]
-              .filter(Boolean)
-              .join(' · '),
-            score: score(t.title),
-          }),
-        ),
-      ),
       ...ranked(
         pulls.map((p) =>
           result({

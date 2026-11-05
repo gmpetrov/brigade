@@ -77,7 +77,7 @@ import { applyPick, checkPick } from '../designs.js'
 import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
 import { prisma, type ScopedDb } from '../db.js'
-import { hubs, scheduleUpdated, taskUpdated, threadUpdated } from '../hub.js'
+import { hubs, scheduleUpdated, threadUpdated } from '../hub.js'
 import { codeFiles, findSource, readThreadFile, writeThreadFile } from '../runner-requests.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
@@ -101,7 +101,6 @@ import {
 } from '../work.js'
 import { waitingOnPerson } from '../pull-requests.js'
 import { messagesToRequeue } from '../recovery.js'
-import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
 import { markDone, markReopened, reopenThread } from '../thread-done.js'
@@ -629,7 +628,6 @@ export const threads = new Hono<AppEnv>()
           orderBy: { createdAt: 'asc' },
         },
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
-        task: { select: { id: true, title: true, completedAt: true } },
         project: { select: { id: true, name: true, icon: true, logo: true, archivedAt: true } },
         wakeups: {
           where: { status: 'pending', kind: 'wakeup' },
@@ -1286,7 +1284,6 @@ export const threads = new Hono<AppEnv>()
       )
       if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
       if (thread.archivedAt) await setThreadArchived(scope, thread.id, false)
-      await reopenOnMessage(scope, thread)
       // A person asks again: the work is no longer done (src/thread-done.ts).
       await reopenThread(scope, thread.id)
       return c.json({ ok: true, paused: false, delivery: 'moving' })
@@ -1321,7 +1318,6 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
       ...(joined.length > 0 ? { data: { joined } } : {}),
     })
-    await reopenOnMessage(scope, thread)
     // A person asks again: the work is no longer done (src/thread-done.ts).
     await reopenThread(scope, thread.id)
     // starting: a stopped computer starts first, and gets the message when its runner connects.
@@ -1910,7 +1906,7 @@ export const threads = new Hono<AppEnv>()
 
   /**
    * Into a project or out of one: any member, as it only organizes. Its next
-   * turn gets the new project's context; its task follows.
+   * turn gets the new project's context.
    */
   .put('/:id/project', async (c) => {
     const { scope, db } = c.var
@@ -1922,8 +1918,6 @@ export const threads = new Hono<AppEnv>()
       where: { id: thread.id },
       data: { projectId: next, updatedAt: thread.updatedAt },
     })
-    if (thread.taskId)
-      await db.task.updateMany({ where: { id: thread.taskId }, data: { projectId: next } })
     // Its child threads, schedule runs among them, and the schedules reporting here follow.
     const family = await descendants(db, thread.id)
     if (family.length)
@@ -2144,14 +2138,8 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(403, {
         message: 'Only the member who started this thread or an admin can delete it',
       })
-    const { taskId } = await deleteThread(
-      db,
-      scope,
-      { type: 'member', id: scope.memberId },
-      thread.id,
-    )
+    await deleteThread(db, scope, { type: 'member', id: scope.memberId }, thread.id)
     void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, 'deleted'))
-    if (taskId) void hubs.get(scope.workspaceId).broadcast(taskUpdated(taskId))
     return c.json({ ok: true })
   })
 

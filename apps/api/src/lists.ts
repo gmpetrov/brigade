@@ -42,9 +42,8 @@ import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
 import { committedBytes, documentText, saveLibraryFile, withLibraryLock } from './library.js'
 import { pullWaitsOnPerson, REVIEW_THREAD } from './review-state.js'
-import { computerFor } from './tasks.js'
 import { noteInThread } from './thread-notes.js'
-import { startThread } from './work.js'
+import { computerFor, startThread } from './work.js'
 
 type ListOperation = z.infer<(typeof ListOperations)[number]>
 
@@ -675,7 +674,8 @@ async function projectFinder(db: ScopedDb) {
     projects.find((p) => path.startsWith(`${p.folder ?? projectFolder(p.name)}/`))?.id ?? null
 }
 
-const projectOf = async (db: ScopedDb, path: string) => (await projectFinder(db))(path)
+/** The project whose folder holds a file, or null. */
+export const projectOf = async (db: ScopedDb, path: string) => (await projectFinder(db))(path)
 
 /** Hand lines to a teammate: one thread for them all, or one each. */
 export async function handOff(
@@ -769,15 +769,16 @@ export async function seedGettingStarted(scope: Scope) {
 }
 
 /**
- * A line added to a list for someone (Chief's work put off in a person's name): the file is made
- * with `header` when missing, and the line goes at its end, linked to no thread. Its row with it,
+ * A line added to a list for someone (Chief's work put off in a person's name, a customer's idea a
+ * playbook filed): the file is made with `header` when missing, and the line goes at the end of
+ * `section` when the file has that heading, else at its end, linked to no thread. Its row with it,
  * under the file's lock, as add_item's.
  */
 export async function addListLine(
   db: ScopedDb,
   scope: Scope,
   actor: Actor,
-  input: { path: string; header: string; text: string },
+  input: { path: string; header: string; text: string; section?: string },
 ) {
   let file = await db.document.findFirst({ where: { path: input.path, ...LIST_FILE } })
   if (!file) {
@@ -811,7 +812,7 @@ export async function addListLine(
         data: { id, documentId, text: plainItemText(input.text).slice(0, 2_000) } as never,
       })
       made = true
-      return insertLine(text, list, {}, input.text, id)
+      return insertLine(text, list, input.section ? { section: input.section } : {}, input.text, id)
     },
     async () => {
       if (made) await db.listItem.deleteMany({ where: { id } })
@@ -1325,6 +1326,46 @@ const lineOut = (
 }
 
 /**
+ * Lines of a list a teammate names, by id or text, as items (link_items, or the lines a thread it
+ * starts works on): marked when they have no id yet, which changes the file, credited to its
+ * thread. Within the library access its folders give it: reading the list, and changing it to
+ * mark a line. Their ids and texts, in order, or why not.
+ */
+export async function pickLines(
+  db: ScopedDb,
+  scope: Scope,
+  session: { id: string },
+  teammate: Teammate,
+  path: string,
+  refs: string[],
+): Promise<{ ids: string[]; texts: string[]; path: string } | { error: string }> {
+  const access = await teammateLibraryAccess(db, teammate)
+  if (access.of(path) === 'none') return { error: `You may not read ${path}` }
+  try {
+    const file = await listFile(db, { path })
+    const list = parseList(await storedText(scope, file))
+    const picked: Picked[] = []
+    for (const ref of refs) {
+      const line = findLine(list, ref)
+      if (typeof line === 'string') return { error: line }
+      picked.push({ id: line.id ?? newListItemId(), text: line.text })
+    }
+    // Marking a line changes the file: only with the right to change it.
+    if (
+      picked.some((p) => !list.lines.some((l) => l.id === p.id)) &&
+      access.of(file.path) !== 'read_write'
+    )
+      return { error: `You may not change ${file.path}, and some of those lines have no id yet` }
+    const actor: Actor = { type: 'teammate', id: teammate.id }
+    const ids = await itemsFor(db, scope, actor, file, picked, { sessionId: session.id })
+    return { ids, texts: picked.map((p) => plainItemText(p.text)), path: file.path }
+  } catch (error) {
+    if (error instanceof HTTPException) return { error: error.message }
+    throw error
+  }
+}
+
+/**
  * list_items, link_items, complete_item and add_item: a teammate reads a list, attaches lines
  * to its thread, ticks one, or adds one. Within the library access its folders give it.
  */
@@ -1372,27 +1413,14 @@ export async function handleListCall(
     }
 
     if (op.name === 'link_items') {
-      const file = await fileAt(op.path, false)
-      const list = parseList(await storedText(scope, file))
-      const picked: Picked[] = []
-      for (const ref of op.items) {
-        const line = findLine(list, ref)
-        if (typeof line === 'string') return { error: line }
-        picked.push({ id: line.id ?? newListItemId(), text: line.text })
-      }
-      // Marking a line changes the file: only with the right to change it.
-      if (
-        picked.some((p) => !list.lines.some((l) => l.id === p.id)) &&
-        access.of(file.path) !== 'read_write'
-      )
-        return { error: `You may not change ${file.path}, and some of those lines have no id yet` }
-      const ids = await itemsFor(db, scope, actor, file, picked, context)
+      const picked = await pickLines(db, scope, session, teammate, op.path, op.items)
+      if ('error' in picked) return picked
       await db.listItemThread.createMany({
-        data: ids.map((itemId) => ({ itemId, sessionId: session.id })) as never,
+        data: picked.ids.map((itemId) => ({ itemId, sessionId: session.id })) as never,
         skipDuplicates: true,
       })
       return {
-        linked: ids.map((id, i) => ({ id, text: plainItemText(picked[i]!.text) })),
+        linked: picked.ids.map((id, i) => ({ id, text: picked.texts[i]! })),
         hint: 'Name them by id in complete_item, and in github_create_pull_request items.closes.',
       }
     }

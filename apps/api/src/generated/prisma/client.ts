@@ -165,9 +165,8 @@ export type HomeDismissal = Prisma.HomeDismissalModel
 export type Session = Prisma.SessionModel
 /**
  * Model Task
- * Work to see finished, on the Tasks board. Its thread is its comments and
- * progress; the column comes from the thread (none: backlog) and completedAt.
- * Assigning a teammate starts the thread, so a task has a teammate once it has one.
+ * Work to see finished, on the Tasks board, which is gone (docs/hand-offs.md): nothing reads or
+ * writes it any more. It goes in a later deploy, once no API running reads it.
  */
 export type Task = Prisma.TaskModel
 /**

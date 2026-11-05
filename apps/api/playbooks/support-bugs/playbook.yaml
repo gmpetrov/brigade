@@ -1,6 +1,6 @@
 id: brigade/support-bugs
 name: Support and bugs
-version: 1.3.0
+version: 1.4.0
 description: Sorts the support inbox, answers customers, fixes the bugs they report and tells them when it is fixed.
 
 # Two teammates: support reads the customers' mail and answers them; developer fixes the bugs
@@ -28,6 +28,14 @@ settings:
       app: analytics,
       optional: true,
       ask: "Which analytics tool should be checked for a customer's account?",
+    }
+  # Where customers' ideas go (file_idea): a list of the library, with a section's heading after #.
+  # Unset: ideas.md in the playbook's project folder.
+  - {
+      key: ideas,
+      type: text,
+      optional: true,
+      ask: "Which list in the library should keep customers' ideas, e.g. Projects/Acme/backlog.md#To approve? Leave it empty for an ideas list of its own.",
     }
 
 entries:

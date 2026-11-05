@@ -4,7 +4,6 @@ import { z } from 'zod'
 export const SearchKind = z.enum([
   'thread',
   'teammate',
-  'task',
   'automation',
   'ticket',
   'pull_request',
