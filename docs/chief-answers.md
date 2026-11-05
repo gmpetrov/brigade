@@ -13,7 +13,8 @@ Code: `apps/api/src/chief-answers.ts`, `apps/api/src/chief-order.ts`,
 ## Decisions
 
 - **Off is Brigade as before.** It is a member's preference (`Member.chiefAnswers`, off for
-  new members for now, turned on in Preferences; `PUT /me/chief`). Off, no decision starts, the spec says nothing of it
+  every member since `20261105230000_chief_answers_off_for_all`, turned on in Preferences;
+  `PUT /me/chief`). Off, no decision starts, the spec says nothing of it
   (`ThreadSpec.chiefAnswers` false, no `decision`), so every teammate's instructions are as they
   were, and questions wait for the person.
 - **Where it reads.** A member's own top-level thread (origin `member`, no parent, no playbook,
