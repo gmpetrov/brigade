@@ -1,52 +1,25 @@
-// Chief answers for the person (docs/chief-answers.md): when a teammate ends its reply on buttons
-// or a choices card, Chief reads the question before the person does and, in their name, picks the
-// answer their mandate settles, says "not now" to work outside their priorities, or leaves the
-// question to them with what it would pick. It first only suggests; a kind of question it may
-// answer on its own is the person's to allow, once it agreed with them enough. A member who turns
-// it off gets Brigade as it was: nothing here runs, and nothing in the instructions changes.
+// Chief for the person (docs/chief-answers.md), with no turn of its own on each question:
+// - Their rules: a text the person keeps (Preferences → Chief), given to every teammate working
+//   for them, which decides what the rules settle and asks them only the rest.
+// - A daily pass: once a day, when something waits on them, Chief goes through it in a thread of
+//   its own that no list shows. It answers in their name the questions their rules settle, tries
+//   failed threads again, and leaves on Today what is still theirs to decide, with what it would
+//   pick, what it noticed across their threads, and rules worth adding from their recent answers.
+// Off (the default), none of it runs, and teammates' instructions are as they were.
 import { z } from 'zod'
 
-/** The kinds of question Chief may answer in a person's name. */
-export const CHIEF_KINDS = ['next_step', 'approach', 'priority'] as const
-export const ChiefKind = z.enum(CHIEF_KINDS)
-export type ChiefKind = z.infer<typeof ChiefKind>
-
-/** What Chief makes of a question: the kinds it may answer, and those that are always the person's. */
-export const ChiefQuestionKind = z.enum([...CHIEF_KINDS, 'taste', 'outside'])
-export type ChiefQuestionKind = z.infer<typeof ChiefQuestionKind>
-
-/** Each kind as people read it, with what it covers. */
-export const CHIEF_KIND_LABELS: Record<ChiefKind, { label: string; hint: string }> = {
-  next_step: { label: 'Next steps', hint: 'Go on, build it, do the next part of the work' },
-  approach: { label: 'Approaches', hint: 'Which way to do the work asked' },
-  priority: { label: 'Priorities', hint: 'Now or later' },
-}
-
-/** A kind of question, in a sentence: "next steps". */
-export const chiefKindWords = (kind: ChiefQuestionKind) =>
-  kind === 'taste'
-    ? 'a matter of taste'
-    : kind === 'outside'
-      ? 'something that leaves Brigade'
-      : CHIEF_KIND_LABELS[kind].label.toLowerCase()
+/** The most of a person's rules their teammates read. */
+export const CHIEF_RULES_MAX = 4_000
+/** Rules a person refused, the latest ones: Chief does not propose them again. */
+export const CHIEF_RULES_REFUSED_MAX = 50
+/** The hour of the person's day, in their timezone, from which their pass may run. */
+export const CHIEF_PASS_HOUR = 7
 
 /**
  * Chief's answers in a row in a thread with no word from the person: the question after them
- * goes to the person, whatever its kind.
+ * waits for the person, whatever their rules say.
  */
 export const CHIEF_ANSWERS_IN_A_ROW = 3
-
-/**
- * When Brigade offers to let Chief answer a kind on its own: of the latest `decisions` suggestions
- * of that kind the person answered (since they last refused, or set it back), `agreed` at least
- * were the person's own pick.
- */
-export const CHIEF_PROMOTION = { decisions: 10, agreed: 9 } as const
-
-/** Where Chief keeps the person's mandate, and the work it put off, in the library. */
-export const CHIEF_FOLDER = 'chief'
-export const MANDATE_PATH = `${CHIEF_FOLDER}/mandate.md`
-export const PARKED_PATH = `${CHIEF_FOLDER}/parked.md`
 
 /** One answer a question offers: its button's words, and the message a click on it sends. */
 export const ChiefOption = z.object({
@@ -54,14 +27,15 @@ export const ChiefOption = z.object({
   message: z.string(),
   /** What a choices card's option says of itself, beside its label. */
   description: z.string().optional(),
+  /** A design to pick on its card: a matter of taste, never answered by Chief. */
+  design: z.boolean().optional(),
 })
 export type ChiefOption = z.infer<typeof ChiefOption>
 
 /**
- * Where a decision stands. pending: Chief is reading the question. suggested: its pick shows on
- * the question, the person decides. answered: it answered on its own. escalated: it left the
- * question to the person, with why. superseded: someone answered first. failed: it could not
- * decide (no account, an error, no decision made).
+ * Where an answer of Chief's stands. answered: it goes, or went, to the teammate in the person's
+ * name. superseded: the person, or the thread, moved on first, and it never goes. escalated: it was
+ * left to the person (CHIEF_ANSWERS_IN_A_ROW). pending and failed: on its way, or not made.
  */
 export const ChiefDecisionStatus = z.enum([
   'pending',
@@ -73,83 +47,9 @@ export const ChiefDecisionStatus = z.enum([
 ])
 export type ChiefDecisionStatus = z.infer<typeof ChiefDecisionStatus>
 
-/** What the person made of it: their own pick was Chief's, another, or Chief's answer was wrong. */
+/** overruled: the person marked Chief's answer as wrong. */
 export const ChiefOutcome = z.enum(['agreed', 'disagreed', 'overruled'])
 export type ChiefOutcome = z.infer<typeof ChiefOutcome>
-
-/** Chief's decision on one question, as a thread shows it. */
-export const ChiefDecisionView = z.object({
-  id: z.string(),
-  /** The question's card in the thread (its tool.started seq). */
-  askSeq: z.number().int(),
-  status: ChiefDecisionStatus,
-  verdict: z.enum(['answer', 'park', 'escalate']).nullable(),
-  kind: ChiefQuestionKind.nullable(),
-  /** The answer it picked (or would pick, escalating): what a click on it sends. */
-  option: ChiefOption.nullable(),
-  reason: z.string().nullable(),
-  basis: z.string().nullable(),
-  outcome: ChiefOutcome.nullable(),
-  /** Chief's thread that decided it, a sub-thread of this one. */
-  childSessionId: z.string().nullable(),
-  createdAt: z.string(),
-})
-export type ChiefDecisionView = z.infer<typeof ChiefDecisionView>
-
-/** A member turns Chief's answers on or off, or lets it answer a kind alone or not (PUT /me/chief). */
-export const SetChief = z
-  .object({
-    on: z.boolean().optional(),
-    alone: z.object({ kind: ChiefKind, on: z.boolean() }).optional(),
-  })
-  .refine((v) => (v.on === undefined) !== (v.alone === undefined), {
-    message: 'Send on, or alone',
-  })
-export type SetChief = z.infer<typeof SetChief>
-
-/** What Chief does in a member's name, as their settings show it (GET /me/chief). */
-export type ChiefSettings = {
-  on: boolean
-  kinds: { kind: ChiefKind; alone: boolean; decided: number; agreed: number }[]
-  mandate: { id: string; path: string } | null
-  stats: {
-    days: number
-    questions: number
-    answered: number
-    overruled: number
-    suggested: number
-    agreed: number
-    disagreed: number
-    escalated: number
-  }
-}
-
-/** Chief's decision, as its decision thread sends it (its chief_decide tool). */
-const Line = (max: number) => z.string().trim().min(1).max(max)
-export const ChiefOperations = [
-  z.object({
-    name: z.literal('chief_decide'),
-    /** answer: pick `option`. park: pick `option`, the one that puts it off, and keep `parked`. escalate: leave it to the person. */
-    verdict: z.enum(['answer', 'park', 'escalate']),
-    /** The answer, by its number in the brief (1 for the first). Escalating: the one it would pick, if any. */
-    option: z.number().int().positive().max(10).optional(),
-    kind: ChiefQuestionKind,
-    reason: Line(600),
-    /** The line of the mandate, or the person's earlier decision, it goes by. */
-    basis: Line(300).optional(),
-    /** Parking: the work put off, in a line for the person's list. */
-    parked: Line(300).optional(),
-  }),
-  /** Chief's recent decisions for the person of its thread, for the weekly look back. */
-  z.object({
-    name: z.literal('chief_decisions'),
-    days: z.number().int().positive().max(31).optional(),
-  }),
-] as const
-
-export type ChiefOperation = z.infer<(typeof ChiefOperations)[number]>
-export const isChiefOperation = (op: { name: string }): op is ChiefOperation =>
-  op.name === 'chief_decide' || op.name === 'chief_decisions'
 
 /** One line: an answer note keeps each part on its own line. */
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim()
@@ -161,29 +61,33 @@ export const CHIEF_ANSWER_RULE =
   'until they write again.'
 
 const ANSWER_HEAD = 'Chief answered for you: '
+const RULE_HEAD = 'By their rule: '
 const decisionTail = (id: string) => `(Chief's decision ${id})`
 
 /**
  * The message Chief's answer reaches the teammate as, in the person's name: the very words a click
- * on the answer sends, with why. The dashboard shows it as a note (chiefAnswerNote).
+ * on the answer sends, with why and the rule it goes by. The dashboard shows it as a note
+ * (chiefAnswerNote).
  */
 export function chiefAnswerMessage(a: {
   decisionId: string
   answer: string
   reason: string
+  /** The person's rule it goes by, in their words. */
   basis?: string | null
 }) {
   return [
     `${ANSWER_HEAD}${oneLine(a.answer)}`,
     `Why: ${oneLine(a.reason)}`,
-    ...(a.basis ? [`From the mandate: ${oneLine(a.basis)}`] : []),
+    ...(a.basis ? [`${RULE_HEAD}${oneLine(a.basis)}`] : []),
     '',
     `${CHIEF_ANSWER_RULE} ${decisionTail(a.decisionId)}`,
   ].join('\n')
 }
 
+// Answers made before the rules (#724) said "From the mandate:": still read back as answers.
 const ANSWER = new RegExp(
-  `^${ANSWER_HEAD}(.+)\\nWhy: (.+)\\n(?:From the mandate: (.+)\\n)?\\n` +
+  `^${ANSWER_HEAD}(.+)\\nWhy: (.+)\\n(?:(?:${RULE_HEAD}|From the mandate: )(.+)\\n)?\\n` +
     `${CHIEF_ANSWER_RULE.replace(/[.()]/g, '\\$&')} \\(Chief's decision ([A-Za-z0-9_-]+)\\)$`,
 )
 
@@ -216,51 +120,271 @@ export function chiefOverruledNote(text: string) {
   return m ? { answer: m[1]!, decisionId: m[2]! } : null
 }
 
-const BRIEF_HEAD = 'Decide for the person: '
+// ---------------------------------------------------------------------------
+// The person's settings and rules
+// ---------------------------------------------------------------------------
+
+/** A member turns their daily pass on or off, sets their rules, or says their timezone (PUT /me/chief). */
+export const SetChief = z
+  .object({
+    pass: z.boolean().optional(),
+    rules: z.string().max(CHIEF_RULES_MAX).optional(),
+    /** IANA, as their browser says it: their pass runs in their morning. */
+    timezone: z.string().trim().min(1).max(64).optional(),
+  })
+  .refine((v) => v.pass !== undefined || v.rules !== undefined || v.timezone !== undefined, {
+    message: 'Send pass, rules or timezone',
+  })
+export type SetChief = z.infer<typeof SetChief>
+
+/** What a member set for Chief (GET /me/chief). */
+export type ChiefSettings = {
+  pass: boolean
+  rules: string
+  timezone: string | null
+  /** Their pass runs from this hour of their day. */
+  hour: number
+}
+
+/** The person takes a rule Chief proposed into their rules, or refuses it (POST /me/chief/rules). */
+export const ChiefRuleDecision = z.object({
+  line: z.string().trim().min(1).max(300),
+  add: z.boolean(),
+})
+export type ChiefRuleDecision = z.infer<typeof ChiefRuleDecision>
+
+// ---------------------------------------------------------------------------
+// The daily pass
+// ---------------------------------------------------------------------------
+
+const Thread = { n: z.number().int().positive(), title: z.string() }
+
+/** One thing that waits on the person, as their pass lists it: by its number in Chief's brief. */
+export const ChiefPassItem = z.discriminatedUnion('kind', [
+  /** A teammate's reply ended on buttons or a choices card nobody answered: Chief may answer it. */
+  z.object({
+    kind: z.literal('question'),
+    ...Thread,
+    sessionId: z.string(),
+    teammate: z.string(),
+    teammateId: z.string(),
+    /** The card's event in the thread (its tool.started seq). */
+    askSeq: z.number().int(),
+    options: z.array(ChiefOption),
+    /** The reply ending on it (its end), and what a choices card asks. */
+    question: z.string(),
+    cardQuestion: z.string().nullable(),
+  }),
+  /** A thread that stopped on an error: Chief may try it again. */
+  z.object({
+    kind: z.literal('failed'),
+    ...Thread,
+    sessionId: z.string(),
+    teammate: z.string(),
+    error: z.string(),
+  }),
+  /** A ticket (an approval, an access, a question in a turn): always the person's to answer. */
+  z.object({
+    kind: z.literal('ticket'),
+    ...Thread,
+    sessionId: z.string().nullable(),
+    ticket: z.string(),
+    type: z.string(),
+  }),
+  /** A pull request waiting on a person: always theirs to merge. */
+  z.object({
+    kind: z.literal('pull'),
+    ...Thread,
+    sessionId: z.string().nullable(),
+    pull: z.string(),
+    state: z.string(),
+  }),
+])
+export type ChiefPassItem = z.infer<typeof ChiefPassItem>
+
+/** A question of the person's answered by a click, lately: what Chief learns their rules from. */
+export type ChiefRecentAnswer = { thread: string; question: string; picked: string }
+
+const BRIEF_HEAD = "Chief's pass for "
+const clip = (text: string, max: number) =>
+  text.length <= max ? text : `…${text.slice(text.length - max)}`
 
 /**
- * The first message of Chief's decision thread: the question, what it offers, and what Chief goes
- * by. Everything it needs is here: it reads no other thread.
+ * The first message of the person's pass: their rules, what waits on them, numbered, and their
+ * recent answers. Everything Chief goes by is here: it reads no thread.
  */
-export function chiefDecisionBrief(b: {
+export function chiefPassBrief(b: {
   person: string
-  teammate: string
-  threadTitle: string
-  request: string
-  /** What a choices card asks, as it asks it; buttons ask in the reply itself. */
-  cardQuestion?: string | null
-  question: string
-  options: ChiefOption[]
-  mandate: string | null
-  earlier: string[]
+  day: string
+  rules: string | null
+  refused: string[]
+  items: ChiefPassItem[]
+  answers: ChiefRecentAnswer[]
 }) {
+  const item = (i: ChiefPassItem) => {
+    const head = `${i.n}. "${oneLine(i.title)}"`
+    switch (i.kind) {
+      case 'question':
+        return [
+          `${head}: ${i.teammate} ended its reply on a question.`,
+          ...(i.cardQuestion?.trim() ? [`   Question: ${oneLine(i.cardQuestion)}`] : []),
+          `   Its reply, ending on it: ${oneLine(clip(i.question, 1_500)) || '(no text)'}`,
+          `   Answers: ${i.options
+            .map(
+              (o, k) =>
+                `${k + 1}) ${o.label}${o.description?.trim() ? ` (${oneLine(o.description)})` : ''}` +
+                (o.design ? ' [a design: theirs to pick]' : ''),
+            )
+            .join('  ')}`,
+        ].join('\n')
+      case 'failed':
+        return `${head}: ${i.teammate}'s turn stopped on an error: ${oneLine(clip(i.error, 600))}`
+      case 'ticket':
+        return `${head}: a ticket waits on them (${i.type}): ${oneLine(i.ticket)}. Theirs to answer.`
+      case 'pull':
+        return `${head}: pull request ${oneLine(i.pull)} (${i.state}). Theirs to merge.`
+    }
+  }
   return [
-    `${BRIEF_HEAD}${b.threadTitle}`,
+    `${BRIEF_HEAD}${b.person}, ${b.day}`,
     '',
-    `${b.teammate} ended its reply in a thread of ${b.person}'s on a question with these answers. ` +
-      `Read it as ${b.person}'s chief of staff, then call chief_decide once and end your turn.`,
+    `Go through what waits on ${b.person} this morning, as their chief of staff (see your instructions), then ` +
+      'call chief_report once and end your turn.',
     '',
-    ...(b.cardQuestion?.trim() ? ['## The question', b.cardQuestion.trim(), ''] : []),
-    '## The answers it offers',
-    ...b.options.map(
-      (o, i) => `${i + 1}. ${o.label}${o.description?.trim() ? `: ${oneLine(o.description)}` : ''}`,
-    ),
+    `## ${b.person}'s rules`,
+    b.rules?.trim() ||
+      `(None yet. Answer nothing in their name; from their recent answers below, propose rules they may want.)`,
     '',
-    `## ${b.teammate}'s reply, ending on the question`,
-    b.question,
-    '',
-    `## What ${b.person} asked in the thread`,
-    b.request || '(The thread started without a request of theirs.)',
-    '',
-    `## ${b.person}'s mandate`,
-    b.mandate?.trim() ||
-      `(None yet: ${b.person} has not written one with you. Answer only what their own words in the thread, or ` +
-        'their decisions in your memory, settle; leave the rest to them.)',
-    ...(b.earlier.length
-      ? ['', '## Your earlier decisions in this thread', ...b.earlier.map((e) => `- ${e}`)]
+    '## What waits on them',
+    ...b.items.map(item),
+    ...(b.answers.length
+      ? [
+          '',
+          '## Their answers to questions lately',
+          ...b.answers.map(
+            (a) =>
+              `- "${oneLine(a.thread)}": ${oneLine(clip(a.question, 300))} → ${oneLine(a.picked)}`,
+          ),
+        ]
+      : []),
+    ...(b.refused.length
+      ? ['', '## Rules they refused (never propose these again)', ...b.refused.map((r) => `- ${r}`)]
       : []),
   ].join('\n')
 }
 
-/** A decision thread's first message, by its head: the thread view folds it like Brigade's notes. */
-export const isChiefDecisionBrief = (text: string) => text.startsWith(BRIEF_HEAD)
+/** A pass's first message, by its head: its thread view folds it like Brigade's notes. */
+export const isChiefPassBrief = (text: string) => text.startsWith(BRIEF_HEAD)
+
+const Line = (max: number) => z.string().trim().min(1).max(max)
+
+/** What Chief leaves the person at the end of its pass (chief_report). */
+export const ChiefPassReport = z.object({
+  /** What is still theirs to decide, each with what Chief would do: an answer, by its number, for a question. */
+  decisions: z
+    .array(
+      z.object({
+        item: z.number().int().positive(),
+        recommendation: Line(400),
+        option: z.number().int().positive().max(10).optional(),
+      }),
+    )
+    .max(30)
+    .default([]),
+  /** What it noticed across their threads: a question settled elsewhere, two threads on the same work. */
+  notes: z
+    .array(z.object({ item: z.number().int().positive().optional(), text: Line(400) }))
+    .max(10)
+    .default([]),
+  /** Rules worth adding, from their recent answers: one line each, in their language, with why. */
+  rules: z
+    .array(z.object({ line: Line(300), why: Line(300) }))
+    .max(5)
+    .default([]),
+})
+export type ChiefPassReport = z.infer<typeof ChiefPassReport>
+
+/** Chief's operations, as its threads send them (its tools, through schedule calls). */
+export const ChiefOperations = [
+  /** In a pass: answer a question item in the person's name, by its answer's number. */
+  z.object({
+    name: z.literal('chief_answer'),
+    item: z.number().int().positive(),
+    option: z.number().int().positive().max(10),
+    reason: Line(600),
+    /** The person's rule that settles it, in their words. */
+    rule: Line(300),
+  }),
+  /** In a pass: try a failed item's turn again. */
+  z.object({
+    name: z.literal('chief_retry'),
+    item: z.number().int().positive(),
+    reason: Line(300),
+  }),
+  /** In a pass, once, last: what is left to the person. */
+  z.object({ name: z.literal('chief_report') }).merge(ChiefPassReport),
+  /** In a thread with the person: their rules, whole, as they agreed to them. */
+  z.object({ name: z.literal('chief_rules'), rules: z.string().max(CHIEF_RULES_MAX) }),
+] as const
+
+export type ChiefOperation = z.infer<(typeof ChiefOperations)[number]>
+const CHIEF_OPERATIONS = new Set(['chief_answer', 'chief_retry', 'chief_report', 'chief_rules'])
+export const isChiefOperation = (op: { name: string }): op is ChiefOperation =>
+  CHIEF_OPERATIONS.has(op.name)
+
+/** One of Chief's answers in a thread, as its view shows it beside the answer's note. */
+export const ChiefDecisionView = z.object({
+  id: z.string(),
+  /** The question's card in the thread (its tool.started seq). */
+  askSeq: z.number().int(),
+  status: ChiefDecisionStatus,
+  /** The answer it picked: what a click on it sends. */
+  option: ChiefOption.nullable(),
+  reason: z.string().nullable(),
+  /** The person's rule it went by. */
+  basis: z.string().nullable(),
+  outcome: ChiefOutcome.nullable(),
+  createdAt: z.string(),
+})
+export type ChiefDecisionView = z.infer<typeof ChiefDecisionView>
+
+/** A thread a pass item is in, as Today links it. */
+type PassThread = { id: string; title: string } | null
+
+/** A member's pass, as Today shows it (GET /me/chief/pass). */
+export type ChiefPassView = {
+  id: string
+  /** The member's day it ran for (YYYY-MM-DD, their timezone). */
+  day: string
+  /** running: Chief is at it. done: it reported. failed: it stopped before reporting. */
+  status: 'running' | 'done' | 'failed'
+  /** Chief's thread for it, to see how it worked. */
+  threadId: string | null
+  at: string
+  /** What it settled in their name. */
+  settled: {
+    kind: 'answered' | 'retried'
+    thread: PassThread
+    /** The answer it gave, or what it tried again. */
+    what: string
+    reason: string
+    rule: string | null
+    /** An answer's: to mark it wrong, and where it stands (superseded: the person was first). */
+    decisionId: string | null
+    status: ChiefDecisionStatus | null
+    outcome: ChiefOutcome | null
+  }[]
+  /** What is still theirs, with what Chief would do. */
+  decisions: {
+    kind: ChiefPassItem['kind']
+    thread: PassThread
+    what: string
+    recommendation: string
+    /** The answer it would pick, for a question still open: a click sends it as theirs. */
+    option: ChiefOption | null
+    /** A question still open: its answer may be sent from Today. */
+    open: boolean
+  }[]
+  notes: { thread: PassThread; text: string }[]
+  rules: { line: string; why: string; state: 'proposed' | 'added' | 'refused' }[]
+}

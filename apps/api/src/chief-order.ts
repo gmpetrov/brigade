@@ -7,6 +7,7 @@
 // kept only while its question is open, nobody has the thread in hand, and no word of the person's
 // waits to be read before it. The workspace's hub then keeps and sends these commands of one thread
 // one at a time (WorkspaceHub.dispatch), so its computer gets them in the order they were kept.
+import { randomUUID } from 'node:crypto'
 import { chiefAnswerNote, type ApiToRunner } from '@brigade/contracts'
 import { prisma, type Prisma, type ScopedDb } from './db.js'
 
@@ -253,4 +254,35 @@ export async function keepInOrder(
     if (row) void hubs.get(command.workspaceId).broadcast(threadUpdated(sessionId, row.status))
   }
   return outcome
+}
+
+/** A retry Chief's pass sends in the person's name (chief_retry), by its commandId. */
+const PASS_RETRY = 'chief-retry:'
+export const passRetryCommandId = (passId: string) => `${PASS_RETRY}${passId}:${randomUUID()}`
+/** The pass a command is a retry of (passRetryCommandId), or null. */
+export const passOfCommand = (commandId: string) =>
+  commandId.startsWith(PASS_RETRY) ? commandId.slice(PASS_RETRY.length).split(':')[0] || null : null
+
+/**
+ * Keep a retry Chief's pass sends in the person's name only while their pass is on and at work,
+ * under their row's lock as an answer is (answerInTheirName): kept before they turn it off
+ * (setChief changes their row, then marks their passes over), or never ('moot').
+ */
+export async function keepForPass(
+  row: Prisma.RunnerCommandUncheckedCreateInput & { workspaceId: string },
+  passId: string,
+): Promise<'kept' | 'moot'> {
+  return prisma.$transaction(async (tx) => {
+    const [pass] = await tx.$queryRaw<{ memberId: string }[]>`
+      SELECT "memberId" FROM "ChiefPass" WHERE id = ${passId} AND "workspaceId" = ${row.workspaceId}`
+    if (!pass) return 'moot'
+    // Their row first, then the pass, as setChief changes them.
+    const [member] = await tx.$queryRaw<{ chiefPass: boolean }[]>`
+      SELECT "chiefPass" FROM "Member" WHERE id = ${pass.memberId} FOR SHARE`
+    const [now] = await tx.$queryRaw<{ status: string }[]>`
+      SELECT status::text AS status FROM "ChiefPass" WHERE id = ${passId} FOR SHARE`
+    if (!member?.chiefPass || now?.status !== 'running') return 'moot'
+    await tx.runnerCommand.create({ data: row })
+    return 'kept'
+  })
 }

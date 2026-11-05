@@ -422,6 +422,7 @@ export const ModelName = {
   Task: 'Task',
   Schedule: 'Schedule',
   ChiefDecision: 'ChiefDecision',
+  ChiefPass: 'ChiefPass',
   Wakeup: 'Wakeup',
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
@@ -469,6 +470,7 @@ export const ModelName = {
   Skill: 'Skill',
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
+  PreviewMachine: 'PreviewMachine',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -514,7 +516,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2365,6 +2367,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ChiefDecisionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ChiefDecisionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChiefPass: {
+      payload: Prisma.$ChiefPassPayload<ExtArgs>
+      fields: Prisma.ChiefPassFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChiefPassFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChiefPassFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        findFirst: {
+          args: Prisma.ChiefPassFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChiefPassFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        findMany: {
+          args: Prisma.ChiefPassFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        create: {
+          args: Prisma.ChiefPassCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        createMany: {
+          args: Prisma.ChiefPassCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ChiefPassCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        delete: {
+          args: Prisma.ChiefPassDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        update: {
+          args: Prisma.ChiefPassUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        deleteMany: {
+          args: Prisma.ChiefPassDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChiefPassUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ChiefPassUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>[]
+        }
+        upsert: {
+          args: Prisma.ChiefPassUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChiefPassPayload>
+        }
+        aggregate: {
+          args: Prisma.ChiefPassAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChiefPass>
+        }
+        groupBy: {
+          args: Prisma.ChiefPassGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChiefPassGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChiefPassCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChiefPassCountAggregateOutputType> | number
         }
       }
     }
@@ -5846,6 +5922,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PreviewMachine: {
+      payload: Prisma.$PreviewMachinePayload<ExtArgs>
+      fields: Prisma.PreviewMachineFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreviewMachineFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreviewMachineFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        findFirst: {
+          args: Prisma.PreviewMachineFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreviewMachineFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        findMany: {
+          args: Prisma.PreviewMachineFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        create: {
+          args: Prisma.PreviewMachineCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        createMany: {
+          args: Prisma.PreviewMachineCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreviewMachineCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        delete: {
+          args: Prisma.PreviewMachineDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        update: {
+          args: Prisma.PreviewMachineUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        deleteMany: {
+          args: Prisma.PreviewMachineDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreviewMachineUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreviewMachineUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>[]
+        }
+        upsert: {
+          args: Prisma.PreviewMachineUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewMachinePayload>
+        }
+        aggregate: {
+          args: Prisma.PreviewMachineAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreviewMachine>
+        }
+        groupBy: {
+          args: Prisma.PreviewMachineGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewMachineGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreviewMachineCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewMachineCountAggregateOutputType> | number
+        }
+      }
+    }
     PreviewVariable: {
       payload: Prisma.$PreviewVariablePayload<ExtArgs>
       fields: Prisma.PreviewVariableFieldRefs
@@ -8239,9 +8389,14 @@ export const MemberScalarFieldEnum = {
   notify: 'notify',
   suggestions: 'suggestions',
   autoMerge: 'autoMerge',
+  previewMachines: 'previewMachines',
   chiefAnswers: 'chiefAnswers',
   chiefAuto: 'chiefAuto',
-  chiefAutoChangedAt: 'chiefAutoChangedAt'
+  chiefAutoChangedAt: 'chiefAutoChangedAt',
+  chiefPass: 'chiefPass',
+  chiefRules: 'chiefRules',
+  chiefRulesRefused: 'chiefRulesRefused',
+  timezone: 'timezone'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -8448,6 +8603,7 @@ export const SessionScalarFieldEnum = {
   surfacedAt: 'surfacedAt',
   quiet: 'quiet',
   chiefDecisionId: 'chiefDecisionId',
+  chiefPassId: 'chiefPassId',
   chiefWordSeq: 'chiefWordSeq'
 } as const
 
@@ -8513,6 +8669,7 @@ export const ChiefDecisionScalarFieldEnum = {
   question: 'question',
   options: 'options',
   childSessionId: 'childSessionId',
+  passId: 'passId',
   status: 'status',
   verdict: 'verdict',
   kind: 'kind',
@@ -8529,6 +8686,24 @@ export const ChiefDecisionScalarFieldEnum = {
 } as const
 
 export type ChiefDecisionScalarFieldEnum = (typeof ChiefDecisionScalarFieldEnum)[keyof typeof ChiefDecisionScalarFieldEnum]
+
+
+export const ChiefPassScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  day: 'day',
+  sessionId: 'sessionId',
+  status: 'status',
+  items: 'items',
+  actions: 'actions',
+  report: 'report',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type ChiefPassScalarFieldEnum = (typeof ChiefPassScalarFieldEnum)[keyof typeof ChiefPassScalarFieldEnum]
 
 
 export const WakeupScalarFieldEnum = {
@@ -9337,6 +9512,25 @@ export const PreviewRecipeScalarFieldEnum = {
 } as const
 
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
+export const PreviewMachineScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  status: 'status',
+  providerRef: 'providerRef',
+  generation: 'generation',
+  claimedUntil: 'claimedUntil',
+  usedAt: 'usedAt',
+  keptAliveAt: 'keptAliveAt',
+  stoppedAt: 'stoppedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
 
 
 export const PreviewVariableScalarFieldEnum = {
@@ -10173,6 +10367,20 @@ export type ListEnumChiefOutcomeFieldRefInput<$PrismaModel> = FieldRefInputType<
 
 
 /**
+ * Reference to a field of type 'ChiefPassStatus'
+ */
+export type EnumChiefPassStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChiefPassStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ChiefPassStatus[]'
+ */
+export type ListEnumChiefPassStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChiefPassStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'WakeupKind'
  */
 export type EnumWakeupKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupKind'>
@@ -10449,6 +10657,20 @@ export type EnumAttachmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<
  * Reference to a field of type 'AttachmentSource[]'
  */
 export type ListEnumAttachmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentSource[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PreviewMachineStatus'
+ */
+export type EnumPreviewMachineStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewMachineStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PreviewMachineStatus[]'
+ */
+export type ListEnumPreviewMachineStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewMachineStatus[]'>
     
 
 
@@ -10809,6 +11031,7 @@ export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit
   chiefDecision?: Prisma.ChiefDecisionOmit
+  chiefPass?: Prisma.ChiefPassOmit
   wakeup?: Prisma.WakeupOmit
   replyWatch?: Prisma.ReplyWatchOmit
   threadTeammate?: Prisma.ThreadTeammateOmit
@@ -10856,6 +11079,7 @@ export type GlobalOmitConfig = {
   skill?: Prisma.SkillOmit
   skillPack?: Prisma.SkillPackOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
+  previewMachine?: Prisma.PreviewMachineOmit
   previewVariable?: Prisma.PreviewVariableOmit
   project?: Prisma.ProjectOmit
   projectRepository?: Prisma.ProjectRepositoryOmit

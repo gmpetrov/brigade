@@ -135,6 +135,16 @@ export const ChiefOutcome = {
 export type ChiefOutcome = (typeof ChiefOutcome)[keyof typeof ChiefOutcome]
 
 
+export const ChiefPassStatus = {
+  running: 'running',
+  done: 'done',
+  failed: 'failed',
+  idle: 'idle'
+} as const
+
+export type ChiefPassStatus = (typeof ChiefPassStatus)[keyof typeof ChiefPassStatus]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',
@@ -333,6 +343,17 @@ export const AttachmentStatus = {
 } as const
 
 export type AttachmentStatus = (typeof AttachmentStatus)[keyof typeof AttachmentStatus]
+
+
+export const PreviewMachineStatus = {
+  creating: 'creating',
+  running: 'running',
+  stopping: 'stopping',
+  stopped: 'stopped',
+  destroying: 'destroying'
+} as const
+
+export type PreviewMachineStatus = (typeof PreviewMachineStatus)[keyof typeof PreviewMachineStatus]
 
 
 export const PreviewVariableKind = {

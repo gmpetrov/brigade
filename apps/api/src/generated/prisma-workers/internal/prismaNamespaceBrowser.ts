@@ -76,6 +76,7 @@ export const ModelName = {
   Task: 'Task',
   Schedule: 'Schedule',
   ChiefDecision: 'ChiefDecision',
+  ChiefPass: 'ChiefPass',
   Wakeup: 'Wakeup',
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
@@ -123,6 +124,7 @@ export const ModelName = {
   Skill: 'Skill',
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
+  PreviewMachine: 'PreviewMachine',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -305,9 +307,14 @@ export const MemberScalarFieldEnum = {
   notify: 'notify',
   suggestions: 'suggestions',
   autoMerge: 'autoMerge',
+  previewMachines: 'previewMachines',
   chiefAnswers: 'chiefAnswers',
   chiefAuto: 'chiefAuto',
-  chiefAutoChangedAt: 'chiefAutoChangedAt'
+  chiefAutoChangedAt: 'chiefAutoChangedAt',
+  chiefPass: 'chiefPass',
+  chiefRules: 'chiefRules',
+  chiefRulesRefused: 'chiefRulesRefused',
+  timezone: 'timezone'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -514,6 +521,7 @@ export const SessionScalarFieldEnum = {
   surfacedAt: 'surfacedAt',
   quiet: 'quiet',
   chiefDecisionId: 'chiefDecisionId',
+  chiefPassId: 'chiefPassId',
   chiefWordSeq: 'chiefWordSeq'
 } as const
 
@@ -579,6 +587,7 @@ export const ChiefDecisionScalarFieldEnum = {
   question: 'question',
   options: 'options',
   childSessionId: 'childSessionId',
+  passId: 'passId',
   status: 'status',
   verdict: 'verdict',
   kind: 'kind',
@@ -595,6 +604,24 @@ export const ChiefDecisionScalarFieldEnum = {
 } as const
 
 export type ChiefDecisionScalarFieldEnum = (typeof ChiefDecisionScalarFieldEnum)[keyof typeof ChiefDecisionScalarFieldEnum]
+
+
+export const ChiefPassScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  day: 'day',
+  sessionId: 'sessionId',
+  status: 'status',
+  items: 'items',
+  actions: 'actions',
+  report: 'report',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type ChiefPassScalarFieldEnum = (typeof ChiefPassScalarFieldEnum)[keyof typeof ChiefPassScalarFieldEnum]
 
 
 export const WakeupScalarFieldEnum = {
@@ -1403,6 +1430,25 @@ export const PreviewRecipeScalarFieldEnum = {
 } as const
 
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
+export const PreviewMachineScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  status: 'status',
+  providerRef: 'providerRef',
+  generation: 'generation',
+  claimedUntil: 'claimedUntil',
+  usedAt: 'usedAt',
+  keptAliveAt: 'keptAliveAt',
+  stoppedAt: 'stoppedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
 
 
 export const PreviewVariableScalarFieldEnum = {

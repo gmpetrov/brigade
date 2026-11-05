@@ -1759,90 +1759,158 @@ const TIMEZONE =
   'IANA timezone the hours are in, e.g. "Europe/Paris". Use the person\'s if you know it.'
 
 /**
- * Chief answering for the person (docs/chief-answers.md): its decision on one question, in the
- * thread Brigade starts for it; and, in its own threads, a look back at what it decided.
+ * Chief for the person (docs/chief-answers.md). In its daily pass, the thread Brigade starts for
+ * it: answer a question in the person's name, try a failed thread again, and report what is left
+ * to them. Elsewhere: their rules, written with them.
  */
-export function chiefTools(
-  call: ScheduleCaller,
-  options: { deciding: boolean },
-): Record<string, Tool> {
-  if (options.deciding)
+export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Record<string, Tool> {
+  if (!options.pass)
     return {
-      chief_decide: tool({
+      chief_rules: tool({
         description:
-          "Decide the question this thread is about, in the person's name, once; then end your turn without a reply. " +
-          'answer: pick one of its answers. park: pick the one that puts the work off, and say what is put off. ' +
-          'escalate: leave it to the person, with why, and the answer you would pick if you lean one way.',
-        inputSchema: jsonSchema<{
-          verdict: 'answer' | 'park' | 'escalate'
-          option?: number
-          kind: 'next_step' | 'approach' | 'priority' | 'taste' | 'outside'
-          reason: string
-          basis?: string
-          parked?: string
-        }>({
+          "Save the person's rules for their teammates, whole, once they agreed to them: short lines in their words " +
+          'that settle what they would otherwise be asked. Every teammate working for them reads them. An empty text ' +
+          'clears them.',
+        inputSchema: jsonSchema<{ rules: string }>({
           type: 'object',
           properties: {
-            verdict: { type: 'string', enum: ['answer', 'park', 'escalate'] },
-            option: {
-              type: 'number',
-              description:
-                'The answer, by its number in the brief (1 for the first). Required to answer or park.',
-            },
-            kind: {
+            rules: {
               type: 'string',
-              enum: ['next_step', 'approach', 'priority', 'taste', 'outside'],
-              description: 'What kind of question it is (see your instructions)',
-            },
-            reason: { type: 'string', description: 'Why, in a line the person reads' },
-            basis: {
-              type: 'string',
-              description:
-                "The line of the mandate, or the person's decision, it goes by, in their words",
-            },
-            parked: {
-              type: 'string',
-              description: 'Parking: the work put off, in a line for their list',
+              description: 'The rules, whole, one per line (at most 4000 characters)',
             },
           },
-          required: ['verdict', 'kind', 'reason'],
+          required: ['rules'],
         }),
         execute: (input, { toolCallId }) =>
           call({
-            operation: {
-              name: 'chief_decide',
-              verdict: input.verdict,
-              kind: input.kind,
-              reason: input.reason,
-              ...(input.option !== undefined ? { option: Math.round(input.option) } : {}),
-              ...(input.basis ? { basis: input.basis } : {}),
-              ...(input.parked ? { parked: input.parked } : {}),
-            },
+            operation: { name: 'chief_rules', rules: input.rules },
             toolCallId,
-            toolName: 'chief_decide',
+            toolName: 'chief_rules',
             input,
           }),
       }),
     }
   return {
-    chief_decisions: tool({
+    chief_answer: tool({
       description:
-        "What you decided in the person's name lately, for your look back with them: each question's thread, its " +
-        'kind, your verdict and answer, whether it went alone or as a suggestion, and how they took it; with totals.',
-      inputSchema: jsonSchema<{ days?: number }>({
+        "Answer a question item of your brief in the person's name, when one of their rules plainly settles it: the " +
+        'teammate gets the answer as their click, with why and the rule.',
+      inputSchema: jsonSchema<{ item: number; option: number; reason: string; rule: string }>({
         type: 'object',
         properties: {
-          days: { type: 'number', description: 'How far back, in days (default 7, at most 31)' },
+          item: { type: 'number', description: 'The question, by its number in your brief' },
+          option: { type: 'number', description: 'The answer, by its number (1 for the first)' },
+          reason: { type: 'string', description: 'Why, in a line the person reads' },
+          rule: { type: 'string', description: 'Their rule that settles it, in their words' },
+        },
+        required: ['item', 'option', 'reason', 'rule'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'chief_answer',
+            item: Math.round(input.item),
+            option: Math.round(input.option),
+            reason: input.reason,
+            rule: input.rule,
+          },
+          toolCallId,
+          toolName: 'chief_answer',
+          input,
+        }),
+    }),
+    chief_retry: tool({
+      description:
+        "Try a failed item's turn again, when its error looks passing (a timeout, a lost connection, a limit since reset).",
+      inputSchema: jsonSchema<{ item: number; reason: string }>({
+        type: 'object',
+        properties: {
+          item: { type: 'number', description: 'The failed thread, by its number in your brief' },
+          reason: { type: 'string', description: 'Why it may go through now, in a line' },
+        },
+        required: ['item', 'reason'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'chief_retry', item: Math.round(input.item), reason: input.reason },
+          toolCallId,
+          toolName: 'chief_retry',
+          input,
+        }),
+    }),
+    chief_report: tool({
+      description:
+        'Once, last: what is still theirs (each with what you would do), what you noticed across their threads, and ' +
+        'new rules worth proposing from their recent answers. Then end your turn without a reply.',
+      inputSchema: jsonSchema<{
+        decisions?: { item: number; recommendation: string; option?: number }[]
+        notes?: { item?: number; text: string }[]
+        rules?: { line: string; why: string }[]
+      }>({
+        type: 'object',
+        properties: {
+          decisions: {
+            type: 'array',
+            description: 'What is still theirs to decide',
+            items: {
+              type: 'object',
+              properties: {
+                item: { type: 'number', description: 'By its number in your brief' },
+                recommendation: { type: 'string', description: 'What you would do, in a line' },
+                option: {
+                  type: 'number',
+                  description: 'For a question: the answer you would pick, by its number',
+                },
+              },
+              required: ['item', 'recommendation'],
+            },
+          },
+          notes: {
+            type: 'array',
+            description: 'What you see across their threads that they would want to know',
+            items: {
+              type: 'object',
+              properties: {
+                item: { type: 'number', description: 'The item it is about, if one' },
+                text: { type: 'string', description: 'In a line or two' },
+              },
+              required: ['text'],
+            },
+          },
+          rules: {
+            type: 'array',
+            description: 'At most three new rules from their recent answers',
+            items: {
+              type: 'object',
+              properties: {
+                line: {
+                  type: 'string',
+                  description: 'The rule, one line, in their language and words',
+                },
+                why: { type: 'string', description: 'The answers it comes from, in a line' },
+              },
+              required: ['line', 'why'],
+            },
+          },
         },
       }),
       execute: (input, { toolCallId }) =>
         call({
           operation: {
-            name: 'chief_decisions',
-            ...(input.days ? { days: Math.min(31, Math.max(1, Math.round(input.days))) } : {}),
+            name: 'chief_report',
+            decisions: (input.decisions ?? []).map((d) => ({
+              item: Math.round(d.item),
+              recommendation: d.recommendation,
+              ...(d.option !== undefined ? { option: Math.round(d.option) } : {}),
+            })),
+            notes: (input.notes ?? []).map((n) => ({
+              ...(n.item !== undefined ? { item: Math.round(n.item) } : {}),
+              text: n.text,
+            })),
+            rules: input.rules ?? [],
           },
           toolCallId,
-          toolName: 'chief_decisions',
+          toolName: 'chief_report',
           input,
         }),
     }),

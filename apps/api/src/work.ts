@@ -2,9 +2,11 @@
 // caps all come through here, so caps are checked in one place.
 import { randomUUID } from 'node:crypto'
 import {
+  type AgentEvent,
   type Effort,
   mentionedIds,
   type ReplyTo,
+  RETRY_PROTOCOL,
   type ThreadAttachmentRef,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -219,6 +221,58 @@ export async function promptThread(
   }
 }
 
+/**
+ * Try a thread's failed turn again (POST /threads/:id/retry, a person; or Chief's daily pass in a
+ * person's name, src/chief-pass.ts, whose commandId keeps it only while their pass is on): its
+ * latest turn event must be an error. Throws a 409 when there is nothing to try again, or the
+ * computer cannot.
+ */
+export async function retryThread(
+  db: ScopedDb,
+  scope: Scope,
+  thread: Thread,
+  memberId: string,
+  commandId: string = randomUUID(),
+) {
+  const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computer.id)
+  if (protocol !== undefined && protocol < RETRY_PROTOCOL)
+    throw new HTTPException(409, {
+      message: "This computer's Brigade is too old to try a turn again. Send a message instead.",
+    })
+  // The thread's latest turn event: an error, with the turn it ended before it.
+  const [last, started] = await Promise.all([
+    db.sessionEvent.findFirst({
+      where: {
+        sessionId: thread.id,
+        type: { in: ['turn.started', 'turn.completed', 'error', 'message.user'] },
+      },
+      orderBy: { seq: 'desc' },
+      select: { data: true },
+    }),
+    db.sessionEvent.findFirst({
+      where: { sessionId: thread.id, type: 'turn.started' },
+      orderBy: { seq: 'desc' },
+      select: { data: true },
+    }),
+  ])
+  const error = last?.data as AgentEvent | undefined
+  if (error?.type !== 'error')
+    throw new HTTPException(409, { message: 'There is nothing to try again: no turn failed.' })
+  const turn = started?.data as AgentEvent | undefined
+  const teammate = teammateIn(thread, turn?.type === 'turn.started' ? turn.teammateId : undefined)
+  const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
+    type: 'thread.retry',
+    commandId,
+    thread: await specFor(db, thread, { teammate }),
+    error: error.message.slice(0, 10_000),
+    memberId,
+  })
+  if (sent === 'offline')
+    throw new HTTPException(409, {
+      message: 'That computer is offline. Start its runner and try again.',
+    })
+}
+
 /** The member in control hands the thread back: the teammate continues, told their note and what changed. */
 export async function handBack(
   db: ScopedDb,
@@ -293,9 +347,14 @@ export async function handoffThread(
   const from = thread.teammates.find((t) => t.teammateId === message.fromTeammateId)
   if (!from) return
   // The chief routes work: a teammate it mentions joins the thread to answer. Not in a playbook's
-  // run: what started it is untrusted, and only a person brings another teammate in. Nor where it
-  // decides a question for the person (src/chief-answers.ts): it only decides there.
-  if (from.teammate.kind === 'chief' && !session.playbookRunId && !session.chiefDecisionId) {
+  // run: what started it is untrusted, and only a person brings another teammate in. Nor in its
+  // daily pass for a person (src/chief-pass.ts), nor a decision thread of #724's: it only reads there.
+  if (
+    from.teammate.kind === 'chief' &&
+    !session.playbookRunId &&
+    !session.chiefDecisionId &&
+    !session.chiefPassId
+  ) {
     const joining = await db.teammate.findMany({
       where: {
         id: { in: message.teammateIds.filter((id) => !inThread.has(id)) },
@@ -491,8 +550,11 @@ export async function startThread(
      * a thread made here that did not start is deleted rather than left failed.
      */
     dropUnstarted?: boolean
-    /** Chief's thread deciding a question for the person (src/chief-answers.ts): its decision. */
-    chiefDecisionId?: string
+    /**
+     * Chief's thread going through what waits on a person (src/chief-pass.ts): its pass. Its brief
+     * is Brigade's, quoting what teammates wrote: not the person's word, and it summons nobody.
+     */
+    chiefPassId?: string
     /**
      * Handed on by a thread whose work goes on Chief's word (Session.chiefWordSeq): this one's
      * does too, from its start, and its App writes ask a person.
@@ -502,10 +564,11 @@ export async function startThread(
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, teammates, children).
   await refuseWhileDeleting(scope.workspaceId)
-  // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
+  // Teammates the first message mentions answer after the starting one. A trigger's event is
+  // untrusted, and a pass's brief quotes what others wrote: they summon nobody.
   const teammateIds = [
     input.teammate.id,
-    ...(input.origin ? [] : await mentionedTeammates(db, input.text)).filter(
+    ...(input.origin || input.chiefPassId ? [] : await mentionedTeammates(db, input.text)).filter(
       (id) => id !== input.teammate.id,
     ),
   ]
@@ -541,7 +604,7 @@ export async function startThread(
         ...(input.effort ? { effort: input.effort } : {}),
         ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
         ...(input.quiet ? { quiet: true } : {}),
-        ...(input.chiefDecisionId ? { chiefDecisionId: input.chiefDecisionId } : {}),
+        ...(input.chiefPassId ? { chiefPassId: input.chiefPassId } : {}),
         ...(input.chiefWord ? { chiefWordSeq: 0 } : {}),
         ...(input.origin?.kind === 'trigger'
           ? {
@@ -629,7 +692,9 @@ export async function startThread(
           actor: !input.origin
             ? input.byTeammateId
               ? { type: 'teammate', id: input.byTeammateId }
-              : { type: 'member', id: input.memberId }
+              : input.chiefPassId
+                ? { type: 'system', id: `chief-pass:${input.chiefPassId}` }
+                : { type: 'member', id: input.memberId }
             : input.origin.kind === 'trigger'
               ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
               : input.origin.kind === 'schedule'
@@ -640,7 +705,13 @@ export async function startThread(
           track: {
             origin:
               input.origin?.kind ??
-              (input.quiet ? 'email' : input.byTeammateId ? 'teammate' : 'member'),
+              (input.chiefPassId
+                ? 'chief_pass'
+                : input.quiet
+                  ? 'email'
+                  : input.byTeammateId
+                    ? 'teammate'
+                    : 'member'),
             harness: input.teammate.harness,
           },
           data: {
@@ -661,14 +732,14 @@ export async function startThread(
       thread,
       {
         text: input.text,
-        memberId: input.origin || input.byTeammateId ? null : input.memberId,
+        memberId: input.origin || input.byTeammateId || input.chiefPassId ? null : input.memberId,
         teammateIds,
         attachments,
       },
       // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
       {
         isNew: true,
-        ...(input.origin ? {} : { nameThread: created.title }),
+        ...(input.origin || input.chiefPassId ? {} : { nameThread: created.title }),
         ...(input.commandId ? { commandId: input.commandId } : {}),
       },
     ).catch(async (error: unknown) => {

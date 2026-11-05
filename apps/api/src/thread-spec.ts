@@ -1,5 +1,4 @@
 import {
-  CHIEF_FOLDER,
   Effort,
   folderExceptions,
   libraryAccessFor,
@@ -8,6 +7,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { mayWrite } from './account-sharing.js'
+import { personRules } from './chief-rules.js'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
@@ -65,7 +65,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       parent: { select: { id: true, title: true } },
-      startedBy: { select: { suggestions: true, chiefAnswers: true } },
+      startedBy: { select: { suggestions: true } },
     },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -247,19 +247,19 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
-  // Chief deciding a question for the person (src/chief-answers.ts): it reads and decides, with no
-  // App, repository or computer of anyone's to act on.
-  const deciding = !!thread.chiefDecisionId && teammate.kind === 'chief'
-  // Its person lets Chief answer their teammates' questions: each teammate here is told what its
-  // answers are, and Chief that it keeps their mandate. In a member's own thread only, as Chief's
-  // answers are: a child reports, a playbook decides.
-  const chiefAnswers =
-    !deciding &&
-    thread.startedBy.chiefAnswers &&
-    thread.origin === 'member' &&
-    !thread.parentId &&
-    !playbook
-  const grants = deciding ? [] : await usableGrants(db, thread, teammate.id, granted, playbook)
+  // Chief's daily pass for a person (src/chief-pass.ts): it reads and answers by their rules, with
+  // no App, repository or computer of anyone's to act on.
+  const passing = !!thread.chiefPassId && teammate.kind === 'chief'
+  // The person the thread works for (src/chief-rules.ts): their rules reach its teammates, and with
+  // their pass on, each is told what Chief's answers in their name are, in their own threads, where
+  // a pass answers. Not in a playbook's run, which its playbook says how to run, nor in a pass, whose
+  // brief has them, nor in a thread several people ask in: whose rules would they be?
+  const asker = await askedBy(db, thread.id)
+  const personId = asker === SEVERAL_ASKERS ? null : (asker ?? thread.startedByMemberId)
+  const person = personId && !playbook && !passing ? await personRules(db, personId) : null
+  const personRule = person?.text ? { person: person.person, text: person.text } : null
+  const chiefAnswers = !!person?.pass && thread.origin === 'member' && !thread.parentId
+  const grants = passing ? [] : await usableGrants(db, thread, teammate.id, granted, playbook)
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
@@ -325,23 +325,19 @@ export async function specFor(
       thread.startedBy.suggestions,
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
-    // Deciding, Chief brings nobody in.
-    roster: deciding ? [] : roster,
+    // In its pass, Chief brings nobody in.
+    roster: passing ? [] : roster,
     library: teammate.libraryAccess,
-    libraryFolders: [
-      ...folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
-      // Chief keeps the person's mandate in its folder (teammateLibraryAccess lets it).
-      ...(chiefAnswers && teammate.kind === 'chief' && teammate.libraryAccess !== 'read_write'
-        ? [{ path: CHIEF_FOLDER, access: 'read_write' as const }]
-        : []),
-    ],
+    libraryFolders: folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
     private: thread.private,
     // A child reports to it; older runners ignore it, and its last message stands for its report.
     parent: thread.parent,
-    // Chief's answers for the person (CHIEF_PROTOCOL): false when they are off, and the
+    // Chief's answers in the person's name, by their pass: false when it is off, and the
     // instructions are as before.
     chiefAnswers,
-    ...(deciding ? { decision: { id: thread.chiefDecisionId! } } : {}),
+    // Their rules: none, and the instructions are as before. Older runners ignore them.
+    rules: personRule,
+    ...(passing ? { pass: { id: thread.chiefPassId! } } : {}),
     // What the instructions and tools offer depends on it (schedules, wake-ups, a merge's wake-up).
     origin: thread.origin,
     playbook: playbook
@@ -381,7 +377,7 @@ export async function specFor(
     // Taken in once by the computer it moved to; older runners ignore it.
     ...(thread.movedAt ? { moved: movedOf(thread) } : {}),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
-    ...(github && !deciding
+    ...(github && !passing
       ? {
           git: gitAccess(
             { sessionId: thread.id, teammateId: teammate.id, computerId: thread.computerId },
