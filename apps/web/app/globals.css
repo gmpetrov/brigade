@@ -617,6 +617,11 @@
       opacity: 1;
     }
   }
+  /* The Working pebble: pebble-avatar.tsx moves its eyes by the step it is on, in place of
+   * the glances; it still blinks. */
+  .pebble[data-expressive] .pebble-face {
+    animation: none;
+  }
   /* Out of sight (pebble-avatar.tsx): it stands still, and costs nothing on each frame. */
   .pebble[data-still] * {
     animation-play-state: paused;

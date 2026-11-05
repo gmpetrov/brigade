@@ -119,7 +119,7 @@ import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
-import { PebbleAvatar, pebbleInk } from '@/components/pebble-avatar'
+import { PebbleAvatar, pebbleInk, type PebbleExpression } from '@/components/pebble-avatar'
 import { PreviewElementChips } from '@/components/preview-elements'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
@@ -1679,6 +1679,19 @@ function liveStepText(item: ActivityItem) {
   return `${DOING[kind]} ${summary}`.trim()
 }
 
+/** What the Working pebble's eyes do on a step: read a file, think, squint at a command's
+ * work, light up on an edit, look around while searching, raise a brow at anything else. */
+function stepExpression(item: ActivityItem | undefined): PebbleExpression {
+  if (!item || item.kind === 'thinking') return 'think'
+  if (item.kind === 'file') return 'aha'
+  const kind = toolKind(item.toolName)
+  if (kind === 'read') return 'read'
+  if (kind === 'edit') return 'aha'
+  if (kind === 'command') return 'focus'
+  if (kind === 'search' || kind === 'web') return 'glance'
+  return 'curious'
+}
+
 /** How long a step shows at least: steps a teammate takes in a burst would flicker past. */
 const STEP_SHOWS_MS = 1_000
 
@@ -2396,7 +2409,12 @@ function WorkingLine({
       ) : (
         // The step happening now over how long it has worked, the pebble at work on the step's line.
         <CollapsibleTrigger className="group flex max-w-full min-w-0 items-start gap-2 self-start text-left text-muted-foreground hover:text-foreground">
-          <PebbleAvatar seed="working" tone="primary" className="size-5 flex-none" />
+          <PebbleAvatar
+            seed="working"
+            tone="neutral"
+            expression={stepExpression(steps.at(-1))}
+            className="size-5 flex-none"
+          />
           <span className="flex min-w-0 flex-col">
             <StepTicker label={steps.length ? liveStepText(steps.at(-1)!) : 'Working'} />
             <span className="flex min-w-0 items-center gap-1 text-xs tabular-nums">
