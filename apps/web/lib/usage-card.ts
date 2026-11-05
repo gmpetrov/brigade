@@ -86,12 +86,10 @@ const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFracti
 /** What the card says, in English like the rest of Brigade's interface. */
 export function cardText(data: UsageResponse) {
   const total = compact.format(all(data.totals))
-  const providers = data.byProvider.filter((p) => all(p) > 0).map((p) => p.id)
   return {
     title: PERIOD_TITLES[data.days],
     total: `${total} tokens`,
     rise: rise(data.totals, data.previous),
-    providers: (['claude_code', 'codex'] as const).filter((p) => providers.includes(p)),
     post: `${total} tokens in the ${PERIOD_TITLES[data.days].toLowerCase()} with my AI teammates on Brigade`,
   }
 }

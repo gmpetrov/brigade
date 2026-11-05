@@ -73,7 +73,7 @@ it sends what they still hold, which replaces the stream's totals of those turns
 
 Share, beside the period, opens the period's card: a 1200×630 PNG drawn in the
 browser (`apps/web/lib/usage-card-image.ts`, in the page's theme), with the total,
-the providers it was spent on, how much it rose from the period before, and a
+how much it rose from the period before, and a
 GitHub-like grid of when the tokens went, in the person's own hours
 (`lib/usage-card.ts`). 24 hours is 24 hours by quarter hour; 7 days, 7 stretches
 of 24 hours by hour; 30 days, 30 stretches of 24 hours by 3 hours, each ending

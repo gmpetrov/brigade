@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils'
 
 /**
  * Each harness's vendor mark, in a 24 by 24 box, and its color: null draws it in the text color.
- * The Usage card draws them too (usage-share.tsx).
  */
 export const HARNESS_MARKS = {
   claude_code: {
