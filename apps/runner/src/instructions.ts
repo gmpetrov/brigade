@@ -17,6 +17,8 @@ import {
   DESIGN_SYSTEM_TOKENS,
   PROPOSE_TEAM_TOOL,
   BUILTIN_SKILL_PREFIX,
+  builtinSkillDescription,
+  LIBRARY_SKILL,
   PROPOSE_SKILL_TOOL,
   REVIEW_LOOKS,
   SHOW_WIDGET_TOOL,
@@ -123,6 +125,7 @@ export function instructions(
     visuals(spec),
     replies(spec),
     designs(spec),
+    projectDocuments(spec),
     spec.git && code(spec),
     PREVIEWS,
     skills(spec),
@@ -271,6 +274,27 @@ function designs(spec: ThreadSpec) {
   ].join('\n\n')
 }
 
+/** Whether an admin turned one of Brigade's own skills off for the workspace. */
+const builtinOff = (spec: ThreadSpec, name: string) => (spec.builtinSkillsOff ?? []).includes(name)
+
+/** A project's documents (docs/projects.md, Decisions): when, here; how, in `brigade-library`. */
+function projectDocuments(spec: ThreadSpec) {
+  if (!canSaveDesigns(spec) || builtinOff(spec, LIBRARY_SKILL.name)) return ''
+  return [
+    '## Project documents',
+    'Before you write or save a spec, note or design for a project, when a pull request ships or changes one, ' +
+      "or when you tidy a project's folder, read the `" +
+      LIBRARY_SKILL.name +
+      "` skill: where each document goes, and the status line Brigade reads to show the project's decisions.",
+  ].join('\n\n')
+}
+
+/** The library skill, unless an admin turned it off; only for teammates that can save to the library. */
+function librarySkills(spec: ThreadSpec): ThreadSkill[] {
+  if (!canSaveDesigns(spec) || builtinOff(spec, LIBRARY_SKILL.name)) return []
+  return [{ ...LIBRARY_SKILL, files: [], refs: [] }]
+}
+
 /** Making designs as HTML, and the design systems they follow: Brigade's skills for them. */
 function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
   if (!canSaveDesigns(spec)) return []
@@ -371,18 +395,14 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
   return [
     {
       name: `${BUILTIN_SKILL_PREFIX}designs`,
-      description:
-        'Make, change, check and save a visual design (a page, a screen, a prototype, slides, a one-pager) as ' +
-        'a web page in the library; answer comments on one; pick its design system. Read before any design work.',
+      description: builtinSkillDescription(`${BUILTIN_SKILL_PREFIX}designs`),
       instructions: `# Designs\n\n${making}`,
       files: [],
       refs: [],
     },
     {
       name: `${BUILTIN_SKILL_PREFIX}design-systems`,
-      description:
-        'Make a design system (from a repository, a site, an export or a brief) and register it with ' +
-        'save_design_system. Read when asked for a design system.',
+      description: builtinSkillDescription(`${BUILTIN_SKILL_PREFIX}design-systems`),
       instructions: `# Making a design system\n\n${system}`,
       files: [],
       refs: [],
@@ -412,9 +432,13 @@ const skills = (spec: ThreadSpec) =>
       'Propose rarely: a procedure, never a fact (that is memory), nor a one-off. Never put secrets in a skill.',
   ].join('\n\n')
 
-/** Brigade's own skills for this thread: how to make designs and design systems, run previews, learn a task. */
+/**
+ * Brigade's own skills for this thread: how to make designs and design systems, keep a project's
+ * documents, run previews, learn a task. Their names and descriptions are BUILTIN_SKILLS'.
+ */
 export const builtinSkills = (spec: ThreadSpec, libraryDir: string): ThreadSkill[] => [
   ...designSkills(spec, libraryDir),
+  ...librarySkills(spec),
   PREVIEW_SKILL,
   TEACH_SKILL,
 ]
@@ -425,9 +449,7 @@ export const builtinSkills = (spec: ThreadSpec, libraryDir: string): ThreadSkill
  */
 const TEACH_SKILL: ThreadSkill = {
   name: `${BUILTIN_SKILL_PREFIX}teach`,
-  description:
-    'Learn a task from a recording a person made with Teach a task (a `/teach` message with a video and a ' +
-    'demonstration zip), and propose it as a skill of your own. Read when a message asks you to learn from a demonstration.',
+  description: builtinSkillDescription(`${BUILTIN_SKILL_PREFIX}teach`),
   instructions:
     '# Learning a task from a demonstration\n\n' +
     'The person did a task on your computer while the dashboard recorded it. The message brings two files in ' +
@@ -677,9 +699,7 @@ const PREVIEWS =
 /** How to start, check and save a preview: Brigade's skill for it. */
 const PREVIEW_SKILL: ThreadSkill = {
   name: `${BUILTIN_SKILL_PREFIX}previews`,
-  description:
-    'Start, set up, check, fix and save a preview of an app (start_preview, check_preview, save_preview, ' +
-    'preview_logs, preview variables). Read before starting a preview.',
+  description: builtinSkillDescription(`${BUILTIN_SKILL_PREFIX}previews`),
   instructions:
     '# Previews\n\n' +
     'When to start one is in the Previews section of your instructions. ' +

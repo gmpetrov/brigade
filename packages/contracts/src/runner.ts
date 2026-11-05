@@ -224,6 +224,11 @@ export const ThreadSpec = z.object({
   designSystems: z.array(ThreadDesignSystem).default([]),
   /** The workspace's skills that apply to this thread (enabled, and for its teammate and project). */
   skills: z.array(ThreadSkill).default([]),
+  /**
+   * Brigade's own skills an admin turned off for the workspace (BUILTIN_SKILLS, `switchable`): the
+   * runner leaves them out, and the instructions that point to them. Older APIs leave it out: all on.
+   */
+  builtinSkillsOff: z.array(z.string()).default([]),
   /** The project the thread works in: its brief, memory, folder and repositories. */
   project: ThreadProject.nullish(),
   /** The workspace's projects (not archived), so a mention of one can be followed. */

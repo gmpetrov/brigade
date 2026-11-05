@@ -17,6 +17,7 @@ import {
   type PullRequestSummary,
   type PullRequestTracking,
   type PullReview,
+  type PullSpecs,
   type TeammateReview,
   resolveConflictsMessage,
   wakesParent,
@@ -31,6 +32,7 @@ import { ConnectorError, json } from './connectors/types.js'
 import { captureError, markTracked } from './error-tracking.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { linkPullItems, settleItemsOnMerge, type PullItems } from './lists.js'
+import { linkPullSpecs, settleSpecsOnMerge } from './decisions.js'
 import { renamedRepository, teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
@@ -371,6 +373,7 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
   }
   if (state === 'merged' && moved) {
     await settleItemsOnMerge(db, scope, row)
+    await settleSpecsOnMerge(db, scope, row)
     // Its thread's teammate is woken, to declare the thread done or say what remains.
     await wakeOnMerge(scope, row).catch((error) =>
       console.warn(`pull request ${row.id}: its thread not woken: ${String(error)}`),
@@ -916,6 +919,21 @@ export async function notePullRequestCall(
       await linkPullItems(db, row.id, call.sessionId, call.teammateId, items).catch((error) =>
         console.warn(`lists: items of pull request ${row.id} not kept: ${String(error)}`),
       )
+    // The library's specs and designs it ships, or is part of (src/decisions.ts).
+    const specs = call.input.specs as PullSpecs | undefined
+    if (specs) {
+      const missed = await linkPullSpecs(db, row.id, call.teammateId, specs).catch((error) => {
+        console.warn(`decisions: specs of pull request ${row.id} not kept: ${String(error)}`)
+        return []
+      })
+      if (missed.length)
+        await noteInThread(
+          db,
+          call.sessionId,
+          `#${out.number} is not linked to these, as they are not files of the library you may ` +
+            `change (check the paths: a Markdown file, or a design's folder):\n${missed.map((p) => `- ${p}`).join('\n')}`,
+        )
+    }
     return
   }
   if (call.operation === 'github_review_pull_request') {
@@ -1491,6 +1509,7 @@ async function recordMerge(
     await noteInThread(db, row.sessionId, await pullNote(row, 'merged', by))
   }
   await settleItemsOnMerge(db, scope, row)
+  await settleSpecsOnMerge(db, scope, row)
   // Its thread's teammate is woken, to declare the thread done or say what remains; not when it
   // merged it itself, in its turn.
   await wakeOnMerge(scope, row).catch((error) =>

@@ -639,3 +639,11 @@ export type ComputerReplacement = Prisma.ComputerReplacementModel
  * opened to some people. Without a row, a feature is its declared default for everyone.
  */
 export type FeatureFlag = Prisma.FeatureFlagModel
+/**
+ * Model SpecPull
+ * A spec or design of the library that a pull request ships (`ships`) or is one step of
+ * (github_create_pull_request's `specs`). On merge, Brigade names the pull request on it and, when
+ * it ships it, sets its status to shipped (src/decisions.ts, settleSpecsOnMerge). A Markdown spec's
+ * row is its file's; a design's is its design.json's.
+ */
+export type SpecPull = Prisma.SpecPullModel

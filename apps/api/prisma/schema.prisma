@@ -336,6 +336,11 @@ model Workspace {
   listItemThreads ListItemThread[]
   listItemPulls   ListItemPull[]
 
+  /// Brigade's own skills an owner or admin turned off here, by name (`brigade-library`): the
+  /// others are on, as is a skill added later. Only those marked switchable (BUILTIN_SKILLS).
+  builtinSkillsOff String[] @default([])
+  specPulls        SpecPull[]
+
   @@index([organizationId])
 }
 
@@ -1171,6 +1176,8 @@ model PullRequest {
 
   /// The list items it works on, or finishes (docs/lists.md).
   listItems ListItemPull[]
+  /// The library's specs and designs it ships, or is part of (src/decisions.ts).
+  specs     SpecPull[]
 
   @@unique([workspaceId, repository, number])
   @@index([workspaceId, repositoryId])
@@ -1730,6 +1737,8 @@ model Document {
 
   /// Its checklist lines that work is attached to (docs/lists.md).
   listItems ListItem[]
+  /// The pull requests that ship it or are part of it, when it is a spec or a design (src/decisions.ts).
+  specPulls SpecPull[]
 
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
@@ -3186,4 +3195,26 @@ model FeatureFlag {
   /// Why, or who asked: for the people who read the table.
   note         String   @default("")
   updatedAt    DateTime @default(now()) @updatedAt
+}
+
+/// A spec or design of the library that a pull request ships (`ships`) or is one step of
+/// (github_create_pull_request's `specs`). On merge, Brigade names the pull request on it and, when
+/// it ships it, sets its status to shipped (src/decisions.ts, settleSpecsOnMerge). A Markdown spec's
+/// row is its file's; a design's is its design.json's.
+model SpecPull {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pullRequestId  String
+  pullRequest    PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  ships          Boolean     @default(false)
+  /// When its merge was dealt with (the file changed, or nothing to change); while unset after a
+  /// merge, it is tried again (sweepSpecMerges).
+  settledAt      DateTime?
+  createdAt      DateTime    @default(now())
+
+  @@id([documentId, pullRequestId])
+  @@index([pullRequestId])
 }
