@@ -34,6 +34,7 @@ import {
   type SideRoute,
   THREAD_NOTE_SOURCE,
   TURN_MEMORY_SOURCE,
+  TURN_NEXT_SOURCE,
   TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
   turnAnswer,
@@ -48,6 +49,7 @@ import {
   type ThreadPrompt,
   type ThreadSpec,
   type TurnEntry,
+  type TurnNext,
   type TurnPreparing,
   type TurnWaiting,
 } from '@brigade/contracts'
@@ -401,6 +403,12 @@ type Thread = {
   log: Promise<Log>
   /** Turns queued and not yet started, by teammate id. */
   waiting: Map<string, number>
+  /**
+   * Teammates whose turns wait to answer after another teammate's (a handoff, a message to
+   * several), in the order they answer; with the list the thread was told last (TURN_NEXT_SOURCE).
+   */
+  next: string[]
+  toldNext: string
   /** Answers a person gave to a teammate's ask (a ticket, a question, an approval), by teammate id. */
   answers: Map<string, number>
   /** Handoffs since a member last wrote. */
@@ -557,7 +565,10 @@ export class Threads {
     if (command.type === 'thread.retry') return this.retry(spec, command.error)
     if (command.type === 'thread.prompt' && command.handoff) {
       // Nobody wrote anything: each is told what was said since its last turn.
-      for (const next of specs) this.enqueue(next, 'prompt')
+      for (const next of specs) this.enqueue(next, 'prompt', undefined, undefined, true)
+      // A turn answered already only waits on Claude Code's guess: the next ones need not.
+      const thread = this.thread(spec.sessionId)
+      if (thread.running) void thread.harnesses.get(thread.running.teammateId)?.harness.stopDrain()
       return
     }
     if (command.type === 'thread.prompt') {
@@ -1037,13 +1048,15 @@ export class Threads {
    * `prepare` runs when the turn is about to start: it gives the log's end to
    * tell up to, or null when the turn no longer happens; with the spec to run on
    * when messages queued after this one go into its turn (joinQueued). `moot`
-   * says, before the turn waits for a slot or memory, that it no longer happens.
+   * says, before the turn waits for a slot or memory, that it no longer happens. `follows`:
+   * it answers after another teammate's turn, and the thread says it is next until it starts.
    */
   private enqueue(
     spec: ThreadSpec,
     input: ThreadInput | 'prompt' | Lost | Retry,
     prepare?: () => Promise<number | undefined | null | { upTo: number; spec: ThreadSpec }>,
     moot?: () => boolean,
+    follows = false,
   ) {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
@@ -1054,10 +1067,19 @@ export class Threads {
     this.pending++
     const me = spec.teammate.id
     thread.waiting.set(me, (thread.waiting.get(me) ?? 0) + 1)
+    if (follows) {
+      thread.next.push(me)
+      this.tellNext(thread, spec.sessionId)
+    }
     thread.queue = thread.queue.then(async () => {
       let queued = true
       const started = () => {
         if (queued) thread.waiting.set(me, thread.waiting.get(me)! - 1)
+        if (queued && follows) {
+          const at = thread.next.indexOf(me)
+          if (at >= 0) thread.next.splice(at, 1)
+          this.tellNext(thread, spec.sessionId)
+        }
         queued = false
       }
       let acquired = false
@@ -1253,6 +1275,20 @@ export class Threads {
         if (counted) this.started--
         if (acquired) this.release()
       }
+    })
+  }
+
+  /** Who answers next in the thread, once it changed: the dashboard says so under its last reply. */
+  private tellNext(thread: Thread, sessionId: string) {
+    const teammateIds = [...new Set(thread.next)]
+    const told = teammateIds.join(',')
+    if (told === thread.toldNext) return
+    thread.toldNext = told
+    this.options.emit(sessionId, {
+      at: new Date().toISOString(),
+      type: 'raw',
+      source: TURN_NEXT_SOURCE,
+      value: { teammateIds } satisfies TurnNext,
     })
   }
 
@@ -1454,8 +1490,12 @@ export class Threads {
     )
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
-      this.enqueue(next, 'prompt', async () =>
-        message.state === 'held' || message.state === 'cancelled' ? null : undefined,
+      this.enqueue(
+        next,
+        'prompt',
+        async () => (message.state === 'held' || message.state === 'cancelled' ? null : undefined),
+        undefined,
+        true,
       )
   }
 
@@ -2297,6 +2337,8 @@ export class Threads {
         sideLog: new Map(),
         memorizing: false,
         waiting: new Map(),
+        next: [],
+        toldNext: '',
         answers: new Map(),
         handoffs: 0,
         log: readFile(this.logFile(sessionId), 'utf8').then(
@@ -2360,14 +2402,11 @@ export class Threads {
             seat!.waiting = false
             seat!.background = []
           }
-          // Answered and handing on (handOn): the teammates it names start now, rather than wait
-          // on a guess at the member's next message their answers are about to replace.
+          // Answered, and others answer next: they start now (guessMoot).
           if (
             event.type === 'turn.completed' &&
             seat!.harness.answered &&
-            mentionedTeammates(answerOf(seat!.turn), seat!.spec ?? spec).some(
-              (id) => id !== teammateId,
-            )
+            guessMoot(thread.waiting, answerOf(seat!.turn), seat!.spec ?? spec, teammateId)
           )
             void seat!.harness.stopDrain()
           if (event.type === 'tool.started')
@@ -2665,6 +2704,22 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * or as plain @Name (teammates write that). Longer names first, so "@Cody 2"
  * is not read as "@Cody".
  */
+/**
+ * A turn is answered, and only Claude Code's guess at the member's next message is left: it is
+ * moot when the thread goes on without the member, with turns queued behind it (another teammate
+ * the same message or handoff asked, a message sent meanwhile) or with the teammates its reply
+ * hands on to (handOn). They start now, rather than wait on a guess their answers replace.
+ */
+export function guessMoot(
+  waiting: ReadonlyMap<string, number>,
+  reply: string | undefined,
+  spec: ThreadSpec,
+  me: string,
+) {
+  if ([...waiting.values()].some((n) => n > 0)) return true
+  return !!reply && mentionedTeammates(reply, spec).some((id) => id !== me)
+}
+
 export function mentionedTeammates(text: string, spec: ThreadSpec) {
   // The chief may also bring in any teammate of the workspace.
   const reachable =
