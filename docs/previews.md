@@ -438,10 +438,12 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     may have made. It reads only the rows with work due, so rows with none
     never hold others back.
   - **One operation on a machine at a time.** Whoever makes, starts, stops or
-    destroys a machine holds its row (`claimedUntil`, 3 minutes); the provider's
-    work is done holding it. Every change of who holds a machine (an `up`'s
-    reserve, a stop, a destroy) is decided under one lock per workspace (an
-    advisory lock), on the row read under that lock: a destroy never slips
+    destroys a machine holds its row (`claimedUntil`, 10 minutes from when it
+    took it, longer than any provider call); the provider's work is done holding
+    it. Every change of who holds a machine (an `up`'s reserve, a stop, a
+    destroy) and every touch is decided under one lock per workspace (an
+    advisory lock), on the row read under that lock and taken only as it was
+    read: a destroy never slips
     between a reserve's read and its write, the sweep judges each row it listed
     again as it acts (an `up` since then wins), and an `up` that finds its
     machine being destroyed waits, then makes a new one. Starts in several

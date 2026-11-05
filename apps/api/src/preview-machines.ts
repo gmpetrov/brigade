@@ -27,8 +27,15 @@ const configured = machinesFromEnv(process.env)
 
 /** Machines one workspace may have up at once: past that, a preview runs on the computer. */
 export const MACHINES_RUNNING_MAX = 5
-/** How long an operation on a machine holds it (making, starting, stopping, destroying). */
-export const CLAIM_MS = 3 * 60_000
+/**
+ * How long an operation on a machine holds it (making, starting, stopping, destroying), from the
+ * moment it took it: longer than any of the provider's calls takes (each request gives up after
+ * a minute; a start waits for a stop under way first), so a claim never runs out under work still
+ * going. Its only cost: a machine whose operation's process was lost waits that long.
+ */
+export const CLAIM_MS = 10 * 60_000
+/** Longest one sweep goes on taking rows: what it did not reach waits for the next. */
+const SWEEP_TIME_MS = 2 * 60_000
 /** How long an `up` waits for another operation on its machine, asking every POLL_MS. */
 export const BUSY_WAIT_MS = 2 * 60_000
 const POLL_MS = 2_000
@@ -132,12 +139,13 @@ async function reserve(
           ? ('running' as const)
           : ('creating' as const)
         : row.status
-    return {
-      row: await tx.previewMachine.update({
-        where: { id: row.id },
-        data: { ...held, status, ...(status !== row.status ? { stoppedAt: null } : {}) },
-      }),
-    }
+    // Taken as read: a write meanwhile from outside the lock (a holder finishing) is waited for.
+    const { count } = await tx.previewMachine.updateMany({
+      where: { id: row.id, updatedAt: row.updatedAt },
+      data: { ...held, status, ...(status !== row.status ? { stoppedAt: null } : {}) },
+    })
+    if (count === 0) return { busy: true }
+    return { row: await tx.previewMachine.findUniqueOrThrow({ where: { id: row.id } }) }
   })
 }
 
@@ -317,18 +325,27 @@ export async function machineSleep(
 ) {
   const session = machines && (await threadOf(runner, sessionId))
   if (!machines || !session) return
-  const now = new Date()
   const held = await underLock(session.workspaceId, async (tx) => {
+    const now = new Date()
     const row = await tx.previewMachine.findUnique({ where: { sessionId } })
     // Being made, started or stopped by another: that one's to finish.
     if (!row || row.status !== 'running' || (row.claimedUntil && row.claimedUntil > now))
       return null
-    return tx.previewMachine.update({
-      where: { id: row.id },
-      data: { status: 'stopping', claimedUntil: new Date(now.getTime() + CLAIM_MS) },
-    })
+    return claim(tx, row, 'stopping')
   })
-  if (held) await finishStop(machines, held, now)
+  if (held) await finishStop(machines, held, new Date())
+}
+
+/**
+ * Hold a row read under the lock, as it was read (a write since, from outside the lock, leaves
+ * it to be judged again), with a claim that runs from now, when it is taken. Null when it changed.
+ */
+async function claim(tx: Tx, row: PreviewMachine, status: 'stopping' | 'destroying') {
+  const { count } = await tx.previewMachine.updateMany({
+    where: { id: row.id, updatedAt: row.updatedAt },
+    data: { status, claimedUntil: new Date(Date.now() + CLAIM_MS) },
+  })
+  return count === 0 ? null : tx.previewMachine.findUniqueOrThrow({ where: { id: row.id } })
 }
 
 /** `touch`: the preview is in use; the provider's own stop is pushed back now and then. */
@@ -338,16 +355,21 @@ export async function machineTouch(
   sessionId: string,
   now = new Date(),
 ) {
-  if (!machines || !(await threadOf(runner, sessionId))) return
-  const row = await prisma.previewMachine.findUnique({ where: { sessionId } })
-  const ref = refOf(row?.providerRef)
-  if (!row || !ref || row.status !== 'running') return
-  const due = !row.keptAliveAt || now.getTime() - row.keptAliveAt.getTime() >= KEEP_ALIVE_EVERY_MS
-  await prisma.previewMachine.updateMany({
-    where: { id: row.id, status: 'running' },
-    data: { usedAt: now, ...(due ? { keptAliveAt: now } : {}) },
+  const session = machines && (await threadOf(runner, sessionId))
+  if (!machines || !session) return
+  // Under the lock: a sweep judging this machine idle sees the touch, or comes before it.
+  const touched = await underLock(session.workspaceId, async (tx) => {
+    const row = await tx.previewMachine.findUnique({ where: { sessionId } })
+    const ref = refOf(row?.providerRef)
+    if (!row || !ref || row.status !== 'running') return null
+    const due = !row.keptAliveAt || now.getTime() - row.keptAliveAt.getTime() >= KEEP_ALIVE_EVERY_MS
+    await tx.previewMachine.updateMany({
+      where: { id: row.id, status: 'running' },
+      data: { usedAt: now, ...(due ? { keptAliveAt: now } : {}) },
+    })
+    return due ? ref : null
   })
-  if (due) await machines.keepAlive(ref)
+  if (touched) await machines.keepAlive(touched)
 }
 
 /**
@@ -378,11 +400,15 @@ export async function handlePreviewMachine(
   }
 }
 
-/** What the sweep does with a row, as it is now: nothing, a stop, a destroy. */
+/**
+ * What the sweep does with a row, as it is now: nothing, a stop, a destroy. `now`: the sweep's
+ * time, for what is due; a claim is judged at the time it is read.
+ */
 export function dueFor(row: PreviewMachine, threadAlive: boolean, now: Date) {
   const before = (ms: number) => now.getTime() - ms
   // Held by an operation under way: not the sweep's, until its claim runs out.
-  if (row.claimedUntil && row.claimedUntil > now) return null
+  if (row.claimedUntil && row.claimedUntil.getTime() > Math.max(Date.now(), now.getTime()))
+    return null
   if (!threadAlive || row.status === 'destroying') return 'destroy' as const
   if (row.status === 'stopped' && (row.stoppedAt?.getTime() ?? 0) < before(STOPPED_DESTROY_MS))
     return 'destroy' as const
@@ -416,18 +442,12 @@ export async function sweepMachine(
     const alive = (await tx.session.count({ where: { id: row.sessionId } })) > 0
     const due = dueFor(row, alive, now)
     if (!due) return null
-    const held = await tx.previewMachine.update({
-      where: { id },
-      data: {
-        status: due === 'destroy' ? 'destroying' : 'stopping',
-        claimedUntil: new Date(now.getTime() + CLAIM_MS),
-      },
-    })
-    return { due, held }
+    const held = await claim(tx, row, due === 'destroy' ? 'destroying' : 'stopping')
+    return held && { due, held }
   })
   if (!decided) return null
   if (decided.due === 'destroy') await finishDestroy(machines, decided.held)
-  else await finishStop(machines, decided.held, now)
+  else await finishStop(machines, decided.held, new Date())
   return decided.due
 }
 
@@ -457,7 +477,10 @@ export async function sweepPreviewMachines(
       )
     ORDER BY pm."updatedAt" ASC
     LIMIT ${SWEEP_BATCH}`
+  const until = Date.now() + SWEEP_TIME_MS
   for (const row of due) {
+    // A slow provider: the rest waits for the next sweep, which lists them again.
+    if (Date.now() > until) break
     try {
       await sweepMachine(machines, row.id, row.workspaceId, now)
     } catch (error) {
