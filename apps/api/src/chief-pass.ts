@@ -28,7 +28,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { answerInTheirName, openAsk, optionsOf } from './chief-answers.js'
+import { answerInTheirName, openAsk, optionsOf, UNSETTLED } from './chief-answers.js'
 import { questionClosed } from './chief-order.js'
 import { personRules, ruleState, setRulesByChief } from './chief-rules.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
@@ -225,7 +225,9 @@ export async function passItems(db: ScopedDb, memberId: string, now = new Date()
     if (!ask) continue
     const [teammate, answered] = await Promise.all([
       db.teammate.findFirst({ where: { id: ask.teammateId }, select: { name: true, kind: true } }),
-      db.chiefDecision.count({ where: { sessionId: thread.id, askSeq: ask.seq } }),
+      db.chiefDecision.count({
+        where: { sessionId: thread.id, askSeq: ask.seq, status: { notIn: UNSETTLED } },
+      }),
     ])
     // Chief's own questions are the person's; one answered once is not answered again.
     if (!teammate || teammate.kind === 'chief' || answered) continue
@@ -359,8 +361,12 @@ export async function recentAnswers(
  */
 export async function startPass(scope: Scope, memberId: string, day: string, now = new Date()) {
   const db = scoped(scope)
-  const chief = await db.teammate.findFirst({ where: { kind: 'chief', archivedAt: null } })
-  if (!chief) return null
+  const [chief, on] = await Promise.all([
+    db.teammate.findFirst({ where: { kind: 'chief', archivedAt: null } }),
+    // Turned off since it was found due: none today.
+    db.member.count({ where: { id: memberId, chiefPass: true } }),
+  ])
+  if (!chief || !on) return null
   let pass: { id: string; sessionId: string | null }
   try {
     pass = await db.chiefPass.create({
@@ -487,6 +493,22 @@ const retried = z.array(
   z.object({ kind: z.literal('retried'), item: z.number(), reason: z.string() }),
 )
 
+const PASS_OFF =
+  'Their daily pass is over, or they turned it off: nothing more goes in their name. End your turn now, without a reply.'
+
+/**
+ * Whether the person still has their pass on. Turned off since it started (setChief stops theirs
+ * as it does so; one in another workspace stops here), it is over: failed, as one that stopped.
+ */
+async function passOn(db: ScopedDb, pass: { id: string; memberId: string }) {
+  if (await db.member.count({ where: { id: pass.memberId, chiefPass: true } })) return true
+  await db.chiefPass.updateMany({
+    where: { id: pass.id, status: 'running' },
+    data: { status: 'failed', finishedAt: new Date() },
+  })
+  return false
+}
+
 /** Chief's calls (its tools): a pass's chief_answer, chief_retry and chief_report; chief_rules elsewhere. */
 export async function handleChiefCall(
   db: ScopedDb,
@@ -534,6 +556,7 @@ export async function handleChiefCall(
   const pass = await db.chiefPass.findFirst({ where: { id: session.chiefPassId } })
   if (!pass) return { error: 'That pass is gone.' }
   if (pass.status !== 'running') return { error: 'This pass is over: end your turn.' }
+  if (!(await passOn(db, pass))) return { error: PASS_OFF }
   const items = itemsOf(pass.items)
   const byNumber = (n: number) => items.find((i) => i.n === n)
 
@@ -560,6 +583,10 @@ export async function handleChiefCall(
       rule: op.rule,
       passId: pass.id,
     })
+    if (result.status === 'off') {
+      await passOn(db, pass)
+      return { error: PASS_OFF }
+    }
     return {
       status: result.status,
       decisionId: result.decisionId,
@@ -656,7 +683,9 @@ export async function passView(
     },
     orderBy: { createdAt: 'desc' },
     include: {
+      // What it settled: never a decision left unsettled (UNSETTLED).
       decisions: {
+        where: { status: { notIn: UNSETTLED } },
         orderBy: { createdAt: 'asc' },
         include: { session: { select: { id: true, title: true } } },
       },

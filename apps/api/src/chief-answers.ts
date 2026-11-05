@@ -152,10 +152,16 @@ async function answersInARow(
 const chiefId = async (db: ScopedDb) =>
   (await db.teammate.findFirst({ where: { kind: 'chief' }, select: { id: true } }))?.id
 
+/** A decision that sent nothing: #724's, still being made or only suggested. An answer settles it. */
+export const UNSETTLED: ChiefDecisionStatus[] = ['pending', 'suggested']
+
 /**
- * Answer a question in the person's name (a pass's chief_answer, src/chief-pass.ts): kept as
- * Chief's decision on that card, once (a card answered already says how it stands), then applied
- * (applyAnswer).
+ * Answer a question in the person's name (a pass's chief_answer, src/chief-pass.ts). Kept as
+ * Chief's decision on that card, once (a card answered already says how it stands), with where it
+ * goes, in one transaction under the thread's lock, as the person's word is (src/chief-order.ts):
+ * nowhere once the thread moved on; left to the person after CHIEF_ANSWERS_IN_A_ROW answers of
+ * Chief's with no word from them; else to the teammate, as a report's wake-up, kept with it and
+ * fired at once. Nothing at all once the person turned their pass off, or it is over: 'off'.
  */
 export async function answerInTheirName(
   scope: Scope,
@@ -173,15 +179,41 @@ export async function answerInTheirName(
     rule: string
     passId: string
   },
-): Promise<{ decisionId: string | null; status: ChiefDecisionStatus; again?: boolean }> {
+): Promise<{ decisionId: string | null; status: ChiefDecisionStatus | 'off'; again?: boolean }> {
   const db = scoped(scope)
-  try {
-    const row = await db.chiefDecision.create({
-      data: {
-        sessionId: input.sessionId,
-        memberId: input.memberId,
-        teammateId: input.teammateId,
-        askSeq: input.askSeq,
+  const kept = await db
+    .$transaction(async (tx) => {
+      await lockThread(tx, input.sessionId)
+      // The person turning their pass off at this instant: whichever is kept first, the other
+      // reads it, as setChief changes their row (then their passes), which this holds till kept.
+      const [member] = await tx.$queryRaw<{ chiefPass: boolean }[]>`
+        SELECT "chiefPass" FROM "Member"
+        WHERE id = ${input.memberId} AND "organizationId" = ${scope.organizationId}
+        FOR SHARE`
+      const [pass] = await tx.$queryRaw<{ status: string }[]>`
+        SELECT status::text AS status FROM "ChiefPass"
+        WHERE id = ${input.passId} AND "workspaceId" = ${scope.workspaceId}
+        FOR SHARE`
+      if (!member?.chiefPass || pass?.status !== 'running') return null
+      const existing = await tx.chiefDecision.findFirst({
+        where: { sessionId: input.sessionId, askSeq: input.askSeq },
+        select: { id: true, status: true },
+      })
+      // Answered already, by this pass or an earlier one: as it stands.
+      if (existing && !UNSETTLED.includes(existing.status))
+        return { decisionId: existing.id, status: existing.status, again: true as const }
+      const option = input.options[input.optionIndex]
+      const status: 'superseded' | 'escalated' | 'answered' = (await questionClosed(
+        tx,
+        input.sessionId,
+        input.askSeq,
+      ))
+        ? 'superseded'
+        : !option || (await answersInARow(tx, input.sessionId)) >= CHIEF_ANSWERS_IN_A_ROW
+          ? 'escalated'
+          : 'answered'
+      const answer = {
+        status,
         question: input.cardQuestion,
         options: input.options as unknown as Prisma.InputJsonValue,
         passId: input.passId,
@@ -190,86 +222,69 @@ export async function answerInTheirName(
         reason: input.reason,
         basis: input.rule,
         decidedAt: new Date(),
-      } as never,
-      select: { id: true },
+      }
+      const row = existing
+        ? await tx.chiefDecision.update({
+            where: { id: existing.id },
+            data: answer as never,
+            select: { id: true },
+          })
+        : await tx.chiefDecision.create({
+            data: {
+              sessionId: input.sessionId,
+              memberId: input.memberId,
+              teammateId: input.teammateId,
+              askSeq: input.askSeq,
+              ...answer,
+            } as never,
+            select: { id: true },
+          })
+      if (status !== 'answered' || !option) return { decisionId: row.id, status, wakeupId: null }
+      // Its work goes on Chief's word from the question on, until the person writes after it.
+      await raiseChiefsWord(tx, input.sessionId, input.askSeq)
+      // As a report's wake-up: kept with the decision, tried until it reaches the thread.
+      const wakeup = await tx.wakeup.create({
+        data: {
+          sessionId: input.sessionId,
+          teammateId: input.teammateId,
+          kind: 'report',
+          note: chiefAnswerMessage({
+            decisionId: row.id,
+            answer: option.message,
+            reason: input.reason,
+            basis: input.rule,
+          }),
+          wakeAt: new Date(),
+          sourceId: `${CHIEF_SOURCE}${row.id}`,
+        } as never,
+      })
+      return { decisionId: row.id, status, wakeupId: wakeup.id }
     })
-    return { decisionId: row.id, status: await applyAnswer(scope, row.id) }
-  } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
-      throw error
-    // Answered already, by this pass or an earlier one: as it stands.
-    const row = await db.chiefDecision.findFirst({
-      where: { sessionId: input.sessionId, askSeq: input.askSeq },
-      select: { id: true, status: true },
+    .catch(async (error: unknown) => {
+      // Kept at the same instant by a call that did not take the thread's lock: as it stands.
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+        throw error
+      const row = await db.chiefDecision.findFirst({
+        where: { sessionId: input.sessionId, askSeq: input.askSeq },
+        select: { id: true, status: true },
+      })
+      return { decisionId: row?.id ?? null, status: row?.status ?? 'failed', again: true as const }
     })
-    return { decisionId: row?.id ?? null, status: row?.status ?? 'failed', again: true }
-  }
-}
-
-/**
- * Where Chief's answer goes, under the thread's lock (the person's word may come at the same
- * time): nowhere once the thread moved on; left to the person after CHIEF_ANSWERS_IN_A_ROW answers
- * of Chief's with no word from them; else to the teammate, as a report's wake-up fired at once.
- */
-async function applyAnswer(scope: Scope, decisionId: string): Promise<ChiefDecisionStatus> {
-  const db = scoped(scope)
-  const applied = await db.$transaction(async (tx) => {
-    const row = await tx.chiefDecision.findFirst({ where: { id: decisionId } })
-    if (!row || row.status !== 'pending') return null
-    await lockThread(tx, row.sessionId)
-    const set = (status: 'superseded' | 'answered' | 'escalated') =>
-      tx.chiefDecision.updateMany({ where: { id: row.id, status: 'pending' }, data: { status } })
-    if (await questionClosed(tx, row.sessionId, row.askSeq)) {
-      await set('superseded')
-      return { status: 'superseded' as const, row, wakeupId: null }
-    }
-    const option = row.optionIndex != null ? optionsOf(row.options)[row.optionIndex] : undefined
-    if (!option || (await answersInARow(tx, row.sessionId)) >= CHIEF_ANSWERS_IN_A_ROW) {
-      await set('escalated')
-      return { status: 'escalated' as const, row, wakeupId: null }
-    }
-    await set('answered')
-    // Its work goes on Chief's word from the question on, until the person writes after it.
-    await raiseChiefsWord(tx, row.sessionId, row.askSeq)
-    // As a report's wake-up: stored with the decision, tried until it reaches the thread.
-    const wakeup = await tx.wakeup.create({
-      data: {
-        sessionId: row.sessionId,
-        teammateId: row.teammateId,
-        kind: 'report',
-        note: chiefAnswerMessage({
-          decisionId: row.id,
-          answer: option.message,
-          reason: row.reason ?? '',
-          basis: row.basis,
-        }),
-        wakeAt: new Date(),
-        sourceId: `${CHIEF_SOURCE}${row.id}`,
-      } as never,
-    })
-    return { status: 'answered' as const, row, wakeupId: wakeup.id }
-  })
-  if (!applied) {
-    const now = await db.chiefDecision.findFirst({
-      where: { id: decisionId },
-      select: { status: true },
-    })
-    return now?.status ?? 'failed'
-  }
-  const { row } = applied
+  if (!kept) return { decisionId: null, status: 'off' }
+  if ('again' in kept) return kept
   await audit({
     ...scope,
     actor: { type: 'teammate', id: (await chiefId(db)) ?? 'chief' },
-    action: `chief.${applied.status}`,
-    target: { type: 'thread', id: row.sessionId },
-    data: { decisionId: row.id, passId: row.passId, option: row.optionIndex },
+    action: `chief.${kept.status}`,
+    target: { type: 'thread', id: input.sessionId },
+    data: { decisionId: kept.decisionId, passId: input.passId, option: input.optionIndex },
   })
-  if (applied.wakeupId) {
+  if (kept.wakeupId) {
     const { fireNow } = await import('./wakeups.js')
-    await fireNow(applied.wakeupId)
+    await fireNow(kept.wakeupId)
   }
-  await threadChanged(scope, row.sessionId)
-  return applied.status
+  await threadChanged(scope, input.sessionId)
+  return { decisionId: kept.decisionId, status: kept.status }
 }
 
 /**

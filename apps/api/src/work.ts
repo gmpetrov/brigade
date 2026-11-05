@@ -543,7 +543,10 @@ export async function startThread(
      * a thread made here that did not start is deleted rather than left failed.
      */
     dropUnstarted?: boolean
-    /** Chief's thread going through what waits on a person (src/chief-pass.ts): its pass. */
+    /**
+     * Chief's thread going through what waits on a person (src/chief-pass.ts): its pass. Its brief
+     * is Brigade's, quoting what teammates wrote: not the person's word, and it summons nobody.
+     */
     chiefPassId?: string
     /**
      * Handed on by a thread whose work goes on Chief's word (Session.chiefWordSeq): this one's
@@ -554,10 +557,11 @@ export async function startThread(
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, teammates, children).
   await refuseWhileDeleting(scope.workspaceId)
-  // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
+  // Teammates the first message mentions answer after the starting one. A trigger's event is
+  // untrusted, and a pass's brief quotes what others wrote: they summon nobody.
   const teammateIds = [
     input.teammate.id,
-    ...(input.origin ? [] : await mentionedTeammates(db, input.text)).filter(
+    ...(input.origin || input.chiefPassId ? [] : await mentionedTeammates(db, input.text)).filter(
       (id) => id !== input.teammate.id,
     ),
   ]
@@ -681,7 +685,9 @@ export async function startThread(
           actor: !input.origin
             ? input.byTeammateId
               ? { type: 'teammate', id: input.byTeammateId }
-              : { type: 'member', id: input.memberId }
+              : input.chiefPassId
+                ? { type: 'system', id: `chief-pass:${input.chiefPassId}` }
+                : { type: 'member', id: input.memberId }
             : input.origin.kind === 'trigger'
               ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
               : input.origin.kind === 'schedule'
@@ -692,7 +698,13 @@ export async function startThread(
           track: {
             origin:
               input.origin?.kind ??
-              (input.quiet ? 'email' : input.byTeammateId ? 'teammate' : 'member'),
+              (input.chiefPassId
+                ? 'chief_pass'
+                : input.quiet
+                  ? 'email'
+                  : input.byTeammateId
+                    ? 'teammate'
+                    : 'member'),
             harness: input.teammate.harness,
           },
           data: {
@@ -713,14 +725,14 @@ export async function startThread(
       thread,
       {
         text: input.text,
-        memberId: input.origin || input.byTeammateId ? null : input.memberId,
+        memberId: input.origin || input.byTeammateId || input.chiefPassId ? null : input.memberId,
         teammateIds,
         attachments,
       },
       // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
       {
         isNew: true,
-        ...(input.origin ? {} : { nameThread: created.title }),
+        ...(input.origin || input.chiefPassId ? {} : { nameThread: created.title }),
         ...(input.commandId ? { commandId: input.commandId } : {}),
       },
     ).catch(async (error: unknown) => {

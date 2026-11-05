@@ -1744,4 +1744,227 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       conn.close()
     }
   })
+
+  /** Another connection's transaction holding Ada's row, as a write of hers in progress does. */
+  async function holdingAda(write?: string) {
+    const { newPrismaClient } = await import('../src/db.js')
+    const other = newPrismaClient(process.env.DATABASE_URL!)
+    let release!: () => void
+    const released = new Promise<void>((resolve) => (release = resolve))
+    let locked!: () => void
+    const isLocked = new Promise<void>((resolve) => (locked = resolve))
+    const held = other.$transaction(
+      async (tx) => {
+        if (write === 'off')
+          await tx.$executeRaw`UPDATE "Member" SET "chiefPass" = false WHERE id = ${member('ada')}`
+        else await tx.$executeRaw`SELECT 1 FROM "Member" WHERE id = ${member('ada')} FOR UPDATE`
+        locked()
+        await released
+      },
+      { timeout: 30_000 },
+    )
+    await isLocked
+    /** How many queries wait on a lock: those that wait on her row. */
+    const waiting = async () => {
+      const [row] = await other.$queryRaw<[{ count: bigint }]>`
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`
+      return Number(row.count)
+    }
+    return {
+      waiting,
+      done: async () => {
+        release()
+        await held
+        await other.$disconnect()
+      },
+    }
+  }
+
+  test('a pass’s brief summons nobody, and is not the person’s word', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES })
+    const id = await thread()
+    await person(id, 'Add the admin page.')
+    await say(id, { type: 'turn.started', teammateId: riley, accountId: account })
+    // A reply quoting a mention, as a teammate copies what an email or another thread said.
+    await say(id, {
+      type: 'message.done',
+      id: `m-${randomUUID()}`,
+      text: `I can ask @[Riley](teammate:${riley}) to check it. Shall I build it?`,
+    })
+    await say(id, {
+      type: 'tool.started',
+      toolName: 'suggest_replies',
+      toolCallId: `t-${randomUUID()}`,
+      input: { replies: ['Build it', 'Not yet'] },
+    })
+    await say(id, { type: 'turn.completed', finishReason: 'stop' })
+    const conn = await runner()
+    try {
+      const passId = await chiefPass.startPass(scope, member('ada'), `brief-${randomUUID()}`)
+      const pass = await db.chiefPass.findFirstOrThrow({ where: { id: passId! } })
+      const ofPass = (m: Sent) =>
+        m.type === 'thread.prompt' &&
+        (m.thread as { sessionId: string }).sessionId === pass.sessionId
+      await until(() => conn.sent.some(ofPass), 'the pass on the runner')
+      const prompt = conn.sent.find(ofPass)!
+      assert.match(prompt.text as string, /@\[Riley\]\(teammate:/)
+      // Chief alone answers it: nobody after, nobody joining.
+      assert.deepEqual(prompt.then ?? [], [])
+      assert.deepEqual(
+        (await db.threadTeammate.findMany({ where: { sessionId: pass.sessionId! } })).map(
+          (t) => t.teammateId,
+        ),
+        [chief],
+      )
+      // Brigade's brief, shown as Brigade's: not her message, nor her word on a card.
+      assert.ok(!prompt.memberId)
+      assert.equal(
+        (await db.session.findFirstOrThrow({ where: { id: pass.sessionId! } })).title,
+        `Chief's pass · ${pass.day}`,
+      )
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('turned off, a pass at work answers and retries nothing more in the person’s name', async () => {
+    // Off in Preferences: the pass at work is over, in every workspace.
+    const id = await thread()
+    const made = await pending(id, await asks(id))
+    const settings = await chiefRules.setChief(
+      db,
+      { ...scope, memberId: member('ada') },
+      { pass: false },
+    )
+    assert.equal(settings.pass, false)
+    assert.equal(
+      (await db.chiefPass.findFirstOrThrow({ where: { id: made.pass.id } })).status,
+      'failed',
+    )
+    assert.match((await decide(made, { option: 1 })).error ?? '', /over/)
+    // Nor does one start.
+    assert.equal(await chiefPass.startPass(scope, member('ada'), `off-${randomUUID()}`), null)
+    // Off while its call was on its way: refused, and the pass is over.
+    const two = await thread()
+    const again = await pending(two, await asks(two))
+    await setMember({ chiefPass: false })
+    assert.match(
+      (await passCall(again, { name: 'chief_retry', item: 1, reason: 'It failed.' })).error ?? '',
+      /turned it off/,
+    )
+    assert.equal(
+      (await db.chiefPass.findFirstOrThrow({ where: { id: again.pass.id } })).status,
+      'failed',
+    )
+    assert.equal(await db.chiefDecision.count({ where: { sessionId: { in: [id, two] } } }), 0)
+    // Turned off as an answer is being kept: it waits for her row, then reads it is off.
+    const three = await thread()
+    const card = await asks(three)
+    const third = await pending(three, card)
+    const ada = await holdingAda('off')
+    const answering = decide(third, { option: 1 })
+    try {
+      await until(async () => (await ada.waiting()) > 0, 'the answer waiting on her row')
+    } finally {
+      await ada.done()
+    }
+    assert.match((await answering).error ?? '', /turned it off/)
+    assert.equal(
+      (await db.chiefPass.findFirstOrThrow({ where: { id: third.pass.id } })).status,
+      'failed',
+    )
+    assert.equal(await db.chiefDecision.count({ where: { sessionId: three } }), 0)
+    assert.equal(await db.wakeup.count({ where: { sessionId: three } }), 0)
+    assert.equal((await db.session.findFirstOrThrow({ where: { id: three } })).chiefWordSeq, null)
+  })
+
+  test('rules taken or refused at once on Today all stay', async () => {
+    await setMember({ chiefRules: '- Existing rule', chiefRulesRefused: [] })
+    const ada = await holdingAda()
+    const decided = Promise.all(
+      [
+        { line: 'Small fixes: open a PR', add: true },
+        { line: 'Anything visual: ask me', add: true },
+        { line: 'Deploys: go ahead', add: false },
+        { line: 'Emails: send them', add: false },
+      ].map((input) => chiefRules.decideRule(db, { ...scope, memberId: member('ada') }, input)),
+    )
+    try {
+      // Each waits for her row: none read it before the others wrote.
+      await until(async () => (await ada.waiting()) >= 4, 'the four waiting on her row')
+    } finally {
+      await ada.done()
+    }
+    await decided
+    const now = await prisma.member.findUniqueOrThrow({ where: { id: member('ada') } })
+    assert.deepEqual(now.chiefRules!.split('\n').sort(), [
+      '- Anything visual: ask me',
+      '- Existing rule',
+      '- Small fixes: open a PR',
+    ])
+    assert.deepEqual([...now.chiefRulesRefused].sort(), ['Deploys: go ahead', 'Emails: send them'])
+  })
+
+  test('an answer is kept with where it goes, or not at all; one #724 left unsettled is the pass’s', async () => {
+    const id = await thread()
+    const card = await asks(id)
+    const made = await pending(id, card)
+    const input = {
+      sessionId: id,
+      memberId: member('ada'),
+      teammateId: riley,
+      askSeq: card,
+      options: [
+        { label: 'Build it', message: 'Build it' },
+        { label: 'Not yet', message: 'Not yet' },
+      ],
+      cardQuestion: null,
+      optionIndex: 0,
+      reason: 'It serves the launch.',
+      rule: 'Admin work: go ahead on next steps of what I asked for',
+      passId: made.pass.id,
+    }
+    // Cut off midway (its wake-up cannot be kept): nothing of it stays, the card is still open.
+    await assert.rejects(chiefAnswers.answerInTheirName(scope, { ...input, teammateId: 'gone' }))
+    assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 0)
+    assert.equal((await db.session.findFirstOrThrow({ where: { id } })).chiefWordSeq, null)
+    // A decision left pending on the card (#724's still being made, or one cut off before this
+    // change): listed, not shown as settled, and the pass's answer settles it.
+    const left = await db.chiefDecision.create({
+      data: {
+        sessionId: id,
+        memberId: member('ada'),
+        teammateId: riley,
+        askSeq: card,
+        options: input.options,
+        passId: made.pass.id,
+        verdict: 'answer',
+        optionIndex: 0,
+      },
+    } as never)
+    const listed = async () =>
+      (await chiefPass.passItems(db, member('ada'))).some(
+        (i) => i.kind === 'question' && i.sessionId === id,
+      )
+    const settled = async () =>
+      ((await chiefPass.passView(db, member('ada')))?.settled ?? []).map((s) => s.decisionId)
+    assert.ok(await listed())
+    assert.ok(!(await settled()).includes(left.id))
+    assert.equal((await decide(made, { option: 1 })).status, 'answered')
+    assert.ok((await settled()).includes(left.id))
+    const answered = await row(left.id)
+    assert.equal(answered.status, 'answered')
+    assert.equal(answered.passId, made.pass.id)
+    assert.equal(answered.basis, 'Admin work: go ahead on next steps of what I asked for')
+    assert.equal(
+      await db.wakeup.count({ where: { sessionId: id, sourceId: `chief:${left.id}` } }),
+      1,
+    )
+    // Asked again: as it stands, sent once.
+    const twice = await decide(made, { option: 2 })
+    assert.equal(twice.status, 'answered')
+    assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 1)
+    assert.ok(!(await listed()))
+  })
 })

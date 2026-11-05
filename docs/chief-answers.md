@@ -20,15 +20,19 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
 - **Off is Brigade as before.** Both are a member's (`Member.chiefRules`, `Member.chiefPass`, off
   and empty by default; `PUT /me/chief`). With no rules, the spec has none (`ThreadSpec.rules`);
   with the pass off, nothing runs and teammates are told nothing of Chief's answers
-  (`ThreadSpec.chiefAnswers` false). `Member.chiefAnswers` and `chiefAuto` of #724 are no longer
-  read, kept while an older API may (migrations only add), and were turned off for everyone first.
+  (`ThreadSpec.chiefAnswers` false). Turned off, a pass at work stops: `setChief` marks theirs
+  `failed` as it changes their row, in every workspace, every call of a pass checks it is still on
+  (`passOn`), and an answer reads it under their row's lock, so one being kept as they turn it off
+  is kept first or not at all. `Member.chiefAnswers` and `chiefAuto` of #724 are no longer read,
+  kept while an older API may (migrations only add), and were turned off for everyone first.
 - **Rules are a text in the person's words, not a library file.** `Member.chiefRules`, at most
   `CHIEF_RULES_MAX` characters, private to them and their teammates: one per person, whatever the
   workspace's folders. The person writes them in Preferences, with Chief in a thread (**Write them
   with Chief**, then `chief_rules` once they agree: only in a member's own thread of theirs, right
   after they wrote, never from what a routine, a trigger or an email brought in, as rules give
   their teammates leave to act), or takes the lines a pass proposes (`POST /me/chief/rules`; a
-  refused line is kept in `chiefRulesRefused` and never proposed again).
+  refused line is kept in `chiefRulesRefused` and never proposed again). Each is taken or refused
+  under their row's lock (`decideRule`): several at once all stay.
 - **Every teammate working for the person reads them** (`specFor`): the thread's person is its
   asker (`askedBy`), or its starter when nobody asked (a routine's, a trigger's run); none in a
   thread several people ask in, a playbook's run, or a pass. The runner puts them in the
@@ -47,7 +51,9 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   the pass is over, at medium effort on the person's account and the workspace's cloud computer,
   else their own machine; runners older than `CHIEF_PASS_PROTOCOL` get none). Its brief
   (`chiefPassBrief`) has their rules, the numbered items and their recent answers to cards
-  (`recentAnswers`, the last two weeks), and what they refused.
+  (`recentAnswers`, the last two weeks), and what they refused. The brief is Brigade's, not the
+  person's word: it summons none of the teammates the replies it quotes mention (`startThread`
+  reads no mention in it), shows as Brigade's note, and only Chief answers it.
   Its only tools are `search_workspace`, `list_items` and its three calls, which act only on the
   brief's items, by number:
   - `chief_answer`: answers a question item in their name, citing the rule that settles it. Refused
@@ -56,8 +62,10 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   - `chief_report`, once, last: what is still theirs with what Chief would do, notes across their
     threads, and at most a few rules to add. A pass that ends without it, or runs past 30 minutes,
     is `failed`: what it did stays.
-- **An answer reaches the teammate as a report's wake-up** (`answerInTheirName`, stored as a
-  `ChiefDecision` of the pass, applied under the thread's lock): superseded when the thread moved on
+- **An answer reaches the teammate as a report's wake-up** (`answerInTheirName`: a
+  `ChiefDecision` of the pass kept with where it goes and its wake-up, in one transaction under the
+  thread's lock, so never half made; one #724 left `pending` or `suggested` on the card is the
+  pass's to settle, and the card is listed for it): superseded when the thread moved on
   since the question; left to the person after `CHIEF_ANSWERS_IN_A_ROW` (3) answers of Chief's
   there with no word from them; else fired at once, its text the very words a click would send,
   with why and the rule (`chiefAnswerMessage`). People see it as Brigade's note, "Chief answered for

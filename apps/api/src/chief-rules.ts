@@ -66,13 +66,23 @@ export async function setChief(
   if (input.timezone !== undefined && !validTimezone(input.timezone))
     throw new HTTPException(400, { message: `Unknown timezone: ${input.timezone}` })
   const rules = input.rules === undefined ? undefined : input.rules.trim() || null
-  await db.member.update({
-    where: { id: scope.memberId },
-    data: {
-      ...(input.pass !== undefined ? { chiefPass: input.pass } : {}),
-      ...(rules !== undefined ? { chiefRules: rules } : {}),
-      ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-    },
+  await db.$transaction(async (tx) => {
+    await tx.member.update({
+      where: { id: scope.memberId },
+      data: {
+        ...(input.pass !== undefined ? { chiefPass: input.pass } : {}),
+        ...(rules !== undefined ? { chiefRules: rules } : {}),
+        ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+      },
+    })
+    // Off: a pass of theirs running now, in any workspace, is over. It answers nothing more in
+    // their name: an answer being kept as they turn it off is kept first, or reads it is off
+    // (answerInTheirName holds their row until it is kept).
+    if (input.pass === false)
+      await tx.$executeRaw`
+        UPDATE "ChiefPass" SET status = 'failed', "finishedAt" = now()
+        WHERE "memberId" = ${scope.memberId} AND "organizationId" = ${scope.organizationId}
+          AND status = 'running'`
   })
   if (input.pass !== undefined || rules !== undefined)
     await audit({
@@ -91,38 +101,44 @@ export async function setChief(
 
 /**
  * The person takes a rule Chief's pass proposed (a line at the end of their rules), or refuses it
- * (kept so Chief does not propose it again). POST /me/chief/rules.
+ * (kept so Chief does not propose it again). POST /me/chief/rules. Under their row's lock: two
+ * clicks at once (Add on two lines) each keep what the other added.
  */
 export async function decideRule(
   db: ScopedDb,
   scope: Scope & { memberId: string },
   input: ChiefRuleDecision,
 ): Promise<ChiefSettings> {
-  const member = await db.member.findFirst({
-    where: { id: scope.memberId },
-    select: { chiefRules: true, chiefRulesRefused: true },
-  })
-  if (!member) throw new HTTPException(404, { message: 'No such member' })
-  const rules = member.chiefRules ?? ''
-  if (input.add) {
-    if (!holds(rules, input.line)) {
+  await db.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      SELECT 1 FROM "Member"
+      WHERE id = ${scope.memberId} AND "organizationId" = ${scope.organizationId}
+      FOR UPDATE`
+    const member = await tx.member.findFirst({
+      where: { id: scope.memberId },
+      select: { chiefRules: true, chiefRulesRefused: true },
+    })
+    if (!member) throw new HTTPException(404, { message: 'No such member' })
+    const rules = member.chiefRules ?? ''
+    if (input.add) {
+      if (holds(rules, input.line)) return
       const next = rules.trim() ? `${rules.trimEnd()}\n${asLine(input.line)}` : asLine(input.line)
       if (next.length > CHIEF_RULES_MAX)
         throw new HTTPException(400, {
           message: `Your rules would be longer than ${CHIEF_RULES_MAX} characters: shorten them first, in Preferences.`,
         })
-      await db.member.update({ where: { id: scope.memberId }, data: { chiefRules: next } })
+      await tx.member.update({ where: { id: scope.memberId }, data: { chiefRules: next } })
+      return
     }
-  } else {
     const line = input.line.replace(/\s+/g, ' ').trim()
     const refused = [...member.chiefRulesRefused.filter((r) => r !== line), line].slice(
       -CHIEF_RULES_REFUSED_MAX,
     )
-    await db.member.update({
+    await tx.member.update({
       where: { id: scope.memberId },
       data: { chiefRulesRefused: refused },
     })
-  }
+  })
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
