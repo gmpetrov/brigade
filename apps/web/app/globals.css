@@ -167,6 +167,12 @@
   initial-value: 0px;
 }
 
+/* The sidebar row ⌥↑ / ⌥↓ stopped on, when it only folds others ("+N more", a folded section):
+   ringed as when focused, even after the page the walk opened took the focus (sidebar-keys.tsx). */
+[data-sidebar='sidebar'] [data-nav-stop='toggle'][data-nav-at] {
+  box-shadow: 0 0 0 2px var(--sidebar-ring);
+}
+
 @layer components {
   /* Side panel (the desktop, or a file): on wide screens it is fixed to the
    * right of the window; the content column makes room (below, unlayered).
