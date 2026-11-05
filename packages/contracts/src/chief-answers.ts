@@ -262,7 +262,8 @@ export function chiefPassBrief(b: {
           '',
           '## Their answers to questions lately',
           ...b.answers.map(
-            (a) => `- "${oneLine(a.thread)}": ${oneLine(clip(a.question, 300))} → ${oneLine(a.picked)}`,
+            (a) =>
+              `- "${oneLine(a.thread)}": ${oneLine(clip(a.question, 300))} → ${oneLine(a.picked)}`,
           ),
         ]
       : []),

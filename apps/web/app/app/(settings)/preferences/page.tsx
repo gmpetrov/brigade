@@ -159,9 +159,9 @@ function ChiefSection() {
           <Label htmlFor="chief-rules" className="grid gap-1 font-normal">
             <span className="font-medium">Your rules</span>
             <span className="text-muted-foreground text-xs">
-              Short lines in your words. Every teammate working for you reads them, decides what they
-              settle and asks you only the rest. Merging, sending, publishing or paying still waits
-              for you.
+              Short lines in your words. Every teammate working for you reads them, decides what
+              they settle and asks you only the rest. Merging, sending, publishing or paying still
+              waits for you.
             </span>
           </Label>
           <Textarea
@@ -208,10 +208,10 @@ function ChiefSection() {
             <span className="font-medium">Daily pass</span>
             <span className="text-muted-foreground text-xs">
               Each morning from {data.hour}:00
-              {data.timezone ? ` (${data.timezone})` : ''}, when something waits on you, Chief
-              goes through it: it answers in your name the questions your rules settle, tries
-              failed threads again, and leaves the rest on Today with what it would do, and rules
-              you may want to add. Off, nothing runs.
+              {data.timezone ? ` (${data.timezone})` : ''}, when something waits on you, Chief goes
+              through it: it answers in your name the questions your rules settle, tries failed
+              threads again, and leaves the rest on Today with what it would do, and rules you may
+              want to add. Off, nothing runs.
             </span>
           </Label>
           <Switch

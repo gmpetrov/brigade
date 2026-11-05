@@ -1980,7 +1980,10 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
         inputSchema: jsonSchema<{ rules: string }>({
           type: 'object',
           properties: {
-            rules: { type: 'string', description: 'The rules, whole, one per line (at most 4000 characters)' },
+            rules: {
+              type: 'string',
+              description: 'The rules, whole, one per line (at most 4000 characters)',
+            },
           },
           required: ['rules'],
         }),
@@ -2086,7 +2089,10 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
             items: {
               type: 'object',
               properties: {
-                line: { type: 'string', description: 'The rule, one line, in their language and words' },
+                line: {
+                  type: 'string',
+                  description: 'The rule, one line, in their language and words',
+                },
                 why: { type: 'string', description: 'The answers it comes from, in a line' },
               },
               required: ['line', 'why'],
