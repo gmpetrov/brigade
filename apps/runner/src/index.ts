@@ -363,9 +363,6 @@ async function start() {
         }
       : {}),
   })
-  // The previews the runner before this one handed over as it updated go on here, before
-  // anything looks for quiet threads (their containers, their namespaces).
-  void previews.adopt()
   // What a cloud computer keeps only on its disk, backed up to Brigade, and put back on one
   // that replaces it before anything runs there.
   const backups = backupStore
@@ -851,6 +848,10 @@ async function start() {
     (events, send) => eventFiles.take(events, send),
     new SeenCommands(join(paths.state, 'commands-seen.json')),
   )
+  // The previews the runner before this one handed over as it updated go on here, before
+  // anything looks for quiet threads (their containers, their namespaces); what needs the API
+  // waits for the connection (startAgain).
+  void previews.adopt()
   connection.start()
 
   // Free disk now and then: checkouts of quiet threads that hold nothing GitHub lacks.

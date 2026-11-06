@@ -32,6 +32,10 @@
 // cookies by name, not port, so on plain localhost one thread's preview would
 // sign another's out.
 //
+// An update of the runner leaves its previews running: the app is detached from it, its output
+// in a file, and the runner hands them over (handOver) to the next one, which takes them up where
+// they are (adopt), frozen or asleep as they were.
+//
 // Each start reads the repository's preview variables, which people set, from
 // the API: they go into the app's environment over the start's own settings,
 // never into what the teammate reads; a secret's value is hidden in the log.
@@ -46,6 +50,7 @@ import {
   openSync,
   readFileSync,
   readSync,
+  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -54,7 +59,7 @@ import { readFile } from 'node:fs/promises'
 import http from 'node:http'
 import { createConnection } from 'node:net'
 import { uptime } from 'node:os'
-import { dirname, extname, join, posix, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, join, posix, relative, resolve, sep } from 'node:path'
 import type { Writable } from 'node:stream'
 import { StringDecoder } from 'node:string_decoder'
 import { fileURLToPath } from 'node:url'
@@ -549,9 +554,13 @@ export class Previews {
     this.handed = readHandOver(this.handOverFile)
     rmSync(this.handOverFile, { force: true })
     const handedPaused = new Set(
-      this.handed.flatMap((p) => (p.pausedContainers ? [`${p.seat.sessionId}:${p.pausedContainers.join(',')}`] : [])),
+      this.handed.flatMap((p) =>
+        p.pausedContainers ? [`${p.seat.sessionId}:${p.pausedContainers.join(',')}`] : [],
+      ),
     )
-    this.unresumed = this.unresumed.filter(([, sessionId, ids]) => !handedPaused.has(`${sessionId}:${ids.join(',')}`))
+    this.unresumed = this.unresumed.filter(
+      ([, sessionId, ids]) => !handedPaused.has(`${sessionId}:${ids.join(',')}`),
+    )
     void this.resumeLeft()
     try {
       const saved = JSON.parse(readFileSync(options.stateFile, 'utf8')) as [string, LastStart][]
@@ -1022,7 +1031,11 @@ export class Previews {
       lines: preview.lines,
       written: preview.written,
       // From the start of the line it has not finished: read again, whole, by the next runner.
-      run: { ...(run?.pid ? { pid: run.pid } : {}), at: run?.at ?? 0, offset: run?.lineOffset ?? 0 },
+      run: {
+        ...(run?.pid ? { pid: run.pid } : {}),
+        at: run?.at ?? 0,
+        offset: run?.lineOffset ?? 0,
+      },
       ...(remote
         ? {
             remote: {
@@ -1066,6 +1079,16 @@ export class Previews {
       })
       this.adopting.push({ preview, saved, ready, settle })
     }
+    // The output of the runs nothing takes up any more (a runner that stopped without handing
+    // them over, whose apps stopped with it).
+    const runs = join(dirname(this.options.stateFile), 'preview-runs')
+    const kept = new Set([...this.previews.values()].map((p) => basename(this.runFiles(p).dir)))
+    try {
+      for (const name of readdirSync(runs))
+        if (!kept.has(name)) rmSync(join(runs, name), { recursive: true, force: true })
+    } catch {
+      // None yet.
+    }
     return Promise.all(this.adopting.map((a) => a.ready))
   }
 
@@ -1081,7 +1104,10 @@ export class Previews {
         ? this.remoteFor(
             seat,
             saved.net ?? null,
-            this.linkFor(away.access, join(this.options.machines.home, 'preview-machines', 'id_ed25519')),
+            this.linkFor(
+              away.access,
+              join(this.options.machines.home, 'preview-machines', 'id_ed25519'),
+            ),
             saved.dir,
             away.root,
             away.includes,
@@ -1234,7 +1260,8 @@ export class Previews {
     this.followRemote(preview, remote, run)
     void remote.sync.flush().then(
       () => remote.log('[preview] Its machine has the code; changes go as they happen'),
-      (error: unknown) => remote.log(`[preview] The sync with its machine did not start: ${String(error)}`),
+      (error: unknown) =>
+        remote.log(`[preview] The sync with its machine did not start: ${String(error)}`),
     )
     return undefined
   }
@@ -1269,10 +1296,12 @@ export class Previews {
         if (!why && (saved.secrets.length || (preview.remote && !preview.remote.asleep))) {
           const variables =
             saved.secrets.length && preview.info.repository
-              ? await this.variables(preview.seat, preview.info.repository).catch((error: unknown) => {
-                  console.warn(`preview of ${preview.seat.sessionId}: ${String(error)}`)
-                  return null
-                })
+              ? await this.variables(preview.seat, preview.info.repository).catch(
+                  (error: unknown) => {
+                    console.warn(`preview of ${preview.seat.sessionId}: ${String(error)}`)
+                    return null
+                  },
+                )
               : { env: saved.settings, secrets: [] }
           why = await this.goOn(preview, saved, variables).catch(
             (error: unknown) =>
@@ -1785,7 +1814,10 @@ export class Previews {
     const dir = join(
       dirname(this.options.stateFile),
       'preview-runs',
-      `${preview.seat.sessionId}-${preview.info.previewId.slice(0, 8)}`.replace(/[^A-Za-z0-9_-]/g, '_'),
+      `${preview.seat.sessionId}-${preview.info.previewId.slice(0, 8)}`.replace(
+        /[^A-Za-z0-9_-]/g,
+        '_',
+      ),
     )
     return { dir, output: join(dir, 'output.log'), exit: join(dir, 'exit') }
   }
@@ -1857,7 +1889,9 @@ export class Previews {
         run.offset = run.lineOffset = 0
       }
     } catch (error) {
-      console.warn(`could not read the output of ${preview.seat.sessionId}'s preview: ${String(error)}`)
+      console.warn(
+        `could not read the output of ${preview.seat.sessionId}'s preview: ${String(error)}`,
+      )
     } finally {
       closeSync(fd)
     }
@@ -1888,11 +1922,7 @@ export class Previews {
     // It never ran, for want of a port (the app's, or one its containers publish): say who has it.
     const taken = ran || preview.net ? '' : await this.takenSaid(preview)
     if (this.previews.get(preview.seat.sessionId) !== preview || preview.run !== run) return
-    this.ended(
-      preview,
-      'failed',
-      ran ? `The app stopped: it ${how}` : `The command ${how}${taken}`,
-    )
+    this.ended(preview, 'failed', ran ? `The app stopped: it ${how}` : `The command ${how}${taken}`)
   }
 
   /**
@@ -2103,7 +2133,7 @@ export class Previews {
 
   private async untilRemoteEnds(preview: Preview, remote: Remote, run: AppRun) {
     const { link } = remote
-    for (let cuts = 0; ; ) {
+    for (let cuts = 0; ;) {
       if (!run.following) return null
       const code = await this.readRemote(preview, run, link, true)
       if (!run.following) return null
@@ -2123,7 +2153,13 @@ export class Previews {
         continue
       }
       // The connection was cut (ssh says 255): made again, then followed on from where it was.
-      if (++cuts > 5 || !(await link.connect().then(() => true, () => false))) {
+      if (
+        ++cuts > 5 ||
+        !(await link.connect().then(
+          () => true,
+          () => false,
+        ))
+      ) {
         run.lost = true
         return null
       }
@@ -2153,7 +2189,8 @@ export class Previews {
     if (this.handedOver || this.previews.get(sessionId) !== preview || preview.run !== run) return
     // Asleep: stopped on purpose, with its machine.
     if (remote.asleep) return
-    if (preview.stopping) return this.ended(preview, preview.stopping.status, preview.stopping.reason)
+    if (preview.stopping)
+      return this.ended(preview, preview.stopping.status, preview.stopping.reason)
     const how = run.lost
       ? 'lost its connection to its machine'
       : code === null
@@ -2646,6 +2683,9 @@ export class Previews {
     this.report(preview)
     if (preview.keptDir) void dropEnvFiles(preview.seat, preview.keptDir)
     if (preview.remote) void this.endRemote(preview, preview.remote)
+    // Its output and how it ended, here: nothing reads them any more.
+    else if (preview.info.previewId)
+      rmSync(this.runFiles(preview).dir, { recursive: true, force: true })
     void preview.cgroup?.remove()
     if (preview.pausedContainers?.length)
       void this.pause(preview, () => this.unpauseContainers(preview))
@@ -2723,7 +2763,9 @@ async function appEnv(
     // machine, the proxy is on the loopback too, and nobody else on its network needs the app.
     HOST: CLOUD ? '0.0.0.0' : '127.0.0.1',
     BRIGADE_PREVIEW_URL: origin,
-    ...Object.fromEntries([input.port, ...ports].map((p) => [`BRIGADE_PREVIEW_URL_${p}`, origins[p]!])),
+    ...Object.fromEntries(
+      [input.port, ...ports].map((p) => [`BRIGADE_PREVIEW_URL_${p}`, origins[p]!]),
+    ),
     // People's variables over the start's own settings.
     ...withAddresses({ ...input.env, ...variables }, origin, origins),
   }
@@ -2806,7 +2848,8 @@ export const localName = (sessionId: string) =>
 function readHandOver(file: string): Handed[] {
   try {
     const note = JSON.parse(readFileSync(file, 'utf8')) as HandOver
-    const fresh = Date.now() - note.at < HANDED_FRESH_MS && Math.abs(note.boot - bootTime()) <= 60_000
+    const fresh =
+      Date.now() - note.at < HANDED_FRESH_MS && Math.abs(note.boot - bootTime()) <= 60_000
     return fresh && Array.isArray(note.previews) ? note.previews : []
   } catch {
     return []
