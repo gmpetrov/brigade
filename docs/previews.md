@@ -544,8 +544,10 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     `preview-sync-reader.ts`, run as the teammate in its thread's namespaces,
     sends the checkout (the git work tree of the preview's folder): first a
     manifest, then what the machine lacks, then each change as `fs.watch` sees
-    it, 15 ms batched. `preview-sync-receiver.ts` writes each file whole and
-    moves it in place, so the dev server there reloads as for a local edit.
+    it, 15 ms batched. `preview-sync-receiver.ts` writes each file's bytes as
+    they come into a staging folder beside its state file, outside the copy,
+    then moves the file in place whole, so the dev server there reloads as for
+    a local edit.
     Left out: `.git` and `node_modules` anywhere, and what git ignores (asked of
     one `git check-ignore --stdin`), except `.env` files and the start's env
     file; the machine installs and builds for itself. The receiver deletes only
@@ -563,6 +565,41 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     later (80 to 110 ms edited there directly); the checkout's 1,712 files in
     under a second. A process per change was tried first: under a loaded
     computer, spawning rsync took up to 3 s; the reader stays up.
+    - **Files up to 2 GB each** (raw footage for a render, say), neither side
+      holding one in memory. A frame is a JSON line, then exactly the bytes it
+      says. The reader sends a file over 8 MB 1 MiB at a time from one open
+      file, each chunk once the link took the one before. The receiver writes
+      each chunk to its staged file before it reads the next, so a disk or a
+      link slower than the other holds the reader back, through SSH; once all
+      came, the file is placed in its turn, after the frames before it (copied
+      beside its place first when the staging folder is on another
+      filesystem). The staging folder (`.brigade/sync/<id>.staging`) is emptied
+      as the receiver starts, and keeps nothing of a file placed, refused or
+      cut by the link's end. A file cut short while it goes still gets the size
+      its line said, the rest as zeros, and goes again at once, up to three
+      times, ahead of any mark asked for meanwhile; one still cut short then is
+      named in the next mark, and that flush fails (no command starts on a copy
+      padded with zeros). Such a copy stays named until a frame replaces or
+      deletes it there (the file whole, a link, a deletion of it or of its
+      folder), never merely because its path was looked at again; one whose
+      file became a folder, a pipe, or a path git now ignores is deleted there
+      at once. One that grew
+      goes as its line said, its watcher sending the rest; one that cannot be
+      read is deleted there, as before. The receiver decides a path on its
+      line: the bytes of one it refuses are read and dropped, and the next
+      frame applies. A file over 2 GB is left out, said once in the log, and
+      deleted there if an older copy was. A flush waits as long as bytes go to
+      the machine, and fails after 60 seconds with none (5 minutes for the
+      first sync, which may read files the computer is still restoring from its
+      snapshot). Once its input ends, the receiver ends by itself, its last
+      save included: `process.exit()` hung there in 6 of 30 ends after a file
+      of 99 MiB (none in 80 since). Measured on November 6, 2026 on a thread's
+      machine, both halves built and joined by a pipe (no SSH, no network): a
+      file of 2 GiB in 3.0 to 4.7 seconds (once 18.6, the first run after its
+      2 GiB were written), the same bytes there, with the reader at most 122
+      MB of memory and the receiver 94 MB (52 MB each for 1 KB). On
+      the cloud computer, a file of 99 MiB (under the old limit of 100 MB) took
+      the code before 151 and 255 MB; now 116 and 78.
   - **The app runs there, reached here.** Its settings go into files there by
     stdin (never a command line), with its credentials; its script sources
     them, runs the setup unless it restarts, then its command. The shell sshd

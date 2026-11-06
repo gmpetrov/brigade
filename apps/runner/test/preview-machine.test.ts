@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createHash, randomBytes } from 'node:crypto'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +33,8 @@ import {
 // for the SSH link that runs each command in a folder here, as the machine's home:
 // - the sync starts the reader here and the receiver there, sends the whole checkout, then
 //   each change, and starts again after it was cut, sending only what changed;
+// - a flush waits as long as bytes go to the machine (large files), and gives up once none do;
+//   it fails when the machine's copy of a file is not whole (it changed while it went), naming it;
 // - the app's script sources its settings and credentials, runs the setup only when asked, and
 //   its whole process group stops when signalled, what it left included;
 // - it runs detached, its output in a file read from any byte on, and how it ended noted there.
@@ -43,13 +54,16 @@ function temp() {
 
 /**
  * Commands "on the machine" run in `home`, in a session of their own as sshd starts them. The
- * receiver copied there is TypeScript in tests: run with tsx instead.
+ * receiver copied there is TypeScript in tests: run with tsx instead. `before`: what its input
+ * goes through first (a slow link); `receiver`: a script that stands in for it.
  */
-function fakeLink(home: string) {
+function fakeLink(home: string, before = '', receiver?: string) {
   const command = (line: string) =>
     line.replace(
       'node .brigade/preview-sync-receiver.mjs',
-      `node --import ${shellQuote(tsx)} ${shellQuote(join(src, 'preview-sync-receiver.ts'))}`,
+      receiver
+        ? `node ${shellQuote(receiver)}`
+        : `${before}node --import ${shellQuote(tsx)} ${shellQuote(join(src, 'preview-sync-receiver.ts'))}`,
     )
   const spawnHere = (line: string, stdio: 'pipe' | 'ignore' = 'pipe') =>
     spawn('sh', ['-c', command(line)], {
@@ -120,6 +134,97 @@ test('the sync sends the checkout, each change, and only what changed after a cu
     write(root, 'src/b.ts', 'export const b = 1\n')
     assert.equal(await sync.flush(), 1, 'only the new file')
     assert.ok(existsSync(join(copy, 'src/b.ts')))
+  } finally {
+    sync.stop()
+  }
+})
+
+/** Passes its input on at 64 KB every 20 ms (about 3 MB a second), and nothing while ./stall exists. */
+const SLOW_LINK = `
+import { existsSync } from 'node:fs'
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
+for await (const chunk of process.stdin)
+  for (let at = 0; at < chunk.length; at += 65536) {
+    while (existsSync('stall')) await sleep(50)
+    if (!process.stdout.write(chunk.subarray(at, at + 65536)))
+      await new Promise((done) => process.stdout.once('drain', done))
+    await sleep(20)
+  }
+`
+
+test('a flush waits while bytes go to the machine, however long, and gives up once none do', async () => {
+  const root = temp()
+  const home = temp()
+  execFileSync('git', ['init', '-q', root])
+  write(root, 'src/a.ts', 'export const a = 1\n')
+  const slow = join(temp(), 'slow-link.mjs')
+  writeFileSync(slow, SLOW_LINK)
+  const link = fakeLink(home, `node ${shellQuote(slow)} | `)
+  const sync = new MachineSync(link, reader(root), 'work/app', () => undefined)
+  const staging = join(
+    home,
+    '.brigade/sync',
+    `${createHash('sha256').update('work/app').digest('hex').slice(0, 16)}.staging`,
+  )
+  try {
+    assert.equal(await sync.flush(), 1)
+    const clip = randomBytes(8 * 1024 ** 2)
+    writeFileSync(join(root, 'clip.mov'), clip)
+    // On its way (its bytes staged there as they come): the flush's mark goes after it.
+    await eventually(() => readdirSync(staging).length > 0, 'the file on its way')
+    const asked = Date.now()
+    await sync.flush(1000)
+    const took = Date.now() - asked
+    assert.ok(took > 1000, `it waited past its second while bytes went: ${took} ms`)
+    assert.ok(readFileSync(join(home, 'work/app/clip.mov')).equals(clip))
+
+    // The machine takes nothing more: given up a second after the last byte went.
+    writeFileSync(join(home, 'stall'), '')
+    await new Promise((done) => setTimeout(done, 100))
+    const stalled = Date.now()
+    await assert.rejects(sync.flush(1000), /did not confirm the latest changes in time/)
+    assert.ok(Date.now() - stalled >= 1000)
+  } finally {
+    rmSync(join(home, 'stall'), { force: true })
+    sync.stop()
+  }
+})
+
+/**
+ * Stands in for the receiver: lacks nothing the manifest names, and acknowledges each mark,
+ * naming the files listed in ./partial there as not whole.
+ */
+const PARTIAL_RECEIVER = `
+import { existsSync, readFileSync } from 'node:fs'
+import { createInterface } from 'node:readline'
+const say = (message) => process.stdout.write(JSON.stringify(message) + '\\n')
+createInterface({ input: process.stdin }).on('line', (line) => {
+  let frame
+  try { frame = JSON.parse(line) } catch { return }
+  if (frame.t === 'manifest') say({ t: 'need', paths: [] })
+  if (frame.t !== 'mark') return
+  const partial = existsSync('partial') ? readFileSync('partial', 'utf8').split('\\n').filter(Boolean) : []
+  say({ t: 'ack', id: frame.id, ...(partial.length ? { partial } : {}) })
+})
+`
+
+test('a flush fails, naming the file, when the machine has no whole copy of it', async () => {
+  const root = temp()
+  const home = temp()
+  execFileSync('git', ['init', '-q', root])
+  write(root, 'src/a.ts', 'export const a = 1\n')
+  const stand = join(temp(), 'partial-receiver.mjs')
+  writeFileSync(stand, PARTIAL_RECEIVER)
+  const sync = new MachineSync(fakeLink(home, '', stand), reader(root), 'work/app', () => undefined)
+  try {
+    assert.equal(await sync.flush(), 0)
+    writeFileSync(join(home, 'partial'), 'footage/clip.mov\n')
+    await assert.rejects(
+      sync.flush(),
+      /The thread’s machine has no whole copy of footage\/clip\.mov yet: it kept changing/,
+    )
+    rmSync(join(home, 'partial'))
+    assert.equal(await sync.flush(), undefined, 'still running: the next flush vouches again')
   } finally {
     sync.stop()
   }

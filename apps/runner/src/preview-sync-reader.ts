@@ -7,13 +7,15 @@
 //   node preview-sync-reader.js <root> [--include <path>]...
 //
 // stdout: frames for the receiver (preview-sync-receiver.ts), each a JSON line, then for a file
-// its bytes. stdin: JSON lines from the runner: the paths the receiver needs, a flush (send what
+// exactly the bytes its line says. A file goes up to 2 GB (raw footage for a render): one over
+// 8 MB is read a chunk at a time from one open file as the stream takes them, never whole in
+// memory. stdin: JSON lines from the runner: the paths the receiver needs, a flush (send what
 // changed now, then a mark the receiver acknowledges) or a resync (the manifest again, after the
 // link to the machine was cut). Left out: .git and node_modules anywhere, and whatever git
 // ignores (builds, caches, the preview's own database), except .env files, which the app reads.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { watch, type FSWatcher } from 'node:fs'
-import { lstat, readFile, readdir, readlink, realpath } from 'node:fs/promises'
+import { constants, watch, type FSWatcher, type Stats } from 'node:fs'
+import { lstat, open, readdir, readlink, realpath, type FileHandle } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import { createInterface } from 'node:readline'
 
@@ -21,12 +23,20 @@ import { createInterface } from 'node:readline'
 const SKIPPED = new Set(['.git', 'node_modules'])
 /** Sent even when git ignores them: the app's own settings (.env, .env.local…). */
 const ENV_FILE = /^\.env(\..+)?$/
-/** A file larger than this is not sent (a video in the repository): said once on stderr. */
-const FILE_MAX = 100 * 1024 ** 2
+/** A file larger than this is not sent, nor kept on the machine: said once on stderr. */
+const FILE_MAX = 2 * 1024 ** 3
+/** A file larger than this goes a chunk at a time, read as the stream takes them. */
+const STREAM_MIN = 8 * 1024 ** 2
+/** The chunks a large file goes in. */
+const CHUNK = 1024 ** 2
+/** A file cut short on the way goes again at once, this many times at most. */
+const RESENDS = 3
 /** Changes this close together go as one batch. */
 const BATCH_MS = 15
 
 type Entry = { size: number; mtimeMs: number; mode: number } | { link: string }
+/** Bytes for the stream: resolves once it took them. */
+type Write = (chunk: Buffer) => Promise<void>
 
 /** A path relative to the root, with / between its parts whatever the system's separator. */
 const rel = (...parts: string[]) => parts.filter(Boolean).join('/')
@@ -149,6 +159,13 @@ export class Reader {
   private working: Promise<void> = Promise.resolve()
   private readonly ignores: Ignores
   private readonly warned = new Set<string>()
+  /**
+   * Files whose copy on the machine went cut short (padded with zeros): a mark names them, and
+   * the flush it ends fails rather than vouch for that copy. One stays named until a frame
+   * replaces or deletes that copy there (the file whole, a link, a deletion, of it or of a folder
+   * it is in), never merely because it was looked at again.
+   */
+  private readonly partial = new Set<string>()
 
   constructor(
     private readonly root: string,
@@ -193,7 +210,9 @@ export class Reader {
     clearTimeout(this.timer)
     this.timer = undefined
     this.batch()
-    return this.then(() => this.frame({ t: 'mark', id }))
+    return this.then(() =>
+      this.frame({ t: 'mark', id, ...(this.partial.size ? { partial: [...this.partial] } : {}) }),
+    )
   }
 
   /** After what is under way: one thing at a time, and a failure does not stop what comes next. */
@@ -212,17 +231,25 @@ export class Reader {
     this.ignores.close()
   }
 
-  private frame(header: object, body?: Buffer) {
-    this.writing = this.writing.then(
-      () =>
-        new Promise<void>((done) => {
-          const ok = this.out.write(`${JSON.stringify(header)}\n`)
-          const more = body ? this.out.write(body) : true
-          if (ok && more) done()
-          else this.out.once('drain', () => done())
-        }),
-    )
+  /**
+   * A frame, whole before the next starts: its header line, then its body, given whole or written
+   * by `body` a chunk at a time (a large file's, read as it goes).
+   */
+  private frame(header: object, body?: Buffer | ((write: Write) => Promise<void>)) {
+    this.writing = this.writing.then(async () => {
+      await this.write(`${JSON.stringify(header)}\n`)
+      if (typeof body === 'function') await body((chunk) => this.write(chunk))
+      else if (body) await this.write(body)
+    })
     return this.writing
+  }
+
+  /** Once the stream took it: while it holds more than it wants, until it drained. */
+  private write(chunk: Buffer | string) {
+    return new Promise<void>((done) => {
+      if (this.out.write(chunk)) done()
+      else this.out.once('drain', () => done())
+    })
   }
 
   private async walk(dir: string) {
@@ -283,9 +310,10 @@ export class Reader {
 
   /**
    * Look at a path now: send it when it changed (with `send`; else only note it for the
-   * manifest), say it is gone, or walk a new folder.
+   * manifest), say it is gone, or walk a new folder. `resent`: how many times in a row it just
+   * changed while it went.
    */
-  private async check(path: string, send: boolean) {
+  private async check(path: string, send: boolean, resent = 0): Promise<void> {
     if (!path || skipped(path)) {
       if (!path) await this.rescan('')
       return
@@ -297,6 +325,8 @@ export class Reader {
       return this.gone(path)
     }
     if (stat.isDirectory()) {
+      // A folder where a file was, cut short on its way: that copy goes from the machine first.
+      if (this.partial.has(path)) await this.gone(path)
       if (!this.watchers.has(path)) {
         if (await this.ignores.ignored(path)) return
         // A new folder (or one moved here): all it holds is new too.
@@ -305,7 +335,7 @@ export class Reader {
       return
     }
     if (baseName(path) === '.gitignore') this.ignores.restart()
-    if (await this.ignores.ignored(path)) return
+    if (await this.ignores.ignored(path)) return this.drop(path)
     const before = this.index.get(path)
     if (stat.isSymbolicLink()) {
       const target = await readlink(join(this.root, path)).catch(() => null)
@@ -313,16 +343,19 @@ export class Reader {
       // Unchanged since sent, unless the receiver asked for it: it lacks it.
       if (before && 'link' in before && before.link === target && !this.needed) return
       this.index.set(path, { link: target })
-      if (send) await this.frame({ t: 'link', p: path, to: target })
-      return
+      if (!send) return
+      await this.frame({ t: 'link', p: path, to: target })
+      // It replaced there what was at its place: a copy cut short, or a folder holding some.
+      return this.repaired(path)
     }
-    if (!stat.isFile()) return
+    if (!stat.isFile()) return this.drop(path)
     if (stat.size > FILE_MAX) {
       if (!this.warned.has(path)) {
         this.warned.add(path)
-        this.warn(`[preview] ${path} is not sent to the thread's machine: over 100 MB`)
+        this.warn(`[preview] ${path} is not sent to the thread's machine: over 2 GB`)
       }
-      return
+      // Nor kept there as it was before: nothing on the machine runs on an older copy of it.
+      return this.gone(path)
     }
     const entry = { size: stat.size, mtimeMs: Math.trunc(stat.mtimeMs), mode: stat.mode & 0o777 }
     const same =
@@ -335,15 +368,70 @@ export class Reader {
     if (same && !this.needed) return
     this.index.set(path, entry)
     if (!send) return
-    // A folder on its way that became a link to elsewhere: nothing there is read.
+    // A folder on its way that became a link to elsewhere: nothing there is read. A copy cut
+    // short stays named: the link that folder now is replaces it, once it goes.
     if (!(await this.inside(path))) return
-    let body: Buffer
+    const sent = await this.send(path, stat)
+    if (sent === 'gone') return this.gone(path)
+    if (sent === 'sent') return this.repaired(path)
+    // What the machine has is not this file (cut short: padded with zeros), or it was not the
+    // file seen: noted as no file can be, it goes again now, ahead of any mark already asked
+    // for. Cut short that many times, it waits for a later batch, and the next mark names it.
+    const told = this.index.get(path)
+    if (told && !('link' in told)) this.index.set(path, { ...told, size: -1 })
+    if (sent === 'short') this.partial.add(path)
+    if (resent < RESENDS) return this.check(path, true, resent + 1)
+    this.warn(
+      `[preview] ${path} kept changing while it went to the thread's machine: it goes again`,
+    )
+    this.schedule(path)
+  }
+
+  /**
+   * The file at `path` as it is now, from one open file: read whole when small, else a chunk at
+   * a time as the stream takes them, and always the size its header says. 'short': it was cut
+   * short on the way, the rest sent as zeros. 'changed': it is no longer the file `seen`
+   * (replaced, or grown past the limit), and nothing went. 'gone': it could not be read (on the
+   * way too: then as zeros).
+   */
+  private async send(path: string, seen: Stats): Promise<'sent' | 'short' | 'changed' | 'gone'> {
+    let file: FileHandle
     try {
-      body = await readFile(join(this.root, path))
+      // Not held up by what is no file (a pipe put in its place): let go below.
+      file = await open(join(this.root, path), constants.O_RDONLY | constants.O_NONBLOCK)
     } catch {
-      return this.gone(path)
+      return 'gone'
     }
-    await this.frame({ t: 'file', p: path, s: body.length, m: entry.mode, mt: entry.mtimeMs }, body)
+    try {
+      const stat = await file.stat()
+      if (!stat.isFile() || stat.ino !== seen.ino || stat.dev !== seen.dev || stat.size > FILE_MAX)
+        return 'changed'
+      const mode = stat.mode & 0o777
+      const mtimeMs = Math.trunc(stat.mtimeMs)
+      if (stat.size <= STREAM_MIN) {
+        const body = Buffer.allocUnsafe(stat.size)
+        const read = await readInto(file, body, 0)
+        this.index.set(path, { size: read, mtimeMs, mode })
+        await this.frame(
+          { t: 'file', p: path, s: read, m: mode, mt: mtimeMs },
+          body.subarray(0, read),
+        )
+        return 'sent'
+      }
+      this.index.set(path, { size: stat.size, mtimeMs, mode })
+      let went: Awaited<ReturnType<typeof chunks>> = 'whole'
+      await this.frame(
+        { t: 'file', p: path, s: stat.size, m: mode, mt: mtimeMs },
+        async (write) => {
+          went = await chunks(file, stat.size, write)
+        },
+      )
+      return went === 'whole' ? 'sent' : went === 'short' ? 'short' : 'gone'
+    } catch {
+      return 'gone'
+    } finally {
+      await file.close().catch(() => undefined)
+    }
   }
 
   /** Set while sending what the receiver asked for: sent even when unchanged here. */
@@ -406,7 +494,25 @@ export class Reader {
         watcher.close()
         this.watchers.delete(dir)
       }
-    if (known) await this.frame({ t: 'del', p: path })
+    if (known) {
+      await this.frame({ t: 'del', p: path })
+      this.repaired(path)
+    }
+  }
+
+  /** A frame replaced or deleted what the machine had at `path`: no copy there is cut short now. */
+  private repaired(path: string) {
+    const under = `${path}/`
+    for (const key of [...this.partial])
+      if (key === path || key.startsWith(under)) this.partial.delete(key)
+  }
+
+  /**
+   * No longer sent as it is (git ignores it now, or it is no regular file): a copy cut short of
+   * it goes from the machine, rather than stay there named in every mark.
+   */
+  private async drop(path: string) {
+    if (this.partial.has(path)) await this.gone(path)
   }
 
   /** Send these as they are now, changed or not: the receiver lacks them. */
@@ -434,6 +540,43 @@ export class Reader {
     const real = await realpath(join(this.root, path)).catch(() => null)
     return real !== null && (real === this.rootReal || real.startsWith(`${this.rootReal}${sep}`))
   }
+}
+
+/** Read into `buffer` from `position` until it is full or the file ends: how many bytes came. */
+async function readInto(file: FileHandle, buffer: Buffer, position: number) {
+  let read = 0
+  while (read < buffer.length) {
+    const { bytesRead } = await file.read(buffer, read, buffer.length - read, position + read)
+    if (bytesRead === 0) break
+    read += bytesRead
+  }
+  return read
+}
+
+/**
+ * `size` bytes of an open file from its start, a chunk at a time, each read once the stream took
+ * the one before. 'short': the file ended sooner (cut short on the way), 'failed': it could not
+ * be read; either way what it lacked went as zeros, so the receiver still gets the size the
+ * header said.
+ */
+async function chunks(file: FileHandle, size: number, write: Write) {
+  let went: 'whole' | 'short' | 'failed' = 'whole'
+  for (let at = 0; at < size;) {
+    // A buffer of its own each time: the stream may still hold the one before.
+    const chunk = Buffer.allocUnsafe(Math.min(CHUNK, size - at))
+    let read = 0
+    if (went === 'whole')
+      try {
+        read = await readInto(file, chunk, at)
+        if (read < chunk.length) went = 'short'
+      } catch {
+        went = 'failed'
+      }
+    chunk.fill(0, read)
+    await write(chunk)
+    at += chunk.length
+  }
+  return went
 }
 
 /** As a program: the root from argv, frames to stdout, the runner's lines from stdin. */
