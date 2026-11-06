@@ -704,9 +704,11 @@ type Pick = {
 const cardKey = (sessionId: string, askSeq: number) => `${sessionId}:${askSeq}`
 
 /**
- * The person's answer to each question Chief picked for, once they gave it: the first message in
- * the thread after the card, when it is theirs, compared with Chief's pick (its words, its label or
- * the choice it names). Brigade's first (a wake-up, an answer of Chief's), or none yet: no outcome.
+ * The person's answer to each question Chief picked for, once they gave it: the first message the
+ * thread's teammate got after the card (message.user), when it is theirs, compared with Chief's pick
+ * (its words, its label or the choice it names). One still queued counts once it goes, in the words
+ * it goes with (edited meanwhile or not); cancelled, never. Brigade's first (a wake-up, an answer of
+ * Chief's), or none yet: no outcome.
  */
 async function pickOutcomes(db: ScopedDb, memberId: string, picks: Pick[]) {
   const outcomes = new Map<string, ChiefPickOutcome>()
@@ -719,8 +721,7 @@ async function pickOutcomes(db: ScopedDb, memberId: string, picks: Pick[]) {
       AS q(session, seq)
     CROSS JOIN LATERAL (
       SELECT data FROM "SessionEvent" e
-      WHERE e."sessionId" = q.session AND e.seq > q.seq
-        AND e.type IN ('message.user', 'message.queued')
+      WHERE e."sessionId" = q.session AND e.seq > q.seq AND e.type = 'message.user'
       ORDER BY e.seq ASC LIMIT 1
     ) e`
   const byCard = new Map(picks.map((p) => [cardKey(p.sessionId, p.askSeq), p]))

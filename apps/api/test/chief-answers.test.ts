@@ -2214,7 +2214,17 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
     const at = (day: number, hour = 6) => new Date(Date.UTC(2031, 5, day, hour))
     const rule = 'Admin work: go ahead'
     const cards: Record<string, { id: string; seq: number }> = {}
-    for (const c of ['one', 'two', 'three', 'four', 'five', 'old']) {
+    for (const c of [
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+      'edited',
+      'cancelled',
+      'queued',
+      'old',
+    ]) {
       const id = await thread()
       cards[c] = { id, seq: await asks(id) }
     }
@@ -2265,6 +2275,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       ['one', 2, rule],
       ['four', 1, 'Visual: ask me'],
       ['five', 1, null],
+      ['edited', 1, rule],
+      ['cancelled', 1, rule],
+      ['queued', 1, rule],
     ])
     await person(cards.old!.id, 'Build it')
     // Its latest pick, in its words.
@@ -2280,10 +2293,35 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
     await person(cards.three!.id, 'Build it')
     // Four waits. Five: its pick, as a click sends it.
     await person(cards.five!.id, 'Build it')
+    // Queued as its pick, then edited: what reached the teammate counts.
+    const queued = (c: string, messageId: string, text: string) =>
+      say(cards[c]!.id, {
+        type: 'message.queued',
+        messageId,
+        text,
+        memberId: member('ada'),
+        waitingFor: 'turn',
+      })
+    await queued('edited', `q-edit-${suffix}`, 'Build it')
+    await queued('edited', `q-edit-${suffix}`, 'Not yet')
+    await say(cards.edited!.id, {
+      type: 'message.user',
+      messageId: `q-edit-${suffix}`,
+      text: 'Not yet',
+      memberId: member('ada'),
+    })
+    // Queued as its pick, then cancelled: never an answer. Still queued: none yet.
+    await queued('cancelled', `q-cancel-${suffix}`, 'Build it')
+    await say(cards.cancelled!.id, {
+      type: 'message.cancelled',
+      messageId: `q-cancel-${suffix}`,
+      memberId: member('ada'),
+    })
+    await queued('queued', `q-wait-${suffix}`, 'Build it')
     const view = (await chiefPass.passView(db, { ...scope, memberId: member('ada') }, now))!
     assert.equal(view.id, latest.id)
     assert.deepEqual(view.calibration, [
-      { rule, same: 1, answered: 2 },
+      { rule, same: 1, answered: 3 },
       { rule: null, same: 1, answered: 1 },
     ])
     assert.deepEqual(
@@ -2292,6 +2330,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
         [cards.one!.id, 'same', rule],
         [cards.four!.id, null, 'Visual: ask me'],
         [cards.five!.id, 'same', null],
+        [cards.edited!.id, 'otherwise', rule],
+        [cards.cancelled!.id, null, rule],
+        [cards.queued!.id, null, rule],
       ],
     )
   })

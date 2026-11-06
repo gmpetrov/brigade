@@ -32,8 +32,9 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
     answer) and, for a thread still failed, **Try again**;
   - Today shows how Chief reads the person (`passView.calibration`): over the last
     `CHIEF_CALIBRATION_DAYS` of passes, each question Chief picked for (once, by its latest pick)
-    counts when the person answered it, the first message after its card being theirs, as the same
-    answer or another (`pickOutcomes`), by the rule the pick went by. It tells which rules Chief
+    counts when the person answered it, the first message its teammate got after its card being
+    theirs (one still queued counts once it goes, as it goes, edited or not; cancelled, never), as
+    the same answer or another (`pickOutcomes`), by the rule the pick went by. It tells which rules Chief
     reads right, before it acts on any;
   - the rules reach no teammate (`ThreadSpec.rules` unset, `chiefAnswers` false): they would act
     on them. Teammates ask as before, and Chief is told so (`rulesAct`, `rulesForChief`).
