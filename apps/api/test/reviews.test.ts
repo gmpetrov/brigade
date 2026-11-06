@@ -29,7 +29,10 @@ import { parseEnv } from 'node:util'
 //   it; the child reports to its parent only once the review is done (not while it runs, nor
 //   before the turn its report brings), and its parent's wait outlasts the review's;
 // - the parent may ask for the review of its child's pull request: it runs under the child, and
-//   the parent waits for the child again; closing it lets the child it held report;
+//   the parent waits for the child again, with a deadline even for one it did not wait for;
+//   closing it lets the child it held report;
+// - no review starts below a child's review: a teammate there is told so, and a person's ask
+//   runs in a thread of its own;
 // - such a review sits under the thread at the top: archived with it, and a ticket there brings
 //   it back and keeps it from being done.
 const envFile = new URL('../.env', import.meta.url)
@@ -771,6 +774,9 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
 
   /** A child thread of Riley's under `parentId`, which waits for it (start_child). */
   const childOf = async (parentId: string, ask: string) => {
+    // What waited for the computer went, as its runner would take it: no runner answers here,
+    // and what may wait for one is capped (src/runner-commands.ts).
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.computer } })
     const session = await db.session.create({
       data: {
         teammateId: ids.riley,
@@ -955,6 +961,64 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
       { summary: null, delivered: false, awaited: true },
     )
     assert.ok(again.awaitUntil!.getTime() > review.awaitUntil!.getTime())
+  })
+
+  test('the parent asking for the review of a child it did not wait for waits for it, with a deadline', async () => {
+    const { handleReviewCall } = await import('../src/reviews.js')
+    const parent = await thread(ids.web, 'Background fixes.')
+    const child = await childOf(parent, 'Fix the logo in the background.')
+    // Started with wait false (start_child): nothing waits for it, and it has no deadline.
+    await db.session.updateMany({
+      where: { id: child },
+      data: { awaited: false, awaitUntil: null },
+    })
+    await open(child, 906, { wanted: false, reason: 'An image' })
+    const asked = (await handleReviewCall(
+      db,
+      scope,
+      { id: parent },
+      { id: ids.riley, name: 'Riley' },
+      { name: 'request_review', repository: repo, number: 906 },
+    )) as { reviewer?: string; error?: string }
+    assert.equal(asked.reviewer, 'Kai', asked.error)
+    const review = (await row(906)).reviewSession!
+    const after = await reportOf(child)
+    assert.equal(after.awaited, true)
+    assert.ok(after.awaitUntil, 'the sweep settles it if the review or the child stalls')
+    assert.ok(after.awaitUntil!.getTime() > review.awaitUntil!.getTime())
+  })
+
+  test('no review starts below a child’s review: a teammate there is told so, a person’s ask runs apart', async () => {
+    const { handleReviewCall, requestReview } = await import('../src/reviews.js')
+    const parent = await thread(ids.web, 'Deep work.')
+    const child = await childOf(parent, 'Fix the sync.')
+    const below = await childOf(child, 'Review #900: Fix the sync')
+    const told = await open(below, 907, { wanted: true, reason: 'A follow-up fix' })
+    assert.equal(told?.review.started, false)
+    assert.match(told!.review.note, /under a child thread: Brigade starts no review below it/)
+    assert.equal((await row(907)).reviewSessionId, null)
+    // Asked for by itself, or by the child above it: refused alike.
+    for (const id of [below, child]) {
+      const asked = (await handleReviewCall(
+        db,
+        scope,
+        { id },
+        { id: ids.riley, name: 'Riley' },
+        { name: 'request_review', repository: repo, number: 907 },
+      )) as { error?: string }
+      assert.match(asked.error ?? '', /starts no review below it/)
+    }
+    // A person asks on its page: it runs in a thread of its own, out of the tree.
+    const { threadId } = await requestReview(
+      { ...scope, userId: `owner-${suffix}`, memberId: ids.owner, role: 'owner' },
+      repo,
+      907,
+      { reviewerId: ids.kai },
+    )
+    const pr = await row(907)
+    assert.equal(pr.reviewSessionId, threadId)
+    assert.equal(pr.reviewSession?.parentId, null)
+    assert.equal(pr.sessionId, below, 'the pull request stays where it was opened')
   })
 
   test('closing its pull request stops the review, and the child it held reports', async () => {

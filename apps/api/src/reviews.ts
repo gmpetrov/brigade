@@ -381,6 +381,21 @@ async function defaultComputer(db: ScopedDb, memberId: string) {
   return computer
 }
 
+/** Why a thread under a child thread (a child's review) starts no review of what it opens. */
+const DEEP_NOTE =
+  'This thread is under a child thread: Brigade starts no review below it. Say in your report that ' +
+  'this pull request needs one; a person can ask for it on its page.'
+
+/** Whether a thread sits under a child thread: a child's review, below which no review starts. */
+async function underChild(db: ScopedDb, thread: { parentId: string | null } | null) {
+  if (!thread?.parentId) return false
+  const parent = await db.session.findFirst({
+    where: { id: thread.parentId },
+    select: { parentId: true },
+  })
+  return !!parent?.parentId
+}
+
 /**
  * Start a pull request's review. Throws, with what stops it, when the pull request is closed,
  * a review of it is already under way, the asker may not, or no teammate can review it.
@@ -457,27 +472,33 @@ async function startClaimed(
         'it read again with Review again on the pull request.',
     })
   // The review runs in a child of the thread that opened it, whose author it wakes: a child
-  // thread's too, which reports to its own parent once the review is done.
-  const parent = row.sessionId ? await loadThread(db, row.sessionId) : null
+  // thread's too, which reports to its own parent once the review is done. Below a child's
+  // review, never: threads go two levels deep at most (src/thread-root.ts).
+  const home = row.sessionId ? await loadThread(db, row.sessionId) : null
+  const deep = await underChild(db, home)
   const by = input.by
-  if (by.kind === 'teammate' && parent?.id !== by.sessionId && parent?.parentId !== by.sessionId)
+  if (by.kind === 'teammate' && home?.id !== by.sessionId && home?.parentId !== by.sessionId)
     throw new HTTPException(403, {
       message:
         'request_review is for a pull request this thread, or one of its child threads, opened. A person can ask for a review of another one on its page.',
     })
-  if (by.kind === 'member' && parent) {
-    if (!(await memberMayWrite(parent, by.memberId)))
+  if (by.kind === 'teammate' && deep) throw new HTTPException(409, { message: DEEP_NOTE })
+  if (by.kind === 'member' && home) {
+    if (!(await memberMayWrite(home, by.memberId)))
       throw new HTTPException(403, {
         message: "Only who may write in this pull request's thread can ask for its review.",
       })
-    if (parent.controlledByMemberId)
+    if (home.controlledByMemberId)
       throw new HTTPException(409, {
         message: 'A person has control of the thread that opened it. Hand it back first.',
       })
   }
-  const memberId = parent?.startedByMemberId ?? (by.kind === 'member' ? by.memberId : null)
+  const memberId = home?.startedByMemberId ?? (by.kind === 'member' ? by.memberId : null)
   if (!memberId) throw new HTTPException(409, { message: 'This pull request has no thread' })
-  const computer = parent?.computer ?? (await defaultComputer(db, memberId))
+  const computer = home?.computer ?? (await defaultComputer(db, memberId))
+  // Where it runs: a child of that thread; a person's ask for one a review under a child opened,
+  // in a thread of its own, as one opened outside Brigade.
+  const parent = deep ? null : home
   const author = row.authorTeammate
   const reviewer = await pickReviewer(db, scope, {
     repo: input.repo,
@@ -488,7 +509,7 @@ async function startClaimed(
   })
   const [checks, asked] = await Promise.all([
     checksRun(gh, input.repo, p).catch(() => []),
-    parent ? firstAsk(db, parent.id) : '',
+    home ? firstAsk(db, home.id) : '',
   ])
   const instructions = reviewBrief({
     repo: input.repo,
@@ -526,8 +547,8 @@ async function startClaimed(
           },
         }
       : {}),
-    projectId: parent?.projectId ?? (await projectOfRepository(db, input.repo)),
-    effort: (parent?.effort as never) ?? null,
+    projectId: home?.projectId ?? (await projectOfRepository(db, input.repo)),
+    effort: (home?.effort as never) ?? null,
   })
   if (outcome === 'offline') {
     // It never ran: nothing waits for it.
@@ -606,6 +627,9 @@ export async function reviewOnCreate(
   const choice = ReviewChoice.safeParse(call.input.review)
   const policy = await reviewPolicyOf(db, session)
   if (policy === 'none') return undefined
+  // A review under a child opened it: none starts below it.
+  if (await underChild(db, session))
+    return choice.success ? { review: { started: false, note: DEEP_NOTE } } : undefined
   if (policy === 'manual')
     return choice.success
       ? {

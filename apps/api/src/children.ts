@@ -203,7 +203,8 @@ export async function reviewHold(
  * child reports to its parent once it is done, so a report it made in this turn, or a
  * conversation's last word still to go, waits for it too, and its parent's wait outlasts the
  * review's. Its parent asking for it (request_review on a pull request its child opened) waits
- * for the child again, as message_thread does, as long.
+ * for the child again, as message_thread does, as long: one it did not wait for (start_child
+ * with wait false) too, with a wait of its own.
  */
 export async function holdForReview(
   scope: Scope,
@@ -221,6 +222,7 @@ export async function holdForReview(
         reportDeliveredAt: null,
         reportDueAt: null,
         awaited: true,
+        awaitUntil: waitUntil(undefined),
         parentTeammateId: options.askedBy,
       },
     })
@@ -238,12 +240,19 @@ const OUTLAST_MS = 60 * 60_000
 
 /**
  * A child waits for its review until `until`: its parent waits for it a while longer, while it
- * does, so that the child hears first when that review runs late. A wait already longer stays.
+ * does, so that the child hears first when that review runs late. A wait already longer stays;
+ * an awaited child without one gets one, so the sweep still settles it (settleOverdueChildren).
  */
 async function outlast(db: ScopedDb, childId: string, until: Date) {
   const later = new Date(until.getTime() + OUTLAST_MS)
   await db.session.updateMany({
-    where: { id: childId, awaited: true, reportDeliveredAt: null, awaitUntil: { lt: later } },
+    where: {
+      id: childId,
+      awaited: true,
+      reportDeliveredAt: null,
+      // None set is waiting for ever, which nothing awaited does: it gets one.
+      OR: [{ awaitUntil: null }, { awaitUntil: { lt: later } }],
+    },
     data: { awaitUntil: later },
   })
 }
