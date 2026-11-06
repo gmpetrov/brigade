@@ -91,7 +91,14 @@ import {
 import { fetchFar, keepFar, latestOnly } from '@/lib/far-threads'
 import { latestSave } from '@/lib/latest-save'
 import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
-import { groupOf, groupWith, holds, subThreadRows, type Group } from '@/lib/sub-threads'
+import {
+  groupOf,
+  groupWith,
+  holds,
+  subThreadRows,
+  withoutReviews,
+  type Group,
+} from '@/lib/sub-threads'
 import { useFlip } from '@/lib/use-flip'
 import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
@@ -858,9 +865,15 @@ function saveFilter(saved: SavedFilter) {
 }
 
 /** The threads with what each waiting on a person asks, those shown as waiting. */
-function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
+function withAsks(
+  threads: ThreadSummary[],
+  needsYou: Record<string, string>,
+  openId: string | null,
+) {
   const asks = new Map<string, string>()
-  const all = threads.map((t) => {
+  const all = threads.map((thread) => {
+    // Its pull requests' reviews are not rows of their own (lib/sub-threads.ts).
+    const t = withoutReviews(thread, needsYou, openId)
     // A failed thread's pull request is not ready for a person: the thread waits on them, its
     // red dot says what to do (src/failed.ts in the API).
     const ask =
@@ -1031,8 +1044,8 @@ export function SidebarWork({
     const farRows = keepFar(far, farIds, loadedIds)
     const farOnes = new Set(farRows.map((t) => t.id))
     const list = [...(threads ?? []), ...olderOnes, ...farRows]
-    return { ...withAsks(archived ?? list, needsYou), farOnes }
-  }, [threads, older, far, farIds, needsYou, archived])
+    return { ...withAsks(archived ?? list, needsYou, threadId), farOnes }
+  }, [threads, older, far, farIds, needsYou, archived, threadId])
   // The lists this member pinned: under Pinned, each with the threads on its items (those not
   // pinned themselves), which leave Threads.
   const pinnedLists = useApi<PinnedList[]>('/lists/pins', ['lists.updated'])
@@ -1268,7 +1281,8 @@ export function SidebarWork({
     let current = true
     api<ThreadSummary[]>(`/threads?id=${openId}`).then(
       ([t]) =>
-        current && setFetched(t && holds(t, openId) ? withAsks([t], needsYou).all[0] : undefined),
+        current &&
+        setFetched(t && holds(t, openId) ? withAsks([t], needsYou, openId).all[0] : undefined),
       () => undefined,
     )
     return () => {

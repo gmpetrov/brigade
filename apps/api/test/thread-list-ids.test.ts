@@ -138,4 +138,42 @@ describe('threads by id', { skip: !database && 'no database answers' }, () => {
     assert.equal(kid.laterAt, null)
     assert.ok(kid.doneAt, 'marked done')
   })
+
+  // The sidebar leaves out a pull request's reviews (lib/sub-threads.ts in the dashboard): its
+  // latest review's thread, and an earlier one that posted a review, which the pull request no
+  // longer points at.
+  test('a child thread that reviews a pull request is marked as a review', async () => {
+    const parent = await thread('Opened a pull request')
+    const work = await thread('Other work', parent.id)
+    const latest = await thread('Review #7: latest', parent.id)
+    const earlier = await thread('Review #7: earlier', parent.id)
+    const pull = await db.pullRequest.create({
+      data: {
+        repository: 'acme/web',
+        number: 7,
+        title: 'A change',
+        headRef: 'brigade/x',
+        baseRef: 'main',
+        sessionId: parent.id,
+        reviewSessionId: latest.id,
+      },
+    } as never)
+    await db.pullRequestReview.create({
+      data: {
+        pullRequestId: pull.id,
+        sessionId: earlier.id,
+        verdict: 'request_changes',
+        body: 'One thing',
+        sha: 'abc',
+        round: 1,
+      },
+    } as never)
+    const res = await app.request(`/api/threads?id=${parent.id}`)
+    assert.equal(res.status, 200, await res.clone().text())
+    const [row] = (await res.json()) as { children: { id: string; review: boolean }[] }[]
+    const review = (id: string) => row!.children.find((c) => c.id === id)?.review
+    assert.equal(review(work.id), false)
+    assert.equal(review(latest.id), true)
+    assert.equal(review(earlier.id), true)
+  })
 })

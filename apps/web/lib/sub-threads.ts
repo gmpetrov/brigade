@@ -65,3 +65,21 @@ export function subThreadRows(
     : ordered.filter((c, i) => i < cap || (!!activeId && holds(c, activeId)))
   return { shown, hidden: ordered.length - shown.length }
 }
+
+/**
+ * The thread without its child threads that review a pull request, at any depth: they show
+ * in it (its pull request card opens them), not in the sidebar. Unless one needs the member
+ * (a ticket, a failed review waiting on them), or is the thread open, so the sidebar still
+ * shows where they are.
+ */
+export function withoutReviews<T extends { children?: SidebarChild[] }>(
+  t: T,
+  needsYou: Record<string, string>,
+  openId: string | null,
+): T {
+  if (!t.children) return t
+  const children = t.children
+    .filter((c) => !c.review || !!needsYou[c.id] || c.id === openId)
+    .map((c) => withoutReviews(c, needsYou, openId))
+  return { ...t, children }
+}

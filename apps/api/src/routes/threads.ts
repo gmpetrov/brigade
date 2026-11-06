@@ -456,10 +456,25 @@ export const threads = new Hono<AppEnv>()
             startedByMemberId: true,
             othersMayPrompt: true,
             doneAt: true,
+            // A pull request's review: the sidebar leaves it out (see `review` below).
+            _count: { select: { reviewsOf: true } },
           },
           orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         })
       : []
+    // Which of them review a pull request: its latest review's thread, or an earlier one that
+    // posted a review (a pull request keeps only its latest review's thread).
+    const posted = children.length
+      ? await c.var.db.pullRequestReview.findMany({
+          where: { sessionId: { in: children.map((r) => r.id) } },
+          select: { sessionId: true },
+          distinct: ['sessionId'],
+        })
+      : []
+    const reviewIds = new Set([
+      ...children.filter((r) => r._count.reviewsOf > 0).map((r) => r.id),
+      ...posted.map((r) => r.sessionId!),
+    ])
     // Which of them a teammate answered since this member last looked.
     const [childTurns, childReads] = children.length
       ? await Promise.all([
@@ -540,9 +555,12 @@ export const threads = new Hono<AppEnv>()
                 computer,
                 startedByMemberId,
                 othersMayPrompt,
+                _count,
                 ...child
               }) => ({
                 ...child,
+                // A pull request's review: out of the sidebar unless it needs the person.
+                review: reviewIds.has(child.id),
                 // What its menu needs (thread-menu.tsx): who started it, who else may change it,
                 // and this member's pin and Later on it.
                 parent: { id: parentId! },

@@ -533,6 +533,11 @@ export type SidebarChild = {
   doneAt?: string | null
   /** The thread it was started from; none for a list's thread, which is a thread of its own. */
   parent?: { id: string } | null
+  /**
+   * It reviews a pull request: the sidebar leaves it out, unless it needs the member or is open
+   * (lib/sub-threads.ts). Its parent's pull request card opens it.
+   */
+  review?: boolean
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */
