@@ -1056,10 +1056,13 @@ export function unavailableApps(spec: Pick<ThreadSpec, 'connectors'>) {
   return [
     '## Accounts you cannot use now',
     lines.join('\n'),
-    'When the work needs one of them, do not do it another way without a word. For an account whose sign-in ' +
-      'was refused, open a ticket (`open_ticket`) with an `access` ask of kind `connection` and the `app` given ' +
-      'above: its owner reconnects it from the ticket, and its tools reach you in this thread. For one whose ' +
-      'server did not answer, say so in your reply, and what you did instead. Ask for none the work does not need.',
+    'When the person names one of them or asks you to use it, or the work needs it, and its sign-in was ' +
+      'refused: open a ticket (`open_ticket`) with an `access` ask of kind `connection` and the `app` given above, ' +
+      'before anything else that needs it. Its owner reconnects it from the ticket in one click, and its tools ' +
+      'reach you in this thread. Do not do that part another way instead, even one that needs no account (a local ' +
+      'tool, another App): the person chose this account. Only once they decline the ticket, or tell you to, go ' +
+      'another way. For one whose server did not answer, say so in your reply, and what you did instead. Ask for ' +
+      'none the work does not need.',
   ].join('\n\n')
 }
 
