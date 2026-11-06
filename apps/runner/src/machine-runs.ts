@@ -885,7 +885,7 @@ export class MachineRuns {
       if (output.length > TAIL_CHARS) output = `…${output.slice(-TAIL_CHARS)}`
       if (run.resumed && !output)
         notes.push(
-          'The runner started again while it ran: its output before that is on the machine',
+          `Its output was not kept here: the runner started again since. It is on the machine, in ${runDir(run.id)}/output.log`,
         )
     }
     return {
