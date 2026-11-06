@@ -413,8 +413,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   feature, `src/preview-machines.ts` in the API, `apps/runner/src/preview-machine.ts`).
   A cloud computer runs every teammate's turns, typechecks and previews in its
   8 GB; a preview's dev server and database take one to three of them. A member
-  with the feature (docs/feature-flags.md) turns on "Run previews and heavy work
-  on their own machine" in Preferences (`Member.previewMachines`, off by default;
+  with the feature (docs/feature-flags.md) turns on "Keep heavy work off the
+  shared computer" in Preferences (`Member.previewMachines`, off by default;
   the switch shows only to members who have the feature, and
   `PUT /me/preview-machines` answers 404 to the others). Then each thread they
   start gets a VM of its own at the provider (boat's `large`: 8 vCPU, 16 GB),
