@@ -22,6 +22,7 @@ import { threadAddress } from './connectors/email.js'
 import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
 import { playbookAccount, threadPlaybook } from './playbooks.js'
+import { wantsMachine } from './preview-machines.js'
 import { gitAccess } from './git.js'
 import { specItems } from './lists.js'
 import { folderRules } from './library-folders.js'
@@ -263,6 +264,9 @@ export async function specFor(
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
+  // A machine of its own (the preview_machines feature, which its starter turned on): its preview
+  // runs there, and its teammates get the tools to run heavy commands there. Not in Chief's pass.
+  const machine = !passing && thread.computer.kind === 'cloud' && (await wantsMachine(thread))
   // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
   const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computerId)
   const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }
@@ -340,6 +344,8 @@ export async function specFor(
     ...(passing ? { pass: { id: thread.chiefPassId! } } : {}),
     // What the instructions and tools offer depends on it (schedules, wake-ups, a merge's wake-up).
     origin: thread.origin,
+    // Older runners ignore it, and offer no command on the machine.
+    machine,
     playbook: playbook
       ? {
           installationId: playbook.installationId,

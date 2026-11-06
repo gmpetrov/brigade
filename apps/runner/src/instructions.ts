@@ -135,6 +135,8 @@ export function instructions(
     projectDocuments(spec),
     spec.git && code(spec),
     PREVIEWS,
+    // Where its starter chose a machine of its own for the thread (the preview_machines feature).
+    spec.machine && CLOUD && MACHINE,
     skills(spec),
     threadsOfTheirOwn(spec),
     lists(spec),
@@ -784,6 +786,18 @@ const PREVIEWS =
   'the test setup itself fails (a server that will not start, a sign-in, a port), stop and say what you ' +
   'could not check, rather than debugging the setup. ' +
   'Before you start, set up, check or save one, read the `brigade-previews` skill.'
+
+/** Heavy work: a thread with a machine of its own runs it there (machine-runs.ts). */
+const MACHINE =
+  '## Heavy work\n\n' +
+  'Besides this computer, which every teammate of the workspace shares, this thread has a machine of its own ' +
+  '(8 vCPU, 16 GB), where its preview runs. Run there with `run_on_machine` what takes much CPU or memory: a ' +
+  "video render, a build, a full test suite, a big repository's typecheck or lint. Keep quick commands here " +
+  '(git, reading and searching files, small scripts, a single test). The folder a command runs in goes there ' +
+  "first, and later only what changed; the machine has none of this computer's environment, so the command " +
+  'installs what it needs, which stays there for the next ones. Name in `outputs` the files you need back here. ' +
+  "A command longer than the call's wait goes on there: wait for it with `machine_run`, or set a wake-up and end " +
+  'your turn.'
 
 /** How to start, check and save a preview: Brigade's skill for it. */
 const PREVIEW_SKILL: ThreadSkill = {

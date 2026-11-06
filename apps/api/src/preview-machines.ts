@@ -271,7 +271,7 @@ export async function machineUp(
       return {
         machine: null,
         reason:
-          `${reserved.over} previews already run on machines of their own in this workspace, the ` +
+          `${reserved.over} threads of this workspace already have their machine running, the ` +
           'most at once: this one runs on the cloud computer',
       }
     const ref = await bringUp(machines, reserved.row)

@@ -413,12 +413,13 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   feature, `src/preview-machines.ts` in the API, `apps/runner/src/preview-machine.ts`).
   A cloud computer runs every teammate's turns, typechecks and previews in its
   8 GB; a preview's dev server and database take one to three of them. A member
-  with the feature (docs/feature-flags.md) turns on "Run previews on their own
-  machine" in Preferences (`Member.previewMachines`, off by default; the switch
-  shows only to members who have the feature, and `PUT /me/preview-machines`
-  answers 404 to the others). Then the preview of a thread they started runs on
-  a VM of its own at the provider (boat's `large`: 8 vCPU, 16 GB), one per
-  thread, while its code stays here. Off, or without the feature, nothing
+  with the feature (docs/feature-flags.md) turns on "Run previews and heavy work
+  on their own machine" in Preferences (`Member.previewMachines`, off by default;
+  the switch shows only to members who have the feature, and
+  `PUT /me/preview-machines` answers 404 to the others). Then each thread they
+  start gets a VM of its own at the provider (boat's `large`: 8 vCPU, 16 GB),
+  where its preview runs and its teammates run heavy commands (below), while its
+  code stays here. Off, or without the feature, nothing
   changes: the runner asks, the API says `{ machine: null }`, and the preview
   runs on the computer as before (an API before it answers that it could not
   read the call, which does the same).
@@ -509,6 +510,66 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     stays stopped.
     A replaced preview, or one the next runner starts again after an update,
     keeps its machine up for it.
+  - **Heavy commands there too** (`apps/runner/src/machine-runs.ts`). A thread
+    with a machine (`ThreadSpec.machine`, which the API sets as it would give
+    one: the feature, the starter's switch, a cloud computer) gives its
+    teammates `run_on_machine` and `machine_run`, and a "Heavy work" section in
+    their instructions: run there what takes much CPU or memory (a video render,
+    a build, a test suite, a big repository's typecheck), keep quick commands
+    here. Without one, neither the tools, the instructions nor the agent's key
+    change. A command's folder goes first, by the same one-way sync, into the
+    teammate's own copy (`commands/<teammate>/…` on the machine, apart from the
+    preview's `work/`, so a build never writes under a running dev server): the
+    whole checkout it is in, or the folder alone outside a checkout (never the
+    whole working directory). The copy stays between commands with what they
+    installed, and the next command sends only what changed. At most 3 commands
+    of a thread run at once.
+    - **Detached there, followed here.** The command runs in a session of its
+      own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
+      sourced, then deleted from the disk. Its output goes to a file the runner
+      follows (`tail -f --pid`) from the byte it reached: a cut connection loses
+      and repeats nothing, and once it ended, what the follow had not read yet
+      is read to the end. It counts as running while any process of its group
+      does (the boot id tells a machine stopped since), so a stop or its time
+      limit (60 minutes unless said, 6 hours at most) sends TERM to the whole
+      group, then KILL to what is left 10 seconds later: a TERM ends its script
+      before what it started, and what ignores TERM outlives both.
+    - **It outlives the call and the runner.** `machine_run` waits for it again;
+      an update leaves it running there, and the next runner follows it from its
+      state file (`machine-runs.json`, with no secret in it). That file keeps the
+      last 200 lines of an ended command's output, so `machine_run` still
+      answers after a restart (the turn a wake-up starts, say).
+    - **Its outputs come back, then it ends.** Once it ran, succeeded or not, the
+      files and folders it names in `outputs` (inside its folder, 2 GB at most)
+      come back to the same place in the teammate's folder, written as the
+      teammate (tar over the link, times and modes kept, so the next sync does
+      not send them back). It says it ended only once they are back: a runner
+      that stops meanwhile leaves it unfinished in its state, and the next one
+      brings them back.
+    - **Credentials' values are hidden in its output**, read as a shell reads
+      the released file (`export NAME='…'`, a ' inside as `'\''`; a key over
+      several lines is hidden line by line too), and the end of a line still
+      being written that may begin one is hidden until the line ends. A runner
+      that started after the command does not know them, and shows none of its
+      output.
+  - **The preview and the commands share the machine** (`machine-holds.ts`).
+    The runner tells the API `sleep` only once neither uses it, and after a
+    command only 10 minutes later, should another follow: each start counts at
+    the provider (200 a day included in the plan). A thread's ups and sleeps go
+    to the API one after the other: an up waits for a sleep under way, and a
+    sleep not under way yet is not made once someone comes for the machine.
+    While a command runs, the runner touches the machine every 5 minutes as
+    busy: the sweep and the provider's own stop stay away, and the API marks the
+    runner's computer in use too, as with a thread running. Its idle stop (30
+    minutes without a running thread) would otherwise stop the runner under a
+    long command whose turn ended, and the machine, untouched, 45 minutes later.
+    A preview's touch does not keep the computer up: a person viewing it does,
+    from the dashboard. What the machine has (November 6, 2026): Ubuntu, Node.js
+    24, pnpm, Docker, Python 3.12, ffmpeg, Chrome and passwordless sudo, 120 GB
+    free. Measured that day, driven from a cloud computer: Brigade's whole
+    `pnpm install`, then the runner's typecheck, 40 seconds on a fresh copy; the
+    same after an edit, 4 seconds (one file sent); a 20-second 1080p render with
+    ffmpeg, its file back here, in about 7.
   - **Not done**: making a machine from a saved image per repository (a
     prebuild). The first preview of a thread installs everything on a fresh
     machine (about 90 seconds for Brigade, measured); later ones in the thread

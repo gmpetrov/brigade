@@ -31,3 +31,15 @@ test("an account's availability changing makes the session anew, its tools the s
   // A usable account's key is as it was before availability: a runner update parks nothing.
   assert.equal(key(grant()), JSON.stringify([null, [['c1', 'read_write', []]], undefined]))
 })
+
+test('a machine of its own for the thread makes the session anew; none keeps the key as before', () => {
+  const spec = (machine?: boolean) =>
+    agentKey({
+      connectors: [],
+      effort: null,
+      ...(machine ? { machine } : {}),
+    } as unknown as ThreadSpec)
+  // Its tools (run_on_machine, machine_run) and its instructions come with it.
+  assert.notEqual(spec(true), spec(false))
+  assert.equal(spec(false), JSON.stringify([null, [], undefined]))
+})

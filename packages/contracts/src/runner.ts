@@ -238,6 +238,12 @@ export const ThreadSpec = z.object({
    * only a thread a person or a trigger started. Older APIs leave it out: read as a person's.
    */
   origin: z.enum(['member', 'trigger', 'schedule', 'child']).nullish(),
+  /**
+   * The thread has a machine of its own beside the cloud computer (the preview_machines feature,
+   * which its starter turned on): its preview runs there, and its teammates run heavy commands
+   * there (run_on_machine). Older APIs leave it out: none, as before.
+   */
+  machine: z.boolean().default(false),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
@@ -663,6 +669,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     callId: z.string(),
     sessionId: z.string(),
     action: PreviewMachineAction,
+    /**
+     * touch: a command runs there (machine-runs.ts), which the runner follows and whose files it
+     * brings back: its computer stays up meanwhile, as with a thread running. Older APIs ignore it.
+     */
+    busy: z.boolean().optional(),
     /** up: the runner's key, let into the machine. */
     publicKey: SshPublicKey.optional(),
   }),

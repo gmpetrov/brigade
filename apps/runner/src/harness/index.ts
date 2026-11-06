@@ -118,6 +118,7 @@ import {
   doneTools,
   imageTools,
   libraryTools,
+  machineTools,
   OPEN_TICKET_TOOL,
   openTicketTool,
   previewTools,
@@ -136,12 +137,19 @@ import {
   type ConnectorCaller,
   type ImageMaker,
   type LibraryCaller,
+  type MachineRunTools,
   type PreviewTools,
   type ScheduleCaller,
   widgetGuideTool,
 } from './tools.js'
 
-export type { ConnectorCaller, LibraryCaller, PreviewTools, ScheduleCaller } from './tools.js'
+export type {
+  ConnectorCaller,
+  LibraryCaller,
+  MachineRunTools,
+  PreviewTools,
+  ScheduleCaller,
+} from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
@@ -153,6 +161,11 @@ export type ThreadContext = {
   callSchedule: ScheduleCaller
   /** The thread's live preview: an app the teammate runs for people to try. */
   preview: PreviewTools
+  /**
+   * Commands the teammate runs on the thread's machine of its own (machine-runs.ts): on a cloud
+   * computer; offered only in a thread that has one (spec.machine).
+   */
+  machine?: MachineRunTools
   bundles: BundleStore
   /** A skill's file, by its SHA-256, cached on this computer. */
   skillFile: (sha256: string) => Promise<Buffer>
@@ -292,6 +305,7 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
+  machine: MachineRunTools | undefined,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -376,6 +390,8 @@ function createAgent(
           scheduled: spec.origin === 'schedule',
         }),
         ...previewTools(preview, credentials),
+        // Heavy commands on the thread's machine of its own, where its starter chose one.
+        ...(spec.machine && machine ? machineTools(machine, credentials) : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
         ...(computer ? computerUseTools(computer) : {}),
         // Claude Code asks with its own question tool; Codex's adapter has none.
@@ -435,6 +451,8 @@ export const agentKey = (spec: ThreadSpec) =>
       ...(c.unavailable ? [c.unavailable] : []),
     ]),
     spec.suggestions,
+    // The machine's tools come and go with the starter's choice; left out when off, as before it.
+    ...(spec.machine ? ['machine'] : []),
   ])
 
 type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
@@ -2005,6 +2023,7 @@ export class HarnessThread {
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
+      this.context.machine,
     )
     const adopt = await this.takeHandedOver(account)
     const sandbox = createLocalSandboxSession({

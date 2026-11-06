@@ -1,7 +1,8 @@
 'use client'
 // Preferences: what each member sets for themselves, never for the workspace: next-message
 // suggestions, auto-merge of their threads' pull requests (owners and admins, who may merge),
-// where their threads' previews run (members with the preview_machines feature), their rules
+// where their threads' previews and heavy commands run (members with the preview_machines
+// feature), their rules
 // and Chief's daily pass, and deleting their own account. Notifications have their own section;
 // the theme is picked in the member's menu, in the sidebar.
 import { CHIEF_RULES_MAX, type ChiefSettings, type SetChief } from '@brigade/contracts'
@@ -112,16 +113,17 @@ export default function PreferencesPage() {
       )}
 
       {hasMachines && (
-        <Section title="Previews" detail="Where the app runs while you try it.">
+        <Section title="Machines" detail="Where your threads' previews and heavy work run.">
           <div className="flex items-start justify-between gap-4">
             <Label htmlFor="preview-machines" className="grid gap-1 font-normal">
-              <span className="font-medium">Run previews on their own machine</span>
+              <span className="font-medium">Run previews and heavy work on their own machine</span>
               <span className="text-muted-foreground text-xs">
-                The preview of a thread you start runs on a machine of its own (8 vCPU, 16 GB), not
-                on the cloud computer your teammates work on. Its code stays on the cloud computer
-                and reaches the machine as it changes. It sleeps after 30 minutes without use and
-                takes about half a minute to wake. Off, previews run on the cloud computer, as
-                before.
+                A thread you start gets a machine of its own (8 vCPU, 16 GB), not the cloud computer
+                your teammates work on: its preview runs there, and its teammates run heavy commands
+                there (video renders, builds, test suites). Its code stays on the cloud computer and
+                reaches the machine as it changes; what a command makes comes back. It sleeps when
+                nobody uses it and takes about half a minute to wake. Off, all of it runs on the
+                cloud computer, as before.
               </span>
             </Label>
             <Switch id="preview-machines" checked={machines} onCheckedChange={previewOnMachine} />

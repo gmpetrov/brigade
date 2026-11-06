@@ -3336,6 +3336,207 @@ export function previewTools(
   }
 }
 
+/** A command on the thread's machine, as machineTools give it back (see machine-runs.ts). */
+type MachineRunResult = {
+  id: string
+  command: string
+  cwd: string
+  status: 'starting' | 'running' | 'succeeded' | 'failed' | 'stopped' | 'timed_out'
+  exitCode?: number
+  startedAt: string
+  endedAt?: string
+  seconds: number
+  output?: string
+  files?: string[]
+  notes: string[]
+}
+
+/** A teammate's commands on its thread's machine of its own: what machineTools reach. */
+export type MachineRunTools = {
+  run(
+    input: {
+      command: string
+      cwd?: string
+      outputs?: string[]
+      env?: Record<string, string>
+      envFiles?: string[]
+      timeoutMs?: number
+    },
+    waitMs: number,
+    signal?: AbortSignal,
+  ): Promise<MachineRunResult>
+  get(id: string, waitMs: number, lines?: number, signal?: AbortSignal): Promise<MachineRunResult>
+  stop(id: string): Promise<MachineRunResult>
+  list(): Omit<MachineRunResult, 'output'>[]
+}
+
+/** How long a call waits for a command on the machine, unless it says, and at most. */
+const MACHINE_WAIT_MINUTES = 10
+const MACHINE_WAIT_MAX_MINUTES = 30
+
+/** What to do next, by how the command stands. */
+function machineNote(result: MachineRunResult) {
+  switch (result.status) {
+    case 'starting':
+    case 'running':
+      return (
+        'Still running on the machine, where it goes on without this call. Wait for it with ' +
+        `machine_run({ id: "${result.id}" }), or set a wake-up and end your turn; its outputs come back when it ends.`
+      )
+    case 'succeeded':
+      return result.files?.length
+        ? `Done. Its outputs are in your folder: ${result.files.join(', ')}.`
+        : 'Done.'
+    case 'stopped':
+      return 'Stopped.'
+    default:
+      return (
+        'It did not succeed: read its output and notes. machine_run with `lines` gives more of its output ' +
+        '(up to 2000 lines).'
+      )
+  }
+}
+
+const withNote = (result: MachineRunResult) => ({ ...result, note: machineNote(result) })
+
+/** Minutes a call waits, within bounds. */
+const waitMs = (minutes: number | undefined) =>
+  Math.min(Math.max(minutes ?? MACHINE_WAIT_MINUTES, 0), MACHINE_WAIT_MAX_MINUTES) * 60_000
+
+/** Heavy commands on the thread's machine of its own: run, wait, read, stop. */
+export function machineTools(
+  runs: MachineRunTools,
+  credentials: Pick<Credentials, 'env'>,
+): Record<string, Tool> {
+  return {
+    run_on_machine: tool({
+      description:
+        "Run a shell command on this thread's machine of its own (8 vCPU, 16 GB) instead of this computer, which " +
+        'every teammate of the workspace shares: for work that takes much CPU or memory, such as a video render, ' +
+        "a build, a full test suite, or a big repository's typecheck or lint. Not for quick commands (git, reading " +
+        'or searching files, small scripts): those are faster here. ' +
+        'The folder in `cwd` goes to the machine first: the whole checkout it is in, without .git, node_modules, ' +
+        'what git ignores (.env files aside) and files over 100 MB, or the folder alone outside a checkout. Your ' +
+        'copy there stays between commands, with what they installed: the next ones send only what changed. ' +
+        'It runs Ubuntu with Node.js, pnpm, Docker, Python, ffmpeg and Chrome, and sudo for anything else ' +
+        "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
+        'what it needs (e.g. "pnpm install --frozen-lockfile && pnpm test"), with settings in `env` and vault ' +
+        'credentials in `credentials`; what it installs stays on its disk. ' +
+        'Name in `outputs` the files or folders it makes that you need here (a video, a report, a build), ' +
+        'relative to cwd: they come back to the same place in your folder once it ends, whether it succeeded or not. ' +
+        'Waits up to `waitMinutes` for it to end; a longer one keeps running there: wait again with machine_run.',
+      inputSchema: jsonSchema<{
+        command: string
+        cwd?: string
+        outputs?: string[]
+        env?: Record<string, string>
+        credentials?: string[]
+        timeoutMinutes?: number
+        waitMinutes?: number
+      }>({
+        type: 'object',
+        properties: {
+          command: {
+            type: 'string',
+            description:
+              'Run with bash in cwd on the machine, e.g. "pnpm install --frozen-lockfile && pnpm typecheck"',
+          },
+          cwd: {
+            type: 'string',
+            description:
+              'The folder it runs in, relative to your working directory: a checkout, a folder of one, or a ' +
+              "project's folder (not your whole working directory)",
+          },
+          outputs: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 20,
+            description:
+              'Files or folders it makes, relative to cwd, brought back here once it ends, e.g. ["renders/video.mp4"]',
+          },
+          env: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description: 'Settings it gets, e.g. {"NODE_OPTIONS": "--max-old-space-size=8192"}',
+          },
+          credentials: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 10,
+            description:
+              'Vault credentials (by id) whose variables it gets; their values are hidden in its output',
+          },
+          timeoutMinutes: {
+            type: 'number',
+            description: 'Stopped past this long (default 60, up to 360)',
+          },
+          waitMinutes: {
+            type: 'number',
+            description: `How long this call waits for it to end (default ${MACHINE_WAIT_MINUTES}, up to ${MACHINE_WAIT_MAX_MINUTES}; 0 to start it and go on)`,
+          },
+        },
+        required: ['command'],
+      }),
+      execute: async (input, { abortSignal, toolCallId }) => {
+        const envFiles: string[] = []
+        for (const credentialId of input.credentials ?? []) {
+          const released = await credentials.env(credentialId, {
+            toolCallId,
+            toolName: 'run_on_machine',
+            input: { credentialId },
+          })
+          envFiles.push(released.file)
+        }
+        const result = await runs.run(
+          {
+            command: input.command,
+            ...(input.cwd ? { cwd: input.cwd } : {}),
+            ...(input.outputs?.length ? { outputs: input.outputs } : {}),
+            ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}),
+            ...(envFiles.length ? { envFiles } : {}),
+            ...(input.timeoutMinutes ? { timeoutMs: input.timeoutMinutes * 60_000 } : {}),
+          },
+          waitMs(input.waitMinutes),
+          abortSignal,
+        )
+        return withNote(result)
+      },
+    }),
+    machine_run: tool({
+      description:
+        'A command you started with run_on_machine: wait for it to end (up to `waitMinutes`), read more of ' +
+        'its output (`lines`), or stop it (`stop`). Without `id`, lists the commands of this thread.',
+      inputSchema: jsonSchema<{
+        id?: string
+        waitMinutes?: number
+        lines?: number
+        stop?: boolean
+      }>({
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'As run_on_machine gave it' },
+          waitMinutes: {
+            type: 'number',
+            description: `How long to wait for it to end (default ${MACHINE_WAIT_MINUTES}, up to ${MACHINE_WAIT_MAX_MINUTES}; 0 not to wait)`,
+          },
+          lines: {
+            type: 'number',
+            description: 'How many of its last lines of output (default 60, up to 2000)',
+          },
+          stop: { type: 'boolean', description: 'Stop it, and all it started on the machine' },
+        },
+      }),
+      execute: async (input, { abortSignal }) => {
+        if (!input.id) return { commands: runs.list() }
+        if (input.stop) return withNote(await runs.stop(input.id))
+        return withNote(
+          await runs.get(input.id, waitMs(input.waitMinutes), input.lines, abortSignal),
+        )
+      },
+    }),
+  }
+}
+
 /** Makes an image with Codex's image model, on the thread starter's Codex account. */
 export type ImageMaker = (
   input: { prompt: string; references: string[]; toolCallId: string },
