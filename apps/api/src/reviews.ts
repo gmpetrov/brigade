@@ -9,9 +9,10 @@
 // that opens a pull request, saying why (github_create_pull_request's review), or only
 // someone who asks: request_review in the thread, or Ask for a review on its page.
 //
-// A pull request a child thread opened is reviewed in a child of that child's parent,
-// whose teammate tells the child what to fix: children stay one level deep. One opened
-// outside Brigade is reviewed in a thread of its own, which posts its verdict on GitHub.
+// A pull request a child thread opened is reviewed in a child of that child, the one thread
+// below a child: its author fixes what the review finds and asks it to look again itself, and
+// reports to its parent once the review is done (src/children.ts holds its report until then).
+// One opened outside Brigade is reviewed in a thread of its own, which posts its verdict on GitHub.
 import { memberMayWrite } from './account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
@@ -25,7 +26,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { parse as parseYaml } from 'yaml'
 import { audit, type Actor } from './audit.js'
-import { parentChanged, settleAwaited } from './children.js'
+import { holdForReview, parentChanged, reportHeld, settleAwaited } from './children.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub } from './git.js'
 import { hubs } from './hub.js'
@@ -64,15 +65,14 @@ type Asker =
 
 /**
  * Who decides whether a thread's pull requests get a review: its project's setting (the
- * teammate, when it has no project). In a child thread or a playbook's run, nobody on their
- * own: the thread a person talks to, or the playbook, decides.
+ * teammate, when it has no project), in a child thread too, which has its parent's project.
+ * In a playbook's run, nobody on their own: the playbook decides.
  */
 export async function reviewPolicyOf(
   db: ScopedDb,
-  session: { projectId: string | null; parentId: string | null; playbookRunId: string | null },
+  session: { projectId: string | null; playbookRunId: string | null },
 ): Promise<ReviewPolicy | 'none'> {
   if (session.playbookRunId) return 'none'
-  if (session.parentId) return 'manual'
   if (!session.projectId) return 'teammate'
   const project = await db.project.findFirst({
     where: { id: session.projectId },
@@ -81,16 +81,29 @@ export async function reviewPolicyOf(
   return project?.reviewPolicy ?? 'teammate'
 }
 
-/** What the author is told once its review started. */
-const startedNote = (reviewer: string) =>
-  `${reviewer} reviews it in a child thread, from a brief of Brigade's. You are woken here with its ` +
-  'report: fix what it rightly found and push, then ask it to look at what changed with ' +
-  'message_thread, and again while each look finds fewer problems that block the merge ' +
-  `(${REVIEW_LOOKS} looks at most). When it goes in circles (a fixed problem comes back, or a ` +
-  'disagreement outlasts telling it why once), stop and tell the person what is open, both sides of ' +
-  'a disagreement in a line each, and what you recommend. Do not offer to merge it while the review ' +
-  'runs: only once it approves, or once you stopped it as above. Tell the person in a line that it is in review, then end your ' +
-  'turn: do not wait or poll.'
+/**
+ * What the one who asked is told once its review started: the author, in its own thread or in a
+ * child thread (which reports once the review is done); or the thread that started that child,
+ * which hears from the child.
+ */
+export const startedNote = (reviewer: string, asker: 'author' | 'child' | 'parent') =>
+  asker === 'parent'
+    ? `${reviewer} reviews it in a child thread of the child thread that opened it, from a brief of ` +
+      "Brigade's. That child is woken with its report, fixes what it rightly found and has it looked at " +
+      'again, then reports to you once the review is done. End your turn now: do not wait or poll.'
+    : `${reviewer} reviews it in a child thread of this one, from a brief of Brigade's. You are woken here with its ` +
+      'report: fix what it rightly found and push, then ask it to look at what changed with ' +
+      'message_thread, and again while each look finds fewer problems that block the merge ' +
+      `(${REVIEW_LOOKS} looks at most). When it goes in circles (a fixed problem comes back, or a ` +
+      'disagreement outlasts telling it why once), stop and ' +
+      (asker === 'child'
+        ? 'report what is open, both sides of a disagreement in a line each, and what you recommend. ' +
+          'Do not report while the review runs: report once it approves, or once you stopped it as ' +
+          'above, with its verdict. End your turn now, without reporting: do not wait or poll.'
+        : 'tell the person what is open, both sides of a disagreement in a line each, and what you ' +
+          'recommend. Do not offer to merge it while the review runs: only once it approves, or once ' +
+          'you stopped it as above. Tell the person in a line that it is in review, then end your ' +
+          'turn: do not wait or poll.')
 
 /** GitHub's filter glob: `*` within a path segment, `**` across them, the rest as it is. */
 function globMatches(pattern: string, value: string) {
@@ -356,12 +369,6 @@ async function pickReviewer(
   })
 }
 
-/** The thread a review reports to: the one that opened the pull request, or its parent for a child's. */
-async function reviewParent(db: ScopedDb, home: LoadedThread | null) {
-  if (!home) return null
-  return home.parentId ? loadThread(db, home.parentId) : home
-}
-
 /** Where a review of a pull request with no thread runs: the cloud computer, else the member's machine. */
 async function defaultComputer(db: ScopedDb, memberId: string) {
   const computer =
@@ -449,10 +456,11 @@ async function startClaimed(
         `Its reviews took their ${REVIEW_LOOKS} looks. Tell the person where it stands: they can have ` +
         'it read again with Review again on the pull request.',
     })
-  const home = row.sessionId ? await loadThread(db, row.sessionId) : null
-  const parent = await reviewParent(db, home)
+  // The review runs in a child of the thread that opened it, whose author it wakes: a child
+  // thread's too, which reports to its own parent once the review is done.
+  const parent = row.sessionId ? await loadThread(db, row.sessionId) : null
   const by = input.by
-  if (by.kind === 'teammate' && parent?.id !== by.sessionId)
+  if (by.kind === 'teammate' && parent?.id !== by.sessionId && parent?.parentId !== by.sessionId)
     throw new HTTPException(403, {
       message:
         'request_review is for a pull request this thread, or one of its child threads, opened. A person can ask for a review of another one on its page.',
@@ -480,7 +488,7 @@ async function startClaimed(
   })
   const [checks, asked] = await Promise.all([
     checksRun(gh, input.repo, p).catch(() => []),
-    home ? firstAsk(db, home.id) : '',
+    parent ? firstAsk(db, parent.id) : '',
   ])
   const instructions = reviewBrief({
     repo: input.repo,
@@ -493,6 +501,7 @@ async function startClaimed(
   })
   // Who its report wakes: the author, when it sits in the thread that waits for it.
   const waker = author && parent?.teammates.some((t) => t.teammateId === author.id) ? author : null
+  const awaitUntil = new Date(Date.now() + REVIEW_WAIT_MINUTES * 60_000)
   const { thread, outcome } = await startThread(db, scope, {
     teammate: reviewer,
     computer,
@@ -513,7 +522,7 @@ async function startClaimed(
             parent,
             byTeammateId: (waker ?? parent.teammate).id,
             awaited: true,
-            awaitUntil: new Date(Date.now() + REVIEW_WAIT_MINUTES * 60_000),
+            awaitUntil,
           },
         }
       : {}),
@@ -547,6 +556,19 @@ async function startClaimed(
     throw new HTTPException(409, { message: 'Another review of it started meanwhile' })
   }
   if (parent) await parentChanged(scope, parent.id)
+  // Who asked: the author in its thread, or in a child thread, which reports once it is done; or
+  // the thread that started that child.
+  const asker =
+    parent && by.kind === 'teammate' && by.sessionId !== parent.id
+      ? ('parent' as const)
+      : parent?.parentId
+        ? ('child' as const)
+        : ('author' as const)
+  if (parent?.parentId)
+    await holdForReview(scope, parent.id, {
+      until: awaitUntil,
+      ...(asker === 'parent' && by.kind === 'teammate' ? { askedBy: by.teammateId } : {}),
+    })
   const actor: Actor =
     by.kind === 'member'
       ? { type: 'member', id: by.memberId }
@@ -564,7 +586,7 @@ async function startClaimed(
       checks: checks.length > 0,
     },
   })
-  return { thread, reviewer }
+  return { thread, reviewer, asker }
 }
 
 /**
@@ -590,7 +612,7 @@ export async function reviewOnCreate(
           review: {
             started: false,
             note: session.parentId
-              ? 'A child thread starts no review: say in your report whether this pull request needs one, and the thread that started you asks for it.'
+              ? "This project's pull requests get a review only when someone asks: none was started. Say in your report that it has none, and the thread that started you asks for one if it wants it."
               : "This project's pull requests get a review only when someone asks: none was started. When the person asks for one, call request_review.",
           },
         }
@@ -619,7 +641,7 @@ export async function reviewOnCreate(
     }
   }
   try {
-    const { thread, reviewer } = await startReview(db, scope, {
+    const { thread, reviewer, asker } = await startReview(db, scope, {
       repo,
       number,
       by: { kind: 'teammate', teammateId: call.teammateId, sessionId: call.sessionId },
@@ -629,7 +651,7 @@ export async function reviewOnCreate(
         started: true,
         reviewer: reviewer.name,
         threadId: thread.id,
-        note: startedNote(reviewer.name),
+        note: startedNote(reviewer.name, asker),
       },
     }
   } catch (error) {
@@ -648,27 +670,29 @@ type ReviewOperation = Extract<ScheduleOperation, { name: 'request_review' }>
 export const isReviewOperation = (op: ScheduleOperation): op is ReviewOperation =>
   op.name === 'request_review'
 
-/** A teammate's request_review, from a thread on this runner's computer. */
+/**
+ * A teammate's request_review, from a thread on this runner's computer: for a pull request it
+ * opened, a child thread too, or one its child thread opened.
+ */
 export async function handleReviewCall(
   db: ScopedDb,
   scope: Scope,
-  session: { id: string; parentId: string | null },
+  session: { id: string },
   teammate: { id: string; name: string },
   op: ReviewOperation,
 ): Promise<object | { error: string }> {
-  if (session.parentId)
-    return {
-      error:
-        'This is a child thread: say in your report that the pull request needs a review, and the thread that started you asks for it.',
-    }
   try {
-    const { thread, reviewer } = await startReview(db, scope, {
+    const { thread, reviewer, asker } = await startReview(db, scope, {
       repo: op.repository,
       number: op.number,
       ...(op.reviewer ? { reviewer: op.reviewer } : {}),
       by: { kind: 'teammate', teammateId: teammate.id, sessionId: session.id },
     })
-    return { threadId: thread.id, reviewer: reviewer.name, note: startedNote(reviewer.name) }
+    return {
+      threadId: thread.id,
+      reviewer: reviewer.name,
+      note: startedNote(reviewer.name, asker),
+    }
   } catch (error) {
     if (error instanceof HTTPException) return { error: error.message }
     throw error
@@ -734,4 +758,6 @@ async function stopReviewThread(
   // The others its parent waits for may all be in now.
   await settleAwaited(scope, thread.parentId)
   await parentChanged(scope, thread.parentId)
+  // A child thread it held from reporting, which nothing else wakes now, reports.
+  await reportHeld(scope, thread.parentId)
 }

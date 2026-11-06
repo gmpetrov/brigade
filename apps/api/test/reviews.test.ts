@@ -24,7 +24,14 @@ import { parseEnv } from 'node:util'
 //   only a person has it read again;
 // - the brief says whether the repository runs checks (a release workflow is none, nor one
 //   whose filters leave the pull request out), and how the thread started;
-// - a merge's status keeps the loop's column, for the API running before a deploy.
+// - a merge's status keeps the loop's column, for the API running before a deploy;
+// - a pull request a child thread opens is reviewed in a child of that child, whose report wakes
+//   it; the child reports to its parent only once the review is done (not while it runs, nor
+//   before the turn its report brings), and its parent's wait outlasts the review's;
+// - the parent may ask for the review of its child's pull request: it runs under the child, and
+//   the parent waits for the child again; closing it lets the child it held report;
+// - such a review sits under the thread at the top: archived with it, and a ticket there brings
+//   it back and keeps it from being done.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -760,6 +767,218 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     } finally {
       slowSha = ''
     }
+  })
+
+  /** A child thread of Riley's under `parentId`, which waits for it (start_child). */
+  const childOf = async (parentId: string, ask: string) => {
+    const id = await thread(ids.web, ask)
+    await db.session.updateMany({
+      where: { id },
+      data: {
+        parentId,
+        parentTeammateId: ids.riley,
+        origin: 'child',
+        awaited: true,
+        awaitUntil: new Date(Date.now() + 30 * 60_000),
+      } as never,
+    })
+    return id
+  }
+
+  /** The thread's next event, as its runner stores it; when. */
+  const event = async (sessionId: string, type: string, data: object) => {
+    const last = await db.sessionEvent.findFirst({
+      where: { sessionId },
+      orderBy: { seq: 'desc' },
+      select: { seq: true },
+    })
+    const seq = (last?.seq ?? 0) + 1
+    const at = new Date(Date.now() + 1)
+    await db.sessionEvent.create({
+      data: { sessionId, seq, type, data: { type, ...data }, at } as never,
+    })
+    await db.session.updateMany({ where: { id: sessionId }, data: { lastSeq: seq } })
+    return at.toISOString()
+  }
+
+  /** What Brigade hears of a child thread's events (src/hub.ts). */
+  const note = async (sessionId: string, events: { type: string; at: string }[]) => {
+    const { noteChildEvents } = await import('../src/children.js')
+    const s = await db.session.findFirstOrThrow({ where: { id: sessionId } })
+    await noteChildEvents(
+      { id: s.id, organizationId: ids.org, workspaceId: ids.workspace, parentId: s.parentId },
+      events.map((event) => ({ event })),
+    )
+  }
+
+  /** A turn of a child thread ends on `text`. */
+  const turnEnds = async (sessionId: string, text: string) => {
+    await event(sessionId, 'message.done', { text })
+    await note(sessionId, [{ type: 'turn.completed', at: new Date().toISOString() }])
+  }
+
+  /** The reports that woke a thread. */
+  const reportsTo = (sessionId: string) =>
+    db.wakeup.findMany({ where: { sessionId, kind: 'report' }, orderBy: { createdAt: 'asc' } })
+
+  const reportOf = async (sessionId: string) => {
+    const s = await db.session.findFirstOrThrow({ where: { id: sessionId } })
+    return {
+      summary: (s.report as { summary?: string } | null)?.summary ?? null,
+      delivered: !!s.reportDeliveredAt,
+      awaited: s.awaited,
+      awaitUntil: s.awaitUntil,
+    }
+  }
+
+  test('a pull request a child thread opens is reviewed under it, and it reports once the review is done', async () => {
+    const { deliverReport, handleChildCall } = await import('../src/children.js')
+    const parent = await thread(ids.web, 'Large files on the machine.')
+    const child = await childOf(parent, 'Send files up to 2 GB.')
+    const told = await open(child, 901, { wanted: true, reason: 'Streams on both sides' })
+    assert.equal(told?.review.started, true, told?.review.note)
+    assert.match(told!.review.note, /End your turn now, without reporting/)
+    const review = (await row(901)).reviewSession!
+    assert.equal(review.parentId, child)
+    assert.equal(review.teammateId, ids.kai)
+    assert.equal(review.awaited, true)
+    // Its report wakes the author, in the child.
+    assert.equal(review.parentTeammateId, ids.riley)
+    // The parent waits for the child past the review's own wait.
+    const held = await reportOf(child)
+    assert.ok(held.awaitUntil!.getTime() > review.awaitUntil!.getTime(), 'the parent outwaits it')
+
+    // Its turn ends while the review runs: nothing reaches the parent, and it may not report.
+    await turnEnds(child, 'Opened #901: Kai reviews it.')
+    assert.deepEqual(
+      { ...(await reportOf(child)), awaitUntil: null },
+      { summary: null, delivered: false, awaited: true, awaitUntil: null },
+    )
+    assert.equal((await reportsTo(parent)).length, 0)
+    const session = await db.session.findFirstOrThrow({ where: { id: child } })
+    const refused = (await handleChildCall(
+      db,
+      scope,
+      session as never,
+      { id: ids.riley, name: 'Riley' },
+      { name: 'report', status: 'report', summary: 'Done.' },
+    )) as { error?: string }
+    assert.match(refused.error ?? '', /#901 is still in review by Kai: do not report yet/)
+
+    // Kai reports: the child is woken, not the parent.
+    await db.session.updateMany({
+      where: { id: review.id },
+      data: {
+        report: { status: 'report', summary: 'Approve: nothing blocks.', at: new Date().toISOString() },
+      } as never,
+    })
+    await deliverReport(scope, review.id)
+    const woken = await reportsTo(child)
+    assert.equal(woken.length, 1)
+    assert.equal(woken[0]!.teammateId, ids.riley)
+    assert.match(woken[0]!.note, /Approve: nothing blocks/)
+    assert.equal((await reportsTo(parent)).length, 0)
+
+    // A turn that ends before that report shows in the child (it waits behind it) still sends nothing.
+    await turnEnds(child, 'Still checking the benchmark.')
+    assert.equal((await reportOf(child)).delivered, false)
+    assert.equal((await reportsTo(parent)).length, 0)
+
+    // The turn the review's report brings ends: the child reports, once, to its parent.
+    await db.wakeup.updateMany({
+      where: { id: woken[0]!.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    const at = await event(child, 'message.user', {
+      text: woken[0]!.note,
+      messageId: `wakeup-${woken[0]!.id}`,
+    })
+    await note(child, [{ type: 'message.user', at }])
+    await turnEnds(child, 'Kai approved #901: ready to merge.')
+    const done = await reportOf(child)
+    assert.equal(done.summary, 'Kai approved #901: ready to merge.')
+    assert.equal(done.delivered, true)
+    const parentWoken = await reportsTo(parent)
+    assert.equal(parentWoken.length, 1)
+    assert.match(parentWoken[0]!.note, /Kai approved #901/)
+  })
+
+  test('the parent may ask for the review of its child’s pull request: it runs under the child, which it waits for again', async () => {
+    const { handleReviewCall } = await import('../src/reviews.js')
+    const parent = await thread(ids.web, 'Two exports.')
+    const child = await childOf(parent, 'Fix the CSV export.')
+    await open(child, 902, { wanted: false, reason: 'One line' })
+    await turnEnds(child, 'Opened #902, with no review: one line.')
+    assert.equal((await reportOf(child)).delivered, true)
+    const riley = { id: ids.riley, name: 'Riley' }
+    const ask = { name: 'request_review' as const, repository: repo, number: 902 }
+    // Another thread may not.
+    const foreign = (await handleReviewCall(db, scope, { id: ids.quietThread }, riley, ask)) as {
+      error?: string
+    }
+    assert.match(foreign.error ?? '', /a pull request this thread/)
+    const asked = (await handleReviewCall(db, scope, { id: parent }, riley, ask)) as {
+      reviewer?: string
+      note?: string
+      error?: string
+    }
+    assert.equal(asked.reviewer, 'Kai', asked.error)
+    assert.match(asked.note ?? '', /That child is woken with its report/)
+    const review = (await row(902)).reviewSession!
+    assert.equal(review.parentId, child)
+    // The parent waits for the child again: its old report no longer stands.
+    const again = await reportOf(child)
+    assert.deepEqual(
+      { summary: again.summary, delivered: again.delivered, awaited: again.awaited },
+      { summary: null, delivered: false, awaited: true },
+    )
+    assert.ok(again.awaitUntil!.getTime() > review.awaitUntil!.getTime())
+  })
+
+  test('closing its pull request stops the review, and the child it held reports', async () => {
+    const { pullRequestEvent } = await import('../src/pull-requests.js')
+    const parent = await thread(ids.web, 'Imports.')
+    const child = await childOf(parent, 'Fix the import.')
+    await open(child, 903, { wanted: true, reason: 'Data' })
+    await turnEnds(child, 'Opened #903, in review.')
+    assert.equal((await reportsTo(parent)).length, 0)
+    closed.add(903)
+    await pullRequestEvent(scope, repo, pull(903) as never)
+    const after = await reportOf(child)
+    assert.equal(after.summary, 'Opened #903, in review.')
+    assert.equal(after.delivered, true)
+    assert.equal((await reportsTo(parent)).length, 1)
+  })
+
+  test('a child’s review sits under the thread at the top: archived with it, and a ticket there brings it back', async () => {
+    const { setThreadArchived } = await import('../src/thread-archive.js')
+    const { openWork } = await import('../src/thread-done.js')
+    const { rootIdOf } = await import('../src/thread-root.js')
+    const parent = await thread(ids.web, 'Uploads.')
+    const child = await childOf(parent, 'Resume uploads.')
+    await open(child, 904, { wanted: true, reason: 'Resumable state' })
+    const review = (await row(904)).reviewSessionId!
+    assert.equal(await rootIdOf(db, review), parent)
+    assert.equal(await rootIdOf(db, child), parent)
+    assert.equal(await rootIdOf(db, parent), parent)
+    await setThreadArchived(scope, parent, true)
+    const archived = await db.session.findFirstOrThrow({ where: { id: review } })
+    assert.ok(archived.archivedAt, 'archived with the thread at the top')
+    await db.ticket.create({
+      data: { sessionId: review, type: 'question', title: 'Which branch?' },
+    } as never)
+    // Brought back as the ticket is written, in the background.
+    for (let i = 0; i < 50; i++) {
+      if (!(await db.session.findFirstOrThrow({ where: { id: parent } })).archivedAt) break
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+    assert.equal((await db.session.findFirstOrThrow({ where: { id: parent } })).archivedAt, null)
+    // Its teammate is told it waits on a person, before it says the work is done.
+    const work = await openWork(db, parent)
+    assert.ok(
+      work.some((line) => /The question “Which branch\?” in the child thread “Review #904/.test(line)),
+      work.join('\n'),
+    )
   })
 
   test('a merge’s status keeps the loop’s column, which the API running before a deploy reads too', async () => {

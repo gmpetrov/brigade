@@ -841,9 +841,15 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   has it read again (Review again). The pull request waits on a person (Needs you, with one push) once its review is done. A project's
   Code review setting (`Project.reviewPolicy`) says who decides there is one: the teammate that opens a pull
   request, in `github_create_pull_request`'s `review` (wanted, and a reason shown on it), or only someone who asks
-  (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread asks its parent
-  for one in its report, and its pull request's review reports to the parent; a playbook's run starts none on its
-  own. One opened outside Brigade is reviewed in a thread of its own, which becomes the pull request's. Closing a
+  (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread follows its
+  project's setting too: its pull request is reviewed in a child of that child, the one thread below a child, whose
+  report wakes the child, which fixes and asks again itself. The child reports to its parent only once the review is
+  done (it approved, or the child stopped it): meanwhile the end of its turn sends nothing and `report` is refused
+  (`reviewHold`), and its parent's wait outlasts the review's. Before, the review ran beside the child and reported
+  to the parent, which had to relay each fix while the child, never told of it, said none had started. The parent
+  may still ask for a review of its child's pull request, which runs under the child the same way and waits for the
+  child again. What waits on a person in such a review (a ticket) marks the thread at the top, as a child's does,
+  and archiving, Later and done go by that thread (`src/thread-root.ts`). A playbook's run starts none on its own. One opened outside Brigade is reviewed in a thread of its own, which becomes the pull request's. Closing a
   pull request stops its review; one merged meanwhile keeps it, as what it finds is still worth a follow-up. Every
   teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a review is
   a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring an

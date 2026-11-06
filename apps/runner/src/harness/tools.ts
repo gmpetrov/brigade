@@ -2678,19 +2678,21 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
 
 /**
  * Reviews: another teammate reviews a pull request of this thread's, or of one of its
- * children's, in a child thread Brigade starts with a brief of its own (src/reviews.ts in
- * the API), whose report comes back here. Through the schedule calls; the API checks the
- * pull request is this thread's.
+ * children's, in a child thread of the thread that opened it, which Brigade starts with a
+ * brief of its own (src/reviews.ts in the API). Its report wakes that thread: this one, or the
+ * child, which reports here once it is done. Through the schedule calls; the API checks the
+ * pull request is this thread's or its child's.
  */
 export function reviewTools(call: ScheduleCaller): Record<string, Tool> {
   return {
     request_review: tool({
       description:
         'Have another teammate review a pull request this thread (or one of its child threads) opened, in a ' +
-        'child thread Brigade starts with a brief of its own: the pull request, how this thread started, and ' +
-        'whether the repository runs checks. You are woken here with its report. Use it when the person asks ' +
-        'for a review, or where the Code section of your instructions says to; for a pull request you open, ' +
-        "github_create_pull_request's `review` says whether it gets one.",
+        'child thread of the one that opened it, which Brigade starts with a brief of its own: the pull request, ' +
+        'how that thread started, and whether the repository runs checks. You are woken here with its report; ' +
+        "for a child thread's pull request, that child is, and reports here once the review is done. Use it when " +
+        'the person asks for a review, or where the Code section of your instructions says to; for a pull ' +
+        "request you open, github_create_pull_request's `review` says whether it gets one.",
       inputSchema: jsonSchema<{ repository: string; number: number; reviewer?: string }>({
         type: 'object',
         properties: {
@@ -2722,7 +2724,8 @@ export function reviewTools(call: ScheduleCaller): Record<string, Tool> {
 
 /**
  * Child threads: work started beside this thread, in a fresh context, whose report
- * comes back here. A child reports with `report` and starts no children of its own.
+ * comes back here. A child reports with `report` and starts no children of its own: the
+ * review of a pull request it opens is the one thread under it, which it lists and reads.
  * A playbook's run may also follow another run's child (follow_thread, `follow`).
  * They go through the schedule calls; the API checks the thread and its children.
  */
@@ -2731,8 +2734,46 @@ export function childTools(
   options: { child: boolean; follow?: boolean },
 ): Record<string, Tool> {
   const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
+  const list_children = tool({
+    description:
+      "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in." +
+      (options.child
+        ? ' Here, the reviews of the pull requests you opened.'
+        : options.follow
+          ? " Also fromOtherRuns: the child threads of this playbook's other runs from the last week " +
+            '(e.g. the fix of a bug another customer reported), which follow_thread can follow.'
+          : ''),
+    inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: { name: 'list_children' },
+        toolCallId,
+        toolName: 'list_children',
+        input,
+      }),
+  })
+  const read_child = tool({
+    description:
+      "A child thread's full report, the files it sent (in your working folder), its last message and the pull " +
+      'requests it opened' +
+      (options.follow ? ', or those of a thread you follow (follow_thread).' : '.'),
+    inputSchema: jsonSchema<{ threadId: string }>({
+      type: 'object',
+      properties: { threadId },
+      required: ['threadId'],
+    }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: { name: 'read_child', threadId: input.threadId },
+        toolCallId,
+        toolName: 'read_child',
+        input,
+      }),
+  })
   if (options.child)
     return {
+      list_children,
+      read_child,
       report: tool({
         description:
           'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
@@ -2741,7 +2782,8 @@ export function childTools(
           'go on without a person and you leave it to them (say what they must do), failed when you could not do it (say why). That thread cannot see your files, ' +
           '/tmp included: never point it to one. Put all it needs in the summary, and send the files it needs ' +
           '(reproduction scripts, logs, screenshots) in files: Brigade puts them in its working folder. Without a ' +
-          'report, your last message stands for it.',
+          'report, your last message stands for it. Not while a review of a pull request you opened runs: end your ' +
+          'turn instead, and report once it is done.',
         inputSchema: jsonSchema<{
           status: 'report' | 'nothing' | 'needs_person' | 'failed'
           summary: string
@@ -2834,40 +2876,8 @@ export function childTools(
           input,
         }),
     }),
-    list_children: tool({
-      description:
-        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in." +
-        (options.follow
-          ? " Also fromOtherRuns: the child threads of this playbook's other runs from the last week " +
-            '(e.g. the fix of a bug another customer reported), which follow_thread can follow.'
-          : ''),
-      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
-      execute: (input, { toolCallId }) =>
-        call({
-          operation: { name: 'list_children' },
-          toolCallId,
-          toolName: 'list_children',
-          input,
-        }),
-    }),
-    read_child: tool({
-      description:
-        "A child thread's full report, the files it sent (in your working folder), its last message and the pull " +
-        'requests it opened' +
-        (options.follow ? ', or those of a thread you follow (follow_thread).' : '.'),
-      inputSchema: jsonSchema<{ threadId: string }>({
-        type: 'object',
-        properties: { threadId },
-        required: ['threadId'],
-      }),
-      execute: (input, { toolCallId }) =>
-        call({
-          operation: { name: 'read_child', threadId: input.threadId },
-          toolCallId,
-          toolName: 'read_child',
-          input,
-        }),
-    }),
+    list_children,
+    read_child,
     cancel_child: tool({
       description:
         'Stop a child thread that is no longer needed. You stop waiting for it; the others you wait for still count.',
