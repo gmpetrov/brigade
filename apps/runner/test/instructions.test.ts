@@ -133,7 +133,10 @@ test('an account it cannot use now is named, with the ticket that reconnects it'
   )
   assert.match(section, /- Linear: Acme: its server did not answer/)
   assert.doesNotMatch(section.split('## Credentials')[0]!, /Gmail/)
-  assert.match(section, /do not do it another way without a word/)
+  // The person chose the account: a reconnect, not a way around it that needs none.
+  assert.match(section, /When the person names one of them or asks you to use it/)
+  assert.match(section, /Do not do that part another way instead, even one that needs no account/)
+  assert.doesNotMatch(section, /without a word/)
 
   // Every account usable: no such section.
   assert.doesNotMatch(
