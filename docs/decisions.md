@@ -207,7 +207,15 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process
   alive, while any of it runs and until the teammate has answered the last result: the thread stays Working, lists
   that work, and a person's message goes straight in (`brigade_waiting`). The session is not parked while the turn is
-  open. Only the memory guard, a runner stop or a person's Stop cut it short.
+  open. Only the memory guard, a runner stop or a person's Stop cut it short, and the runner's own check below.
+  - **Only work in the background holds it.** A command Claude Code runs in the foreground is a task too
+    (`is_backgrounded: false`), whose result is its tool call's: it holds nothing unless it is moved to the background.
+    Taken for background work, it kept the 2026-11-06 health check's turn open for 7 hours (60 s each since #757).
+  - **The runner ends a wait nothing will end.** A turn the bridge says waits on background work, while none runs as
+    the runner sees it (`background_tasks_changed`) for 5 minutes, ends, answered (`staleWait`). A bridge's process
+    outlives runner updates, so a fix to the bridge never reaches a turn already stuck in an older one; the wait goes
+    over with a handed-over turn, for the next runner to end. Threads running with nothing from a connected runner
+    for an hour raise the `turn-silent` alert (docs/monitoring.md).
   - **Thread-level tools are refused to sub-agents.** A sub-agent inherits every Brigade tool but sees only its part
     of the work: one that called `report` sent its partial result to the parent as the child's final one. Claude Code
     gives a PreToolUse hook `agent_id` only for a sub-agent's call, so the bridge's hook refuses the tools that act for
