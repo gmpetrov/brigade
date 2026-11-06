@@ -50,7 +50,8 @@ import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 //   token never reaches the machine, nor the signed URL a command line there; without a bucket,
 //   the API's bytes go over the link;
 // - a command run in the attachments folder finds them there without its sync sending them; a
-//   copy the teammate changed is as given elsewhere, and stays the sync's in that folder.
+//   copy the teammate changed there, even to the same size, is the sync's (nothing fetched stands
+//   in for it), and elsewhere the file is as given.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src')
 /** tsx's loader by its path: the stand-in machine's commands run in a folder without it. */
@@ -783,26 +784,48 @@ test('a command run in the attachments folder finds its files there, and its syn
   assert.equal(Math.trunc(placed.mtimeMs), 1_700_000_000_123)
 })
 
-test('a copy the teammate changed: commands get the file as given, but the sync’s copy stays in a folder it sends', async () => {
-  const clip = randomBytes(64 * 1024)
-  const ref = attached('clip1', 'clip.mov', clip)
-  const store = await bucket({ clip1: clip })
-  const { control, workDir } = setup({ files: { of: () => [ref], api: api(store.url).files } })
-  // Edited here since it was given: longer now.
-  write(workDir, ref.path, Buffer.concat([clip, Buffer.from('edited')]))
-  const edited = sha256(readFileSync(join(workDir, ref.path)))
-  const beside = await control.run(
-    { command: 'sha256sum ../attachments/clip.mov', cwd: 'app' },
-    30_000,
-  )
-  assert.equal(beside.status, 'succeeded', JSON.stringify(beside))
-  assert.match(beside.output ?? '', new RegExp(ref.sha256), 'the file as given')
-  // Run in the attachments folder, which the sync sends as it is here: the edited copy, each time.
-  for (let i = 0; i < 2; i++) {
-    const inside = await control.run({ command: 'sha256sum clip.mov', cwd: 'attachments' }, 30_000)
-    assert.equal(inside.status, 'succeeded', JSON.stringify(inside))
-    assert.match(inside.output ?? '', new RegExp(edited), 'the folder as it is here')
-  }
-  // Fetched once: the sync's copy is not fetched over again, only for the sync to send it again.
-  assert.equal(store.asked.length, 1)
-})
+/** Edits a teammate makes to its copy of a file given to the thread: longer, or of the same size. */
+const edits = [
+  { kind: 'longer', edit: (given: Buffer) => Buffer.concat([given, Buffer.from('edited')]) },
+  {
+    kind: 'of the same size',
+    edit: (given: Buffer) => Buffer.from(given.map((byte) => byte ^ 0xff)),
+  },
+]
+
+for (const { kind, edit } of edits)
+  test(`a copy the teammate changed (${kind}) is the sync’s in the folder it sends; beside it, the file as given`, async () => {
+    const clip = randomBytes(64 * 1024)
+    const ref = attached('clip1', 'clip.mov', clip)
+    const store = await bucket({ clip1: clip })
+    const { control, workDir } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+    write(workDir, ref.path, edit(clip))
+    const edited = sha256(readFileSync(join(workDir, ref.path)))
+    const inside = async () => {
+      const result = await control.run(
+        { command: 'sha256sum clip.mov', cwd: 'attachments' },
+        30_000,
+      )
+      assert.equal(result.status, 'succeeded', JSON.stringify(result))
+      assert.match(result.output ?? '', new RegExp(edited), 'the folder as it is here')
+      return result
+    }
+    // A fresh machine, the command run in the attachments folder, which the sync sends as it is:
+    // the edited copy, which nothing fetched from storage stands in for.
+    const first = await inside()
+    assert.ok(!first.notes.some((note) => note.startsWith('Fetched')), JSON.stringify(first.notes))
+    assert.equal(store.asked.length, 0)
+    // Beside it, the file as given to the thread, over the sync's copy.
+    const beside = await control.run(
+      { command: 'sha256sum ../attachments/clip.mov', cwd: 'app' },
+      30_000,
+    )
+    assert.equal(beside.status, 'succeeded', JSON.stringify(beside))
+    assert.match(beside.output ?? '', new RegExp(ref.sha256), 'the file as given')
+    assert.equal(store.asked.length, 1)
+    // In that folder again, each time: the edited copy, sent by the sync over the file as given,
+    // which kept its own time and mode; and never fetched again only for the sync to send it back.
+    await inside()
+    await inside()
+    assert.equal(store.asked.length, 1)
+  })

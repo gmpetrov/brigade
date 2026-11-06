@@ -9,8 +9,9 @@
 // come, never held whole. The machine writes each to a temporary file, checks its size and SHA-256,
 // then moves it into place, and remembers what it placed: the next command fetches only what it
 // lacks. What it gets is the file as given to the thread, whatever the teammate changed in its
-// copy here; only in a folder the sync sends as it is (a command run in the attachments folder) is
-// a copy the teammate changed left to the sync, as any file of that folder.
+// copy here; except in a folder the sync sends as it is (a command run in the attachments folder),
+// where a file is placed only when the teammate's copy is still the one given (its SHA-256 says
+// so), and any other copy is the sync's, as any file of that folder.
 import { randomBytes } from 'node:crypto'
 import { join, posix, sep } from 'node:path'
 import { Readable } from 'node:stream'
@@ -65,6 +66,9 @@ type Placed = { sha256: string; size: number; mtime: string }
 const STATS =
   'i=0; while IFS= read -r p; do s=$(LC_ALL=C stat -c "%s %.9Y %f" -- "$p" 2>/dev/null) || s=-; ' +
   'echo "$i $s"; i=$((i+1)); done'
+/** The SHA-256 of each path read from stdin, one per line, in order; `-` for one not read. */
+const SUMS =
+  'while IFS= read -r p; do s=$(sha256sum -- "$p" 2>/dev/null) && echo "${s%% *}" || echo -; done'
 
 /** A ref's path, as it is in the working folder: inside its attachments folder, said plainly. */
 export function attachmentPath(path: string) {
@@ -115,6 +119,14 @@ async function localStats(paths: string[], runAs: string | undefined) {
   if (!paths.length) return []
   const out = await runAsUser(['sh', '-c', STATS], runAs, `${paths.join('\n')}\n`).catch(() => '')
   return parseStats(out.split('\n'), paths.length)
+}
+
+/** The paths' SHA-256, read here as the teammate, in order: null for one it cannot read. */
+async function localSums(paths: string[], runAs: string | undefined) {
+  if (!paths.length) return []
+  const out = await runAsUser(['sh', '-c', SUMS], runAs, `${paths.join('\n')}\n`).catch(() => '')
+  const sums = out.split('\n')
+  return paths.map((_, i) => (SHA256.test(sums[i] ?? '') ? sums[i]! : null))
 }
 
 const within = (root: string, path: string) => path === root || path.startsWith(`${root}${sep}`)
@@ -315,12 +327,12 @@ export async function placeAttachments(input: {
   const index = parseIndex(first)
   const stats = parseStats(rest, refs.length)
   let changed = false
-  const lacking: { ref: ThreadAttachmentRef; stat: Stat | null }[] = []
+  const lacking: ThreadAttachmentRef[] = []
   const unsure: { ref: ThreadAttachmentRef; stat: Stat }[] = []
   for (const [i, ref] of refs.entries()) {
-    const stat = stats[i] ?? null
+    const stat = stats[i]
     const known = index[ref.path]
-    if (!stat?.file || stat.size !== ref.size) lacking.push({ ref, stat })
+    if (!stat?.file || stat.size !== ref.size) lacking.push(ref)
     // There as placed, unless something wrote it since: its time says so.
     else if (known?.sha256 !== ref.sha256 || known.size !== ref.size || known.mtime !== stat.mtime)
       unsure.push({ ref, stat })
@@ -328,36 +340,40 @@ export async function placeAttachments(input: {
   // Its size, but not as placed (the sync wrote it, or a command): its SHA-256 says what it is.
   if (unsure.length) {
     const sums = (
-      await link.exec(
-        'while IFS= read -r p; do s=$(sha256sum -- "$p" 2>/dev/null) && echo "${s%% *}" || echo -; done',
-        `${unsure.map(({ ref }) => there(ref)).join('\n')}\n`,
-        FETCH_MS,
-      )
+      await link.exec(SUMS, `${unsure.map(({ ref }) => there(ref)).join('\n')}\n`, FETCH_MS)
     ).split('\n')
     for (const [i, { ref, stat }] of unsure.entries()) {
       if (sums[i] !== ref.sha256) {
-        lacking.push({ ref, stat })
+        lacking.push(ref)
         continue
       }
       index[ref.path] = { sha256: ref.sha256, size: ref.size, mtime: stat.mtime }
       changed = true
     }
   }
-  // The teammate's copies, as it reads them. One still its size, as given, lends the placed file
-  // its time and mode: a sync that sends its folder finds that file there already, and leaves it.
-  const mine = await localStats(
-    lacking.map(({ ref }) => here(ref)),
+  // In a folder a sync sends as it is (a command run in the attachments folder), a file is placed
+  // only when the teammate's copy there is still the one given: its SHA-256 says so, read as the
+  // teammate (its size alone may be an edit's). It then lends the placed file its time and mode,
+  // so the sync finds that file there already and leaves it. Any other copy there (edited,
+  // removed, a link) is the sync's, as any file of that folder: nothing placed, nothing lent.
+  const synced = lacking.filter((ref) => input.syncRoots.some((root) => within(root, here(ref))))
+  const locals = await localStats(synced.map(here), input.runAs)
+  const sized = synced.flatMap((ref, i) => {
+    const local = locals[i]
+    return local?.file && local.size === ref.size ? [{ ref, local }] : []
+  })
+  const sums = await localSums(
+    sized.map(({ ref }) => here(ref)),
     input.runAs,
   )
+  const asGiven = new Map(
+    sized.filter(({ ref }, i) => sums[i] === ref.sha256).map(({ ref, local }) => [ref, local]),
+  )
   const fetching: { ref: ThreadAttachmentRef; mode: number; mtime?: string }[] = []
-  for (const [i, { ref, stat }] of lacking.entries()) {
-    const local = mine[i]
-    const asGiven = !!local?.file && local.size === ref.size
-    // A copy the teammate changed, in a folder a sync sends: the sync's, as any file of it there.
-    if (!asGiven && stat && input.syncRoots.some((root) => within(root, here(ref)))) continue
-    fetching.push(
-      asGiven ? { ref, mode: local.mode, mtime: local.mtime } : { ref, mode: FILE_MODE },
-    )
+  for (const ref of lacking) {
+    const local = asGiven.get(ref)
+    if (local) fetching.push({ ref, mode: local.mode, mtime: local.mtime })
+    else if (!synced.includes(ref)) fetching.push({ ref, mode: FILE_MODE })
   }
   await atMost(fetching, AT_ONCE, async ({ ref, mode, mtime }) => {
     let url: string | undefined

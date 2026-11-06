@@ -552,10 +552,13 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       fetched. It gets each file as given to the thread: a copy the teammate
       edited or removed here does not change it there. The one exception is a
       folder the sync sends as it is (a command run in `attachments`): there a
-      copy still its size, as given, lends the placed file its time and mode, so
-      the sync finds it already there and does not send it, and a copy the
-      teammate changed is the sync's, sent like any file of that folder.
-      Previews do not get them: a preview's copy is its checkout alone.
+      file is placed only when the teammate's copy is still the one given, as
+      its SHA-256 says, read as the teammate (its size alone may be an edit's),
+      and it gets that copy's time and mode, so the sync finds it already there
+      and does not send it; any other copy there, edited or removed, is the
+      sync's, like any file of that folder, and nothing is placed for it.
+      Elsewhere a placed file keeps its own time and mode. Previews do not get
+      them: a preview's copy is its checkout alone.
     - **Detached there, followed here.** The command runs in a session of its
       own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
       sourced, then deleted from the disk. Its output goes to a file the runner
