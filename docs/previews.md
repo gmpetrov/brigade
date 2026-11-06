@@ -528,32 +528,32 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     whole working directory). The copy stays between commands with what they
     installed, and the next command sends only what changed. At most 3 commands
     of a thread run at once.
-    - **The thread's attached files are there too** (`machine-files.ts`), at
-      the same place in the teammate's copy as in its folder
-      (`commands/<teammate>/attachments/…`), so a command names them as it
-      would here (`../attachments/clip.mov` from a checkout beside them),
-      whatever their size, and their bytes never go through the cloud computer,
-      whose memory every teammate shares. Before the command's folder goes, the
-      machine fetches each file it lacks itself, straight from the bucket,
-      three at a time. The
-      runner asks the API as for its own copy (`GET /runner/attachments/<id>`),
-      reads the signed URL from its redirect without following it, and gives
-      the machine only that URL, valid a few minutes, as curl's config on stdin
-      (`curl -K -`), never on a command line; the runner's token never goes
-      there. Without a bucket (on a laptop) the API sends the bytes, which go
-      over the link as they come, never held whole. The machine writes each to
-      a temporary file, checks its size and SHA-256, then moves it into place;
-      one that does not match, or does not come, is left out with a note, and
-      the command runs anyway. It remembers what it placed
-      (`.brigade/attachments/<teammate>.json`: path, SHA-256, size and time),
-      so the next command fetches only what it lacks, and says what it fetched
+    - **The thread's attached files are there too** (`machine-files.ts`), at the
+      same place in the teammate's copy as in its folder
+      (`commands/<teammate>/attachments/…`), so a command names them as it would
+      here (`../attachments/clip.mov` from a checkout beside them), whatever
+      their size, and their bytes never go through the cloud computer, whose
+      memory every teammate shares. Before the command's folder goes, the
+      machine fetches each file it lacks itself, straight from the bucket, three
+      at a time, one command's files after another's. The runner asks the API as
+      for its own copy (`GET /runner/attachments/<id>`), reads the signed URL
+      from its redirect without following it, and gives the machine only that
+      URL, valid a few minutes, as curl's config on stdin (`curl -K -`), never
+      on a command line; the runner's token never goes there. Without a bucket
+      (on a laptop) the API sends the bytes, which go over the link as they
+      come, never held whole. The machine writes each to a temporary file,
+      checks its size and SHA-256, then moves it into place; one that does not
+      match, or does not come, is left out with a note, and the command runs
+      anyway. It remembers what it placed
+      (`.brigade/attachments/<teammate>.json`: path, SHA-256, size and time), so
+      the next command fetches only what it lacks, and says what it fetched
       ("Fetched 1 attached file (512.0 MB) from storage"). A file of the right
       size it did not place (the sync's) is checked by its SHA-256 instead of
       fetched. It gets each file as given to the thread: a copy the teammate
       edited or removed here does not change it there. The one exception is a
       folder the sync sends as it is (a command run in `attachments`): there a
-      copy still its size, as given, lends the placed file its time and mode,
-      so the sync finds it already there and does not send it, and a copy the
+      copy still its size, as given, lends the placed file its time and mode, so
+      the sync finds it already there and does not send it, and a copy the
       teammate changed is the sync's, sent like any file of that folder.
       Previews do not get them: a preview's copy is its checkout alone.
     - **Detached there, followed here.** The command runs in a session of its
