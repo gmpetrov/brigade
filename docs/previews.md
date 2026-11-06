@@ -532,9 +532,10 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       the same place in the teammate's copy as in its folder
       (`commands/<teammate>/attachments/…`), so a command names them as it
       would here (`../attachments/clip.mov` from a checkout beside them),
-      whatever their size: the sync, which reads a file whole here, would leave
-      a 500 MB video out. Before the command's folder goes, the machine fetches
-      each file it lacks itself, straight from the bucket, three at a time. The
+      whatever their size, and their bytes never go through the cloud computer,
+      whose memory every teammate shares. Before the command's folder goes, the
+      machine fetches each file it lacks itself, straight from the bucket,
+      three at a time. The
       runner asks the API as for its own copy (`GET /runner/attachments/<id>`),
       reads the signed URL from its redirect without following it, and gives
       the machine only that URL, valid a few minutes, as curl's config on stdin
@@ -553,8 +554,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       folder the sync sends as it is (a command run in `attachments`): there a
       copy still its size, as given, lends the placed file its time and mode,
       so the sync finds it already there and does not send it, and a copy the
-      teammate changed is the sync's, sent like any file of that folder. Only
-      commands get them this way; a preview's copy has only its checkout.
+      teammate changed is the sync's, sent like any file of that folder.
+      Previews do not get them: a preview's copy is its checkout alone.
     - **Detached there, followed here.** The command runs in a session of its
       own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
       sourced, then deleted from the disk. Its output goes to a file the runner
