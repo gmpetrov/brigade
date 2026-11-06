@@ -61,6 +61,18 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
   let app: Hono
   let as: Person = 'ada'
   let restore: () => void
+  let flagBefore: Awaited<ReturnType<typeof prisma.featureFlag.findUnique>> = null
+
+  /**
+   * Whether Chief acts on rules in this workspace (chief_acts), as most tests here need; off, it only
+   * recommends, as for everyone while rules are calibrated.
+   */
+  const acting = (on: boolean) =>
+    prisma.featureFlag.upsert({
+      where: { key: 'chief_acts' },
+      create: { key: 'chief_acts', workspaceIds: on ? [workspaceId] : [] },
+      update: { everyone: false, emails: [], workspaceIds: on ? [workspaceId] : [] },
+    })
 
   before(async () => {
     const { auth } = await import('../src/auth.js')
@@ -83,6 +95,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       .id
     scope = { organizationId: org, workspaceId }
     db = scoped(scope)
+    // The row as it was, put back at the end.
+    flagBefore = await prisma.featureFlag.findUnique({ where: { key: 'chief_acts' } })
+    await acting(true)
     cloud = (
       await db.computer.create({
         data: { kind: 'cloud', name: 'Cloud computer', status: 'running' },
@@ -122,6 +137,10 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
 
   after(async () => {
     restore?.()
+    if (flagBefore) {
+      const { key: _key, updatedAt: _at, ...rest } = flagBefore
+      await prisma.featureFlag.update({ where: { key: 'chief_acts' }, data: rest })
+    } else await prisma.featureFlag.deleteMany({ where: { key: 'chief_acts' } })
     if (workspaceId) await prisma.workspace.deleteMany({ where: { id: workspaceId } })
     await prisma.member.deleteMany({ where: { organizationId: org } })
     await prisma.organization.deleteMany({ where: { id: org } })
@@ -400,6 +419,7 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       rules: '- Go ahead on fixes',
       timezone: 'Europe/Paris',
       hour: contracts.CHIEF_PASS_HOUR,
+      acts: true,
     })
     await assert.rejects(
       chiefRules.setChief(db, ada, { timezone: 'Mars/Olympus' }),
@@ -533,7 +553,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       assert.match(brief, /1\. ".+": Riley \w+ ended its reply on a question\./)
       assert.match(brief, /Answers: 1\) Build it {2}2\) Not yet/)
       const spec = prompt.thread as { pass?: { id: string }; connectors: unknown[] }
-      assert.deepEqual(spec.pass, { id: mine[0]!.id })
+      // Chief acts here (chief_acts): its runner offers it every call.
+      assert.deepEqual(spec.pass, { id: mine[0]!.id, acts: true })
+      assert.ok(!brief.includes(contracts.CHIEF_RECOMMENDS_ONLY))
       assert.deepEqual(spec.connectors, [])
       // In no list.
       as = 'ada'
@@ -784,7 +806,7 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
         ).ok,
         true,
       )
-      const view = (await chiefPass.passView(db, member('ada')))!
+      const view = (await chiefPass.passView(db, { ...scope, memberId: member('ada') }))!
       assert.equal(view.id, made.pass.id)
       assert.equal(view.status, 'done')
       assert.deepEqual(
@@ -817,7 +839,10 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
           add: true,
         },
       )
-      assert.equal((await chiefPass.passView(db, member('ada')))!.rules[0]!.state, 'added')
+      assert.equal(
+        (await chiefPass.passView(db, { ...scope, memberId: member('ada') }))!.rules[0]!.state,
+        'added',
+      )
     } finally {
       conn.close()
     }
@@ -833,12 +858,14 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       notes: [],
       rules: [],
     })
-    let view = (await chiefPass.passView(db, member('ada')))!
+    let view = (await chiefPass.passView(db, { ...scope, memberId: member('ada') }))!
     assert.deepEqual(view.decisions[0]!.option, { label: 'Build it', message: 'Build it' })
     assert.equal(view.decisions[0]!.open, true)
     await person(id, 'Not yet')
-    view = (await chiefPass.passView(db, member('ada')))!
+    view = (await chiefPass.passView(db, { ...scope, memberId: member('ada') }))!
     assert.equal(view.decisions[0]!.open, false)
+    // Not its pick: counted as another answer.
+    assert.equal(view.decisions[0]!.answered, 'otherwise')
   })
 
   test('a pass that ends without reporting, or runs too long, is over: what it did stays', async () => {
@@ -1948,7 +1975,9 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
         (i) => i.kind === 'question' && i.sessionId === id,
       )
     const settled = async () =>
-      ((await chiefPass.passView(db, member('ada')))?.settled ?? []).map((s) => s.decisionId)
+      ((await chiefPass.passView(db, { ...scope, memberId: member('ada') }))?.settled ?? []).map(
+        (s) => s.decisionId,
+      )
     assert.ok(await listed())
     assert.ok(!(await settled()).includes(left.id))
     assert.equal((await decide(made, { option: 1 })).status, 'answered')
@@ -2034,5 +2063,236 @@ describe('Chief for the person', { skip: !database && 'no database answers' }, (
       await retrying?.catch(() => undefined)
       conn.close()
     }
+  })
+
+  test('while rules are calibrated, they reach no teammate, and Chief is told its pass only recommends', async () => {
+    const { specFor, loadThread } = await import('../src/thread-spec.js')
+    const spec = async (id: string) => specFor(db, await loadThread(db, id))
+    const ada = { ...scope, memberId: member('ada') }
+    await setMember({ chiefRules: RULES, chiefPass: true })
+    const id = await thread()
+    await acting(false)
+    try {
+      let s = await spec(id)
+      assert.equal(s.rules ?? null, null)
+      assert.equal(s.chiefAnswers, false)
+      assert.equal(s.rulesAct, false)
+      assert.equal((await chiefRules.chiefSettings(db, ada)).acts, false)
+      // Once Chief acts on them, as before.
+      await acting(true)
+      s = await spec(id)
+      assert.deepEqual(s.rules, { person: 'Ada', text: RULES })
+      assert.equal(s.chiefAnswers, true)
+      assert.equal(s.rulesAct, true)
+      assert.equal((await chiefRules.chiefSettings(db, ada)).acts, true)
+    } finally {
+      await acting(true)
+    }
+  })
+
+  test('while rules are calibrated, the pass only recommends: nothing goes in their name, and Today has its picks', async () => {
+    await setMember({ chiefPass: true, chiefRules: RULES })
+    // The passes of the tests before are over.
+    await db.chiefPass.updateMany({ where: { status: 'running' }, data: { status: 'done' } })
+    const id = await thread()
+    const card = await asks(id)
+    const failed = await thread()
+    await person(failed, 'Work on the admin page.')
+    await say(failed, { type: 'turn.started', teammateId: riley, accountId: account })
+    await say(failed, { type: 'error', message: 'Request timed out' })
+    await db.session.updateMany({ where: { id: failed }, data: { status: 'failed' } })
+    const rule = `Next steps of what I asked: go ahead ${suffix}`
+    await acting(false)
+    const conn = await runner()
+    try {
+      const passId = await chiefPass.startPass(scope, member('ada'), `recommends-${suffix}`)
+      const pass = await db.chiefPass.findFirstOrThrow({ where: { id: passId! } })
+      const ofPass = (m: Sent) =>
+        m.type === 'thread.prompt' &&
+        (m.thread as { sessionId: string }).sessionId === pass.sessionId
+      await until(() => conn.sent.some(ofPass), 'the pass on the runner')
+      const prompt = conn.sent.find(ofPass)!
+      // Told by its brief, whatever its runner, and by its spec, whose runner offers its report alone.
+      assert.ok((prompt.text as string).includes(contracts.CHIEF_RECOMMENDS_ONLY))
+      assert.deepEqual((prompt.thread as { pass?: unknown }).pass, { id: pass.id, acts: false })
+      const items = pass.items as { n: number; kind: string; sessionId: string; askSeq?: number }[]
+      const question = items.find((i) => i.kind === 'question' && i.sessionId === id)!
+      assert.equal(question.askSeq, card)
+      // A failed thread of hers, for the pass to recommend trying again.
+      await db.chiefPass.updateMany({
+        where: { id: pass.id },
+        data: {
+          items: [
+            ...items,
+            {
+              kind: 'failed',
+              n: 99,
+              title: 'Failed admin page',
+              sessionId: failed,
+              teammate: 'Riley',
+              error: 'Request timed out',
+            },
+          ],
+        },
+      })
+      const made: Made = {
+        pass,
+        child: await db.session.findFirstOrThrow({ where: { id: pass.sessionId! } }),
+        item: question.n,
+      }
+      // It answers and retries nothing.
+      assert.match(
+        (
+          await passCall(made, {
+            name: 'chief_answer',
+            item: question.n,
+            option: 1,
+            reason: 'It is the next step.',
+            rule,
+          })
+        ).error ?? '',
+        /recommendations only/,
+      )
+      assert.match(
+        (await passCall(made, { name: 'chief_retry', item: 99, reason: 'A timeout.' })).error ?? '',
+        /recommendations only/,
+      )
+      assert.equal(await db.chiefDecision.count({ where: { sessionId: id } }), 0)
+      assert.equal(await db.wakeup.count({ where: { sessionId: id } }), 0)
+      assert.equal(
+        await db.runnerCommand.count({ where: { sessionId: failed, type: 'thread.retry' } }),
+        0,
+      )
+      // Its report: on Today, its pick with the rule (Use it), and Try again.
+      assert.equal(
+        (
+          await passCall(made, {
+            name: 'chief_report',
+            decisions: [
+              { item: question.n, recommendation: 'Build it: it is next.', option: 1, rule },
+              { item: 99, recommendation: 'Try it again: it timed out.' },
+            ],
+            notes: [],
+            rules: [],
+          })
+        ).ok,
+        true,
+      )
+      const ada = { ...scope, memberId: member('ada') }
+      let view = (await chiefPass.passView(db, ada))!
+      assert.equal(view.id, pass.id)
+      assert.equal(view.acts, false)
+      assert.deepEqual(view.settled, [])
+      const picked = () => view.decisions.find((d) => d.kind === 'question')!
+      assert.deepEqual(picked().option, { label: 'Build it', message: 'Build it' })
+      assert.equal(picked().rule, rule)
+      assert.equal(picked().open, true)
+      assert.equal(picked().answered, null)
+      assert.equal(view.decisions.find((d) => d.kind === 'failed')!.open, true)
+      // She takes its pick (Use it sends its words): the same answer, counted by its rule.
+      await person(id, 'Build it')
+      view = (await chiefPass.passView(db, ada))!
+      assert.equal(picked().open, false)
+      assert.equal(picked().answered, 'same')
+      assert.deepEqual(
+        view.calibration.find((c) => c.rule === rule),
+        { rule, same: 1, answered: 1 },
+      )
+      // Tried again by her, the thread is no longer for Today to try.
+      await db.session.updateMany({ where: { id: failed }, data: { status: 'idle' } })
+      view = (await chiefPass.passView(db, ada))!
+      assert.equal(view.decisions.find((d) => d.kind === 'failed')!.open, false)
+    } finally {
+      conn.close()
+      await acting(true)
+    }
+  })
+
+  test('Today counts the picks of the week’s passes she answered, the same or otherwise, by rule', async () => {
+    // A week of its own, years ahead: no pass of the tests before falls in it.
+    const now = new Date('2031-06-10T12:00:00Z')
+    const at = (day: number, hour = 6) => new Date(Date.UTC(2031, 5, day, hour))
+    const rule = 'Admin work: go ahead'
+    const cards: Record<string, { id: string; seq: number }> = {}
+    for (const c of ['one', 'two', 'three', 'four', 'five', 'old']) {
+      const id = await thread()
+      cards[c] = { id, seq: await asks(id) }
+    }
+    const item = (n: number, c: string) => ({
+      kind: 'question',
+      n,
+      title: `Card ${c}`,
+      sessionId: cards[c]!.id,
+      teammate: 'Riley',
+      teammateId: riley,
+      askSeq: cards[c]!.seq,
+      options: [
+        { label: 'Build it', message: 'Build it' },
+        { label: 'Not yet', message: 'Not yet' },
+      ],
+      question: 'Shall I build it?',
+      cardQuestion: null,
+    })
+    const pass = (day: number, picks: [string, number, string | null][]) =>
+      db.chiefPass.create({
+        data: {
+          memberId: member('ada'),
+          day: `calibration-${suffix}-${day}`,
+          status: 'done',
+          createdAt: at(day),
+          items: picks.map(([c], i) => item(i + 1, c)),
+          report: {
+            decisions: picks.map(([, option, r], i) => ({
+              item: i + 1,
+              recommendation: 'As you would.',
+              option,
+              ...(r ? { rule: r } : {}),
+            })),
+            notes: [],
+            rules: [],
+          },
+        },
+      } as never)
+    // Eight days before: out of the week.
+    await pass(2, [['old', 1, rule]])
+    await pass(8, [
+      ['one', 1, rule],
+      ['two', 1, rule],
+      ['three', 1, null],
+    ])
+    const latest = await pass(10, [
+      // Picked again, otherwise: its latest pick counts.
+      ['one', 2, rule],
+      ['four', 1, 'Visual: ask me'],
+      ['five', 1, null],
+    ])
+    await person(cards.old!.id, 'Build it')
+    // Its latest pick, in its words.
+    await person(cards.one!.id, 'Not yet')
+    // Her own words: another answer.
+    await person(cards.two!.id, 'Not before Monday.')
+    // Brigade's message came first: hers after it answers something else.
+    await say(cards.three!.id, {
+      type: 'message.user',
+      text: 'Wake-up: check the deploy',
+      memberId: null,
+    })
+    await person(cards.three!.id, 'Build it')
+    // Four waits. Five: its pick, as a click sends it.
+    await person(cards.five!.id, 'Build it')
+    const view = (await chiefPass.passView(db, { ...scope, memberId: member('ada') }, now))!
+    assert.equal(view.id, latest.id)
+    assert.deepEqual(view.calibration, [
+      { rule, same: 1, answered: 2 },
+      { rule: null, same: 1, answered: 1 },
+    ])
+    assert.deepEqual(
+      view.decisions.map((d) => [d.thread?.id, d.answered, d.rule]),
+      [
+        [cards.one!.id, 'same', rule],
+        [cards.four!.id, null, 'Visual: ask me'],
+        [cards.five!.id, 'same', null],
+      ],
+    )
   })
 })
