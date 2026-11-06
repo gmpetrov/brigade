@@ -16,6 +16,8 @@ export type FileField = {
   many: boolean
   /** What the teammate would type the file into otherwise, if the tool takes it inline. */
   inline?: string
+  /** The tool requires its address: the address or the path is, once the path can fill it. */
+  required?: boolean
 }
 
 /** How long the App may fetch a file it is given a link to: a video job may start minutes later. */
@@ -58,16 +60,28 @@ export function fileFields(schema: Schema): FileField[] {
     const path = many ? `${stem}_paths` : `${stem}_path`
     // A tool with a field of that name already keeps it as it is.
     if (path in properties) continue
-    fields.push({ path, url: name, many, ...(inline ? { inline } : {}) })
+    const required = Array.isArray(schema.required) && schema.required.includes(name)
+    fields.push({
+      path,
+      url: name,
+      many,
+      ...(inline ? { inline } : {}),
+      ...(required ? { required } : {}),
+    })
   }
   return fields
 }
 
-/** The tool's input schema with Brigade's file fields beside the addresses they fill. */
+/**
+ * The tool's input schema with Brigade's file fields beside the addresses they fill. An address
+ * the tool requires is required no more, as its path may fill it: the harness checks a call
+ * against this schema before anything is uploaded, and linkFiles asks for one of the two.
+ */
 export function withFileFields(schema: Schema, fields: FileField[]): Schema {
   if (fields.length === 0) return schema
   const properties = { ...propertiesOf(schema) }
   for (const field of fields) {
+    const either = field.required ? ` Give it or ${field.url}.` : ''
     const rather = field.inline ? ` Use it rather than typing a file into ${field.inline}.` : ''
     properties[field.path] = field.many
       ? {
@@ -75,16 +89,23 @@ export function withFileFields(schema: Schema, fields: FileField[]): Schema {
           items: { type: 'string' },
           description:
             `Files in your working folder (paths), sent in ${field.url} after any addresses it ` +
-            `has, in this order: Brigade uploads them and gives the App links to them.${rather}`,
+            `has, in this order: Brigade uploads them and gives the App links to them.${either}${rather}`,
         }
       : {
           type: 'string',
           description:
             `A file in your working folder (its path), sent as ${field.url}, which you then leave ` +
-            `out: Brigade uploads it and gives the App a link to it.${rather}`,
+            `out: Brigade uploads it and gives the App a link to it.${either}${rather}`,
         }
   }
-  return { ...schema, properties }
+  const filled = new Set(fields.filter((field) => field.required).map((field) => field.url))
+  return {
+    ...schema,
+    properties,
+    ...(Array.isArray(schema.required) && filled.size
+      ? { required: schema.required.filter((name) => !filled.has(name as string)) }
+      : {}),
+  }
 }
 
 /**
@@ -115,6 +136,10 @@ export async function linkFiles(
   fields: FileField[],
   link: (id: string) => Promise<string>,
 ): Promise<Record<string, unknown>> {
+  // What the tool requires, and no longer the schema it is called with (withFileFields).
+  for (const field of fields)
+    if (field.required && input[field.url] === undefined && input[field.path] === undefined)
+      throw new Error(`Give ${field.url} or ${field.path}`)
   if (!fields.some((field) => input[field.path] !== undefined)) return input
   const linked = { ...input }
   for (const field of fields) {

@@ -100,13 +100,14 @@ test(
     await sleep(50)
     arrivals.arrived()
     assert.match((await waiting).note, /A message came in/)
-    // The model had not read it yet (no tool's result since): the next wait ends at once.
+    // The model had not read it yet: the next wait ends at once.
     const started = Date.now()
     const next = await tools(runs, arrivals).wait({ id: 'r1', waitMinutes: 10 })
     assert.ok(Date.now() - started < 1_000)
     assert.match(next.note, /A message came in/)
-    // Read with that result: the wait after it waits.
-    arrivals.read()
+    // That result went back and the model wrote again: it read the message, the next wait waits.
+    arrivals.resulted()
+    arrivals.wrote()
     const after = await tools(runs, arrivals).wait({ id: 'r1', waitMinutes: 0.002 })
     assert.match(after.note, /^Still running on the machine/)
     assert.equal(arrivals.listening, 0)

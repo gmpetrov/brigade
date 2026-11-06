@@ -114,6 +114,34 @@ test('other addresses, and tools that already have the field, stay as they are',
 
 const link = async (id: string) => `https://bucket.example/${id}?X-Amz-Signature=s`
 
+// From the review of #772: a tool that requires its address (a custom MCP server's image_url)
+// was checked against the schema with image_url still required, so a call with only the path
+// failed before anything was uploaded, and one with both failed here.
+test('an address the tool requires may be filled by its path: the schema asks for neither, the call for one', async () => {
+  const source = {
+    type: 'object',
+    properties: { image_url: { type: 'string' }, prompt: { type: 'string' } },
+    required: ['image_url', 'prompt'],
+    additionalProperties: false,
+  }
+  const fields = fileFields(source)
+  assert.deepEqual(fields, [{ path: 'image_path', url: 'image_url', many: false, required: true }])
+  const spec = withFiles(source)
+  assert.deepEqual(spec.inputSchema.required, ['prompt'])
+  assert.equal(spec.inputSchema.additionalProperties, false)
+  const properties = spec.inputSchema.properties as Record<string, { description: string }>
+  assert.match(properties.image_path!.description, /Give it or image_url\./)
+  // The tool's own schema is left as it was.
+  assert.deepEqual(source.required, ['image_url', 'prompt'])
+  assert.deepEqual(await linkFiles({ prompt: 'p', image_path: 'att-1' }, fields, link), {
+    prompt: 'p',
+    image_url: 'https://bucket.example/att-1?X-Amz-Signature=s',
+  })
+  const given = { prompt: 'p', image_url: 'https://example.com/a.png' }
+  assert.equal(await linkFiles(given, fields, link), given)
+  await assert.rejects(linkFiles({ prompt: 'p' }, fields, link), /Give image_url or image_path/)
+})
+
 test('the uploaded file becomes a link in the field it fills, and the path field goes', async () => {
   const input = { model: 'openai/whisper-large-v3-turbo', audio_path: 'att-1', format: 'ogg' }
   assert.deepEqual(await linkFiles(input, fileFields(transcribe), link), {

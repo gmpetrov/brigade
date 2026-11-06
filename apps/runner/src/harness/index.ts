@@ -665,7 +665,7 @@ export class HarnessThread {
       this.texts.clear()
       this.reasoning.clear()
       // A new turn reads what it is given now.
-      this.arrivals.read()
+      this.arrivals.started()
     }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Kept whole, as the transcript keeps its latest message: a request often comes after its context.
@@ -1528,13 +1528,18 @@ export class HarnessThread {
         try {
           for await (const part of stream) {
             mapper.map(part)
-            // A result goes back to the model: a message given before it goes in with it.
+            // A message given to the turn is read once the step's results went back and the
+            // model writes again (arrivals.ts).
             if (
               part.type === 'tool-result' ||
               part.type === 'tool-error' ||
               part.type === 'tool-output-denied'
             )
-              this.arrivals.read()
+              this.arrivals.resulted()
+            else if (part.type === 'tool-call') this.arrivals.wrote(part.toolCallId)
+            else if (part.type === 'tool-input-start') this.arrivals.wrote(part.id)
+            else if (part.type === 'text-start' || part.type === 'reasoning-start')
+              this.arrivals.wrote()
             const image = generatedImage(part)
             if (image) await this.keepImage(image)
           }

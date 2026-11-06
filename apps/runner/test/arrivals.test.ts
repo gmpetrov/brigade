@@ -15,19 +15,48 @@ test('a wait under way ends when a message comes in, and says so', () => {
   assert.equal(arrivals.listening, 0)
 })
 
-test('a wait that starts before the turn read the message ends at once; after a result, it waits', () => {
+test('a wait that starts before the model read the message ends at once', () => {
   const arrivals = new Arrivals()
   arrivals.arrived()
   const early = arrivals.watch()
   assert.equal(early.signal.aborted, true)
   assert.equal(early.cut, 'message')
   early.release()
-  // The turn got a tool's result: the message went in with it.
-  arrivals.read()
+  // A result went back, but the step's other calls may still run: the model reads the message
+  // only with all their results (from the review of #772).
+  arrivals.resulted()
+  const sibling = arrivals.watch()
+  assert.equal(sibling.cut, 'message')
+  sibling.release()
+  // The model writes again: its request had the message.
+  arrivals.wrote()
   const later = arrivals.watch()
   assert.equal(later.signal.aborted, false)
   later.release()
   assert.equal(arrivals.listening, 0)
+})
+
+test('what the model writes before a result went back, or a call it wrote before, reads nothing', () => {
+  const arrivals = new Arrivals()
+  arrivals.wrote('call-1')
+  // Came while the model wrote a step whose request did not carry it.
+  arrivals.arrived()
+  arrivals.wrote()
+  arrivals.wrote('call-2')
+  assert.equal(arrivals.watch().cut, 'message')
+  arrivals.resulted()
+  // An adapter showing a call again (around an approval) is no new writing.
+  arrivals.wrote('call-2')
+  assert.equal(arrivals.watch().cut, 'message')
+  arrivals.wrote('call-3')
+  assert.equal(arrivals.watch().cut, undefined)
+})
+
+test('a new turn reads what it is given now', () => {
+  const arrivals = new Arrivals()
+  arrivals.arrived()
+  arrivals.started()
+  assert.equal(arrivals.watch().cut, undefined)
 })
 
 test('a hand-over to the next runner ends the waits under way, and every one after it', () => {
@@ -37,8 +66,9 @@ test('a hand-over to the next runner ends the waits under way, and every one aft
   assert.equal(watch.signal.aborted, true)
   assert.equal(watch.cut, 'handover')
   watch.release()
-  // A result the turn got since changes nothing: this runner is leaving.
-  arrivals.read()
+  // What the turn got since changes nothing: this runner is leaving.
+  arrivals.resulted()
+  arrivals.wrote()
   const after = arrivals.watch()
   assert.equal(after.signal.aborted, true)
   assert.equal(after.cut, 'handover')
