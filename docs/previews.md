@@ -724,6 +724,40 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       not send them back). It says it ended only once they are back: a runner
       that stops meanwhile leaves it unfinished in its state, and the next one
       brings them back.
+    - **Saved to the library from there** (`machine-library.ts`). The files a
+      command names in `library` (`[{ from: "renders/video.mp4", to:
+"Projects/X/videos/video.mp4" }]`, 20 at most) go to the library from the
+      machine once it succeeded, never through the cloud computer: a render is
+      not brought back to be uploaded again. The steps and rules are
+      `save_to_library`'s: the machine reads each file's size and SHA-256, the
+      runner asks the API where to PUT it (`POST /runner/uploads`, purpose
+      `library`, as the teammate), which refuses a path the teammate may not
+      save to before any byte goes (403, as the save itself would) and a file
+      over 500 MB; the machine PUTs it at the bucket's signed URL, given as
+      curl's config on stdin like a download's (never the runner's token, never
+      on a command line); the API reads back what arrived and checks it (a
+      mismatch is sent again, once); then the hub's `library.call` saves it as
+      the teammate, and its mention comes back in the command's result and
+      `machine_run`, for the reply. Without a bucket (on a laptop) the bytes go
+      over the link to the API's stand-in as they come. A file saved this way
+      does not come back unless `outputs` names it too: teammates bring back
+      only what they need to look at (frames, a report). A command that failed
+      saves nothing, and says how to save once it is right (a command such as
+      `true` with the same `library`). Each save is kept in the state file by
+      its upload before it goes, and does not go when that write fails; each
+      outcome is kept as it comes, with its note. A runner that stops
+      meanwhile leaves the rest to the next one, which sends a save it had
+      sent that very way again, never a new upload. The API takes an upload
+      for one save alone (`claimUpload`: of two at once, one gets it), so a
+      save made before the runner stopped is not made again, nor over what
+      was saved at that path since. The runner's connection marks a call's
+      failure when the API answered it (a refusal) or it never went: nothing
+      was made. Any other failure (the connection lost while it was under way),
+      and a save refused when sent again, may have been made: the run says
+      the file may already be in the library, to check before saving it again,
+      and never sends or uploads it again. Only a teammate that may save somewhere in
+      the library sees `library`, and its "Heavy work" instructions say to save
+      renders this way rather than bring them back.
     - **Credentials' values are hidden in its output**, read as a shell reads
       the released file (`export NAME='…'`, a ' inside as `'\''`; a key over
       several lines is hidden line by line too), and the end of a line still

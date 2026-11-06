@@ -3372,6 +3372,7 @@ export type MachineRunResult = {
   seconds: number
   output?: string
   files?: string[]
+  library?: { file: string; path: string; size: string; mention?: string }[]
   notes: string[]
 }
 
@@ -3382,6 +3383,7 @@ export type MachineRunTools = {
       command: string
       cwd?: string
       outputs?: string[]
+      library?: { from: string; to: string }[]
       env?: Record<string, string>
       envFiles?: string[]
       timeoutMs?: number
@@ -3407,10 +3409,18 @@ function machineNote(result: MachineRunResult) {
         'Still running on the machine, where it goes on without this call. Wait for it with ' +
         `machine_run({ id: "${result.id}" }), or set a wake-up and end your turn; its outputs come back when it ends.`
       )
-    case 'succeeded':
-      return result.files?.length
-        ? `Done. Its outputs are in your folder: ${result.files.join(', ')}.`
-        : 'Done.'
+    case 'succeeded': {
+      const said = ['Done.']
+      if (result.files?.length)
+        said.push(`Its outputs are in your folder: ${result.files.join(', ')}.`)
+      if (result.library?.length)
+        said.push(
+          `Saved to the library from the machine: ${result.library
+            .map((file) => file.mention ?? file.path)
+            .join(', ')}. Name each by its mention in your reply.`,
+        )
+      return said.join(' ')
+    }
     case 'stopped':
       return 'Stopped.'
     default:
@@ -3471,7 +3481,28 @@ export function machineTools(
   runs: MachineRunTools,
   credentials: Pick<Credentials, 'env'>,
   arrivals?: Arrivals,
+  /** The teammate may save to the library (somewhere in it): its commands may too, from there. */
+  options: { library?: boolean } = {},
 ): Record<string, Tool> {
+  const library = {
+    type: 'array' as const,
+    items: {
+      type: 'object' as const,
+      properties: {
+        from: { type: 'string' as const, description: 'A file it makes, relative to cwd' },
+        to: {
+          type: 'string' as const,
+          description: 'Its library path, e.g. "Projects/X/videos/video.mp4"',
+        },
+      },
+      required: ['from', 'to'],
+    },
+    maxItems: 20,
+    description:
+      'Files it makes to save to the library straight from the machine once it succeeded, as save_to_library ' +
+      'would (same access, size and checks), e.g. [{"from": "renders/video.mp4", "to": "Projects/X/videos/video.mp4"}]. ' +
+      'Each one’s mention comes back; the file itself does not, unless also in `outputs`',
+  }
   return {
     run_on_machine: tool({
       description:
@@ -3492,14 +3523,21 @@ export function machineTools(
         "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
         'what it needs (e.g. "pip install faster-whisper && python transcribe.py"), with settings in `env` and vault ' +
         'credentials in `credentials`; what it installs stays on its disk. ' +
-        'Name in `outputs` the files or folders it makes that you need here (a video, frames to look at, a transcript), ' +
-        'relative to cwd: they come back to the same place in your folder once it ends, whether it succeeded or not. ' +
+        'Name in `outputs` the files or folders it makes that you need here (' +
+        (options.library ? '' : 'a video, ') +
+        'frames to look at, a transcript), relative to cwd: they come back to the same place in your folder ' +
+        'once it ends, whether it succeeded or not. ' +
+        (options.library
+          ? 'A file for the library (a render, a video) goes there from the machine with `library` instead, never ' +
+            'through this computer: do not bring it back to save it. '
+          : '') +
         'Waits up to `waitMinutes` for it to end, or until a message comes in or Brigade updates; a longer ' +
         'one keeps running there: wait again with machine_run.',
       inputSchema: jsonSchema<{
         command: string
         cwd?: string
         outputs?: string[]
+        library?: { from: string; to: string }[]
         env?: Record<string, string>
         credentials?: string[]
         timeoutMinutes?: number
@@ -3523,8 +3561,9 @@ export function machineTools(
             items: { type: 'string' },
             maxItems: 20,
             description:
-              'Files or folders it makes, relative to cwd, brought back here once it ends, e.g. ["renders/video.mp4"]',
+              'Files or folders it makes, relative to cwd, brought back here once it ends, e.g. ["renders/frames"]',
           },
+          ...(options.library ? { library } : {}),
           env: {
             type: 'object',
             additionalProperties: { type: 'string' },
@@ -3549,6 +3588,10 @@ export function machineTools(
         required: ['command'],
       }),
       execute: async (input, { abortSignal, toolCallId }) => {
+        if (input.library?.length && !options.library)
+          throw new Error(
+            'You may not save to the library: name the files in `outputs` to bring them back instead',
+          )
         const envFiles: string[] = []
         for (const credentialId of input.credentials ?? []) {
           const released = await credentials.env(credentialId, {
@@ -3564,6 +3607,7 @@ export function machineTools(
               command: input.command,
               ...(input.cwd ? { cwd: input.cwd } : {}),
               ...(input.outputs?.length ? { outputs: input.outputs } : {}),
+              ...(input.library?.length ? { library: input.library } : {}),
               ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}),
               ...(envFiles.length ? { envFiles } : {}),
               ...(input.timeoutMinutes ? { timeoutMs: input.timeoutMinutes * 60_000 } : {}),

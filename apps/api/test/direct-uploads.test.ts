@@ -572,6 +572,117 @@ test("a runner's library file is uploaded, checked, then saved by its id", { ski
 })
 
 test(
+  "a runner's save sent twice by the same upload is made once, never over what came since",
+  { skip },
+  async () => {
+    const bytes = strToU8('a render, saved once\n')
+    const path = `Reports/once-${id}.txt`
+    const { id: uploadId, complete } = await runnerUpload('library', path, bytes)
+    assert.equal(complete.status, 200)
+    const op = { name: 'save', path, upload: { id: uploadId } }
+    // Sent twice at once (a runner that restarted before it heard the first's answer): one is made.
+    const replies = await Promise.all([libraryCall(op), libraryCall(op)])
+    assert.deepEqual(
+      replies.map((reply) => reply.ok).sort(),
+      [false, true],
+      JSON.stringify(replies),
+    )
+    const doc = await scoped(scope).document.findFirstOrThrow({ where: { path } })
+    assert.equal(doc.sha256, sha(bytes))
+    // A person saves a newer version there; the same save sent once more writes nothing over it.
+    const newer = strToU8('a newer version, by a person\n')
+    const saved = await app.request(
+      '/api/library/files',
+      json({ path, uploadId: await ready('library', path, newer) }),
+    )
+    assert.ok(saved.status < 300, await saved.clone().text())
+    const again = await libraryCall(op)
+    assert.equal(again.ok, false)
+    const now = await scoped(scope).document.findFirstOrThrow({ where: { path } })
+    assert.equal(now.sha256, sha(newer))
+  },
+)
+
+test(
+  'an upload taken for its use keeps its bytes from the sweep while it is used, however old',
+  { skip },
+  async () => {
+    const { claimUpload, sweepFileUploads, uploadBytesKey } = await import('../src/uploads.js')
+    const bytes = strToU8('a render whose upload took a while')
+    const { id: uploadId, complete } = await runnerUpload(
+      'library',
+      `Reports/slow-${id}.txt`,
+      bytes,
+    )
+    assert.equal(complete.status, 200)
+    // Its URL was signed longer ago than the sweep leaves a used upload's bytes.
+    await prisma.upload.update({
+      where: { id: uploadId },
+      data: { createdAt: new Date(Date.now() - 20 * 60_000) },
+    })
+    assert.equal(await claimUpload(scoped(scope), uploadId), true)
+    assert.equal(await claimUpload(scoped(scope), uploadId), false, 'taken once')
+    const row = await prisma.upload.findUniqueOrThrow({ where: { id: uploadId } })
+    await sweepFileUploads()
+    assert.equal(
+      await objectSize(uploadBytesKey(scope, row)),
+      bytes.byteLength,
+      'still there to copy',
+    )
+  },
+)
+
+test(
+  "a runner's library upload to a path its teammate may not save to is refused before its bytes go",
+  { skip },
+  async () => {
+    const where = { organizationId: ids.organization, workspaceId: scope.workspaceId }
+    const reader = await prisma.teammate.create({
+      data: { ...where, name: 'Rae', libraryAccess: 'read' },
+    })
+    await prisma.threadTeammate.create({
+      data: { ...where, sessionId: seat.sessionId, teammateId: reader.id },
+    })
+    // A folder kept from every teammate it grants nothing.
+    const kept = `Kept-${id}`
+    await prisma.libraryFolder.create({ data: { ...where, path: kept, restricted: true } })
+    const bytes = strToU8('a render, say')
+    const start = (teammateId: string, name: string, purpose = 'library') =>
+      app.request(
+        '/runner/uploads',
+        json(
+          {
+            purpose,
+            sessionId: seat.sessionId,
+            teammateId,
+            name,
+            size: bytes.byteLength,
+            sha256: sha(bytes),
+          },
+          runner,
+        ),
+      )
+    const count = () => prisma.upload.count({ where: { organizationId: ids.organization } })
+    const before = await count()
+    const readOnly = await start(reader.id, 'Reports/render.mp4')
+    assert.equal(readOnly.status, 403)
+    assert.match(
+      await readOnly.text(),
+      /Rae may read that folder of the library but not save to it/,
+    )
+    const hidden = await start(seat.teammateId, `/${kept}//render.mp4`)
+    assert.equal(hidden.status, 403)
+    assert.match(await hidden.text(), /Riley has no access to that folder of the library/)
+    assert.equal(await count(), before, 'nothing started: no URL to PUT the bytes to')
+    // Where it may save, as before; a skill's file is no library path, whoever uploads it.
+    assert.equal((await start(seat.teammateId, 'Reports/render.mp4')).status, 201)
+    assert.equal((await start(reader.id, `${kept}/run.sh`, 'skill_file')).status, 201)
+    await prisma.libraryFolder.deleteMany({ where: { ...where, path: kept } })
+    await prisma.threadTeammate.deleteMany({ where: { teammateId: reader.id } })
+  },
+)
+
+test(
   "a skill proposal names files its runner uploaded; approved, they are the skill's",
   { skip },
   async () => {

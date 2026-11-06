@@ -69,3 +69,32 @@ test('a thread with a machine of its own says to run heavy work there; one witho
   assert.match(text(true), /run_on_machine/)
   assert.doesNotMatch(text(false), /Heavy work|run_on_machine/)
 })
+
+test('a teammate that may save to the library saves renders there from the machine; one that may not, brings them back', () => {
+  const text = (library: 'read' | 'read_write') => {
+    const spec = ThreadSpec.parse({
+      sessionId: 's1',
+      teammate: {
+        id: 'riley',
+        name: 'Riley',
+        instructions: '',
+        harness: 'claude_code',
+        model: null,
+      },
+      permissionMode: 'allow-all',
+      account: { id: 'a1', provider: 'claude_code', source: 'machine' },
+      fallbacks: [],
+      machine: true,
+      library,
+    })
+    const memory = threadMemory(spec, { workspace: '', teammate: '', lines: {} }, '/t', new Date())
+    return instructions(spec, memory, '/library', { ready: true })
+  }
+  assert.match(
+    text('read_write'),
+    /Save what it makes for the library \(a render, a video\) straight from there with `library`/,
+  )
+  assert.match(text('read_write'), /never by bringing it back to save it/)
+  assert.doesNotMatch(text('read'), /straight from there with `library`/)
+  assert.match(text('read'), /Name in `outputs` the files you need back here \(a render/)
+})

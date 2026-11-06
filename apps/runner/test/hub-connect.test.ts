@@ -84,3 +84,67 @@ test('the workspace the welcome names is kept, and named on the next connection'
     server.close()
   }
 })
+
+test('a call the API refused, or that never went, says so; one cut by a lost connection does not', async () => {
+  const server = new WebSocketServer({ port: 0 })
+  await new Promise((resolve) => server.once('listening', resolve))
+  const sockets: import('ws').WebSocket[] = []
+  let refuse = true
+  server.on('connection', (ws) => {
+    sockets.push(ws)
+    ws.on('message', (raw) => {
+      const message = JSON.parse(String(raw)) as { type: string; callId?: string }
+      if (message.type === 'hello')
+        ws.send(JSON.stringify({ type: 'welcome', runnerId: 'r', computerId: 'c' }))
+      // The first call is refused; the second is under way when the connection drops.
+      else if (message.type === 'library.call' && refuse) {
+        refuse = false
+        ws.send(
+          JSON.stringify({
+            type: 'connector.result',
+            callId: message.callId,
+            ok: false,
+            error: 'This upload was used or refused; upload it again',
+          }),
+        )
+      } else if (message.type === 'library.call') ws.terminate()
+    })
+  })
+  const port = (server.address() as { port: number }).port
+  const taken: ApiToRunner[] = []
+  const connection = new Connection(
+    { apiUrl: `http://127.0.0.1:${port}`, token: 'test', computerId: 'c', workspaceName: 'Test' },
+    new Outbox(join(home, 'outbox-calls')),
+    (message) => void taken.push(message),
+    async () => ({}),
+    () => false,
+  )
+  const call = () =>
+    connection.callLibrary({
+      sessionId: 's',
+      teammateId: 't',
+      operation: { name: 'save', path: 'X/a.txt', upload: { id: 'u1' } },
+    })
+  const failure = (promise: Promise<unknown>) =>
+    promise.then(
+      () => assert.fail('it succeeded'),
+      (error: Error & { answered?: boolean }) => error,
+    )
+  try {
+    // Not connected yet: it never went.
+    assert.equal((await failure(call())).answered, true)
+    connection.start()
+    await until(() => taken.some((m) => m.type === 'welcome'), 'the welcome')
+    const refused = await failure(call())
+    assert.equal(refused.message, 'This upload was used or refused; upload it again')
+    assert.equal(refused.answered, true)
+    // Under way when the connection is lost: it may have been made.
+    const cut = await failure(call())
+    assert.match(cut.message, /Lost the connection to Brigade/)
+    assert.equal(cut.answered, undefined)
+  } finally {
+    connection.close()
+    for (const ws of sockets) ws.terminate()
+    server.close()
+  }
+})

@@ -417,7 +417,14 @@ function createAgent(
         ...previewTools(preview, credentials),
         // Heavy commands on the thread's machine of its own, where its starter chose one.
         // A message or an update ends their waits; the command goes on there (arrivals.ts).
-        ...(spec.machine && machine ? machineTools(machine, credentials, arrivals) : {}),
+        ...(spec.machine && machine
+          ? machineTools(machine, credentials, arrivals, {
+              // As save_to_library: a teammate that may save somewhere in the library.
+              library:
+                library.access === 'read_write' ||
+                !!library.folders?.some((folder) => folder.access === 'read_write'),
+            })
+          : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
         ...(computer ? computerUseTools(computer) : {}),
         // Claude Code asks with its own question tool; Codex's adapter has none.
