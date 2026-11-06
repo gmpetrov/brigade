@@ -121,7 +121,7 @@ export async function runMade(handle: RunHandle, sandboxId: string) {
   if (!handle) return
   try {
     await prisma.vmRun.updateMany({
-      where: { id: handle.id, sandboxId: null },
+      where: { id: handle.id, sandboxId: null, status: 'pending' },
       data: { sandboxId },
     })
   } catch (error) {
