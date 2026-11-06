@@ -494,7 +494,8 @@ test(
       const waitFor = (ms: number, signal?: AbortSignal) =>
         new Promise<void>((done) => {
           if (signal?.aborted) return done()
-          const timer = setTimeout(done, ms)
+          // At most 15 s: a wait that is not cut fails the test, rather than hold the run.
+          const timer = setTimeout(done, Math.min(ms, 15_000))
           signal?.addEventListener('abort', () => (clearTimeout(timer), done()), { once: true })
         })
       const view = {
@@ -518,7 +519,11 @@ test(
         stop: async () => assert.fail('the command is not stopped'),
         list: () => [],
       }
-      const tools = machineTools(runs, { env: async () => ({ file: '' }) } as never, t.thread.arrivals)
+      const tools = machineTools(
+        runs,
+        { env: async () => ({ file: '' }) } as never,
+        t.thread.arrivals,
+      )
       const call = (name: string, input: object) =>
         tools[name]!.execute!(input as never, { toolCallId: name, messages: [] }) as Promise<{
           id: string

@@ -175,6 +175,12 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     `run_on_machine` and `machine_run` answer with the command still running, and the turn reads the message with
     that result. Only they: `start_preview` stops the app it starts when its wait is cut, `check_preview` is the
     check itself, and `email_wait` waits two minutes at most in the API.
+  - So does one when an update hands the turn over (`handOver`). The harness lets go of a turn only once its host's
+    calls are done, so a wait on a render held it past `HAND_OVER_MS`: the turn was stopped and started again, and
+    the command's id went with its call (Nov 6, 7 turns cut at 6 merges touching the runner; under Bash, before
+    `run_on_machine`, the update handed such commands over). The call now answers with the command's id and a note
+    to wait for it again, kept for the next runner to give the turn, and a wait that starts while the runner leaves
+    ends at once.
 - **A turn a person writes into reads as a chat** (`layoutThread` in `apps/web/components/thread-view.tsx`,
   `lib/chat-turn.ts`). Seen on Nov 4 at 13:45, once messages went into the running turn: every one carried "Steered
   into Riley's running turn", and each cut the turn's steps into pieces between them ("Searched once", "Ran cat …",
