@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHmac, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { after, before, beforeEach, describe, test } from 'node:test'
+import { after, before, beforeEach, describe, mock, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import type {
   ComputerRef,
@@ -505,6 +505,33 @@ describe('vm costs', { skip: !database && 'no database answers' }, () => {
       [
         ['void', 'resume'],
         ['open', 'resume'],
+      ],
+    )
+  })
+
+  test('a stop written in the same millisecond as the list, before it, does not hold back a found run', async () => {
+    const ledger = new FakeLedger()
+    await prisma.computer.update({
+      where: { id: ids.cloud },
+      data: { providerRef: { provider: 'boat', id: 'vm-same-ms' } },
+    })
+    const run = await beginRun(computer(), 'resume', 'vm-same-ms')
+    await runStarted(run, 'vm-same-ms', { resumedAt: new Date(Date.now() - 3600_000) })
+    ledger.vms.set('vm-same-ms', 'running')
+    // The clock stands still: the stop's write and the minute's check share one millisecond.
+    mock.timers.enable({ apis: ['Date'], now: Date.now() })
+    try {
+      await runStopped('vm-same-ms', new Date(Date.now() - 60_000), 'provider')
+      await reconcileVmRuns(new Date(), ledger)
+    } finally {
+      mock.timers.reset()
+    }
+    const mine = (await runs()).filter((r) => r.sandboxId === 'vm-same-ms')
+    assert.deepEqual(
+      mine.map((r) => [r.status, r.start]),
+      [
+        ['closed', 'resume'],
+        ['open', 'found'],
       ],
     )
   })

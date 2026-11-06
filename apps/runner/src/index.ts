@@ -165,7 +165,12 @@ async function start() {
     )
   // Before any preview starts again on a port one of them may still hold. The harnesses of
   // turns an update handed over stay, for their threads to take up.
-  await processGroups.reap(takeHandOver()).then(
+  // The apps of previews handed over too: the next runner takes them up (Previews.adopt).
+  const kept = new Set([
+    ...takeHandOver(),
+    ...Previews.handedOverGroups(join(paths.state, 'previews.json')),
+  ])
+  await processGroups.reap(kept).then(
     (left) => left && console.log(`stopped what the runner before this one left running: ${left}`),
     (error: unknown) =>
       console.warn(`could not look for what the runner before left: ${String(error)}`),
@@ -537,7 +542,8 @@ async function start() {
         ])
           arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
-        // The previews an update stopped (once, after it), and the commands it stopped following.
+        // The previews an update handed over or stopped (once, after it), and the commands it
+        // stopped following.
         void previews.startAgain()
         machineRuns?.resume()
         threads.requeueLost(message.requeue ?? [], unacknowledged)
@@ -818,7 +824,7 @@ async function start() {
   }
   // An update waits only for what a restart would cut short and cannot hand over: a terminal,
   // a sign-in. The turns running then go on in their harnesses, which the new runner takes up
-  // (hand-over.ts); previews start again there.
+  // (hand-over.ts); previews too, where they are (Previews.handOver).
   const updater = new Updater({
     apiUrl: config.apiUrl,
     quiet: () => terminals.count === 0 && !accounts.busy,
@@ -830,7 +836,8 @@ async function start() {
       noteHandOver(await threads.handOverTurns())
       clearTimeout(closing)
       terminals.closeAll()
-      await previews.stopForUpdate()
+      // Previews go on: the next runner takes them up where they are.
+      await previews.handOver()
       // Commands on threads' machines go on there: the next runner follows them.
       machineRuns?.detach()
       connection.close()
@@ -847,6 +854,10 @@ async function start() {
     (events, send) => eventFiles.take(events, send),
     new SeenCommands(join(paths.state, 'commands-seen.json')),
   )
+  // The previews the runner before this one handed over as it updated go on here, before
+  // anything looks for quiet threads (their containers, their namespaces); what needs the API
+  // waits for the connection (startAgain).
+  void previews.adopt()
   connection.start()
 
   // Free disk now and then: checkouts of quiet threads that hold nothing GitHub lacks.

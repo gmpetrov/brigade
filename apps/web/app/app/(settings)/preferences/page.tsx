@@ -5,38 +5,18 @@
 // feature), their rules
 // and Chief's daily pass, and deleting their own account. Notifications have their own section;
 // the theme is picked in the member's menu, in the sidebar.
+import { Check } from 'lucide-react'
 import { CHIEF_RULES_MAX, type ChiefSettings, type SetChief } from '@brigade/contracts'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread, useThreadDraft } from '@/components/new-thread'
+import { SettingRow, SettingsGroup } from '@/components/settings-group'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi } from '@/lib/api'
-
-function Section({
-  title,
-  detail,
-  children,
-}: {
-  title: string
-  detail: string
-  children: ReactNode
-}) {
-  return (
-    <section className="flex max-w-xl flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="text-muted-foreground text-sm">{detail}</p>
-      </div>
-      <Card className="px-6 py-5">{children}</Card>
-    </section>
-  )
-}
 
 export default function PreferencesPage() {
   const { me, reloadMe } = useDashboard()
@@ -77,59 +57,68 @@ export default function PreferencesPage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-extrabold tracking-tight">Preferences</h1>
         <p className="text-muted-foreground max-w-prose">
-          Yours alone: the rest of the workspace keeps its own.
+          Only for you: the rest of the workspace keeps its own.
         </p>
       </header>
 
-      <Section title="Messages" detail="Help while you write to a teammate.">
-        <div className="flex items-start justify-between gap-4">
-          <Label htmlFor="suggestions" className="grid gap-1 font-normal">
-            <span className="font-medium">Suggest my next message</span>
-            <span className="text-muted-foreground text-xs">
-              An empty message box shows what you may write next, in grey: Tab on a computer, Use on
-              a phone, puts it in. Only with Claude Code teammates.
-            </span>
-          </Label>
-          <Switch id="suggestions" checked={suggestions} onCheckedChange={suggest} />
-        </div>
-      </Section>
-
-      {mayMerge && (
-        <Section title="Pull requests" detail="What teammates open in your threads.">
-          <div className="flex items-start justify-between gap-4">
-            <Label htmlFor="auto-merge" className="grid gap-1 font-normal">
-              <span className="font-medium">Auto-merge when ready</span>
-              <span className="text-muted-foreground text-xs">
-                Once a teammate is done with a pull request, no review is under way or asked for,
-                and its checks pass, Brigade merges it. One that conflicts goes back to that
-                teammate to resolve, and its reviewer looks again if resolving did more than bring
-                in the base branch&apos;s changes. One with failed checks or changes asked for waits
-                for you.
-              </span>
-            </Label>
-            <Switch id="auto-merge" checked={autoMerge} onCheckedChange={merge} />
-          </div>
-        </Section>
-      )}
-
-      {hasMachines && (
-        <Section title="Machines" detail="Where your threads' previews and heavy work run.">
-          <div className="flex items-start justify-between gap-4">
-            <Label htmlFor="preview-machines" className="grid gap-1 font-normal">
-              <span className="font-medium">Run previews and heavy work on their own machine</span>
-              <span className="text-muted-foreground text-xs">
-                A thread you start gets a machine of its own (8 vCPU, 16 GB), not the cloud computer
-                your teammates work on: its preview runs there, and its teammates run heavy commands
-                there (video renders, builds, test suites). Its code stays on the cloud computer and
-                reaches the machine as it changes; what a command makes comes back. It sleeps when
-                nobody uses it and takes about half a minute to wake. Off, all of it runs on the
-                cloud computer, as before.
-              </span>
-            </Label>
-            <Switch id="preview-machines" checked={machines} onCheckedChange={previewOnMachine} />
-          </div>
-        </Section>
-      )}
+      <SettingsGroup title="Teammates">
+        <SettingRow
+          title="Suggest my next message"
+          detail="An empty message box shows what you may write next, in grey. Tab on a computer, Use on a phone, puts it in."
+          chips={['Claude Code teammates only']}
+          control={({ id, describedBy }) => (
+            <Switch
+              id={id}
+              aria-describedby={describedBy}
+              checked={suggestions}
+              onCheckedChange={suggest}
+            />
+          )}
+        />
+        {mayMerge && (
+          <SettingRow
+            title="Auto-merge when ready"
+            detail="Brigade merges a pull request once its teammate is done, its checks pass and no review is under way or asked for."
+            more={
+              <>
+                One that conflicts goes back to its teammate to resolve, and its reviewer looks
+                again if resolving did more than bring in the base branch&apos;s changes. One with
+                failed checks or changes asked for waits for you.
+              </>
+            }
+            control={({ id, describedBy }) => (
+              <Switch
+                id={id}
+                aria-describedby={describedBy}
+                checked={autoMerge}
+                onCheckedChange={merge}
+              />
+            )}
+          />
+        )}
+        {hasMachines && (
+          <SettingRow
+            title="Keep heavy work off the shared computer"
+            detail="Each thread you start runs its preview, builds and renders on a machine of its own."
+            chips={['8 vCPU · 16 GB', 'Wakes in about 30 s']}
+            more={
+              <>
+                Its code stays on the cloud computer and reaches the machine as it changes; what a
+                command makes comes back. The machine sleeps when nobody uses it. Off, all of it
+                runs on the cloud computer your teammates work on.
+              </>
+            }
+            control={({ id, describedBy }) => (
+              <Switch
+                id={id}
+                aria-describedby={describedBy}
+                checked={machines}
+                onCheckedChange={previewOnMachine}
+              />
+            )}
+          />
+        )}
+      </SettingsGroup>
 
       <ChiefSection />
 
@@ -182,72 +171,71 @@ function ChiefSection() {
   if (!data) return null
   const changed = text.trim() !== data.rules.trim()
   return (
-    <Section
-      title="Chief"
-      detail="Your rules tell your teammates what to decide without asking you. Your chief of staff can go through what waits on you each morning."
-    >
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="chief-rules" className="grid gap-1 font-normal">
-            <span className="font-medium">Your rules</span>
-            <span className="text-muted-foreground text-xs">
-              Short lines in your words. Every teammate working for you reads them, decides what
-              they settle and asks you only the rest. Merging, sending, publishing or paying still
-              waits for you.
-            </span>
-          </Label>
-          <Textarea
-            id="chief-rules"
-            rows={5}
-            maxLength={CHIEF_RULES_MAX}
-            placeholder={RULES_EXAMPLE}
-            value={text}
-            onChange={(e) => {
-              setRules(e.target.value)
-              setSaved(false)
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              disabled={!changed || saving}
-              onClick={() => {
-                setSaving(true)
-                void save({ rules: text })
-                  .then((ok) => {
-                    if (ok) {
-                      setRules(undefined)
-                      setSaved(true)
-                    }
-                  })
-                  .finally(() => setSaving(false))
+    <SettingsGroup title="Chief">
+      <SettingRow
+        title="Your rules"
+        detail="What your teammates may decide without asking you. Merging, sending, publishing or paying still waits for you."
+      >
+        {({ id, describedBy }) => (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              id={id}
+              aria-describedby={describedBy}
+              rows={4}
+              maxLength={CHIEF_RULES_MAX}
+              placeholder={RULES_EXAMPLE}
+              value={text}
+              onChange={(e) => {
+                setRules(e.target.value)
+                setSaved(false)
               }}
-            >
-              Save
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setWriting(true)}>
-              Write them with Chief
-            </Button>
-            {saved && !changed && (
-              <span className="text-muted-foreground text-xs">
-                Saved. Teammates read them from their next session.
-              </span>
-            )}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                disabled={!changed || saving}
+                onClick={() => {
+                  setSaving(true)
+                  void save({ rules: text })
+                    .then((ok) => {
+                      if (ok) {
+                        setRules(undefined)
+                        setSaved(true)
+                      }
+                    })
+                    .finally(() => setSaving(false))
+                }}
+              >
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setWriting(true)}>
+                Write them with Chief
+              </Button>
+              {saved && !changed && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Check aria-hidden className="size-3.5 text-success" />
+                  Saved for teammates&apos; next session
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <Label htmlFor="chief-pass" className="grid gap-1 font-normal">
-            <span className="font-medium">Daily pass</span>
-            <span className="text-muted-foreground text-xs">
-              Each morning from {data.hour}:00
-              {data.timezone ? ` (${data.timezone})` : ''}, when something waits on you, Chief goes
-              through it: it answers in your name the questions your rules settle, tries failed
-              threads again, and leaves the rest on Today with what it would do, and rules you may
-              want to add. Off, nothing runs.
-            </span>
-          </Label>
+        )}
+      </SettingRow>
+      <SettingRow
+        title="Daily pass"
+        detail="When something waits on you, Chief settles what your rules cover and leaves the rest on Today."
+        chips={[`Each morning · ${data.hour}:00${data.timezone ? ` ${data.timezone}` : ''}`]}
+        more={
+          <>
+            It answers in your name the questions your rules settle, tries failed threads again, and
+            says on Today what it would do with the rest, and rules you may want to add. Off,
+            nothing runs.
+          </>
+        }
+        control={({ id, describedBy }) => (
           <Switch
-            id="chief-pass"
+            id={id}
+            aria-describedby={describedBy}
             checked={data.pass}
             onCheckedChange={(pass) => {
               const timezone = browserTimezone()
@@ -257,11 +245,11 @@ function ChiefSection() {
               )
             }}
           />
-        </div>
-        {error && <p className="text-sm text-destructive-text">{error}</p>}
-      </div>
+        )}
+      />
+      {error && <p className="px-5 py-3 text-sm text-destructive-text">{error}</p>}
       {writing && <RulesDialog onClose={() => setWriting(false)} />}
-    </Section>
+    </SettingsGroup>
   )
 }
 

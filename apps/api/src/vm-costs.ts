@@ -346,9 +346,11 @@ export async function reconcileVmRuns(
   ledger: ProviderLedger | null = configured,
 ) {
   if (!ledger) return
+  // The live runs are read before the list: a VM whose run was live then is never adopted from
+  // it (adoptRunning), however close in time its stop came.
+  const live = await prisma.vmRun.findMany({ where: { status: { in: ['pending', 'open'] } } })
   const listedAt = new Date()
   const states = await ledger.states()
-  const live = await prisma.vmRun.findMany({ where: { status: { in: ['pending', 'open'] } } })
   const old = (run: VmRun) => now.getTime() - run.createdAt.getTime() >= PENDING_MS
   const seen: string[] = []
   for (const run of live) {
@@ -401,8 +403,12 @@ export async function reconcileVmRuns(
 
 /**
  * VMs of Brigade's running without a run: one from before runs were kept, or started outside
- * Brigade. Each gets a run from the list's time, counted as no start; not one whose run changed
- * since the list was read (a stop recorded meanwhile), nor one a start is writing now.
+ * Brigade. Each gets a run from the list's time, counted as no start; not one that had a live run
+ * when the runs were read just before the list (`live`: a stop recorded since, even in the same
+ * millisecond as the list), nor one that has a live run now (a start writing it), nor one whose
+ * run was written after the list (a start and its stop both since). That last is strictly after:
+ * a stop written in the list's own millisecond but before the runs were read is not "since", and
+ * comparing it with >= skipped the adoption at random.
  */
 async function adoptRunning(
   states: Map<string, VmState>,
@@ -423,7 +429,7 @@ async function adoptRunning(
         'open'::"VmRunStatus", ${listedAt}, ${listedAt}, now()
       WHERE NOT EXISTS (
         SELECT 1 FROM "VmRun" r WHERE r."sandboxId" = ${sandboxId}
-          AND (r."status" IN ('pending', 'open') OR r."updatedAt" >= ${listedAt})
+          AND (r."status" IN ('pending', 'open') OR r."updatedAt" > ${listedAt})
       )
       ON CONFLICT DO NOTHING`.catch((error: unknown) => {
       console.warn(`vm runs: adopting ${sandboxId} failed`, error)
