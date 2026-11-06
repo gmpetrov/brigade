@@ -33,6 +33,7 @@ import { FAILED_THREAD, failedWaitingAmong, failingRoutines, RECENT_FAILURES } f
 import { hubs } from './hub.js'
 import { laterKey, latersIn } from './later.js'
 import { waitingNow } from './pull-requests.js'
+import { rootOf } from './thread-root.js'
 import { sendPush, type Vapid } from './web-push.js'
 
 const SWEEP_MS = 30_000
@@ -170,6 +171,8 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
       title: true,
       startedByMemberId: true,
       parentId: true,
+      // A child's review: its root is its parent's parent (src/thread-root.ts).
+      parent: { select: { parentId: true } },
       teammate: { select: { name: true } },
     },
   }
@@ -293,8 +296,10 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
 
   const items = new Map<string, Item[]>(members.map((m) => [m.id, []]))
   /** The member put the thread away for later: nothing in it waits on them (src/later.ts). */
-  const putAway = (m: { id: string }, s: { id: string; parentId: string | null } | null) =>
-    !!s && laters.has(laterKey(m.id, s.parentId ?? s.id))
+  const putAway = (
+    m: { id: string },
+    s: { id: string; parentId: string | null; parent?: { parentId: string | null } | null } | null,
+  ) => !!s && laters.has(laterKey(m.id, rootOf(s)))
   /** Added once per key: a thread with several tickets is one item. */
   const add = (memberId: string, item: Item) => {
     const list = items.get(memberId)!

@@ -271,3 +271,96 @@ test(
     assert.equal(turns[1]!.filter((p) => p.type === 'finish').length, 1)
   },
 )
+
+/**
+ * Claude Code running a long shell command in the foreground, as 2.1.318 does: a local_bash task
+ * registered with is_backgrounded false, whose notification comes while the tool call that
+ * started it still runs (the 2026-11-06 health check's turn). With MOVED=1 the command is moved
+ * to the background before it ends: it reports back in a turn of Claude Code's own. Then Claude
+ * Code idles, as a kept process does, until its next message.
+ */
+const FOREGROUND_SDK = `import { appendFileSync } from 'node:fs'
+import { setTimeout as sleep } from 'node:timers/promises'
+const note = (what) => appendFileSync(process.env.FAKE_SDK_RECORD, JSON.stringify({ what, at: Date.now() }) + '\\n')
+const moved = process.env.MOVED === '1'
+export function query({ prompt }) {
+  const input = prompt[Symbol.asyncIterator]()
+  async function* run() {
+    const base = { session_id: 'fake-session', usage: { input_tokens: 1, output_tokens: 1 } }
+    const said = (text) => ({ type: 'assistant', parent_tool_use_id: null, session_id: 'fake-session', message: { id: 'm-' + text, role: 'assistant', content: [{ type: 'text', text }] } })
+    const first = await input.next()
+    yield { type: 'system', subtype: 'init', session_id: 'fake-session' }
+    yield said('Running the health check.')
+    yield { type: 'system', subtype: 'task_started', task_id: 'b1', task_type: 'local_bash', description: 'Run the health check', is_backgrounded: false, session_id: 'fake-session' }
+    if (moved) {
+      yield { type: 'system', subtype: 'task_updated', task_id: 'b1', patch: { is_backgrounded: true }, session_id: 'fake-session' }
+      yield { type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'b1', task_type: 'local_bash', description: 'Run the health check' }], session_id: 'fake-session' }
+      yield said('It runs in the background now.')
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'It runs in the background now.', user_message_uuid: first.value.uuid, ...base }
+      await sleep(500)
+      note('command done')
+      yield { type: 'system', subtype: 'background_tasks_changed', tasks: [], session_id: 'fake-session' }
+      yield { type: 'system', subtype: 'task_notification', task_id: 'b1', status: 'completed', summary: 'Run the health check', session_id: 'fake-session' }
+      yield said('The check passed.')
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'The check passed.', origin: { kind: 'task-notification' }, ...base }
+    } else {
+      yield { type: 'system', subtype: 'task_notification', task_id: 'b1', status: 'completed', summary: 'Run the health check', output_file: '', session_id: 'fake-session' }
+      yield said('All normal: reported.')
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'All normal: reported.', user_message_uuid: first.value.uuid, ...base }
+    }
+    for (;;) {
+      const next = await input.next()
+      if (next.done) return note('input closed')
+      note('next message')
+      yield said('Answer.')
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'Answer.', user_message_uuid: next.value.uuid, ...base }
+    }
+  }
+  const messages = run()
+  messages.interrupt = async () => {}
+  return messages
+}
+`
+
+test(
+  'a command run in the foreground holds nothing: the turn ends at its answer',
+  { timeout: 30_000 },
+  async () => {
+    const started = Date.now()
+    const { turns } = await bridgeTurn(FOREGROUND_SDK, {
+      permissionMode: 'allow-all',
+      // A child thread's (no guess at the next message), with a wait for a report longer than
+      // the test allows: a turn that waited for one would not end in time.
+      env: { ...claudeSettingsEnv(), BRIGADE_REPORT_WAIT_MS: '20000' },
+      prompts: ['hello', 'and now?'],
+    })
+    // Nothing to wait for: the thread never hears the turn waits on background work.
+    assert.deepEqual(waitingWords(turns[0] as never), [])
+    assert.equal(turns[0]!.filter((p) => p.type === 'finish').length, 1)
+    assert.equal(turns[1]!.filter((p) => p.type === 'finish').length, 1)
+    assert.ok(Date.now() - started < 15_000, 'the turns ended without waiting for a report')
+  },
+)
+
+test(
+  'a command moved to the background holds the turn until the teammate has read its result',
+  { timeout: 30_000 },
+  async () => {
+    const { turns, record } = await bridgeTurn(FOREGROUND_SDK, {
+      permissionMode: 'allow-all',
+      env: { ...claudeSettingsEnv(), BRIGADE_REPORT_WAIT_MS: '20000', MOVED: '1' },
+      prompts: ['hello'],
+    })
+    assert.ok(
+      record.some((r) => r.what === 'command done'),
+      JSON.stringify(record),
+    )
+    // It waited on the command, then the teammate read its result, and the turn ended once.
+    assert.deepEqual(waitingWords(turns[0] as never), [true, false])
+    assert.equal(turns[0]!.filter((p) => p.type === 'finish').length, 1)
+    const notified = turns[0]!.findIndex(
+      (p) => p.type === 'raw' && (p.rawValue as any)?.subtype === 'task_notification',
+    )
+    assert.ok(notified >= 0 && turns[0]!.findIndex((p) => p.type === 'finish') > notified)
+  },
+)

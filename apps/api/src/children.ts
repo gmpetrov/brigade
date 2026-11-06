@@ -36,9 +36,9 @@ import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { markOnChiefsWord } from './chief-answers.js'
-import { looksTaken } from './review-state.js'
+import { looksTaken, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { askedBy, loadThread, noSuchTeammate } from './thread-spec.js'
-import { fireNow, firedInARow } from './wakeups.js'
+import { fireNow, firedInARow, wakeupMessageId } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
 type ChildOperation = Extract<
@@ -153,13 +153,123 @@ export async function reviewVerdicts(
   return verdicts
 }
 
-/** Dashboards showing the parent refresh its children: told with the parent's own status. */
+/** How long a review's report that went to its child but never showed there still holds the child's. */
+const UNSHOWN_HOLD_MS = 30 * 60_000
+
+/**
+ * Why a child thread does not report yet: a review of a pull request it opened is under way in a
+ * child of its own (src/reviews.ts), or that review's report is still to wake it. It reports to
+ * its parent once the review is done (it approved, or the child stopped it), so the end of its
+ * turn meanwhile sends nothing, and `report` waits. Null when nothing holds it.
+ */
+export async function reviewHold(
+  db: ScopedDb,
+  sessionId: string,
+): Promise<{ number: number; reviewer: string } | null> {
+  const pulls = await db.pullRequest.findMany({
+    where: { sessionId, state: 'open', reviewSession: { parentId: sessionId } },
+    select: { number: true, reviewSession: { select: REVIEW_THREAD } },
+  })
+  if (!pulls.length) return null
+  const running = pulls.find((p) => p.reviewSession && reviewUnderWay(p.reviewSession))
+  if (running) return { number: running.number, reviewer: running.reviewSession!.teammate.name }
+  // Its report is in, and wakes this thread when it can take it (queued behind the turn at work,
+  // say): the turn that reads it reports, not one before. One that never showed a while after it
+  // went (a person took the thread over meanwhile) holds nothing more (UNSHOWN_HOLD_MS).
+  const last = await db.wakeup.findFirst({
+    where: { sessionId, kind: 'report', status: { in: ['pending', 'fired'] } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, status: true, firedAt: true },
+  })
+  const unread =
+    last &&
+    (last.status === 'pending' ||
+      (!!last.firedAt &&
+        Date.now() - last.firedAt.getTime() < UNSHOWN_HOLD_MS &&
+        !(await db.sessionEvent.findFirst({
+          where: {
+            sessionId,
+            type: 'message.user',
+            data: { path: ['messageId'], equals: wakeupMessageId(last.id) },
+          },
+          select: { seq: true },
+        }))))
+  const pull = pulls[0]!
+  return unread ? { number: pull.number, reviewer: pull.reviewSession!.teammate.name } : null
+}
+
+/**
+ * A review started in a child thread (src/reviews.ts), which waits for it until `until`: the
+ * child reports to its parent once it is done, so a report it made in this turn, or a
+ * conversation's last word still to go, waits for it too, and its parent's wait outlasts the
+ * review's. Its parent asking for it (request_review on a pull request its child opened) waits
+ * for the child again, as message_thread does, as long: one it did not wait for (start_child
+ * with wait false) too, with a wait of its own.
+ */
+export async function holdForReview(
+  scope: Scope,
+  childId: string,
+  options: { until: Date; askedBy?: string },
+) {
+  const db = scoped(scope)
+  const child = await db.session.findFirst({ where: { id: childId }, select: { parentId: true } })
+  if (!child?.parentId) return
+  if (options.askedBy)
+    await db.session.updateMany({
+      where: { id: childId },
+      data: {
+        report: Prisma.DbNull,
+        reportDeliveredAt: null,
+        reportDueAt: null,
+        awaited: true,
+        awaitUntil: waitUntil(undefined),
+        parentTeammateId: options.askedBy,
+      },
+    })
+  else
+    await db.session.updateMany({
+      where: { id: childId, reportDeliveredAt: null },
+      data: { report: Prisma.DbNull, reportDueAt: null },
+    })
+  await outlast(db, childId, options.until)
+  await parentChanged(scope, child.parentId)
+}
+
+/** How long a child's parent waits for it past the review it waits for: it hears the review first. */
+const OUTLAST_MS = 60 * 60_000
+
+/**
+ * A child waits for its review until `until`: its parent waits for it a while longer, while it
+ * does, so that the child hears first when that review runs late. A wait already longer stays;
+ * an awaited child without one gets one, so the sweep still settles it (settleOverdueChildren).
+ */
+async function outlast(db: ScopedDb, childId: string, until: Date) {
+  const later = new Date(until.getTime() + OUTLAST_MS)
+  await db.session.updateMany({
+    where: {
+      id: childId,
+      awaited: true,
+      reportDeliveredAt: null,
+      // None set is waiting for ever, which nothing awaited does: it gets one.
+      OR: [{ awaitUntil: null }, { awaitUntil: { lt: later } }],
+    },
+    data: { awaitUntil: later },
+  })
+}
+
+/**
+ * Dashboards showing the parent refresh its children: told with the parent's own status. A
+ * child's review changed: the thread at the top, which shows that child, too.
+ */
 export async function parentChanged(scope: Scope, parentId: string) {
   const parent = await scoped(scope).session.findFirst({
     where: { id: parentId },
-    select: { status: true },
+    select: { status: true, parent: { select: { id: true, status: true } } },
   })
-  if (parent) void hubs.get(scope.workspaceId).broadcast(threadUpdated(parentId, parent.status))
+  if (!parent) return
+  const hub = hubs.get(scope.workspaceId)
+  void hub.broadcast(threadUpdated(parentId, parent.status))
+  if (parent.parent) void hub.broadcast(threadUpdated(parent.parent.id, parent.parent.status))
 }
 
 /**
@@ -496,9 +606,46 @@ export async function reportConversation(scope: Scope, childId: string) {
 }
 
 /**
+ * A child its review held from reporting (reviewHold), once that review stopped with no word to
+ * it (its pull request was closed): its last message goes to its parent, as at the end of its
+ * turn. Not while it works, asks a person or talks with one: what ends that reports.
+ */
+export async function reportHeld(scope: Scope, childId: string) {
+  const db = scoped(scope)
+  const child = await db.session.findFirst({
+    where: { id: childId },
+    select: {
+      parentId: true,
+      status: true,
+      report: true,
+      reportDeliveredAt: true,
+      reportDueAt: true,
+    },
+  })
+  if (!child?.parentId || child.reportDeliveredAt || child.reportDueAt || reportOf(child.report))
+    return
+  if (!['idle', 'done'].includes(child.status) || (await reviewHold(db, childId))) return
+  const report: ChildReport = {
+    status: 'report',
+    summary: clipReport((await lastMessage(childId)) || 'It ended without a word.', REPORT_MAX),
+    at: new Date().toISOString(),
+    fromLastMessage: true,
+  }
+  const { count } = await db.session.updateMany({
+    where: { id: childId, reportDeliveredAt: null, report: { equals: Prisma.DbNull } },
+    data: { report },
+  })
+  if (!count) return
+  await deliverReport(scope, childId)
+  await wakeFollowers(scope, childId)
+}
+
+/**
  * A child's stored events (src/hub.ts): a new message clears its report, as the
  * child works again; the end of its turn settles its report (its last message
  * stands in for one it did not make) and sends it on; an error is a failed report.
+ * While a review of its pull request is under way in a child of its own (reviewHold), the end
+ * of a turn sends nothing: the review's report wakes it, and that turn reports.
  * A turn that answered a person, with no report, sends nothing yet: they may still be
  * talking it through, so its last message goes once they have been quiet a while
  * (reportConversation). An error the runner tries the turn again after (stopped for memory, a
@@ -562,6 +709,16 @@ export async function noteChildEvents(
         select: { report: true, reportDeliveredAt: true },
       })
       if (!row || row.reportDeliveredAt) continue
+      // Its pull request's review is under way, or its report is still to wake it: it reports
+      // once that is done, from the turn the review's report brings.
+      if (
+        !reportOf(row.report) &&
+        event.type === 'turn.completed' &&
+        (await reviewHold(db, session.id))
+      ) {
+        await parentChanged(scope, session.parentId)
+        continue
+      }
       if (
         !reportOf(row.report) &&
         event.type === 'turn.completed' &&
@@ -842,12 +999,13 @@ async function followThread(
   if (threadId === session.id) return { error: 'A thread cannot follow itself.' }
   const thread = await db.session.findFirst({
     where: { id: threadId },
-    select: { ...CHILD_SELECT, playbookRunId: true },
+    select: { ...CHILD_SELECT, playbookRunId: true, parent: { select: { parentId: true } } },
   })
   if (!thread) return { error: 'No thread of this workspace has that id.' }
   if (thread.parentId === session.id)
     return { error: 'That is your own child thread: its report already comes to you.' }
-  if (!thread.parentId)
+  // A review under a child reports to that child, which reports on.
+  if (!thread.parentId || thread.parent?.parentId)
     return {
       error:
         'Only a child thread can be followed: it is the kind that ends with a report. list_children shows those of your playbook’s other runs.',
@@ -947,6 +1105,7 @@ export async function messageChild(
   const thread = await loadThread(db, child.id)
   if (thread.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
+  const until = waitUntil(undefined)
   await db.session.updateMany({
     where: { id: child.id },
     data: {
@@ -954,12 +1113,14 @@ export async function messageChild(
       reportDeliveredAt: null,
       reportDueAt: null,
       awaited: true,
-      awaitUntil: waitUntil(undefined),
+      awaitUntil: until,
       parentTeammateId: teammate.id,
       // Archived with its parent's old work, it comes back.
       archivedAt: null,
     },
   })
+  // A child thread asking its review to look again: its own parent waits for it that long too.
+  if (reviewed) await outlast(db, parent.id, until)
   // Work handed on Chief's word goes on it there too; a review stays the review it is.
   if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordSeq: parent.chiefWordSeq ?? null })
   const outcome = await promptThread(db, scope, thread, {
@@ -995,6 +1156,14 @@ export async function handleChildCall(
       return {
         error:
           'This thread has no parent: report is only for a child thread. Just reply to the person.',
+      }
+    const held = await reviewHold(db, session.id)
+    if (held)
+      return {
+        error:
+          `#${held.number} is still in review by ${held.reviewer}: do not report yet. End your turn now; ` +
+          'you are woken here with its report. Report once it approves, or once you stop asking it ' +
+          'to look again because it goes in circles, with its verdict.',
       }
     // Its files are its parent's now: in each of its teammates' folders before its next turn.
     const files = op.files?.length
@@ -1032,7 +1201,9 @@ export async function handleChildCall(
     const others = await db.session.findMany({
       where: {
         id: { not: session.id },
+        // A run's child, not a review under one.
         parentId: { not: null },
+        parent: { parentId: null },
         NOT: { parentId: session.id },
         playbookRun: { installationId, dryRun: false },
         createdAt: { gte: new Date(Date.now() - OTHER_RUNS_DAYS * 24 * 60 * 60_000) },

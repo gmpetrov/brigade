@@ -5,6 +5,7 @@
 import { onScopedWrite, scoped, type Scope } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { reopenThread } from './thread-done.js'
+import { below, rootIdOf } from './thread-root.js'
 
 /** A thread and its children, archived or back. */
 export async function setThreadArchived(scope: Scope, threadId: string, on: boolean) {
@@ -20,23 +21,20 @@ export async function setThreadArchived(scope: Scope, threadId: string, on: bool
     // Its place in the list stays where it was.
     data: { archivedAt: at, updatedAt: thread.updatedAt },
   })
-  // Its children go and come back with it.
-  await db.session.updateMany({ where: { parentId: thread.id }, data: { archivedAt: at } })
+  // Its sub-threads go and come back with it: its children, and their reviews.
+  await db.session.updateMany({ where: below(thread.id), data: { archivedAt: at } })
   // Archived is put away for everyone: no longer for later for anyone (src/later.ts).
   if (at) await db.threadLater.deleteMany({ where: { sessionId: thread.id } })
   void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
 }
 
-/** Something new waits on a person in an archived thread, or one of its children: it is back. */
+/** Something new waits on a person in an archived thread, or one of its sub-threads: it is back. */
 async function bringBack(scope: Scope, sessionId: string) {
   const db = scoped(scope)
-  const session = await db.session.findFirst({
-    where: { id: sessionId },
-    select: { parentId: true },
-  })
-  if (!session) return
+  const rootId = await rootIdOf(db, sessionId)
+  if (!rootId) return
   const root = await db.session.findFirst({
-    where: { id: session.parentId ?? sessionId, archivedAt: { not: null } },
+    where: { id: rootId, archivedAt: { not: null } },
     select: { id: true },
   })
   if (root) await setThreadArchived(scope, root.id, false)

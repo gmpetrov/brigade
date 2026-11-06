@@ -5,7 +5,9 @@
 // The command's folder goes to the machine first, as a preview's does (preview-machine.ts): the
 // whole checkout it is in, into the teammate's own copy there (`commands/<teammate>/…`, apart
 // from the preview's, so a build never writes under a running dev server), which stays between
-// commands with what they installed; the next command sends only what changed. The command runs
+// commands with what they installed; the next command sends only what changed. Before it goes,
+// the thread's attached files are put at the same place in that copy as in the teammate's folder,
+// fetched by the machine itself from storage (machine-files.ts). The command runs
 // detached there (its own session), its output in a file the runner follows: a cut connection,
 // or the runner starting again after an update, loses none of it, and a run outlives the tool
 // call that started it. Once it ends, the files the teammate named come back into its folder,
@@ -16,7 +18,8 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
-import type { PreviewMachineAccess } from '@brigade/contracts'
+import type { PreviewMachineAccess, ThreadAttachmentRef } from '@brigade/contracts'
+import { placeAttachments, type FilesApi } from './machine-files.js'
 import type { MachineHolds } from './machine-holds.js'
 import {
   envFileText,
@@ -186,6 +189,11 @@ type ThreadMachine = {
   connecting?: Promise<void>
   /** By the folder here that goes there. */
   copies: Map<string, { sync: MachineSync; flushing: Promise<unknown> }>
+  /**
+   * Attached files being put there: one placing at a time on the machine, each fetching a few at
+   * once, so its connection's sessions stay few.
+   */
+  placing?: Promise<unknown>
   /** Its commands not over yet (their files not back yet included). */
   active: Set<Run>
   touchTimer?: NodeJS.Timeout
@@ -335,6 +343,16 @@ export class MachineRuns {
       stateFile: string
       /** Tests: how to reach a machine. */
       link?: (access: PreviewMachineAccess, key: string, stateDir: string) => MachineLink
+      /**
+       * The thread's attached files: put in the teammate's copy on the machine before each
+       * command, at the same place as in its folder, fetched there from storage (machine-files.ts).
+       */
+      files?: {
+        /** Those given to the seat's folder so far (its turns' files, its calls'). */
+        of: (seat: RunSeat) => ThreadAttachmentRef[]
+        /** Where the API has them: its redirect to the bucket gives each one's signed URL. */
+        api: FilesApi
+      }
       /** Tests: the sync's reader for a folder, as the teammate. */
       reader?: (seat: RunSeat, net: ThreadNet | null, root: string) => ChildProcess
       /** Tests: after a thread's last command, how long its machine stays up. */
@@ -623,6 +641,57 @@ export class MachineRuns {
     }
   }
 
+  /**
+   * The thread's attached files in the teammate's copy there, at the same place as in its folder:
+   * those the machine lacks fetched there from storage. What could not be is said in the run's
+   * notes; the command runs anyway.
+   */
+  private async placeFiles(run: Run, thread: ThreadMachine, link: MachineLink) {
+    const files = this.options.files
+    const refs = files?.of(run.seat) ?? []
+    if (!files || !refs.some((ref) => ref.status === 'ready')) return
+    const { teammateId } = run.seat
+    // One placing at a time: two commands starting at once fetch each file once.
+    const placing = (thread.placing ?? Promise.resolve()).then(() =>
+      placeAttachments({
+        link,
+        api: files.api,
+        refs,
+        workDir: run.seat.workDir,
+        ...(run.seat.runAs ? { runAs: run.seat.runAs } : {}),
+        teammateId,
+        copy: posix.join(COPIES, teammateId),
+        // What a sync sends as it is, this command's folder and those of its others under way.
+        syncRoots: [run.root, ...thread.copies.keys()],
+      }),
+    )
+    thread.placing = placing.catch(() => undefined)
+    try {
+      const { fetched, failed, unchecked } = await placing
+      if (fetched.length) {
+        const bytes = fetched.reduce((sum, file) => sum + file.size, 0)
+        const names = fetched.map((file) => file.path)
+        const shown =
+          names.length > 5
+            ? `${names.slice(0, 5).join(', ')} and ${names.length - 5} more`
+            : names.join(', ')
+        run.notes.push(
+          `Fetched ${fetched.length} attached file${fetched.length === 1 ? '' : 's'} ` +
+            `(${size(bytes)}) from storage: ${shown}`,
+        )
+      }
+      for (const file of failed) run.notes.push(`${file.path} is not on the machine: ${file.why}`)
+      for (const file of unchecked)
+        run.notes.push(
+          `${file.path} was not placed from storage: its copy here could not be checked (${file.why})`,
+        )
+    } catch (error) {
+      run.notes.push(
+        `The thread's attached files could not be put on the machine: ${errorText(error)}`,
+      )
+    }
+  }
+
   /** The sync's reader, as the teammate in its thread's namespaces: it reads what the command would. */
   private startReader(seat: RunSeat, net: ThreadNet | null, root: string) {
     const args = [READER, root]
@@ -645,6 +714,10 @@ export class MachineRuns {
     let link: MachineLink
     try {
       link = await this.machine(run, thread)
+      if (run.ending)
+        return await this.finish(run, thread, link, { status: run.ending, ran: false })
+      // Before its folder goes: a sync that sends the attachments folder finds them there already.
+      await this.placeFiles(run, thread, link)
       if (run.ending)
         return await this.finish(run, thread, link, { status: run.ending, ran: false })
       const sent = await this.sendFolder(run, thread, link)
@@ -903,6 +976,7 @@ export class MachineRuns {
       thread.touchTimer = undefined
       for (const copy of thread.copies.values()) copy.sync.stop()
       thread.copies.clear()
+      thread.placing = undefined
       thread.link?.close()
     }
     if (!run.held) return

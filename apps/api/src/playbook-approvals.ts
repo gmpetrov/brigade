@@ -64,8 +64,9 @@ const TICKET_SESSION = {
     origin: true,
     startedByMemberId: true,
     projectId: true,
-    // A child's ticket also marks its parent, which shows the child.
+    // A child's ticket also marks its parent, which shows the child; a child's review's, both.
     parentId: true,
+    parent: { select: { parentId: true } },
     // Archived: it no longer waits on anyone (waitsOn), though the Tickets page lists it.
     archivedAt: true,
     teammate: { select: { id: true, name: true } },

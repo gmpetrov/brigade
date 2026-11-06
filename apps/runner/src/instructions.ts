@@ -857,7 +857,9 @@ const MACHINE =
   'Docker. Keep quick commands here: git, reading, searching and editing files, probes such as ffprobe, small ' +
   'scripts, a single test. Run each in the folder it needs (a checkout, or the project’s folder): that folder ' +
   'goes to the machine first, then only what changed, and what commands install there stays for the next ones; ' +
-  "the machine has none of this computer's environment. Name in `outputs` the files you need back here (a " +
+  "the machine has none of this computer's environment. The thread's attached files are there too, whatever " +
+  'their size, at the same path relative to your working directory as here (`attachments/…`): name them as ' +
+  'you would here. Name in `outputs` the files you need back here (a ' +
   "render, frames to look at, a report). A command longer than the call's wait goes on there: wait for it with " +
   '`machine_run`, or set a wake-up and end your turn.'
 
@@ -943,7 +945,10 @@ const children = (spec: ThreadSpec) =>
       '`report` once and end your turn: your report reaches the parent when your turn ends. If something you need ' +
       'is missing (a decision, an input), do not guess: report it as what you need, and the parent answers by ' +
       'writing here. When only a person can decide, open a ticket: your turn waits for their answer, then carry ' +
-      'on. You cannot start child threads, schedules or wake-ups of your own. ' +
+      'on. You cannot start child threads, schedules or wake-ups of your own' +
+      (spec.git
+        ? ': the review of a pull request you open is the one thread Brigade starts under this one (see Code). '
+        : '. ') +
       SUB_THREAD +
       '\n\n' +
       'When a person writes here, talk it through with them; your answers do not go to the parent. Once they ' +
@@ -1164,19 +1169,21 @@ const credentials = (browser: Browser) =>
 
 /**
  * Who decides whether this thread's pull requests get a review by another teammate: the
- * teammate (the project's default), only someone who asks, or, in a child thread, the thread
- * that started it. A playbook's run follows its playbook.
+ * teammate (the project's default) or only someone who asks, in a child thread too. A
+ * playbook's run follows its playbook.
  */
 const reviewPolicy = (spec: ThreadSpec) =>
-  spec.playbook ? 'none' : spec.parent ? 'child' : (spec.project?.reviewPolicy ?? 'teammate')
+  spec.playbook ? 'none' : (spec.project?.reviewPolicy ?? 'teammate')
 
-/** After a review: what the author does with its report. */
-const AFTER_REVIEW =
-  'With a review, Brigade starts it in a child thread, with a brief of its own, and wakes you with its report: ' +
+/** After a review: what the author does with its report; in a child thread, what it reports when. */
+const afterReview = (child: boolean) =>
+  'With a review, Brigade starts it in a child thread of this one, with a brief of its own, and wakes you with its report: ' +
   `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\`, ` +
   'or tell it why you disagree. Ask again while the review converges: each look finds fewer problems that block ' +
   'the merge, and new ones. Stop when it goes in circles (a problem you fixed comes back, or you still disagree ' +
-  'on one after telling it why once) and tell the person where it stands: what is still open, both sides of a ' +
+  'on one after telling it why once) and ' +
+  (child ? 'report' : 'tell the person') +
+  ' where it stands: what is still open, both sides of a ' +
   'disagreement in a line each, and what you recommend. ' +
   `A review takes ${REVIEW_LOOKS} looks at most, its first included: Brigade refuses more. ` +
   'When you pushed after its last look and may not ask it again, say so: the pull request shows those commits ' +
@@ -1184,32 +1191,44 @@ const AFTER_REVIEW =
   "When its fixes go in a new pull request, leave that one's `review` out and call `request_review` on it, " +
   'naming the same reviewer, rather than only messaging its old review thread: the person sees a review on a pull request only ' +
   'when Brigade started it, and otherwise is offered to merge it while it is still being read. ' +
-  'Do not offer to merge a pull request while its review runs.'
+  (child
+    ? 'While its review runs, do not call `report`: end your turn, and you are woken here with its report. ' +
+      'Report once the review approves, or once you stopped it as above, with its verdict: the thread that ' +
+      'started you hears from you once, when the pull request is ready for a person.'
+    : 'Do not offer to merge a pull request while its review runs.')
 
-/** Reviews of the pull requests this thread opens. */
+/** Reviews of the pull requests this thread opens, a child thread's included. */
 function reviews(spec: ThreadSpec) {
   const policy = reviewPolicy(spec)
   if (policy === 'none') return null
-  if (policy === 'child')
-    return (
-      'A child thread starts no review: when a pull request you opened deserves one, say so in your report, and ' +
-      'the thread that started you asks for it.'
-    )
+  const child = !!spec.parent
+  // A child thread has the pull requests it opens reviewed itself; the thread that started it
+  // asks for one only where its child left none.
+  const children = child
+    ? ''
+    : 'A child thread of yours handles the review of a pull request it opens and reports once it is done; ' +
+      'call `request_review` on one only when the person asks, or when its child reported it without a review ' +
+      'it deserves: the review runs under that child, which fixes what it finds and reports to you again. '
   if (policy === 'manual')
     return (
-      'In this project, a pull request gets a review by another teammate only when someone asks. When the person ' +
-      "asks you for one, call `request_review`; leave `github_create_pull_request`'s `review` out. " +
-      AFTER_REVIEW
+      'In this project, a pull request gets a review by another teammate only when someone asks. ' +
+      (child
+        ? 'Say in your report that a pull request you opened has none: when the person asks for one, the thread ' +
+          'that started you asks for it. When a person asks you here for one, call `request_review`'
+        : 'When the person asks you for one, call `request_review`') +
+      "; leave `github_create_pull_request`'s `review` out. " +
+      children +
+      afterReview(child)
     )
   return (
     'You decide whether a pull request you open gets a review by another teammate before it reaches the person, ' +
     "and say so in `github_create_pull_request`'s `review`: `wanted: true` for a change where a mistake would " +
     'cost or is easy to miss (logic across several files, data or migrations, money, permissions or security, ' +
     'concurrency, a fix you could not fully test), `wanted: false` for a small or low-risk one (copy, style, a ' +
-    'one-line fix, a revert), with a reason in a few words: the person reads it on the pull request. For one a ' +
-    'child thread of yours opened, call `request_review` when it deserves one, and when the person asks you ' +
-    'for a review. ' +
-    AFTER_REVIEW
+    'one-line fix, a revert), with a reason in a few words: the person reads it on the pull request. ' +
+    children +
+    (child ? '' : 'Call `request_review` too when the person asks you for a review. ') +
+    afterReview(child)
   )
 }
 

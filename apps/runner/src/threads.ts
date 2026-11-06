@@ -64,7 +64,7 @@ import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, missedLines, ownReports, type Indexed, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { keepReplyImages, type StoreImage } from './reply-images.js'
-import { backgroundTasks } from './harness/background.js'
+import { backgroundTasks, backgroundWait } from './harness/background.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -270,6 +270,11 @@ type Command = Extract<
 type Seat = {
   harness: HarnessThread
   folder: Folder
+  /**
+   * The files given to its folder so far, by path: its turns' (the thread's) and those its calls
+   * brought. Its commands on the thread's machine find them there too (machine-files.ts).
+   */
+  files?: Map<string, ThreadAttachmentRef>
   parkTimer: NodeJS.Timeout | undefined
   /** When its last turn ended idle, while its session stays running for the next (coolDown). */
   idleSince?: number
@@ -285,14 +290,14 @@ type Seat = {
   background: BackgroundWork[]
 }
 
-/** The bridge's word on whether the turn only waits on background work, from a harness event. */
-function backgroundWait(event: AgentEvent): boolean | undefined {
-  if (event.type !== 'raw' || event.source !== 'harness') return
-  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
-  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
-}
-
 export { backgroundTasks }
+
+/** Files given to a seat's folder: the latest of each path is the one its machine gets. */
+function given(seat: Seat, refs: ThreadAttachmentRef[] | undefined) {
+  if (!refs?.length) return
+  const files = (seat.files ??= new Map())
+  for (const ref of refs) files.set(ref.path, ref)
+}
 
 /** A turn's answer as the thread shows it (turnAnswer), joined. */
 const answerOf = (turn: Seat['turn']) =>
@@ -910,6 +915,14 @@ export class Threads {
     return this.threads.get(sessionId)?.harnesses.get(teammateId)?.background ?? []
   }
 
+  /**
+   * The files given to a teammate's folder in the thread so far: its commands on the thread's
+   * machine find them at the same place there (machine-files.ts).
+   */
+  attachmentsFor(sessionId: string, teammateId: string): ThreadAttachmentRef[] {
+    return [...(this.threads.get(sessionId)?.harnesses.get(teammateId)?.files?.values() ?? [])]
+  }
+
   inUse(sessionId: string) {
     const thread = this.threads.get(sessionId)
     if (!thread) return false
@@ -1152,7 +1165,7 @@ export class Threads {
           })
           return
         }
-        await this.placeFiles(spec, seat.folder, preparing)
+        await this.placeFiles(spec, seat, preparing)
         const turn =
           input === 'prompt'
             ? {
@@ -1705,7 +1718,7 @@ export class Threads {
       this.emitSide(message, { status: 'answering' })
       started = true
       // The files that came with it are in the teammate's folder before the copy reads where they are.
-      await this.placeFiles(spec, seat.folder)
+      await this.placeFiles(spec, seat)
       const text = await seat.harness.sideReply(
         sidePrompt({
           name: 'A member',
@@ -1929,7 +1942,7 @@ export class Threads {
     message.steering = new Promise<void>((resolve) => (done = resolve))
     try {
       // The files that came with it are in the teammate's folder before it reads where they are.
-      await this.placeFiles(spec, seat.folder)
+      await this.placeFiles(spec, seat)
       // What was said on the side before it, which the turn never heard: it may build on it.
       const earlier = (thread.sideLog.get(spec.teammate.id) ?? []).filter(
         (e) => e.messageId !== message.id,
@@ -2020,9 +2033,10 @@ export class Threads {
   }
 
   /** Put the thread's files in the teammate's folder; say in the thread which could not be. */
-  private async placeFiles(spec: ThreadSpec, folder: Folder, fetching?: () => void) {
+  private async placeFiles(spec: ThreadSpec, seat: Seat, fetching?: () => void) {
+    given(seat, spec.attachments)
     const failed = await this.options.attachments
-      .deliver(spec.attachments, folder, fetching)
+      .deliver(spec.attachments, seat.folder, fetching)
       .catch((error: unknown) => [String(error)])
     if (failed.length === 0) return
     this.options.emit(spec.sessionId, {
@@ -2449,6 +2463,7 @@ export class Threads {
             teammateId,
             call,
           )
+          given(seat!, attachments)
           const failed = await this.options.attachments.deliver(attachments, folder)
           if (failed.length > 0)
             throw new Error(`Could not put the file here: ${failed.join('; ')}`)

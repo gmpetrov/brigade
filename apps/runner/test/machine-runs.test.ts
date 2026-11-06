@@ -1,18 +1,26 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { createHash, randomBytes } from 'node:crypto'
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, test } from 'node:test'
+import type { ThreadAttachmentRef } from '@brigade/contracts'
+import type { FilesApi } from '../src/machine-files.js'
 import { MachineRuns, outputPath, secretValues, type RunSeat } from '../src/machine-runs.js'
 import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 
@@ -34,14 +42,28 @@ import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 //   when it ended meanwhile;
 // - the runner after this one follows it to its end, outputs included, even when it stopped while
 //   they came back; an ended one's output is still there after a restart;
-// - two commands of the thread at once share the copy of their folder.
+// - two commands of the thread at once share the copy of their folder;
+// - the thread's attached files are fetched by the machine itself from the bucket (a server here,
+//   the API a function answering with its redirect), checked, and put at the same place as in the
+//   teammate's folder, where the command finds them; once: the next command does not fetch them
+//   again, nor two at once; one that does not match is left out with a note, and the runner's
+//   token never reaches the machine, nor the signed URL a command line there; without a bucket,
+//   the API's bytes go over the link;
+// - a command run in the attachments folder finds them there without its sync sending them, even
+//   on a runner without GNU's stat and sha256sum (a Mac); a copy the teammate changed there, even
+//   to the same size, is the sync's (nothing fetched stands in for it), and elsewhere the file is
+//   as given; a copy that cannot be read there is not placed, and the run says so.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src')
 /** tsx's loader by its path: the stand-in machine's commands run in a folder without it. */
 const tsx = import.meta.resolve('tsx')
+/** The machine's own tools: what a test puts in this computer's PATH never reaches them. */
+const MACHINE_PATH = process.env.PATH
 const made: string[] = []
+const servers: Server[] = []
 after(() => {
   for (const dir of made) rmSync(dir, { recursive: true, force: true })
+  for (const server of servers) server.close()
 })
 
 function temp() {
@@ -50,7 +72,7 @@ function temp() {
   return dir
 }
 
-function write(root: string, path: string, text: string) {
+function write(root: string, path: string, text: string | Buffer) {
   mkdirSync(dirname(join(root, path)), { recursive: true })
   writeFileSync(join(root, path), text)
 }
@@ -69,10 +91,15 @@ function folderLink(home: string) {
     spawn('sh', ['-c', command(line)], {
       cwd: home,
       detached: true,
+      env: { ...process.env, PATH: MACHINE_PATH },
       stdio: [stdio === 'pipe' ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     })
   const link = {
     log: [] as string[],
+    /** What it ran with spawn. */
+    spawned: [] as string[],
+    /** All the machine was given: each command line, and what went on each one's stdin. */
+    given: [] as string[],
     followers: [] as ChildProcess[],
     /** Called before each exec: a test holds one back. */
     before: undefined as ((line: string) => Promise<void>) | undefined,
@@ -87,6 +114,16 @@ function folderLink(home: string) {
       const fails = link.failOnce?.(line) ?? false
       if (fails) link.failOnce = undefined
       const child = spawnHere(fails ? 'exit 255' : line, stdio)
+      link.spawned.push(line)
+      link.given.push(line)
+      const stdin = child.stdin
+      if (stdin) {
+        const write = stdin.write.bind(stdin) as (chunk: unknown, ...rest: unknown[]) => boolean
+        stdin.write = ((chunk: unknown, ...rest: unknown[]) => {
+          link.given.push(String(chunk))
+          return write(chunk, ...rest)
+        }) as typeof stdin.write
+      }
       if (line.includes('tail -c')) link.followers.push(child)
       return child
     },
@@ -94,10 +131,16 @@ function folderLink(home: string) {
       await link.before?.(line)
       return new Promise<string>((done, fail) => {
         link.log.push(line)
+        link.given.push(line, input)
         const child = spawnHere(line)
         let out = ''
+        let err = ''
         child.stdout!.on('data', (d: Buffer) => (out += d.toString()))
-        child.on('close', (code) => (code === 0 ? done(out) : fail(new Error(`exit ${code}`))))
+        child.stderr!.on('data', (d: Buffer) => (err += d.toString()))
+        // As MachineLink.exec: what it said on stderr is why it failed.
+        child.on('close', (code) =>
+          code === 0 ? done(out) : fail(new Error(err.trim() || `exit ${code}`)),
+        )
         child.stdin!.on('error', () => undefined)
         child.stdin!.end(input)
       })
@@ -131,7 +174,7 @@ function fakeHolds() {
 }
 
 /** A teammate's working directory with a checkout in it, a machine, and the runner's commands. */
-function setup() {
+function setup(options: { files?: ConstructorParameters<typeof MachineRuns>[0]['files'] } = {}) {
   const workDir = temp()
   const machine = temp()
   const runner = temp()
@@ -152,6 +195,7 @@ function setup() {
       idleMs: 1000,
       touchMs: 200,
       stopGraceMs: 1000,
+      ...(options.files ? { files: options.files } : {}),
     })
   const runs = make()
   return { workDir, machine, app, link, holds, seat, make, runs, control: runs.forSeat(seat) }
@@ -503,3 +547,358 @@ test('an ended command’s output is still there for machine_run after a restart
   assert.equal(again.status, 'succeeded')
   assert.match(again.output ?? '', /kept-line/)
 })
+
+const TOKEN = 'runner-token-k3q9z7w2x8'
+const sha256 = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
+
+/** A file given to the thread, as its spec says it. */
+function attached(
+  id: string,
+  name: string,
+  bytes: Buffer,
+  over: Partial<ThreadAttachmentRef> = {},
+) {
+  return {
+    id,
+    path: `attachments/${name}`,
+    name,
+    contentType: 'video/quicktime',
+    size: bytes.length,
+    sha256: sha256(bytes),
+    status: 'ready',
+    source: 'upload',
+    ...over,
+  } satisfies ThreadAttachmentRef
+}
+
+/** The bucket: each file at its signed URL only, and who asked for it, with what token. */
+async function bucket(files: Record<string, Buffer>) {
+  const asked: { id: string; authorization?: string }[] = []
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://bucket')
+    const id = url.pathname.split('/').pop() ?? ''
+    asked.push({
+      id,
+      ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}),
+    })
+    const bytes = files[id]
+    if (!bytes || url.searchParams.get('X-Amz-Signature') !== `signed-${id}`)
+      return void res.writeHead(403).end()
+    res.writeHead(200, { 'content-length': String(bytes.length) }).end(bytes)
+  })
+  servers.push(server)
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
+  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, asked }
+}
+
+/**
+ * The API: a file's GET, with the runner's token, answered as with R2, by a redirect to the
+ * bucket's signed URL; or, given `bytes`, by the bytes themselves, as without a bucket.
+ */
+function api(bucketUrl: string, bytes?: Record<string, Buffer>) {
+  const calls: { url: string; authorization: string | null; redirect?: string }[] = []
+  const files: FilesApi = {
+    apiUrl: 'http://api.test',
+    token: TOKEN,
+    fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({
+        url,
+        authorization: new Headers(init?.headers).get('authorization'),
+        ...(init?.redirect ? { redirect: init.redirect } : {}),
+      })
+      const id = url.split('/').pop() ?? ''
+      if (bytes?.[id]) {
+        // In pieces, as a stream does.
+        const body = bytes[id]
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              for (let at = 0; at < body.length; at += 16 * 1024)
+                controller.enqueue(new Uint8Array(body.subarray(at, at + 16 * 1024)))
+              controller.close()
+            },
+          }),
+        )
+      }
+      return new Response(null, {
+        status: 302,
+        headers: { location: `${bucketUrl}/objects/${id}?X-Amz-Signature=signed-${id}` },
+      })
+    }) as typeof fetch,
+  }
+  return { calls, files }
+}
+
+test('an attached file is fetched by the machine, checked, and put where the command finds it', async () => {
+  const clip = randomBytes(256 * 1024 + 7)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const fake = api(store.url)
+  const { control, machine, workDir } = setup({ files: { of: () => [ref], api: fake.files } })
+  // The teammate's own copy, as its turn put it there.
+  write(workDir, ref.path, clip)
+  const result = await control.run(
+    { command: 'sha256sum ../attachments/clip.mov', cwd: 'app' },
+    30_000,
+  )
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', new RegExp(ref.sha256))
+  assert.ok(
+    result.notes.includes('Fetched 1 attached file (256.0 KB) from storage: attachments/clip.mov'),
+    JSON.stringify(result.notes),
+  )
+  // At the same place in the teammate's copy there as in its folder here.
+  assert.deepEqual(readFileSync(join(machine, 'commands/t1/attachments/clip.mov')), clip)
+  // The runner asked the API with its token and read the redirect; the machine went to the bucket.
+  assert.deepEqual(fake.calls, [
+    {
+      url: 'http://api.test/runner/attachments/clip1',
+      authorization: `Bearer ${TOKEN}`,
+      redirect: 'manual',
+    },
+  ])
+  assert.deepEqual(store.asked, [{ id: 'clip1' }])
+})
+
+test('an attached file the machine has is not fetched again by the next command', async () => {
+  const clip = randomBytes(64 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const fake = api(store.url)
+  const { control, link } = setup({ files: { of: () => [ref], api: fake.files } })
+  const first = await control.run({ command: 'true', cwd: 'app' }, 30_000)
+  assert.ok(first.notes.some((note) => note.startsWith('Fetched 1 attached file')))
+  const before = link.log.length
+  const next = await control.run({ command: 'wc -c < ../attachments/clip.mov', cwd: 'app' }, 30_000)
+  assert.equal(next.status, 'succeeded', JSON.stringify(next))
+  assert.match(next.output ?? '', new RegExp(`^${clip.length}$`, 'm'))
+  assert.ok(!next.notes.some((note) => note.startsWith('Fetched')), JSON.stringify(next.notes))
+  assert.equal(store.asked.length, 1, 'fetched once')
+  assert.equal(fake.calls.length, 1, 'the API asked once')
+  // Known from the machine's record: not even read whole again to be checked.
+  assert.ok(
+    !link.log.slice(before).some((line) => line.includes('sha256sum')),
+    link.log.slice(before).join('\n'),
+  )
+})
+
+test('two commands starting at once fetch an attached file once', async () => {
+  const clip = randomBytes(64 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const { control } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+  const [a, b] = await Promise.all([
+    control.run({ command: 'cat ../attachments/clip.mov > /dev/null', cwd: 'app' }, 30_000),
+    control.run({ command: 'cat ../../attachments/clip.mov > /dev/null', cwd: 'app/src' }, 30_000),
+  ])
+  assert.equal(a.status, 'succeeded', JSON.stringify(a))
+  assert.equal(b.status, 'succeeded', JSON.stringify(b))
+  assert.equal(store.asked.length, 1)
+})
+
+test('an attached file whose SHA-256 does not match is left out, with a note; the command runs', async () => {
+  const clip = randomBytes(64 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip, { sha256: sha256(Buffer.from('another file')) })
+  const store = await bucket({ clip1: clip })
+  const { control, machine } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+  const result = await control.run({ command: 'echo ran', cwd: 'app' }, 30_000)
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', /ran/)
+  assert.ok(
+    result.notes.includes(
+      'attachments/clip.mov is not on the machine: its SHA-256 is not the one it was given',
+    ),
+    JSON.stringify(result.notes),
+  )
+  assert.ok(!result.notes.some((note) => note.startsWith('Fetched')), JSON.stringify(result.notes))
+  assert.equal(store.asked.length, 1)
+  assert.ok(!existsSync(join(machine, 'commands/t1/attachments/clip.mov')), 'no file')
+  // Nor anything of it on its way.
+  assert.deepEqual(readdirSync(join(machine, '.brigade/attachments/tmp')), [])
+})
+
+test('the machine is never given the runner’s token, nor the signed URL on a command line', async () => {
+  const clip = randomBytes(64 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const fake = api(store.url)
+  const { control, link } = setup({ files: { of: () => [ref], api: fake.files } })
+  const result = await control.run(
+    { command: 'cat ../attachments/clip.mov > /dev/null', cwd: 'app' },
+    30_000,
+  )
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  // The token went to the API only.
+  assert.deepEqual(
+    fake.calls.map((call) => call.authorization),
+    [`Bearer ${TOKEN}`],
+  )
+  const given = link.given.join('\n')
+  assert.ok(given.includes('X-Amz-Signature=signed-clip1'), 'the signed URL went, on stdin')
+  assert.ok(!given.includes(TOKEN), 'the token never did')
+  assert.ok(
+    ![...link.log, ...link.spawned].some((line) => line.includes('X-Amz-Signature')),
+    'never on a command line, which every process there can read',
+  )
+})
+
+test('without a bucket, the API’s bytes go to the machine over the link, as they come', async () => {
+  const clip = randomBytes(200 * 1024 + 3)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({})
+  const fake = api(store.url, { clip1: clip })
+  const { control, machine, link } = setup({ files: { of: () => [ref], api: fake.files } })
+  const result = await control.run(
+    { command: 'sha256sum ../attachments/clip.mov', cwd: 'app' },
+    30_000,
+  )
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', new RegExp(ref.sha256))
+  assert.ok(result.notes.some((note) => note.startsWith('Fetched 1 attached file')))
+  assert.deepEqual(readFileSync(join(machine, 'commands/t1/attachments/clip.mov')), clip)
+  assert.equal(store.asked.length, 0)
+  assert.ok(
+    link.spawned.some((line) => line.includes('cat > "$t"')),
+    'streamed to the machine',
+  )
+  assert.ok(!link.given.join('\n').includes(TOKEN))
+})
+
+test('a command run in the attachments folder finds its files there, and its sync does not send them', async () => {
+  const clip = randomBytes(96 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const { control, machine, workDir } = setup({
+    files: { of: () => [ref], api: api(store.url).files },
+  })
+  // The teammate's copy as given, with a mode and a time of its own (to the millisecond).
+  write(workDir, ref.path, clip)
+  chmodSync(join(workDir, ref.path), 0o600)
+  utimesSync(join(workDir, ref.path), new Date(1_700_000_000_123), new Date(1_700_000_000_123))
+  const result = await control.run({ command: 'sha256sum clip.mov', cwd: 'attachments' }, 30_000)
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', new RegExp(ref.sha256))
+  assert.ok(result.notes.some((note) => note.startsWith('Fetched 1 attached file')))
+  // Fetched from storage, the sync finding it there as the teammate's copy is: nothing sent.
+  assert.ok(!result.notes.some((note) => note.startsWith('Sent ')), JSON.stringify(result.notes))
+  assert.equal(store.asked.length, 1)
+  const placed = statSync(join(machine, 'commands/t1/attachments/clip.mov'))
+  assert.equal(placed.mode & 0o777, 0o600)
+  assert.equal(Math.trunc(placed.mtimeMs), 1_700_000_000_123)
+})
+
+/** Edits a teammate makes to its copy of a file given to the thread: longer, or of the same size. */
+const edits = [
+  { kind: 'longer', edit: (given: Buffer) => Buffer.concat([given, Buffer.from('edited')]) },
+  {
+    kind: 'of the same size',
+    edit: (given: Buffer) => Buffer.from(given.map((byte) => byte ^ 0xff)),
+  },
+]
+
+for (const { kind, edit } of edits)
+  test(`a copy the teammate changed (${kind}) is the sync’s in the folder it sends; beside it, the file as given`, async () => {
+    const clip = randomBytes(64 * 1024)
+    const ref = attached('clip1', 'clip.mov', clip)
+    const store = await bucket({ clip1: clip })
+    const { control, workDir } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+    write(workDir, ref.path, edit(clip))
+    const edited = sha256(readFileSync(join(workDir, ref.path)))
+    const inside = async () => {
+      const result = await control.run(
+        { command: 'sha256sum clip.mov', cwd: 'attachments' },
+        30_000,
+      )
+      assert.equal(result.status, 'succeeded', JSON.stringify(result))
+      assert.match(result.output ?? '', new RegExp(edited), 'the folder as it is here')
+      return result
+    }
+    // A fresh machine, the command run in the attachments folder, which the sync sends as it is:
+    // the edited copy, which nothing fetched from storage stands in for.
+    const first = await inside()
+    assert.ok(!first.notes.some((note) => note.startsWith('Fetched')), JSON.stringify(first.notes))
+    assert.equal(store.asked.length, 0)
+    // Beside it, the file as given to the thread, over the sync's copy.
+    const beside = await control.run(
+      { command: 'sha256sum ../attachments/clip.mov', cwd: 'app' },
+      30_000,
+    )
+    assert.equal(beside.status, 'succeeded', JSON.stringify(beside))
+    assert.match(beside.output ?? '', new RegExp(ref.sha256), 'the file as given')
+    assert.equal(store.asked.length, 1)
+    // In that folder again, each time: the edited copy, sent by the sync over the file as given,
+    // which kept its own time and mode; and never fetched again only for the sync to send it back.
+    await inside()
+    await inside()
+    assert.equal(store.asked.length, 1)
+  })
+
+test('on a runner without GNU’s stat or sha256sum, as on a Mac, a copy as given is still known and placed', async () => {
+  const clip = randomBytes(96 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const { control, machine, workDir } = setup({
+    files: { of: () => [ref], api: api(store.url).files },
+  })
+  write(workDir, ref.path, clip)
+  chmodSync(join(workDir, ref.path), 0o600)
+  utimesSync(join(workDir, ref.path), new Date(1_700_000_000_123), new Date(1_700_000_000_123))
+  // This computer's stat refuses -c, as BSD's does, and it has no sha256sum. The machine keeps
+  // GNU's (MACHINE_PATH).
+  const tools = temp()
+  writeFileSync(join(tools, 'stat'), '#!/bin/sh\necho "stat: illegal option -- c" >&2\nexit 1\n', {
+    mode: 0o755,
+  })
+  writeFileSync(
+    join(tools, 'sha256sum'),
+    '#!/bin/sh\necho "sha256sum: not found" >&2\nexit 127\n',
+    {
+      mode: 0o755,
+    },
+  )
+  const path = process.env.PATH
+  process.env.PATH = `${tools}:${path}`
+  const result = await control
+    .run({ command: 'sha256sum clip.mov', cwd: 'attachments' }, 30_000)
+    .finally(() => (process.env.PATH = path))
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', new RegExp(ref.sha256))
+  assert.ok(
+    result.notes.some((note) => note.startsWith('Fetched 1 attached file')),
+    JSON.stringify(result.notes),
+  )
+  assert.ok(!result.notes.some((note) => note.startsWith('Sent ')), JSON.stringify(result.notes))
+  assert.equal(store.asked.length, 1)
+  const placed = statSync(join(machine, 'commands/t1/attachments/clip.mov'))
+  assert.equal(placed.mode & 0o777, 0o600)
+  assert.equal(Math.trunc(placed.mtimeMs), 1_700_000_000_123)
+})
+
+test(
+  'a copy that cannot be read here is not placed for the folder the sync sends, and the run says so',
+  { skip: process.getuid?.() === 0 ? 'root reads any file' : false },
+  async () => {
+    const clip = randomBytes(32 * 1024)
+    const ref = attached('clip1', 'clip.mov', clip)
+    const store = await bucket({ clip1: clip })
+    const { control, workDir } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+    write(workDir, ref.path, clip)
+    chmodSync(join(workDir, ref.path), 0o000)
+    try {
+      const result = await control.run({ command: 'echo ran', cwd: 'attachments' }, 30_000)
+      assert.equal(result.status, 'succeeded', JSON.stringify(result))
+      assert.ok(
+        result.notes.includes(
+          'attachments/clip.mov was not placed from storage: its copy here could not be checked ' +
+            '(EACCES: permission denied)',
+        ),
+        JSON.stringify(result.notes),
+      )
+      // Not guessed from its size: nothing fetched.
+      assert.equal(store.asked.length, 0)
+    } finally {
+      chmodSync(join(workDir, ref.path), 0o644)
+    }
+  },
+)

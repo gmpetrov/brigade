@@ -207,7 +207,16 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process
   alive, while any of it runs and until the teammate has answered the last result: the thread stays Working, lists
   that work, and a person's message goes straight in (`brigade_waiting`). The session is not parked while the turn is
-  open. Only the memory guard, a runner stop or a person's Stop cut it short.
+  open. Only the memory guard, a runner stop or a person's Stop cut it short, and the runner's own check below.
+  - **Only work in the background holds it.** A command Claude Code runs in the foreground is a task too
+    (`is_backgrounded: false`), whose result is its tool call's: it holds nothing unless it is moved to the background.
+    Taken for background work, it kept the 2026-11-06 health check's turn open for 7 hours (60 s each since #757).
+  - **The runner ends a wait nothing will end.** A turn the bridge says waits on background work, while none runs as
+    the runner sees it (`background_tasks_changed`) for 5 minutes since the later of that word and the end of its last
+    work, ends, answered (`staleWait`); never while a person's message steered into it is still unanswered. A bridge's process
+    outlives runner updates, so a fix to the bridge never reaches a turn already stuck in an older one; the wait goes
+    over with a handed-over turn, for the next runner to end. Threads running with nothing from a connected runner
+    for an hour raise the `turn-silent` alert (docs/monitoring.md).
   - **Thread-level tools are refused to sub-agents.** A sub-agent inherits every Brigade tool but sees only its part
     of the work: one that called `report` sent its partial result to the parent as the child's final one. Claude Code
     gives a PreToolUse hook `agent_id` only for a sub-agent's call, so the bridge's hook refuses the tools that act for
@@ -841,9 +850,15 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   has it read again (Review again). The pull request waits on a person (Needs you, with one push) once its review is done. A project's
   Code review setting (`Project.reviewPolicy`) says who decides there is one: the teammate that opens a pull
   request, in `github_create_pull_request`'s `review` (wanted, and a reason shown on it), or only someone who asks
-  (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread asks its parent
-  for one in its report, and its pull request's review reports to the parent; a playbook's run starts none on its
-  own. One opened outside Brigade is reviewed in a thread of its own, which becomes the pull request's. Closing a
+  (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread follows its
+  project's setting too: its pull request is reviewed in a child of that child, the one thread below a child, whose
+  report wakes the child, which fixes and asks again itself. The child reports to its parent only once the review is
+  done (it approved, or the child stopped it): meanwhile the end of its turn sends nothing and `report` is refused
+  (`reviewHold`), and its parent's wait outlasts the review's. Before, the review ran beside the child and reported
+  to the parent, which had to relay each fix while the child, never told of it, said none had started. The parent
+  may still ask for a review of its child's pull request, which runs under the child the same way and waits for the
+  child again. What waits on a person in such a review (a ticket) marks the thread at the top, as a child's does,
+  and archiving, Later and done go by that thread (`src/thread-root.ts`). A playbook's run starts none on its own. One opened outside Brigade is reviewed in a thread of its own, which becomes the pull request's. Closing a
   pull request stops its review; one merged meanwhile keeps it, as what it finds is still worth a follow-up. Every
   teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a review is
   a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring an

@@ -544,8 +544,10 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     `preview-sync-reader.ts`, run as the teammate in its thread's namespaces,
     sends the checkout (the git work tree of the preview's folder): first a
     manifest, then what the machine lacks, then each change as `fs.watch` sees
-    it, 15 ms batched. `preview-sync-receiver.ts` writes each file whole and
-    moves it in place, so the dev server there reloads as for a local edit.
+    it, 15 ms batched. `preview-sync-receiver.ts` writes each file's bytes as
+    they come into a staging folder beside its state file, outside the copy,
+    then moves the file in place whole, so the dev server there reloads as for
+    a local edit.
     Left out: `.git` and `node_modules` anywhere, and what git ignores (asked of
     one `git check-ignore --stdin`), except `.env` files and the start's env
     file; the machine installs and builds for itself. The receiver deletes only
@@ -563,6 +565,41 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     later (80 to 110 ms edited there directly); the checkout's 1,712 files in
     under a second. A process per change was tried first: under a loaded
     computer, spawning rsync took up to 3 s; the reader stays up.
+    - **Files up to 2 GB each** (raw footage for a render, say), neither side
+      holding one in memory. A frame is a JSON line, then exactly the bytes it
+      says. The reader sends a file over 8 MB 1 MiB at a time from one open
+      file, each chunk once the link took the one before. The receiver writes
+      each chunk to its staged file before it reads the next, so a disk or a
+      link slower than the other holds the reader back, through SSH; once all
+      came, the file is placed in its turn, after the frames before it (copied
+      beside its place first when the staging folder is on another
+      filesystem). The staging folder (`.brigade/sync/<id>.staging`) is emptied
+      as the receiver starts, and keeps nothing of a file placed, refused or
+      cut by the link's end. A file cut short while it goes still gets the size
+      its line said, the rest as zeros, and goes again at once, up to three
+      times, ahead of any mark asked for meanwhile; one still cut short then is
+      named in the next mark, and that flush fails (no command starts on a copy
+      padded with zeros). Such a copy stays named until a frame replaces or
+      deletes it there (the file whole, a link, a deletion of it or of its
+      folder), never merely because its path was looked at again; one whose
+      file became a folder, a pipe, or a path git now ignores is deleted there
+      at once. One that grew
+      goes as its line said, its watcher sending the rest; one that cannot be
+      read is deleted there, as before. The receiver decides a path on its
+      line: the bytes of one it refuses are read and dropped, and the next
+      frame applies. A file over 2 GB is left out, said once in the log, and
+      deleted there if an older copy was. A flush waits as long as bytes go to
+      the machine, and fails after 60 seconds with none (5 minutes for the
+      first sync, which may read files the computer is still restoring from its
+      snapshot). Once its input ends, the receiver ends by itself, its last
+      save included: `process.exit()` hung there in 6 of 30 ends after a file
+      of 99 MiB (none in 80 since). Measured on November 6, 2026 on a thread's
+      machine, both halves built and joined by a pipe (no SSH, no network): a
+      file of 2 GiB in 3.0 to 4.7 seconds (once 18.6, the first run after its
+      2 GiB were written), the same bytes there, with the reader at most 122
+      MB of memory and the receiver 94 MB (52 MB each for 1 KB). On
+      the cloud computer, a file of 99 MiB (under the old limit of 100 MB) took
+      the code before 151 and 255 MB; now 116 and 78.
   - **The app runs there, reached here.** Its settings go into files there by
     stdin (never a command line), with its credentials; its script sources
     them, runs the setup unless it restarts, then its command. The shell sshd
@@ -613,6 +650,41 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     whole working directory). The copy stays between commands with what they
     installed, and the next command sends only what changed. At most 3 commands
     of a thread run at once.
+    - **The thread's attached files are there too** (`machine-files.ts`), at the
+      same place in the teammate's copy as in its folder
+      (`commands/<teammate>/attachments/…`), so a command names them as it would
+      here (`../attachments/clip.mov` from a checkout beside them), whatever
+      their size, and their bytes never go through the cloud computer, whose
+      memory every teammate shares. Before the command's folder goes, the
+      machine fetches each file it lacks itself, straight from the bucket, three
+      at a time, one command's files after another's. The runner asks the API as
+      for its own copy (`GET /runner/attachments/<id>`), reads the signed URL
+      from its redirect without following it, and gives the machine only that
+      URL, valid a few minutes, as curl's config on stdin (`curl -K -`), never
+      on a command line; the runner's token never goes there. Without a bucket
+      (on a laptop) the API sends the bytes, which go over the link as they
+      come, never held whole. The machine writes each to a temporary file,
+      checks its size and SHA-256, then moves it into place; one that does not
+      match, or does not come, is left out with a note, and the command runs
+      anyway. It remembers what it placed
+      (`.brigade/attachments/<teammate>.json`: path, SHA-256, size and time), so
+      the next command fetches only what it lacks, and says what it fetched
+      ("Fetched 1 attached file (512.0 MB) from storage"). A file of the right
+      size it did not place (the sync's) is checked by its SHA-256 instead of
+      fetched. It gets each file as given to the thread: a copy the teammate
+      edited or removed here does not change it there. The one exception is a
+      folder the sync sends as it is (a command run in `attachments`): there a
+      file is placed only when the teammate's copy is still the one given, as
+      its SHA-256 says (its size alone may be an edit's), and it gets that
+      copy's time and mode, so the sync finds it already there and does not send
+      it; any other copy there, edited or removed, is the sync's, like any file
+      of that folder, and nothing is placed for it. The copy is read as the
+      teammate by Node itself (`fs` and `crypto`, opened without following a
+      link, hashed as it streams), not by GNU's `stat` or `sha256sum`, which a
+      Mac lacks; one that cannot be read is not placed either, and the run says
+      so, never guessing from its size. Elsewhere a placed file keeps its own
+      time and mode. Previews do not get them: a preview's copy is its checkout
+      alone.
     - **Detached there, followed here.** The command runs in a session of its
       own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
       sourced, then deleted from the disk. Its output goes to a file the runner

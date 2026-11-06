@@ -104,12 +104,16 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     throw new HTTPException(409, {
       message: 'A teammate is working in this thread. Stop it first.',
     })
-  // Its child threads go with it, their files too: none may be at work.
+  // Its child threads go with it, their files too: none may be at work, nor their reviews.
   const children = await db.session.findMany({
     where: { parentId: sessionId },
     select: { id: true, status: true },
   })
-  if (children.some((c) => BUSY.has(c.status)))
+  const below = await db.session.findMany({
+    where: { parent: { parentId: sessionId } },
+    select: { status: true },
+  })
+  if ([...children, ...below].some((c) => BUSY.has(c.status)))
     throw new HTTPException(409, {
       message: 'One of its sub-threads is at work. Stop it first, or wait for it to finish.',
     })

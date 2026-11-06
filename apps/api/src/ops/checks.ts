@@ -1,8 +1,8 @@
 // The checks behind operators' alerts (docs/monitoring.md), run each minute in the API's jobs
 // (src/jobs.ts): failures counted as they happen (src/ops/failures.ts), cloud computers as the
-// database and the hub see them, threads whose events runners say wait, commands piling up for
-// a computer, Stripe's webhook endpoint, and the Workers' failed invocations as Cloudflare
-// counts them.
+// database and the hub see them, threads whose events runners say wait, threads running with
+// nothing from their runner, commands piling up for a computer, Stripe's webhook endpoint, and
+// the Workers' failed invocations as Cloudflare counts them.
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
 import { diskDetail, fullDisks, type DiskState } from '../computer-disk.js'
@@ -423,6 +423,79 @@ async function checkEventsWaiting(now: number) {
   await settle('events-waiting:', eventsWaitingProblems(waiting, names, now), new Date(now))
 }
 
+/** A thread running with no event from its runner this long: its turn may be stuck. */
+export const SILENT_TURN_MS = 60 * MINUTE
+/** This long: critical. */
+export const SILENT_TURN_CRITICAL_MS = 4 * 60 * MINUTE
+
+type SilentThread = { id: string; title: string; computerId: string; lastAt: Date }
+
+/**
+ * Threads marked running whose runner, connected, has sent nothing for an hour, as alerts by
+ * computer. A turn that waits on work in the background its harness no longer runs stays open
+ * (on 2026-11-06 the cloud health check's run did for 7 hours, its report undelivered, the
+ * person's message queued behind it); the runner now ends such a turn after 5 minutes
+ * (apps/runner/src/harness/index.ts, staleWait), and this catches what it does not.
+ */
+export function silentTurnProblems(
+  threads: SilentThread[],
+  names: Map<string, string>,
+  now: number,
+): Alert[] {
+  const silent = threads.filter((t) => now - t.lastAt.getTime() >= SILENT_TURN_MS)
+  return [...Map.groupBy(silent, (t) => t.computerId)].map(([computerId, on]) => {
+    const longest = Math.max(...on.map((t) => now - t.lastAt.getTime()))
+    return {
+      key: `turn-silent:${computerId}`,
+      severity: longest >= SILENT_TURN_CRITICAL_MS ? 'critical' : 'warning',
+      title: `Threads running with nothing from their runner: ${names.get(computerId) ?? computerId}`,
+      detail: [
+        `${on.length} thread(s) marked running whose runner, connected, has sent no event for ${Math.round(longest / MINUTE)} min at most: a turn stuck open, whose reply or report waits, and the messages queued behind it.`,
+        on
+          .slice(0, 10)
+          .map(
+            (t) =>
+              `${t.id} (${t.title.slice(0, 60)}) since ${t.lastAt.toISOString().slice(0, 16)}Z`,
+          )
+          .join('\n'),
+        "A long command or Monitor can be quiet this long too. Stop in the thread ends a stuck turn; the runner's journal (journalctl -u brigade-runner) says what its harness last did.",
+      ].join('\n\n'),
+    }
+  })
+}
+
+/**
+ * Threads running, with their last event's time (heavy events stored apart have none here: the
+ * thread's last change stands for it), on computers whose runner is connected: one whose runner
+ * is away is the computer's alert (checkComputers).
+ */
+async function checkSilentTurns(now: number) {
+  const running = await prisma.$queryRaw<(SilentThread & { workspaceId: string })[]>`
+    SELECT s.id, s.title, s."computerId", s."workspaceId", COALESCE(e.at, s."updatedAt") AS "lastAt"
+    FROM "Session" s
+    LEFT JOIN "SessionEvent" e ON e."sessionId" = s.id AND e.seq = s."lastSeq"
+    WHERE s.status = 'running' AND s."archivedAt" IS NULL
+      AND COALESCE(e.at, s."updatedAt") < ${new Date(now - SILENT_TURN_MS)}
+    ORDER BY "lastAt"
+    LIMIT 100`
+  const online = new Map<string, boolean>()
+  const silent: SilentThread[] = []
+  for (const thread of running) {
+    if (!online.has(thread.computerId))
+      online.set(thread.computerId, await hubs.get(thread.workspaceId).isOnline(thread.computerId))
+    if (online.get(thread.computerId)) silent.push(thread)
+  }
+  const ids = [...online.keys()]
+  const computers = ids.length
+    ? await prisma.computer.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, workspace: { select: { name: true } } },
+      })
+    : []
+  const names = new Map(computers.map((c) => [c.id, `${c.name} (${c.workspace.name}, ${c.id})`]))
+  await settle('turn-silent:', silentTurnProblems(silent, names, now), new Date(now))
+}
+
 /** Commands waiting for a computer's runner: this many is a backlog… */
 export const BACKLOG_COUNT = 20
 /** …or the oldest this old. */
@@ -665,6 +738,7 @@ export async function runChecks(now = Date.now()) {
       ['events waiting', () => checkEventsWaiting(now)],
       ['command backlogs', () => checkBacklogs(now)],
       ['jobs queue', () => checkJobQueues(now)],
+      ['silent turns', () => checkSilentTurns(now)],
     ]
     let failed: string | null = null
     if (runs % 5 === 0) steps.push(['workers', () => checkWorkers(now)])
