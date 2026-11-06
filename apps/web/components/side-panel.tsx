@@ -339,11 +339,10 @@ export function SidePanel({
         data-expanded={expanded || undefined}
         className={cn(
           expanded
-            ? // Above the on-screen keyboard while it is up (keyboard-viewport.tsx).
-              'relative flex h-(--viewport-h,100svh) min-w-0 flex-col overflow-hidden bg-background'
+            ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
             : [
                 'fixed inset-x-0 bottom-0 z-(--sheet-z) flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
-                'max-md:top-0 max-md:bottom-auto max-md:h-(--viewport-h,100%) max-md:rounded-none max-md:border-t-0',
+                'max-md:top-0 max-md:h-auto max-md:rounded-none max-md:border-t-0',
                 'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-(--panel-z) xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
               ],
           over && FULL,
