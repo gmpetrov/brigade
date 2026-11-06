@@ -199,8 +199,10 @@ export function fetchScript(input: {
     `mkdir -p ${TEMP_DIR} && : > "$t" || exit 1`,
     `trap 'rm -f -- "$t"' EXIT`,
     input.from === 'url'
-      ? // The signed URL comes on stdin, as curl's config (-K -): never on a command line.
-        'curl -fsS --proto =http,https --retry 3 --connect-timeout 30 -Y 1024 -y 120 -o "$t" -K - || exit 2'
+      ? // The signed URL comes on stdin, as curl's config (-K -): never on a command line. Tried
+        // again from the start on any error (a connection cut halfway), stopped when it stalls.
+        'curl -fsS --proto =http,https --retry 3 --retry-all-errors --connect-timeout 30 -Y 1024 -y 120 ' +
+        '-o "$t" -K - || exit 2'
       : 'cat > "$t" || exit 2',
     'n=$(stat -c %s -- "$t") || exit 3',
     `[ "$n" = ${input.size} ] || { echo "it came with $n bytes instead of ${input.size}" >&2; exit 3; }`,

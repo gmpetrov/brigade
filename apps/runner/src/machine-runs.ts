@@ -189,8 +189,11 @@ type ThreadMachine = {
   connecting?: Promise<void>
   /** By the folder here that goes there. */
   copies: Map<string, { sync: MachineSync; flushing: Promise<unknown> }>
-  /** Each teammate's attached files being put there, by teammate: one placing at a time. */
-  placing: Map<string, Promise<unknown>>
+  /**
+   * Attached files being put there: one placing at a time on the machine, each fetching a few at
+   * once, so its connection's sessions stay few.
+   */
+  placing?: Promise<unknown>
   /** Its commands not over yet (their files not back yet included). */
   active: Set<Run>
   touchTimer?: NodeJS.Timeout
@@ -560,7 +563,7 @@ export class MachineRuns {
   private thread(sessionId: string) {
     let thread = this.threads.get(sessionId)
     if (!thread) {
-      thread = { copies: new Map(), placing: new Map(), active: new Set() }
+      thread = { copies: new Map(), active: new Set() }
       this.threads.set(sessionId, thread)
     }
     return thread
@@ -648,8 +651,8 @@ export class MachineRuns {
     const refs = files?.of(run.seat) ?? []
     if (!files || !refs.some((ref) => ref.status === 'ready')) return
     const { teammateId } = run.seat
-    // One placing of a teammate's files at a time: two commands starting at once fetch each once.
-    const placing = (thread.placing.get(teammateId) ?? Promise.resolve()).then(() =>
+    // One placing at a time: two commands starting at once fetch each file once.
+    const placing = (thread.placing ?? Promise.resolve()).then(() =>
       placeAttachments({
         link,
         api: files.api,
@@ -662,10 +665,7 @@ export class MachineRuns {
         syncRoots: [run.root, ...thread.copies.keys()],
       }),
     )
-    thread.placing.set(
-      teammateId,
-      placing.catch(() => undefined),
-    )
+    thread.placing = placing.catch(() => undefined)
     try {
       const { fetched, failed } = await placing
       if (fetched.length) {
@@ -972,7 +972,7 @@ export class MachineRuns {
       thread.touchTimer = undefined
       for (const copy of thread.copies.values()) copy.sync.stop()
       thread.copies.clear()
-      thread.placing.clear()
+      thread.placing = undefined
       thread.link?.close()
     }
     if (!run.held) return
