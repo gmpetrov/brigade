@@ -282,7 +282,7 @@ export function DocumentPanel() {
   const target = current.target
   const tabbed = tabs.length > 1
   return (
-    <SidePanel aria-label={current.title} onClose={close} raiseKey={current}>
+    <SidePanel aria-label={current.title} onClose={close} raiseKey={current} besideSidebar>
       {tabbed && <DocumentTabs />}
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
