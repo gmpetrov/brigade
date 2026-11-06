@@ -59,6 +59,8 @@ const boat = {
   failStops: 0,
   /** Holds sandbox creation until released. */
   creating: null as Promise<void> | null,
+  /** Sandboxes not up (archived), by id; the others are ready. */
+  states: new Map<string, string>(),
 }
 Object.assign(BoatApi.prototype, {
   create: async () => {
@@ -67,7 +69,9 @@ Object.assign(BoatApi.prototype, {
   },
   update: async () => ({}),
   get: async ({ sandboxId }: { sandboxId: string }) => ({
-    sandbox: { state: boat.destroyed.has(sandboxId) ? 'cancelled' : 'ready' },
+    sandbox: {
+      state: boat.destroyed.has(sandboxId) ? 'cancelled' : (boat.states.get(sandboxId) ?? 'ready'),
+    },
   }),
   deleteSandbox: async ({ sandboxId }: { sandboxId: string }) => {
     if (boat.failDestroys > 0) {
@@ -85,8 +89,9 @@ Object.assign(BoatApi.prototype, {
     boat.stops.push(sandboxId)
     return {}
   },
-  resume: async () => {
+  resume: async ({ sandboxId }: { sandboxId: string }) => {
     boat.starts++
+    boat.states.delete(sandboxId)
     return {}
   },
   command: async () => {
@@ -143,7 +148,7 @@ before(async () => {
   await prisma.organization.create({
     data: { id: organizationId, name: organizationId, slug: organizationId },
   })
-  for (const name of ['stop', 'sweep', 'making', 'stale', 'strandedVm', 'cutShort'])
+  for (const name of ['stop', 'sweep', 'making', 'stale', 'strandedVm', 'cutShort', 'runs'])
     ws[name] = (await prisma.workspace.create({ data: { organizationId, name } })).id
 })
 
@@ -250,6 +255,12 @@ test(
     const { providerRef } = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
     assert.ok(boat.destroyed.has((providerRef as { id: string }).id))
     assert.equal(boat.commands, commandsBefore)
+    // Its VM's run (src/vm-costs.ts): made, then destroyed with it.
+    const [made] = await prisma.vmRun.findMany({ where: { computerId: computer.id } })
+    assert.equal(made?.start, 'create')
+    assert.equal(made?.sandboxId, (providerRef as { id: string }).id)
+    assert.equal(made?.status, 'closed')
+    assert.equal(made?.stoppedBy, 'destroyed')
 
     // Subscribed again: a new computer, made and installed.
     await prisma.billingSubscription.update({ where: { id: plan.id }, data: { status: 'active' } })
@@ -317,4 +328,36 @@ test('a row that says "running" resumes nothing without the plan', { skip }, asy
     return true
   })
   assert.equal(boat.starts, startsBefore)
+})
+
+test('a computer’s resume and its stop are a run of its VM', { skip }, async () => {
+  const computer = await runningComputer(ws.runs!)
+  const sandbox = (computer.providerRef as { id: string }).id
+  await prisma.computer.update({ where: { id: computer.id }, data: { status: 'stopped' } })
+  boat.states.set(sandbox, 'archived')
+  const startsBefore = boat.starts
+  await ensureRunning(computer.id)
+  for (let i = 0; i < 100 && boat.starts === startsBefore; i++)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  let run = null
+  for (let i = 0; i < 100 && run?.status !== 'open'; i++) {
+    run = await prisma.vmRun.findFirst({ where: { computerId: computer.id } })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  assert.equal(run?.start, 'resume')
+  assert.equal(run?.status, 'open')
+  assert.equal(run?.sandboxId, sandbox)
+  // Asked again while it runs: no second start, no second run.
+  await prisma.computer.update({ where: { id: computer.id }, data: { status: 'running' } })
+  await ensureRunning(computer.id)
+  assert.equal(await prisma.vmRun.count({ where: { computerId: computer.id } }), 1)
+  // Its plan ends: stopped, and its run with it.
+  await prisma.billingSubscription.updateMany({
+    where: { workspaceId: ws.runs! },
+    data: { status: 'canceled' },
+  })
+  assert.equal(await stopWithoutPlan(computer), true)
+  run = await prisma.vmRun.findFirstOrThrow({ where: { computerId: computer.id } })
+  assert.equal(run.status, 'closed')
+  assert.equal(run.stoppedBy, 'brigade')
 })

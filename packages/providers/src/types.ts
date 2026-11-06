@@ -4,7 +4,18 @@ export type ComputerSpec = {
   /** Used to name the machine; never sent to it as configuration. */
   workspaceId: string
   size: ComputerSize
+  /**
+   * Called as soon as the provider has the VM, before it waits for it to be up: from then on it
+   * bills, so its running time is counted from here (docs/vm-costs.md).
+   */
+  onCreated?: (ref: ComputerRef) => Promise<void> | void
 }
+
+/**
+ * What a start did: `resumedAt`, when the provider started the VM (it bills from then); null
+ * when it was up already, or on its way up, so nothing was started.
+ */
+export type StartResult = { resumedAt: Date | null }
 
 /** Opaque to everything outside this package. Stored as JSON on Computer.providerRef. */
 export type ComputerRef = { provider: string; id: string }
@@ -50,8 +61,12 @@ export interface MachineProvider {
   /** What one has, said to people: "8 vCPU, 16 GB". */
   readonly size: string
   /** Make one, running. The same `key` again gives the same machine: a retry makes no second one. */
-  create(spec: { name: string; key: string }): Promise<ComputerRef>
-  start(ref: ComputerRef): Promise<void> // resume with its disk
+  create(spec: {
+    name: string
+    key: string
+    onCreated?: ComputerSpec['onCreated']
+  }): Promise<ComputerRef>
+  start(ref: ComputerRef): Promise<StartResult | void> // resume with its disk
   stop(ref: ComputerRef): Promise<void> // keep the disk, stop billing
   destroy(ref: ComputerRef): Promise<void>
   status(ref: ComputerRef): Promise<ComputerStatus>
@@ -66,7 +81,7 @@ export interface MachineProvider {
 
 export interface ComputerProvider {
   create(spec: ComputerSpec): Promise<ComputerRef>
-  start(ref: ComputerRef): Promise<void> // resume with its disk
+  start(ref: ComputerRef): Promise<StartResult | void> // resume with its disk
   stop(ref: ComputerRef): Promise<void> // keep the disk, stop billing
   keepAlive(ref: ComputerRef): Promise<void> // push back the provider's own auto-stop while in use
   destroy(ref: ComputerRef): Promise<void>
@@ -81,4 +96,26 @@ export interface ComputerProvider {
    * computer stopped, so it will not be.
    */
   restore?(ref: ComputerRef): Promise<RestoreState>
+}
+
+/** Where a VM is now, as the provider's list says: `running` bills, `stopped` does not. */
+export type VmState = 'starting' | 'running' | 'stopped' | 'error'
+
+/**
+ * What the provider counts of a VM over a window: the seconds it ran (its own clock, not scaled
+ * by size), what they cost at list price, and whether it runs at the window's end.
+ */
+export type VmUsage = { runSeconds: number; dollars: number; running: boolean }
+
+/**
+ * The provider's own figures, to keep Brigade's count of VM time right (docs/vm-costs.md): every
+ * VM of the account and where it is, and what one ran over a window.
+ */
+export interface ProviderLedger {
+  /** Every VM the account has (by its id), with its state; a VM not listed is gone. */
+  states(): Promise<Map<string, VmState>>
+  /** What a VM ran between `since` and `until`. Throws on a VM the provider no longer has. */
+  usage(id: string, since: Date, until: Date): Promise<VmUsage>
+  /** The account's plan and wallet, as the provider gives them, for operators. */
+  limits(): Promise<unknown>
 }

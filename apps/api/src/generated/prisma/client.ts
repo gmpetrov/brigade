@@ -497,6 +497,14 @@ export type PreviewRecipe = Prisma.PreviewRecipeModel
  */
 export type PreviewMachine = Prisma.PreviewMachineModel
 /**
+ * Model VmRun
+ * One run of a VM at the provider (docs/vm-costs.md): its start (a create or a resume) and the
+ * time it ran until it stopped. What a workspace's cloud computer and its threads' machines cost
+ * is summed from these. Written before the provider is asked to start the VM (pending), and
+ * confirmed once it answered or the provider's own figures say it ran (reconcileVmRuns).
+ */
+export type VmRun = Prisma.VmRunModel
+/**
  * Model PreviewVariable
  * A variable people give a repository's preview: each start puts it in the
  * app's environment. A secret's value is sealed in the vault, never shown again.

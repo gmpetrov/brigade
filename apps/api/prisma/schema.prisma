@@ -362,8 +362,9 @@ model Workspace {
 
   /// Brigade's own skills an owner or admin turned off here, by name (`brigade-library`): the
   /// others are on, as is a skill added later. Only those marked switchable (BUILTIN_SKILLS).
-  builtinSkillsOff String[] @default([])
+  builtinSkillsOff String[]   @default([])
   specPulls        SpecPull[]
+  vmRuns           VmRun[]
 
   @@index([organizationId])
 }
@@ -2509,6 +2510,67 @@ enum PreviewMachineStatus {
   stopping
   stopped
   destroying
+}
+
+/// One run of a VM at the provider (docs/vm-costs.md): its start (a create or a resume) and the
+/// time it ran until it stopped. What a workspace's cloud computer and its threads' machines cost
+/// is summed from these. Written before the provider is asked to start the VM (pending), and
+/// confirmed once it answered or the provider's own figures say it ran (reconcileVmRuns).
+model VmRun {
+  id             String      @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind           VmKind
+  /// The cloud computer, for kind computer. No relation: kept as it was when its VM is replaced.
+  computerId     String?
+  /// The thread's PreviewMachine and its thread, for kind machine. No relation: a machine's row
+  /// goes with its VM, and a thread may be deleted; what they cost stays counted.
+  machineId      String?
+  sessionId      String?
+  /// The provider's id of the VM; null until the provider made it (a create).
+  sandboxId      String?
+  /// Brigade's size ('2x4', '4x8', '8x16'), priced in @brigade/providers (VM_PRICES).
+  size           String
+  start          VmStart
+  status         VmRunStatus @default(pending)
+  startedAt      DateTime    @default(now())
+  /// Null while it runs (or may run: pending).
+  stoppedAt      DateTime?
+  /// Who stopped it: brigade, the provider (its own stop, seen by its webhook or its list), or
+  /// destroyed with its disk.
+  stoppedBy      String?
+  /// When the provider last listed it running: a stop not seen came no earlier.
+  seenAt         DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([workspaceId, startedAt])
+  @@index([status])
+  @@index([sandboxId])
+}
+
+/// computer: the workspace's cloud computer. machine: a thread's own machine (preview_machines).
+enum VmKind {
+  computer
+  machine
+}
+
+/// create and resume each count as one start at the provider. found: running when Brigade first
+/// saw it without a start of its own (before runs were kept, or started outside Brigade).
+enum VmStart {
+  create
+  resume
+  found
+}
+
+/// pending: asked of the provider, not confirmed yet. open: running. closed: stopped. void: it
+/// never ran (a failed start), not counted.
+enum VmRunStatus {
+  pending
+  open
+  closed
+  void
 }
 
 enum PreviewVariableKind {

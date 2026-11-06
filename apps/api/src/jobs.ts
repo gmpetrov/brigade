@@ -38,6 +38,7 @@ import { sweepLibraryObjects, sweepOrphanLibraryObjects } from './library-object
 import { sweepDeletedThreadFiles } from './thread-delete.js'
 import { sweepDeliveries } from './triggers.js'
 import { sweepFileUploads } from './uploads.js'
+import { reconcileVmRuns } from './vm-costs.js'
 import { dueWakeups, fireDueWakeups } from './wakeups.js'
 import { dueWorkspaceCleanups, sweepDeletedWorkspaces } from './workspace-delete.js'
 
@@ -109,6 +110,8 @@ export const JOBS = {
   // Preview machines (src/preview-machines.ts): destroyed once their thread is gone or they slept
   // long enough, stopped when their runner forgot them.
   'preview-machines': { every: 60, run: (_key, now) => sweepPreviewMachines(now) },
+  // What VMs ran (src/vm-costs.ts): runs settled against the provider's own list of its VMs.
+  'vm-runs': { every: 60, run: (_key, now) => reconcileVmRuns(now) },
   'github-redeliver': { every: 600, run: () => redeliverFailed() },
   // Hourly: uploads abandoned mid-way or never sent with a message; files no document refers
   // to; library files in the trash long enough; images a runner uploaded after their thread was

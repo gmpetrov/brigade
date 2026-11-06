@@ -125,6 +125,7 @@ export const ModelName = {
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
   PreviewMachine: 'PreviewMachine',
+  VmRun: 'VmRun',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -1449,6 +1450,29 @@ export const PreviewMachineScalarFieldEnum = {
 } as const
 
 export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
+
+
+export const VmRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  kind: 'kind',
+  computerId: 'computerId',
+  machineId: 'machineId',
+  sessionId: 'sessionId',
+  sandboxId: 'sandboxId',
+  size: 'size',
+  start: 'start',
+  status: 'status',
+  startedAt: 'startedAt',
+  stoppedAt: 'stoppedAt',
+  stoppedBy: 'stoppedBy',
+  seenAt: 'seenAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VmRunScalarFieldEnum = (typeof VmRunScalarFieldEnum)[keyof typeof VmRunScalarFieldEnum]
 
 
 export const PreviewVariableScalarFieldEnum = {

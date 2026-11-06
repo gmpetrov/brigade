@@ -356,6 +356,33 @@ export const PreviewMachineStatus = {
 export type PreviewMachineStatus = (typeof PreviewMachineStatus)[keyof typeof PreviewMachineStatus]
 
 
+export const VmKind = {
+  computer: 'computer',
+  machine: 'machine'
+} as const
+
+export type VmKind = (typeof VmKind)[keyof typeof VmKind]
+
+
+export const VmStart = {
+  create: 'create',
+  resume: 'resume',
+  found: 'found'
+} as const
+
+export type VmStart = (typeof VmStart)[keyof typeof VmStart]
+
+
+export const VmRunStatus = {
+  pending: 'pending',
+  open: 'open',
+  closed: 'closed',
+  void: 'void'
+} as const
+
+export type VmRunStatus = (typeof VmRunStatus)[keyof typeof VmRunStatus]
+
+
 export const PreviewVariableKind = {
   setting: 'setting',
   secret: 'secret',

@@ -29,6 +29,7 @@ import { forgetThread, throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { noteFailure } from './ops/failures.js'
+import { beginRun, computerSize, runMade, runStarted, runStopped } from './vm-costs.js'
 
 const provider = providerFromEnv(process.env)
 
@@ -162,7 +163,10 @@ export async function stopOldVm(ref: ComputerRef) {
     (error: unknown) => error,
   )
   const status = await provider.status(ref)
-  if (INACTIVE.has(status)) return
+  if (INACTIVE.has(status)) {
+    if (!stop) await runStopped(ref.id, new Date(), 'brigade')
+    return
+  }
   throw stop instanceof Error
     ? new Error(`the old VM did not stop (${status}): ${await providerReason(stop)}`)
     : new Error(`the old VM did not stop yet (${status})`)
@@ -212,7 +216,9 @@ async function destroyVm(ref: ComputerRef) {
       throw error
     },
   )
-  if (!gone) await provider!.destroy(ref)
+  if (gone) return
+  await provider!.destroy(ref)
+  await runStopped(ref.id, new Date(), 'destroyed')
 }
 
 /**
@@ -238,11 +244,20 @@ async function provision(computer: { id: string; organizationId: string; workspa
       data: { providerRef: Prisma.DbNull },
     })
   }
+  // Its run (src/vm-costs.ts) is written before the provider is asked, and given its VM as soon
+  // as the provider has it.
+  const run = await beginRun(
+    { ...ofComputer(computer), size: computerSize(defaults.cloudComputerSize) },
+    'create',
+    null,
+  )
   const ref = await provider!.create({
     workspaceId: computer.workspaceId,
     size: defaults.cloudComputerSize,
+    onCreated: (made) => runMade(run, made.id),
   })
   await prisma.computer.update({ where: { id: computer.id }, data: { providerRef: ref } })
+  await runStarted(run, ref.id, { resumedAt: null })
   // The plan ended while it was being made, before its stop could reach it (src/billing.ts):
   // nothing is installed yet, so the VM goes rather than wait, stopped, for a runner.
   if (!(await cloudEntitled(computer.workspaceId))) {
@@ -269,6 +284,14 @@ async function provision(computer: { id: string; organizationId: string; workspa
 }
 
 const refOf = (computer: { providerRef: unknown }) => computer.providerRef as ComputerRef | null
+
+/** What a computer's VM runs are of (src/vm-costs.ts). */
+const ofComputer = (computer: { id: string; organizationId: string; workspaceId: string }) => ({
+  kind: 'computer' as const,
+  computerId: computer.id,
+  organizationId: computer.organizationId,
+  workspaceId: computer.workspaceId,
+})
 
 /**
  * In the hub: make sure a cloud computer is on its way up: once its start is asked for,
@@ -338,8 +361,17 @@ async function bringUp(computerId: string) {
   await setStatus(computer, 'starting')
   const { starting } = state()
   starting.add(computer.id)
-  void provider
-    .start(ref)
+  const cloud = provider
+  void (async () => {
+    // Its run is written before the provider is asked (src/vm-costs.ts): a start cut short is
+    // settled from the provider's figures, never lost nor counted twice.
+    const run = await beginRun(
+      { ...ofComputer(computer), size: computerSize(computer.size) },
+      'resume',
+      ref.id,
+    )
+    await runStarted(run, ref.id, await cloud.start(ref))
+  })()
     .then(() =>
       audit({
         organizationId: computer.organizationId,
@@ -499,6 +531,7 @@ export async function stopComputer(
     if (!options.force) return room
   }
   await provider.stop(ref)
+  await runStopped(ref.id, new Date(), 'brigade')
   // Its runner went with it, without closing its connection.
   currentHub(computer.workspaceId).dropRunner(computer.id)
   await setStatus(computer, 'stopped')
