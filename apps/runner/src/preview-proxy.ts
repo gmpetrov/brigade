@@ -138,17 +138,33 @@ export class PreviewProxy {
   async listen(from: number, avoid: number[]) {
     for (let port = from; port < from + 100 && port <= 65535; port++) {
       if (avoid.includes(port)) continue
-      const ok = await new Promise<boolean>((done) => {
-        const fail = () => done(false)
-        this.server.once('error', fail)
-        this.server.listen(port, this.options.bind ?? '0.0.0.0', () => {
-          this.server.off('error', fail)
-          done(true)
-        })
-      })
-      if (ok) return port
+      if (await this.tryListen(port)) return port
     }
     throw new Error(`No free port for the preview's proxy from ${from}`)
+  }
+
+  /**
+   * Listen on this very port, where the proxy of the runner before this one was (an update handed
+   * its preview over): tried again while that one lets go of it, for `waitMs` at most.
+   */
+  async listenAt(port: number, waitMs = 5000) {
+    const deadline = Date.now() + waitMs
+    while (!(await this.tryListen(port))) {
+      if (Date.now() > deadline) throw new Error(`Port ${port} of the preview's proxy is taken`)
+      await new Promise((done) => setTimeout(done, 100))
+    }
+    return port
+  }
+
+  private tryListen(port: number) {
+    return new Promise<boolean>((done) => {
+      const fail = () => done(false)
+      this.server.once('error', fail)
+      this.server.listen(port, this.options.bind ?? '0.0.0.0', () => {
+        this.server.off('error', fail)
+        done(true)
+      })
+    })
   }
 
   close() {

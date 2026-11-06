@@ -6,13 +6,16 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, test } from 'node:test'
 import {
+  appState,
   clearRun,
   envFileText,
+  freeOutput,
   MachineSync,
+  readOutput,
   remoteScript,
-  runApp,
   shellQuote,
   signalApp,
+  startApp,
   writeRun,
   type MachineLink,
 } from '../src/preview-machine.js'
@@ -22,7 +25,8 @@ import {
 // - the sync starts the reader here and the receiver there, sends the whole checkout, then
 //   each change, and starts again after it was cut, sending only what changed;
 // - the app's script sources its settings and credentials, runs the setup only when asked, and
-//   its whole process group stops when signalled, what it left included.
+//   its whole process group stops when signalled, what it left included;
+// - it runs detached, its output in a file read from any byte on, and how it ended noted there.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src')
 /** tsx's loader by its path: the stand-in machine's commands run in a folder without it. */
@@ -71,9 +75,9 @@ const reader = (root: string) => () =>
     stdio: ['pipe', 'pipe', 'pipe'],
   })
 
-async function eventually(check: () => boolean, what: string) {
+async function eventually(check: () => boolean | Promise<boolean>, what: string) {
   for (let i = 0; i < 200; i++) {
-    if (check()) return
+    if (await check()) return
     await new Promise((done) => setTimeout(done, 50))
   }
   assert.fail(`still not so after 10 s: ${what}`)
@@ -145,12 +149,11 @@ test('the app runs with its settings and credentials, its setup only when asked'
   const dir = join(home, 'work/app')
   mkdirSync(dir, { recursive: true })
   const link = fakeLink(home)
-  const output = async (child: ChildProcess) => {
-    let out = ''
-    child.stdout!.on('data', (d: Buffer) => (out += d.toString()))
-    child.stderr!.on('data', (d: Buffer) => (out += d.toString()))
-    await new Promise((done) => child.on('close', done))
-    return out
+  /** Started detached, its output read once it ended there. */
+  const output = async () => {
+    await startApp(link, 'r1')
+    await eventually(async () => (await appState(link))?.state === 'ended', 'it ends')
+    return read(readOutput(link, 'r1', 0, false))
   }
   const script = (setup?: string) =>
     remoteScript({
@@ -161,7 +164,7 @@ test('the app runs with its settings and credentials, its setup only when asked'
       appStarts: '[preview] Starting the app',
     })
   await writeRun(link, { PORT: '4321' }, ['TOKEN=from-the-vault\n'], script('echo setting up'))
-  const first = await output(runApp(link))
+  const first = await output()
   assert.match(first, /\[preview\] Running the setup\nsetting up\n\[preview\] Starting the app\n/)
   assert.match(first, /port=4321 token=from-the-vault in app/)
   assert.equal(
@@ -173,7 +176,7 @@ test('the app runs with its settings and credentials, its setup only when asked'
   )
 
   await writeRun(link, { PORT: '4321' }, ['TOKEN=again\n'], script())
-  const again = await output(runApp(link))
+  const again = await output()
   assert.doesNotMatch(again, /setup/, 'a restart runs no setup')
   assert.match(again, /token=again/)
 })
@@ -209,16 +212,15 @@ test('a signal reaches the app’s whole process group, what it started included
       appStarts: '[preview] Starting the app',
     }),
   )
-  const app = runApp(link)
+  await startApp(link, 'r1')
   const childPid = join(home, 'work/app/child.pid')
   await eventually(
     () => existsSync(childPid) && readFileSync(childPid, 'utf8').trim() !== '',
     'the child',
   )
   const pid = Number(readFileSync(childPid, 'utf8'))
-  const exited = new Promise((done) => app.on('close', done))
   await signalApp(link, 'TERM')
-  await exited
+  await eventually(async () => (await appState(link))?.state === 'ended', 'it stopped')
   await eventually(() => {
     try {
       process.kill(pid, 0)
@@ -227,4 +229,88 @@ test('a signal reaches the app’s whole process group, what it started included
       return true
     }
   }, 'its child stopped too')
+})
+
+/** All a command on the machine prints. */
+async function read(child: ChildProcess) {
+  let out = ''
+  child.stdout!.on('data', (d: Buffer) => (out += d.toString()))
+  await new Promise((done) => child.on('close', done))
+  return out
+}
+
+test('the app outlives the connection that started it; its output is read on from any byte', async () => {
+  const home = temp()
+  mkdirSync(join(home, 'work/app'), { recursive: true })
+  const link = fakeLink(home)
+  await writeRun(
+    link,
+    {},
+    [],
+    remoteScript({
+      dir: 'work/app',
+      envFiles: 0,
+      command: 'echo first; while [ ! -e go ]; do sleep 0.05; done; echo second; exit 3',
+      appStarts: '[preview] Starting the app',
+    }),
+  )
+  await startApp(link, 'r1')
+  assert.deepEqual(await appState(link), { state: 'running' }, 'running once started, detached')
+  // Followed from the start until cut, as a runner handing over does.
+  const follow = readOutput(link, 'r1', 0, true)
+  let seen = ''
+  follow.stdout!.on('data', (d: Buffer) => (seen += d.toString()))
+  await eventually(() => seen === 'first\n', 'its first line')
+  follow.kill()
+  // The next one reads on from the byte reached: nothing again, nothing missed.
+  writeFileSync(join(home, 'work/app/go'), '')
+  const rest = readOutput(link, 'r1', Buffer.byteLength(seen), true)
+  assert.equal(await read(rest), 'second\n')
+  assert.deepEqual(await appState(link), { state: 'ended', code: 3 }, 'how it ended, noted')
+})
+
+test('a run left before the machine last started is not running, nor signalled', async () => {
+  const home = temp()
+  mkdirSync(join(home, '.brigade/run'), { recursive: true })
+  const link = fakeLink(home)
+  // Its group's number is someone else's by now: a process of this test's, in a group of its own.
+  const other = spawn('sleep', ['30'], { detached: true, stdio: 'ignore' })
+  try {
+    writeFileSync(join(home, '.brigade/run/app.pid'), String(other.pid))
+    writeFileSync(join(home, '.brigade/run/boot'), 'another boot\n')
+    assert.deepEqual(await appState(link), { state: 'ended', code: null })
+    await signalApp(link, 'TERM')
+    await new Promise((done) => setTimeout(done, 200))
+    assert.equal(other.exitCode ?? other.signalCode, null, 'that group got no signal')
+  } finally {
+    other.kill('SIGKILL')
+  }
+})
+
+test('the app’s output gives back its disk once read, its size and offsets kept', async () => {
+  const home = temp()
+  mkdirSync(join(home, '.brigade/run'), { recursive: true })
+  const link = fakeLink(home)
+  const file = join(home, '.brigade/run/output-r1.log')
+  writeFileSync(file, 'x'.repeat(64 * 1024) + 'after\n')
+  await freeOutput(link, 'r1', 64 * 1024)
+  const blocks = Number(execFileSync('stat', ['-c', '%b', file]).toString())
+  assert.ok(blocks * 512 <= 8 * 1024, `${blocks} blocks left`)
+  assert.equal(
+    await read(readOutput(link, 'r1', 64 * 1024, false)),
+    'after\n',
+    'read on from the same byte',
+  )
+})
+
+test('giving back the disk of a run’s output never touches the next run’s', async () => {
+  const home = temp()
+  mkdirSync(join(home, '.brigade/run'), { recursive: true })
+  const link = fakeLink(home)
+  // A release for run r1 that reaches the machine late, once r2 replaced it (a restart).
+  const next = join(home, '.brigade/run/output-r2.log')
+  writeFileSync(next, 'x'.repeat(8192) + 'the next run’s first lines\n')
+  await freeOutput(link, 'r1', 8192)
+  assert.match(readFileSync(next, 'utf8'), /^x{8192}the next run’s first lines\n$/)
+  assert.ok(!existsSync(join(home, '.brigade/run/output-r1.log')), 'and none is made for r1')
 })

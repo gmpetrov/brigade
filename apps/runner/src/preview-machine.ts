@@ -106,6 +106,11 @@ export class MachineLink {
     return this.access.size
   }
 
+  /** How it reaches the machine, for a runner after this one (no secret in it: the host key is public). */
+  get machine() {
+    return this.access
+  }
+
   /** After the machine started again: its new address and host key. */
   update(access: PreviewMachineAccess) {
     this.access = access
@@ -417,9 +422,21 @@ export class MachineSync {
   }
 }
 
-/** On the machine: the app's process group, its environment and its script. */
+/**
+ * On the machine: the app's process group, its environment and its script, its output and how it
+ * ended. The app runs detached there (a session of its own), its output in a file the runner
+ * follows: a cut connection, or the next runner after an update, goes on reading where it was.
+ */
 const RUN_DIR = `${REMOTE_DIR}/run`
 const PID_FILE = `${RUN_DIR}/app.pid`
+/** A run's output, named after it: what is meant for one run never reaches the next one's. */
+export const outputFile = (id: string) =>
+  `${RUN_DIR}/output-${id.replace(/[^A-Za-z0-9_-]/g, '')}.log`
+
+/** Whether the machine still runs what it ran when the app started (it was not stopped since). */
+const SAME_BOOT = `[ "$(cat ${RUN_DIR}/boot 2>/dev/null)" = "$(cat /proc/sys/kernel/random/boot_id)" ]`
+/** Whether anything of the app still runs there: any process of its group, not only its script. */
+const ALIVE = `${SAME_BOOT} && kill -0 -"$(cat ${PID_FILE} 2>/dev/null)" 2>/dev/null`
 
 /** A dotenv-like file the machine's shell sources: KEY='value' lines. */
 export function envFileText(env: Record<string, string>) {
@@ -431,7 +448,8 @@ export function envFileText(env: Record<string, string>) {
 
 /**
  * The script the machine runs for the app: as the local wrapper does, its setup first when asked,
- * then its command. The shell sshd starts leads its own process group, noted to stop it all.
+ * then its command, and how it ended in a file. Started in a session of its own, which it leads:
+ * noted, its id stops it all.
  */
 export function remoteScript(input: {
   dir: string
@@ -440,29 +458,32 @@ export function remoteScript(input: {
   command: string
   appStarts: string
 }) {
-  // Its files are named from the home folder sshd starts in: sourced before the cd.
+  // Its files are named from the home folder sshd starts in: the run's folder kept before the cd.
   const lines = [
-    `echo $$ > ${PID_FILE}`,
+    `run="$PWD/${RUN_DIR}"`,
+    'echo $$ > "$run/app.pid"',
+    'cat /proc/sys/kernel/random/boot_id > "$run/boot" 2>/dev/null',
+    'ended() { echo "$1" > "$run/exit.tmp" && mv -f "$run/exit.tmp" "$run/exit"; exit "$1"; }',
     'set -a',
-    `. ./${RUN_DIR}/env`,
-    ...Array.from({ length: input.envFiles }, (_, i) => `. ./${RUN_DIR}/credentials-${i}`),
+    '. "$run/env"',
+    ...Array.from({ length: input.envFiles }, (_, i) => `. "$run/credentials-${i}"`),
     'set +a',
-    `cd -- ${shellQuote(input.dir)} || exit 1`,
+    `cd -- ${shellQuote(input.dir)} || ended 1`,
   ]
   if (input.setup?.trim())
     lines.push(
       'echo "[preview] Running the setup"',
-      `sh -ec ${shellQuote(input.setup)} || { echo "[preview] The setup failed" >&2; exit 1; }`,
+      `sh -ec ${shellQuote(input.setup)} || { echo "[preview] The setup failed" >&2; ended 1; }`,
       `echo ${shellQuote(input.appStarts)}`,
     )
-  lines.push(`exec sh -c ${shellQuote(input.command)} </dev/null`)
+  lines.push(`sh -c ${shellQuote(input.command)} </dev/null`, 'ended $?')
   return `${lines.join('\n')}\n`
 }
 
 /**
  * Write the app's environment and script on the machine: by stdin, never on a command line, in
  * a folder made again for each run, so nothing of an earlier run (its credentials, which a later
- * run may not have been given) is left for this one.
+ * run may not have been given, its output) is left for this one.
  */
 export async function writeRun(
   link: MachineLink,
@@ -486,15 +507,81 @@ export function clearRun(link: MachineLink) {
     .catch(() => undefined)
 }
 
-/** Start the app on the machine: its output comes back on the child's stdout and stderr. */
-export const runApp = (link: MachineLink) => link.spawn(`exec bash ${RUN_DIR}/app.sh`, 'ignore')
+/**
+ * Start the app on the machine, detached: it outlives the connection that started it and the
+ * runner. Resolves once it noted its process group.
+ */
+export async function startApp(link: MachineLink, id: string) {
+  await link.exec(
+    `(setsid nohup bash ${RUN_DIR}/app.sh > ${outputFile(id)} 2>&1 < /dev/null &); i=0; ` +
+      `while [ ! -s ${PID_FILE} ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done; [ -s ${PID_FILE} ]`,
+  )
+}
 
-/** Signal the app's whole process group on the machine (what its last run left too). */
+/**
+ * The app's output from byte `offset` (0 for the start): followed while anything of it runs
+ * (`follow`), else read to its end. Its stdout carries the output.
+ */
+export function readOutput(link: MachineLink, id: string, offset: number, follow: boolean) {
+  const from = offset + 1
+  const file = outputFile(id)
+  return link.spawn(
+    follow
+      ? `if ${ALIVE}; then exec tail -c +${from} -f --pid="$(cat ${PID_FILE})" ${file}; ` +
+          `else exec tail -c +${from} ${file}; fi`
+      : `exec tail -c +${from} ${file}`,
+    'ignore',
+  )
+}
+
+/**
+ * Give back the disk the first `length` bytes of the app's output hold there, once read: they
+ * become a hole, so the file's size and every offset stay, and what the app writes goes on.
+ */
+export function freeOutput(link: MachineLink, id: string, length: number) {
+  const file = outputFile(id)
+  // Only that run's file: another run's (a restart's) is never touched, and none is made.
+  return link.exec(
+    `[ ! -f ${file} ] || fallocate --punch-hole --offset 0 --length ${length} ${file}`,
+    '',
+    15_000,
+  )
+}
+
+/**
+ * How the app stands on the machine: running, ended with its exit status, ended without one (its
+ * machine stopped, or it was killed), or gone (no run there: the machine was made again).
+ * Null when the machine could not be asked.
+ */
+export type AppState = { state: 'running' | 'gone' } | { state: 'ended'; code: number | null }
+
+export async function appState(link: MachineLink): Promise<AppState | null> {
+  const said = await link
+    .exec(
+      `[ -s ${PID_FILE} ] || { echo gone; exit 0; }; ` +
+        `if [ -s ${RUN_DIR}/exit ]; then echo "exit $(cat ${RUN_DIR}/exit)"; ` +
+        `elif ${ALIVE}; then echo running; else echo ended; fi`,
+      '',
+      30_000,
+    )
+    .then((out) => out.trim())
+    .catch(() => null)
+  if (said === null) return null
+  if (said.startsWith('exit ')) return { state: 'ended', code: Number(said.slice(5)) }
+  if (said === 'running' || said === 'gone') return { state: said }
+  return { state: 'ended', code: null }
+}
+
+/**
+ * Signal the app's whole process group on the machine (what its last run left too). Not a group
+ * noted before the machine last started, whose number is someone else's by now.
+ */
 export function signalApp(link: MachineLink, signal: 'TERM' | 'KILL') {
   return link
     .exec(
       // Not `kill -SIG -- -pg`: dash, the shell commands may run in, refuses its `--`.
-      `pg=$(cat ${PID_FILE} 2>/dev/null) && [ -n "$pg" ] && kill -${signal} -"$pg" 2>/dev/null; true`,
+      `{ [ ! -e ${RUN_DIR}/boot ] || ${SAME_BOOT}; } && pg=$(cat ${PID_FILE} 2>/dev/null) && ` +
+        `[ -n "$pg" ] && kill -${signal} -"$pg" 2>/dev/null; true`,
       '',
       15_000,
     )
