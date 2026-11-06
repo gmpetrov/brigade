@@ -322,7 +322,7 @@ async function start() {
     ? new MachineHolds({
         up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
         sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
-        touch: (sessionId) => connection.previewMachine(sessionId, 'touch'),
+        touch: (sessionId, busy) => connection.previewMachine(sessionId, 'touch', busy),
       })
     : null
   const machineRuns = holds

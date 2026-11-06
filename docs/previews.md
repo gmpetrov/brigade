@@ -522,37 +522,54 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     preview's `work/`, so a build never writes under a running dev server): the
     whole checkout it is in, or the folder alone outside a checkout (never the
     whole working directory). The copy stays between commands with what they
-    installed, and the next command sends only what changed. The command runs
-    detached in a session of its own (`.brigade/runs/<id>/` there), with bash;
-    its settings and credentials are sourced, then deleted from the disk; its
-    output goes to a file the runner follows (`tail -f --pid`) from the byte it
-    reached, so a cut connection loses and repeats nothing, and the boot id
-    tells a machine stopped since. A command outlives the tool call that started
-    it (`machine_run` waits for it again) and the runner: an update leaves it
-    running there, and the next runner follows it from its state file
-    (`machine-runs.json`, with no output or secret in it). Once it ends,
-    succeeded or not, the files and folders it names in `outputs` (inside its
-    folder, 2 GB at most) come back to the same place in the teammate's folder,
-    written as the teammate (tar over the link, times and modes kept, so the
-    next sync does not send them back). Credentials' values are hidden in its
-    output; a runner that started after it does not know them, and shows none of
-    its output. A stop, or its time limit (60 minutes unless said, 6 hours at
-    most), ends its whole process group there. At most 3 commands of a thread
-    run at once.
+    installed, and the next command sends only what changed. At most 3 commands
+    of a thread run at once.
+    - **Detached there, followed here.** The command runs in a session of its
+      own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
+      sourced, then deleted from the disk. Its output goes to a file the runner
+      follows (`tail -f --pid`) from the byte it reached: a cut connection loses
+      and repeats nothing, and once it ended, what the follow had not read yet
+      is read to the end. It counts as running while any process of its group
+      does (the boot id tells a machine stopped since), so a stop or its time
+      limit (60 minutes unless said, 6 hours at most) sends TERM to the whole
+      group, then KILL to what is left 10 seconds later: a TERM ends its script
+      before what it started, and what ignores TERM outlives both.
+    - **It outlives the call and the runner.** `machine_run` waits for it again;
+      an update leaves it running there, and the next runner follows it from its
+      state file (`machine-runs.json`, with no secret in it). That file keeps the
+      last 200 lines of an ended command's output, so `machine_run` still
+      answers after a restart (the turn a wake-up starts, say).
+    - **Its outputs come back, then it ends.** Once it ran, succeeded or not, the
+      files and folders it names in `outputs` (inside its folder, 2 GB at most)
+      come back to the same place in the teammate's folder, written as the
+      teammate (tar over the link, times and modes kept, so the next sync does
+      not send them back). It says it ended only once they are back: a runner
+      that stops meanwhile leaves it unfinished in its state, and the next one
+      brings them back.
+    - **Credentials' values are hidden in its output**, read as a shell reads
+      the released file (`export NAME='…'`, a ' inside as `'\''`; a key over
+      several lines is hidden line by line too), and the end of a line still
+      being written that may begin one is hidden until the line ends. A runner
+      that started after the command does not know them, and shows none of its
+      output.
   - **The preview and the commands share the machine** (`machine-holds.ts`).
     The runner tells the API `sleep` only once neither uses it, and after a
     command only 10 minutes later, should another follow: each start counts at
     the provider (200 a day included in the plan). A thread's ups and sleeps go
     to the API one after the other: an up waits for a sleep under way, and a
     sleep not under way yet is not made once someone comes for the machine.
-    While a command runs, the API is told every 5 minutes that the machine is in
-    use, which keeps the sweep and the provider's own stop away. What the
-    machine has (November 6, 2026): Ubuntu, Node.js 24, pnpm, Docker, Python
-    3.12, ffmpeg, Chrome and passwordless sudo, 120 GB free. Measured that day,
-    driven from a cloud computer: Brigade's whole `pnpm install`, then the
-    runner's typecheck, 40 seconds on a fresh copy; the same after an edit, 4
-    seconds (one file sent); a 20-second 1080p render with ffmpeg, its file back
-    here, in about 7.
+    While a command runs, the runner touches the machine every 5 minutes as
+    busy: the sweep and the provider's own stop stay away, and the API marks the
+    runner's computer in use too, as with a thread running. Its idle stop (30
+    minutes without a running thread) would otherwise stop the runner under a
+    long command whose turn ended, and the machine, untouched, 45 minutes later.
+    A preview's touch does not keep the computer up: a person viewing it does,
+    from the dashboard. What the machine has (November 6, 2026): Ubuntu, Node.js
+    24, pnpm, Docker, Python 3.12, ffmpeg, Chrome and passwordless sudo, 120 GB
+    free. Measured that day, driven from a cloud computer: Brigade's whole
+    `pnpm install`, then the runner's typecheck, 40 seconds on a fresh copy; the
+    same after an edit, 4 seconds (one file sent); a 20-second 1080p render with
+    ffmpeg, its file back here, in about 7.
   - **Not done**: making a machine from a saved image per repository (a
     prebuild). The first preview of a thread installs everything on a fresh
     machine (about 90 seconds for Brigade, measured); later ones in the thread

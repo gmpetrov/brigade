@@ -256,6 +256,9 @@ async function handle(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
   }
 
   if (message.type === 'preview.machine') {
+    // A command running on the thread's machine keeps the runner's computer up, as a running
+    // thread does: the runner follows it there and brings its files back.
+    if (message.action === 'touch' && message.busy) hub.touch(runner.computerId)
     void handlePreviewMachine(runner, message, send).catch(failed(message.callId))
     return
   }

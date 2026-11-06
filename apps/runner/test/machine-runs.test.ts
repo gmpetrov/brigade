@@ -23,12 +23,17 @@ import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 //   kept a while for the next command;
 // - one longer than the call's wait goes on, and machine_run waits for it;
 // - a failed one says so, and what it made still comes back;
-// - a stop ends it and all it started; so does its time limit;
-// - credentials' values are hidden in its output, and their files do not stay on the machine;
+// - a stop ends it and all it started, what ignores TERM included; so does its time limit;
+// - while it runs, the API is told so as busy: the runner's computer stays up;
+// - credentials' values are hidden in its output, as written by ThreadCredentials (quotes, keys
+//   over several lines), even while the line holding one is still being written, and their files
+//   do not stay on the machine;
 // - outputs, and the folder it runs in, are inside the working directory, and the whole working
 //   directory does not go;
-// - its output is followed again after the follow was cut, losing and repeating nothing;
-// - the runner after this one follows it to its end, outputs included;
+// - its output is followed again after the follow was cut, losing and repeating nothing, even
+//   when it ended meanwhile;
+// - the runner after this one follows it to its end, outputs included, even when it stopped while
+//   they came back; an ended one's output is still there after a restart;
 // - two commands of the thread at once share the copy of their folder.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src')
@@ -69,6 +74,8 @@ function folderLink(home: string) {
   const link = {
     log: [] as string[],
     followers: [] as ChildProcess[],
+    /** Called before each exec: a test holds one back. */
+    before: undefined as ((line: string) => Promise<void>) | undefined,
     size: 'test',
     connect: async () => undefined,
     close: () => undefined,
@@ -79,8 +86,9 @@ function folderLink(home: string) {
       if (line.includes('tail -c')) link.followers.push(child)
       return child
     },
-    exec: (line: string, input = '') =>
-      new Promise<string>((done, fail) => {
+    exec: async (line: string, input = '') => {
+      await link.before?.(line)
+      return new Promise<string>((done, fail) => {
         link.log.push(line)
         const child = spawnHere(line)
         let out = ''
@@ -88,7 +96,8 @@ function folderLink(home: string) {
         child.on('close', (code) => (code === 0 ? done(out) : fail(new Error(`exit ${code}`))))
         child.stdin!.on('error', () => undefined)
         child.stdin!.end(input)
-      }),
+      })
+    },
   }
   return link
 }
@@ -110,7 +119,10 @@ function fakeHolds() {
     },
     release: async (_sessionId: string, holder: string, idleMs = 0) =>
       void calls.push(`release ${holder} ${idleMs}`),
-    touch: async () => undefined,
+    touches: [] as boolean[],
+    async touch(_sessionId: string, busy = false) {
+      this.touches.push(busy)
+    },
   }
 }
 
@@ -134,6 +146,8 @@ function setup() {
       link: () => link as unknown as MachineLink,
       reader,
       idleMs: 1000,
+      touchMs: 200,
+      stopGraceMs: 1000,
     })
   const runs = make()
   return { workDir, machine, app, link, holds, seat, make, runs, control: runs.forSeat(seat) }
@@ -241,9 +255,12 @@ function groupLeft(group: string) {
   }
 }
 
-test('a stop ends the command and all it started; so does its time limit', async () => {
+test('a stop ends the command and all it started, what ignores TERM included; so does its time limit', async () => {
   const { control, machine } = setup()
-  const started = await control.run({ command: 'sleep 300 & sleep 300; echo never', cwd: 'app' }, 0)
+  const started = await control.run(
+    { command: '(trap "" TERM; sleep 300) & sleep 300; echo never', cwd: 'app' },
+    0,
+  )
   const pidFile = join(machine, `.brigade/runs/${started.id}/pid`)
   await until(() => existsSync(pidFile) && control.list()[0]?.status === 'running', 'running')
   const group = readFileSync(pidFile, 'utf8').trim()
@@ -258,24 +275,69 @@ test('a stop ends the command and all it started; so does its time limit', async
   assert.ok(limited.notes.some((note) => note.includes('time limit')))
 })
 
-test('credentials’ values are hidden in its output, and their files do not stay there', async () => {
+/** As ThreadCredentials.env writes a value: in single quotes, each ' inside as '\''. */
+const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
+
+/** Its view, asked again until `check` holds of it. */
+async function viewUntil(
+  control: ReturnType<MachineRuns['forSeat']>,
+  id: string,
+  check: (output: string) => boolean,
+) {
+  for (let i = 0; i < 200; i++) {
+    const view = await control.get(id, 0)
+    if (check(view.output ?? '')) return view
+    await new Promise((done) => setTimeout(done, 50))
+  }
+  assert.fail(`never so: ${id}`)
+}
+
+test('credentials’ values are hidden in its output, as ThreadCredentials writes them, and their files do not stay there', async () => {
   const { control, machine, workDir } = setup()
   const released = join(workDir, 'released.env')
-  writeFileSync(released, 'API_TOKEN="s3cr3t-value-123"\nSHORT=ab\n')
+  writeFileSync(
+    released,
+    `${[
+      `export API_TOKEN=${quote("dummy'password-123456")}`,
+      `export PRIVATE_KEY=${quote('line-one-of-the-key\nline-two-of-the-key')}`,
+      `export SHORT=${quote('ab')}`,
+    ].join('\n')}\n`,
+  )
   const result = await control.run(
-    { command: 'echo "token is $API_TOKEN, short is $SHORT"', cwd: 'app', envFiles: [released] },
+    {
+      command: 'echo "token is $API_TOKEN, short is $SHORT"; echo "$PRIVATE_KEY"',
+      cwd: 'app',
+      envFiles: [released],
+    },
     30_000,
   )
   assert.equal(result.status, 'succeeded')
   assert.match(result.output ?? '', /token is ••••••, short is ab/)
-  assert.ok(!(result.output ?? '').includes('s3cr3t'))
+  for (const part of ['dummy', 'password', 'line-one', 'line-two'])
+    assert.ok(!(result.output ?? '').includes(part), `${part} is hidden: ${result.output}`)
   const left = readdirSync(join(machine, `.brigade/runs/${result.id}`))
   assert.ok(!left.some((file) => file === 'env' || file.startsWith('credentials')), left.join(','))
-  assert.deepEqual(secretValues('A="x y z w"\nB=\'quoted value\'\nC=abc\nexport D=longer-one'), [
-    'quoted value',
-    'longer-one',
-    'x y z w',
-  ])
+
+  // A line still being written, the start of a value in it and its rest to come: never shown.
+  const partial = await control.run(
+    {
+      command: 'printf "token: %s" "${API_TOKEN:0:12}"; sleep 2; printf "%s\\n" "${API_TOKEN:12}"',
+      cwd: 'app',
+      envFiles: [released],
+    },
+    0,
+  )
+  const writing = await viewUntil(control, partial.id, (output) => output.includes('token:'))
+  assert.equal(writing.output, 'token: ••••••')
+  const whole = await control.get(partial.id, 30_000)
+  assert.equal(whole.output, 'token: ••••••')
+
+  assert.deepEqual(
+    secretValues(
+      `export A=${quote("it's a secret")}\nB="x \\"y\\" z"\nC=abc\n# D=commented-out\nexport D=longer-one\nexport E=${quote('multi\nline value')}\n`,
+    ),
+    ['multi\nline value', "it's a secret", 'longer-one', 'line value', 'x "y" z'],
+  )
 })
 
 test('outputs and the folder it runs in are inside the working directory', async () => {
@@ -347,4 +409,72 @@ test('two commands of the thread at once share the copy of their folder', async 
     1,
     'one sync of the checkout for both',
   )
+})
+
+test('while a command runs, the API hears it busy: the runner’s computer stays up', async () => {
+  const { control, holds } = setup()
+  const result = await control.run({ command: 'sleep 1', cwd: 'app' }, 30_000)
+  assert.equal(result.status, 'succeeded')
+  assert.ok(
+    holds.touches.length >= 2 && holds.touches.every(Boolean),
+    JSON.stringify(holds.touches),
+  )
+})
+
+test('what it wrote as the follow was cut, the moment it ended, is still read', async () => {
+  const { control, link } = setup()
+  let slow = false
+  link.before = async (line) => {
+    // Its status is asked slowly: it ends meanwhile, its last line unread.
+    if (slow && line.includes('echo gone')) await new Promise((done) => setTimeout(done, 1500))
+  }
+  const started = await control.run(
+    { command: 'echo before; sleep 1; echo final-error-message; exit 1', cwd: 'app' },
+    0,
+  )
+  await viewUntil(control, started.id, (output) => output.includes('before'))
+  slow = true
+  link.followers.at(-1)!.kill('SIGKILL')
+  const ended = await control.get(started.id, 30_000)
+  assert.equal(ended.status, 'failed')
+  assert.match(ended.output ?? '', /final-error-message/)
+})
+
+test('a runner that stops while the outputs come back leaves them to the next one', async () => {
+  const { runs, control, make, seat, app, link } = setup()
+  let listing!: () => void
+  const listed = new Promise<void>((done) => (listing = done))
+  let release!: () => void
+  const gate = new Promise<void>((done) => (release = done))
+  link.before = async (line) => {
+    if (!line.includes('for p in')) return
+    listing()
+    await gate
+    throw new Error('its connection went with the runner')
+  }
+  const started = await control.run(
+    { command: 'echo made > report.txt', cwd: 'app', outputs: ['report.txt'] },
+    0,
+  )
+  await listed
+  runs.detach()
+  link.before = undefined
+  release()
+  // What the stopped runner still does once its copy failed is over before the next one reads.
+  await new Promise((done) => setTimeout(done, 300))
+  const next = make()
+  next.resume()
+  const ended = await next.forSeat(seat).get(started.id, 30_000)
+  assert.equal(ended.status, 'succeeded')
+  assert.equal(readFileSync(join(app, 'report.txt'), 'utf8'), 'made\n')
+})
+
+test('an ended command’s output is still there for machine_run after a restart', async () => {
+  const { runs, control, make, seat } = setup()
+  const result = await control.run({ command: 'echo kept-line', cwd: 'app' }, 30_000)
+  assert.equal(result.status, 'succeeded')
+  runs.detach()
+  const again = await make().forSeat(seat).get(result.id, 0)
+  assert.equal(again.status, 'succeeded')
+  assert.match(again.output ?? '', /kept-line/)
 })

@@ -669,6 +669,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     callId: z.string(),
     sessionId: z.string(),
     action: PreviewMachineAction,
+    /**
+     * touch: a command runs there (machine-runs.ts), which the runner follows and whose files it
+     * brings back: its computer stays up meanwhile, as with a thread running. Older APIs ignore it.
+     */
+    busy: z.boolean().optional(),
     /** up: the runner's key, let into the machine. */
     publicKey: SshPublicKey.optional(),
   }),

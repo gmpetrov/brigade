@@ -12,8 +12,11 @@ export type MachineApi = {
   up: (sessionId: string, publicKey: string) => Promise<PreviewMachineUp>
   /** Stop the thread's machine, its disk kept. */
   sleep: (sessionId: string) => Promise<unknown>
-  /** Still in use: its machine is not stopped meanwhile. */
-  touch: (sessionId: string) => Promise<unknown>
+  /**
+   * Still in use: its machine is not stopped meanwhile. `busy`: a command runs there, and the
+   * runner's computer stays up too.
+   */
+  touch: (sessionId: string, busy?: boolean) => Promise<unknown>
 }
 
 type Held = {
@@ -79,8 +82,8 @@ export class MachineHolds {
   }
 
   /** Still in use: said to the API as is. */
-  touch(sessionId: string) {
-    return this.api.touch(sessionId)
+  touch(sessionId: string, busy = false) {
+    return this.api.touch(sessionId, busy)
   }
 
   /** Who holds the thread's machine now. */

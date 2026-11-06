@@ -141,16 +141,24 @@ type Run = {
   timer?: NodeJS.Timeout
   done: Promise<void>
   finished: () => void
-  /** Started again by a runner after the one that started it: credentials' values unknown. */
+  /** Loaded from the state file of the runner before this one. */
   resumed?: boolean
+  /**
+   * Followed by a runner that does not know its credentials' values (it started after the
+   * command): its output, which nothing can hide them in, is not shown.
+   */
+  blind?: boolean
   /** Its folder's sync is starting: what the sync says goes into its notes. */
   syncing?: boolean
   /** It holds the thread's machine (MachineHolds): released once it is over. */
   held?: boolean
 }
 
-/** What the state file keeps of a command: enough to follow it again, never its output or secrets. */
-type SavedRun = Pick<
+/**
+ * What the state file keeps of a command: enough to follow it again, and the end of an ended
+ * one's output, its credentials' values hidden. Never a secret.
+ */
+type SavedRun = { tail?: string[] } & Pick<
   Run,
   | 'id'
   | 'seat'
@@ -167,6 +175,7 @@ type SavedRun = Pick<
   | 'endedAt'
   | 'timeoutMs'
   | 'secret'
+  | 'blind'
   | 'files'
   | 'notes'
 >
@@ -182,6 +191,18 @@ type ThreadMachine = {
   touchTimer?: NodeJS.Timeout
 }
 
+/** How a command ended, said once its files are back. */
+type Outcome = {
+  status: Exclude<MachineRunStatus, 'starting' | 'running'>
+  exitCode?: number
+  /** It ran on the machine: its outputs may be there. */
+  ran: boolean
+}
+
+/** Lines of an ended command's output its state keeps, and their length at most. */
+const KEPT_LINES = 200
+const KEPT_CHARS = 20_000
+
 const holderOf = (run: Pick<Run, 'id'>) => `run:${run.id}`
 const runDir = (id: string) => `${RUNS_DIR}/${id}`
 const ended = (status: MachineRunStatus) => status !== 'starting' && status !== 'running'
@@ -189,6 +210,11 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 /** Whether the machine still runs what it ran when the command started (it was not stopped since). */
 const SAME_BOOT = '[ "$(cat boot 2>/dev/null)" = "$(cat /proc/sys/kernel/random/boot_id)" ]'
+/**
+ * Whether anything of the command still runs there: any process of its group, not only its
+ * script, which a TERM ends before what it started.
+ */
+const ALIVE = `${SAME_BOOT} && kill -0 -"$(cat pid 2>/dev/null)" 2>/dev/null`
 
 /**
  * The script the machine runs for a command, from its user's home: its settings and credentials
@@ -217,18 +243,46 @@ export function runScript(input: {
   ].join('\n')}\n`
 }
 
-/** The values of a dotenv file's variables (its quotes taken off), long enough to hide. */
+/**
+ * The values of an env file's variables, as a shell sourcing it gets them, long enough to hide:
+ * ThreadCredentials.env writes `export NAME='…'` with each ' inside as '\''. A value over several
+ * lines (a key) is hidden line by line too, as its output shows it.
+ */
 export function secretValues(text: string) {
   const values: string[] = []
-  for (const line of text.split('\n')) {
-    const match = /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*(.*?)\s*$/.exec(line)
-    if (!match) continue
-    let value = match[1]!
-    const quote = value[0]
-    if ((quote === '"' || quote === "'") && value.endsWith(quote) && value.length >= 2)
-      value = value.slice(1, -1)
-    if (quote === '"') value = value.replace(/\\n/g, '\n').replace(/\\(["\\])/g, '$1')
+  const assignment = /(^|\n)[ \t]*(?:export[ \t]+)?[A-Za-z_][A-Za-z0-9_]*=/g
+  for (let match = assignment.exec(text); match; match = assignment.exec(text)) {
+    let i = match.index + match[0].length
+    let value = ''
+    // One shell word: '…' as is, "…" with its escapes, \x, plain characters; up to a blank.
+    while (i < text.length && !/[\s;]/.test(text[i]!)) {
+      const c = text[i]!
+      if (c === "'") {
+        const close = text.indexOf("'", i + 1)
+        if (close < 0) break
+        value += text.slice(i + 1, close)
+        i = close + 1
+      } else if (c === '"') {
+        i++
+        while (i < text.length && text[i] !== '"') {
+          if (text[i] === '\\' && '$`"\\\n'.includes(text[i + 1] ?? '')) i++
+          value += text[i]
+          i++
+        }
+        i++
+      } else if (c === '\\') {
+        value += text[i + 1] ?? ''
+        i += 2
+      } else {
+        value += c
+        i++
+      }
+    }
+    assignment.lastIndex = Math.max(i, assignment.lastIndex)
     if (value.length >= HIDDEN_MIN) values.push(value)
+    if (value.includes('\n'))
+      for (const line of value.split('\n'))
+        if (line.trim().length >= HIDDEN_MIN) values.push(line.replace(/\r$/, ''))
   }
   // Longest first: a value that holds another is hidden whole.
   return [...new Set(values)].sort((a, b) => b.length - a.length)
@@ -241,6 +295,18 @@ export function outputPath(path: string) {
     return null
   if (clean.includes('\0') || clean.includes('\\')) return null
   return clean
+}
+
+/** The last lines of an output, as many as fit in KEPT_CHARS. */
+function keptTail(lines: string[]) {
+  const kept: string[] = []
+  let chars = 0
+  for (let i = lines.length - 1; i >= 0 && kept.length < KEPT_LINES; i--) {
+    chars += lines[i]!.length + 1
+    if (chars > KEPT_CHARS) break
+    kept.unshift(lines[i]!)
+  }
+  return kept
 }
 
 /** "34.2 MB". */
@@ -272,6 +338,9 @@ export class MachineRuns {
       reader?: (seat: RunSeat, net: ThreadNet | null, root: string) => ChildProcess
       /** Tests: after a thread's last command, how long its machine stays up. */
       idleMs?: number
+      /** Tests: how often the API is told a command runs, and how long a stop waits to KILL. */
+      touchMs?: number
+      stopGraceMs?: number
     },
   ) {
     let saved: SavedRun[] = []
@@ -309,7 +378,7 @@ export class MachineRuns {
       stop: async (id) => {
         const run = mine(id)
         await this.end(run, 'stopped')
-        await this.wait(run, STOP_GRACE_MS + 20_000)
+        await this.wait(run, (this.options.stopGraceMs ?? STOP_GRACE_MS) + 20_000)
         return this.view(run)
       },
       list: () =>
@@ -462,10 +531,13 @@ export class MachineRuns {
     }
   }
 
-  private fromSaved(saved: SavedRun) {
+  private fromSaved({ tail, ...saved }: SavedRun) {
     const run = this.newRun(saved)
     run.resumed = true
-    if (ended(run.status)) run.finished()
+    if (ended(run.status)) {
+      run.lines = tail ?? []
+      run.finished()
+    }
     return run
   }
 
@@ -506,13 +578,14 @@ export class MachineRuns {
 
   private keepTouching(sessionId: string, thread: ThreadMachine) {
     if (thread.touchTimer) return
+    // Busy: the runner's computer stays up too, to follow the command and bring its files back.
     thread.touchTimer = setInterval(() => {
-      void this.options.holds.touch(sessionId).catch((error: unknown) => {
+      void this.options.holds.touch(sessionId, true).catch((error: unknown) => {
         console.warn(
           `commands of ${sessionId}: could not say the machine is in use: ${String(error)}`,
         )
       })
-    }, TOUCH_MS)
+    }, this.options.touchMs ?? TOUCH_MS)
     thread.touchTimer.unref()
   }
 
@@ -571,14 +644,16 @@ export class MachineRuns {
     let link: MachineLink
     try {
       link = await this.machine(run, thread)
-      if (run.ending) return await this.finish(run, thread, link, false)
+      if (run.ending)
+        return await this.finish(run, thread, link, { status: run.ending, ran: false })
       const sent = await this.sendFolder(run, thread, link)
       if (sent)
         run.notes.push(
           `Sent ${sent} file${sent === 1 ? '' : 's'} of ${relative(run.seat.workDir, run.root) || '.'} to the machine; ` +
             'they stay there for the next commands, which send only what changed',
         )
-      if (run.ending) return await this.finish(run, thread, link, false)
+      if (run.ending)
+        return await this.finish(run, thread, link, { status: run.ending, ran: false })
       const dir = runDir(run.id)
       await link.exec(
         `mkdir -p ${RUNS_DIR} && find ${RUNS_DIR} -mindepth 1 -maxdepth 1 -mtime +${RUN_DIR_DAYS} ` +
@@ -600,7 +675,7 @@ export class MachineRuns {
       )
       if (run.ending) {
         await link.exec(`rm -rf ${dir}`).catch(() => undefined)
-        return await this.finish(run, thread, link, false)
+        return await this.finish(run, thread, link, { status: run.ending, ran: false })
       }
       await link.exec(
         `(setsid nohup bash ${dir}/run.sh > /dev/null 2>&1 < /dev/null &); i=0; ` +
@@ -609,9 +684,8 @@ export class MachineRuns {
     } catch (error) {
       // The runner is stopping: the next one finds whether it started there, and follows it.
       if (this.detached) return
-      run.status = 'failed'
       run.notes.push(errorText(error))
-      return this.finish(run, thread, undefined, false)
+      return this.finish(run, thread, undefined, { status: 'failed', ran: false })
     }
     run.status = 'running'
     this.save()
@@ -633,13 +707,14 @@ export class MachineRuns {
   private async follow(run: Run) {
     const thread = this.thread(run.seat.sessionId)
     thread.active.add(run)
+    // Its credentials' values went with the runner before: nothing to hide them with.
+    if (run.secret) run.blind = true
     let link: MachineLink
     try {
       link = await this.machine(run, thread)
     } catch (error) {
-      run.status = 'failed'
       run.notes.push(`Its machine could not be reached again: ${errorText(error)}`)
-      return this.finish(run, thread, undefined, false)
+      return this.finish(run, thread, undefined, { status: 'failed', ran: false })
     }
     run.status = 'running'
     this.limit(run)
@@ -651,59 +726,53 @@ export class MachineRuns {
     const dir = runDir(run.id)
     for (let cuts = 0; ;) {
       if (this.detached) return
-      const code = await new Promise<number | null>((done) => {
-        const child = link.spawn(
-          `cd ${dir} && if ${SAME_BOOT} && kill -0 "$(cat pid)" 2>/dev/null; then ` +
-            `exec tail -c +${run.offset + 1} -f --pid="$(cat pid)" output.log; ` +
-            `else exec tail -c +${run.offset + 1} output.log; fi`,
-          'ignore',
-        )
-        run.follower = child
-        child.stdout!.on('data', (data: Buffer) => {
-          run.offset += data.length
-          this.append(run, run.decoder.write(data))
-        })
-        child.stderr!.resume()
-        child.once('error', () => done(null))
-        child.once('close', (exit) => done(exit))
-      })
-      run.follower = undefined
+      const code = await this.readLog(run, link, true)
       if (this.detached) return
       const state = await link
         .exec(
           `cd ${dir} 2>/dev/null || { echo gone; exit 0; }; if [ -s exit ]; then echo "exit $(cat exit)"; ` +
-            `elif ${SAME_BOOT} && kill -0 "$(cat pid 2>/dev/null)" 2>/dev/null; then echo running; else echo ended; fi`,
+            `elif ${ALIVE}; then echo running; else echo ended; fi`,
           '',
           30_000,
         )
         .then((out) => out.trim())
         .catch(() => null)
       if (this.detached) return
-      if (state?.startsWith('exit ')) {
-        run.exitCode = Number(state.slice(5))
-        run.status = run.ending ?? (run.exitCode === 0 ? 'succeeded' : 'failed')
-        return this.finish(run, thread, link, true)
+      if (state?.startsWith('exit ') || state === 'ended') {
+        // What it wrote after the follow was cut (the connection lost as it ended), to its end.
+        await this.readLog(run, link, false)
+        if (this.detached) return
+        if (state.startsWith('exit ')) {
+          const exitCode = Number(state.slice(5))
+          return this.finish(run, thread, link, {
+            status: run.ending ?? (exitCode === 0 ? 'succeeded' : 'failed'),
+            exitCode,
+            ran: true,
+          })
+        }
+        if (!run.ending)
+          run.notes.push(
+            'It ended without an exit status: its machine stopped while it ran, or it was killed',
+          )
+        return this.finish(run, thread, link, { status: run.ending ?? 'failed', ran: true })
+      }
+      if (state === 'gone') {
+        if (!run.ending)
+          run.notes.push(
+            'Its files are not on the machine: it never started there, or the machine was made again',
+          )
+        return this.finish(run, thread, link, { status: run.ending ?? 'failed', ran: false })
       }
       if (state === 'running' && code !== 255) {
-        // Its follow ended while it runs (tail failed): again, a second later.
+        // Its script is gone but not what it started (being stopped), or its follow failed: again,
+        // a second later.
         await new Promise((done) => setTimeout(done, 1000))
         continue
       }
-      if (state === 'ended' || state === 'gone') {
-        run.status = run.ending ?? 'failed'
-        if (!run.ending)
-          run.notes.push(
-            state === 'gone'
-              ? 'Its files are not on the machine: it never started there, or the machine was made again'
-              : 'It ended without an exit status: its machine stopped while it ran, or it was killed',
-          )
-        return this.finish(run, thread, link, state === 'ended')
-      }
       // The connection was cut (ssh says 255): made again, then followed on from where it was.
       if (++cuts > 5) {
-        run.status = 'failed'
         run.notes.push('Lost its connection to the machine too many times: it may still run there')
-        return this.finish(run, thread, undefined, false)
+        return this.finish(run, thread, undefined, { status: 'failed', ran: false })
       }
       try {
         thread.connecting ??= link.connect().finally(() => {
@@ -711,11 +780,37 @@ export class MachineRuns {
         })
         await thread.connecting
       } catch (error) {
-        run.status = 'failed'
         run.notes.push(`Lost its machine: ${errorText(error)}`)
-        return this.finish(run, thread, undefined, false)
+        return this.finish(run, thread, undefined, { status: 'failed', ran: false })
       }
     }
+  }
+
+  /**
+   * Its output file from the byte read so far: followed while anything of it runs (`follow`),
+   * else read to its end. Resolves to ssh's exit code.
+   */
+  private readLog(run: Run, link: MachineLink, follow: boolean) {
+    const dir = runDir(run.id)
+    const from = run.offset + 1
+    const command = follow
+      ? `cd ${dir} && if ${ALIVE}; then exec tail -c +${from} -f --pid="$(cat pid)" output.log; ` +
+        `else exec tail -c +${from} output.log; fi`
+      : `cd ${dir} && exec tail -c +${from} output.log`
+    return new Promise<number | null>((done) => {
+      const child = link.spawn(command, 'ignore')
+      if (follow) run.follower = child
+      child.stdout!.on('data', (data: Buffer) => {
+        run.offset += data.length
+        this.append(run, run.decoder.write(data))
+      })
+      child.stderr!.resume()
+      child.once('error', () => done(null))
+      child.once('close', (exit) => {
+        if (run.follower === child) run.follower = undefined
+        done(exit)
+      })
+    })
   }
 
   /** Ask it to end: stopped by the teammate, or past its time limit. */
@@ -730,12 +825,16 @@ export class MachineRuns {
     this.kill(run, link)
   }
 
-  /** TERM to all it runs there, then KILL what is left a while later. */
+  /**
+   * TERM to all it runs there, then KILL what is left a while later, whatever its status says by
+   * then: a TERM ends its script before what it started, and what ignores TERM outlives both.
+   */
   private kill(run: Run, link: MachineLink) {
     void this.signal(run, link, 'TERM')
-    setTimeout(() => {
-      if (!ended(run.status)) void this.signal(run, link, 'KILL')
-    }, STOP_GRACE_MS).unref()
+    setTimeout(
+      () => void this.signal(run, link, 'KILL'),
+      this.options.stopGraceMs ?? STOP_GRACE_MS,
+    ).unref()
   }
 
   private signal(run: Run, link: MachineLink, signal: 'TERM' | 'KILL') {
@@ -750,26 +849,29 @@ export class MachineRuns {
   }
 
   /**
-   * It ended: its outputs come back (`ran`: it ran, so they may be there), the machine is
-   * released, kept up a while for the next command, and the thread's sync stops with its last one.
+   * It ended: its outputs come back (when it ran there), then it says how it ended, the machine
+   * is released, kept up a while for the next command, and the thread's sync stops with its last.
    */
   private async finish(
     run: Run,
     thread: ThreadMachine,
     link: MachineLink | undefined,
-    ran: boolean,
+    outcome: Outcome,
   ) {
-    // The runner is stopping: left as it is in the state file, for the next one to finish it
-    // (its outputs come back then).
+    // The runner is stopping: left unfinished in the state file, for the next one to finish.
     if (this.detached) return
     clearTimeout(run.timer)
-    if (run.status === 'starting' || run.status === 'running') run.status = run.ending ?? 'failed'
+    if (outcome.exitCode !== undefined) run.exitCode = outcome.exitCode
     const tail = run.decoder.end()
     if (tail) this.append(run, tail)
-    if (ran && link && run.outputs.length)
+    if (outcome.ran && link && run.outputs.length) {
       await this.bringBack(run, link).catch((error: unknown) => {
         run.notes.push(`Its outputs could not come back: ${errorText(error)}`)
       })
+      // Its files are not all back: the next runner brings them back, then says it ended.
+      if (this.detached) return
+    }
+    run.status = outcome.status
     run.endedAt = Date.now()
     thread.active.delete(run)
     this.save()
@@ -858,29 +960,49 @@ export class MachineRuns {
     // A line redrawn (\r) keeps its last state; its end is kept when it never ends.
     const cut = run.partial.lastIndexOf('\r', run.partial.length - 2)
     if (cut >= 0) run.partial = run.partial.slice(cut + 1)
-    if (run.partial.length > PARTIAL_MAX) run.partial = run.partial.slice(-PARTIAL_MAX)
+    // Its credentials' values hidden before it is cut: a cut never leaves part of one.
+    if (run.partial.length > PARTIAL_MAX)
+      run.partial = this.hide(run, run.partial).slice(-PARTIAL_MAX)
     for (const part of parts) run.lines.push(this.clean(run, part))
     if (run.lines.length > OUTPUT_LINES) run.lines.splice(0, run.lines.length - OUTPUT_LINES)
   }
 
   private clean(run: Run, line: string) {
     const last = line.replace(/\r+$/, '').split('\r').pop() ?? ''
-    const plain = last.replace(ANSI, '')
-    return run.hidden.reduce((text, value) => text.split(value).join(HIDDEN), plain)
+    return this.hide(run, last.replace(ANSI, ''))
+  }
+
+  private hide(run: Run, text: string) {
+    return run.hidden.reduce((shown, value) => shown.split(value).join(HIDDEN), text)
+  }
+
+  /**
+   * The line it is writing, not ended yet: its end may be the start of a credential's value whose
+   * rest is still to come, hidden too.
+   */
+  private unfinished(run: Run, text: string) {
+    let shown = this.clean(run, text)
+    for (const value of run.hidden)
+      for (let n = Math.min(value.length - 1, shown.length); n > 0; n--)
+        if (shown.endsWith(value.slice(0, n))) {
+          shown = `${shown.slice(0, shown.length - n)}${HIDDEN}`
+          break
+        }
+    return shown
   }
 
   private view(run: Run, lines = TAIL_LINES): MachineRunView {
     const end = run.endedAt ?? Date.now()
     const notes = [...run.notes]
     // Its credentials' values are not known to a runner that started after it: nothing to hide them with.
-    const withheld = run.secret && run.resumed
+    const withheld = !!run.blind
     if (withheld)
       notes.push(
         'Its output is not shown: it had credentials, whose values this runner cannot hide',
       )
     let output: string | undefined
     if (!withheld) {
-      const all = run.partial ? [...run.lines, this.clean(run, run.partial)] : run.lines
+      const all = run.partial ? [...run.lines, this.unfinished(run, run.partial)] : run.lines
       output = all.slice(-Math.min(Math.max(lines, 1), OUTPUT_LINES)).join('\n')
       if (output.length > TAIL_CHARS) output = `…${output.slice(-TAIL_CHARS)}`
       if (run.resumed && !output)
@@ -942,8 +1064,11 @@ export class MachineRuns {
       ...(run.endedAt ? { endedAt: run.endedAt } : {}),
       timeoutMs: run.timeoutMs,
       secret: run.secret,
+      ...(run.blind ? { blind: true } : {}),
       ...(run.files ? { files: run.files } : {}),
       notes: run.notes,
+      // The end of an ended one's output, for machine_run after a restart (a wake-up's turn).
+      ...(ended(run.status) && !run.blind ? { tail: keptTail(run.lines) } : {}),
     }))
     try {
       mkdirSync(dirname(this.options.stateFile), { recursive: true })

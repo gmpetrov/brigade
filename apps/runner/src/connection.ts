@@ -434,8 +434,11 @@ export class Connection {
   }
 
   /** The thread's preview machine sleeps (stops, its disk kept), or is still in use. */
-  async previewMachine(sessionId: string, action: 'sleep' | 'touch') {
-    await this.withTimeout({ type: 'preview.machine', sessionId, action }, MACHINE_CALL_MS)
+  async previewMachine(sessionId: string, action: 'sleep' | 'touch', busy = false) {
+    await this.withTimeout(
+      { type: 'preview.machine', sessionId, action, ...(busy ? { busy: true } : {}) },
+      MACHINE_CALL_MS,
+    )
   }
 
   /** A call given up after `ms` when the API does not answer it. */
