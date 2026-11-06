@@ -105,7 +105,7 @@ import { declareDone, Outbox } from './outbox.js'
 import { callFiles } from './call-files.js'
 import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
-import { backgroundTasks, reportWaitsFor } from './background.js'
+import { backgroundTasks, backgroundWait, reportWaitsFor } from './background.js'
 import {
   answerMessageTool,
   ASK_USER_TOOL,
@@ -255,6 +255,9 @@ type SavedState = {
     /** The text and thinking blocks it was writing, so far, by id. */
     texts?: [string, string][]
     reasoning?: [string, string][]
+    /** Since when the turn only waited on work in the background, and what ran there (staleWait). */
+    waitingSince?: number
+    background?: BackgroundWork[]
   }
 }
 
@@ -483,6 +486,15 @@ function frozenMidRun(resume: unknown) {
 /** How long a harness may take to let go of its turn when the runner hands it over. */
 const HAND_OVER_MS = 20_000
 
+/**
+ * How long an answered turn may wait on work in the background, by the bridge's word, while
+ * none runs as the runner sees it, before the runner ends it (staleWait). The bridge waits 60 s
+ * at most for a report of work that ended; past this, nothing is coming.
+ */
+const STALE_WAIT_MS = Number(process.env.BRIGADE_STALE_WAIT_MS) || 5 * 60_000
+/** How soon a turn past that wait that could not end then is looked at again. */
+const STALE_RETRY_MS = Math.min(STALE_WAIT_MS, 10_000)
+
 /** Whether something answers on the port a handed-over bridge listened on. */
 function answers(host: string, port: number) {
   return new Promise<boolean>((done) => {
@@ -541,6 +553,8 @@ export class HarnessThread {
   private readonly replies = new ReplyWatch()
   /** What the running turn runs in the background now (background.ts): a report waits on its agents. */
   private background: BackgroundWork[] = []
+  /** Since when the running turn only waits on work in the background, by the bridge's word. */
+  private waitingSince: number | undefined
   /**
    * The running turn is answered, and completed for everyone: Claude Code only writes its guess
    * at the person's next message before its process ends (the bridge's drain). `done` settles
@@ -1231,6 +1245,10 @@ export class HarnessThread {
         calls: [...this.toolCalls].map(([toolCallId, call]) => ({ toolCallId, ...call })),
         texts: [...this.texts],
         reasoning: [...this.reasoning],
+        // The bridge said so before the update, and says it only once: the next runner keeps it.
+        ...(this.waitingSince !== undefined
+          ? { waitingSince: this.waitingSince, background: this.background }
+          : {}),
       },
     }
     await this.persist()
@@ -1249,8 +1267,12 @@ export class HarnessThread {
     if (!saved || !handed) return []
     delete saved.handedOver
     for (const pgid of handed.groups) claimHandOver(pgid)
-    if (saved.accountId === account.id && (await this.bridgeAnswers(saved.resume)))
+    if (saved.accountId === account.id && (await this.bridgeAnswers(saved.resume))) {
+      // The turn goes on where it was: waiting on work in the background, if it was.
+      this.waitingSince = handed.waitingSince
+      this.background = handed.background ?? []
       return handed.groups
+    }
     for (const pgid of handed.groups) stopGroup(pgid, this.runAs)
     saved.resume = withoutBridge(saved.resume)
     return []
@@ -1286,6 +1308,8 @@ export class HarnessThread {
     | { kind: 'lost'; error: string; said: string | undefined; approved: Call | undefined }
   > {
     let attached: Live | undefined
+    // A turn before this one waits on nothing now; a turn handed over goes on waiting (attach).
+    this.waitingSince = undefined
     // What the turn told the harness as a message (a restart, an aside), for a new session.
     let said: string | undefined
     const say = (prompt: string) => (said = prompt)
@@ -1322,25 +1346,64 @@ export class HarnessThread {
     let mayAnswer = false
     let early = false
     let drained: () => void = () => {}
+    // Answered, with a reply the person can read: done for everyone now, while Claude Code
+    // guesses what they may write next (drain). A turn that owes a reply is asked for it in a
+    // stream of its own, which ends the turn instead. False when it cannot end so now.
+    const answerNow = (owing = this.replies.owes()) => {
+      if (early || !mayAnswer || signal.aborted || owing || mapper.error || mapper.exhausted)
+        return false
+      early = true
+      this.drain = { stop: tail, done: new Promise<void>((resolve) => (drained = resolve)) }
+      this.completed('stop')
+      return true
+    }
+    // The bridge says the turn only waits on work in the background. With none running as this
+    // runner sees it for STALE_WAIT_MS, nothing is coming (a bridge that took a command run in
+    // the foreground for background work kept a turn open for 7 hours, and through each update
+    // of the runner): the turn ends, answered, as at a guess no longer wanted (stopDrain). One
+    // that still owes a reply ends too, rather than never.
+    let staleTimer: NodeJS.Timeout | undefined
+    const watchWait = () => {
+      clearTimeout(staleTimer)
+      staleTimer = undefined
+      if (this.waitingSince === undefined) return
+      staleTimer = setTimeout(
+        staleWait,
+        Math.max(0, this.waitingSince + STALE_WAIT_MS - Date.now()),
+      )
+      staleTimer.unref?.()
+    }
+    // Told once that the turn cannot end yet (its last stream not started, a stop under way).
+    let staleTold = false
+    const staleWait = () => {
+      staleTimer = undefined
+      if (this.waitingSince === undefined) return
+      const again = (ms: number) => {
+        staleTimer = setTimeout(staleWait, ms)
+        staleTimer.unref?.()
+      }
+      // Work still runs: it reports once it ends, and the bridge says so. Looked at again later.
+      if (this.background.length > 0) return again(STALE_WAIT_MS)
+      const since = Math.round((Date.now() - this.waitingSince) / 1000)
+      if (!answerNow(false)) {
+        if (!staleTold)
+          console.warn(
+            `thread ${this.spec.sessionId}: its turn waits on background work that is not running (${since} s), and cannot end yet`,
+          )
+        staleTold = true
+        return again(STALE_RETRY_MS)
+      }
+      console.warn(
+        `thread ${this.spec.sessionId}: its turn waited ${since} s on background work that was not running, so it ended`,
+      )
+      void this.stopDrain()
+    }
     const mapper = new EventMapper(
       (event) => {
         // Parked, what is left is done again; handed over, it is up to where the next runner goes on.
         if (frozenUnder() && !this.handingOver) return
         if (answered(event)) {
-          // Answered, with a reply the person can read: done for everyone now, while Claude Code
-          // guesses what they may write next. A turn that owes a reply is asked for it in a
-          // stream of its own, which ends the turn instead.
-          if (
-            !mayAnswer ||
-            signal.aborted ||
-            this.replies.owes() ||
-            mapper.error ||
-            mapper.exhausted
-          )
-            return
-          early = true
-          this.drain = { stop: tail, done: new Promise<void>((resolve) => (drained = resolve)) }
-          this.completed('stop')
+          answerNow()
           return
         }
         // A guess counts once the turn is answered: before that, more of the turn comes after it
@@ -1361,6 +1424,7 @@ export class HarnessThread {
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
         this.noteBackground(event)
+        if (backgroundWait(event) !== undefined) watchWait()
         // A turn's usage says whose account spent it: the stream's own, which after running out
         // of usage (switchTo) is the next account's, not the one the turn started on.
         this.outbox.send(
@@ -1405,6 +1469,8 @@ export class HarnessThread {
       const calls = aside ? this.waitingAsks() : []
       let closed = !this.live && (answer || aside) && this.closeTurn()
       const live = (attached = await this.attach())
+      // Handed over while it waited on work in the background, it is watched on from where it was.
+      watchWait()
       // Or nothing kept the turn at all (the process stopped without parking): the session has
       // no turn to continue, and the answer comes as a new message just the same.
       if (answer && !live.session.hasUnfinishedTurn()) closed = true
@@ -1639,6 +1705,8 @@ export class HarnessThread {
       this.emit({ type: 'error', message })
       await this.drop()
       return { kind: 'done', result: { status: 'failed', error: message } }
+    } finally {
+      clearTimeout(staleTimer)
     }
   }
 
@@ -2233,7 +2301,13 @@ export class HarnessThread {
   private noteBackground(event: AgentEvent) {
     const background = backgroundTasks(event)
     if (background) this.background = background
-    if (event.type === 'turn.completed' || event.type === 'error') this.background = []
+    const waiting = backgroundWait(event)
+    if (waiting !== undefined)
+      this.waitingSince = waiting ? (this.waitingSince ?? Date.now()) : undefined
+    if (event.type === 'turn.completed' || event.type === 'error') {
+      this.background = []
+      this.waitingSince = undefined
+    }
   }
 
   /** A child's report waits for the teammate's own sub-agents (reportWaitsFor). */
