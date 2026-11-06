@@ -133,6 +133,11 @@ export const ConnectorGrant = z.object({
        * (e.g. an email's attachments). The runner uploads them and passes their ids.
        */
       filesField: z.string().optional(),
+      /**
+       * Every such field, when there are several (an MCP tool's paths of files it gets links to,
+       * the API's file-links.ts): the runner uploads each one's. Without it, filesField alone.
+       */
+      filesFields: z.array(z.string()).optional(),
     }),
   ),
 })

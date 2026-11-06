@@ -1134,6 +1134,8 @@ export class MachineRuns {
   /** Until it ended (its outputs back), `ms` passed, or the call was cut. */
   private async wait(run: Run, ms: number, signal?: AbortSignal) {
     if (ended(run.status) && !this.threads.get(run.seat.sessionId)?.active.has(run)) return
+    // Cut before it began (a message came in while the command started): its abort is past.
+    if (signal?.aborted) return
     let timer: NodeJS.Timeout | undefined
     let onAbort: (() => void) | undefined
     await Promise.race([

@@ -161,6 +161,30 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   meanwhile) waits quietly and is read with the others in the next turn. The dashboard shows a person's messages not
   read yet as they look once read, at the end of the thread above its Working line, where the turn will read them, with
   the status under them; their actions sit in a menu shown while the pointer is over one (always on phones).
+- **A message is read at the turn's next step, so no step may hold it for minutes.** On Nov 6 a teammate sent 24 KB
+  of audio to OpenRouter's transcription by writing it into the call as base64: 2 minutes 30 and 23,000 output
+  tokens per call, twice, and the person's question waited for the first. Two changes:
+  - A file goes to an MCP App as a link, never through the API (`apps/api/src/file-links.ts`). A tool that takes a
+    file's address beside the file itself (an `_url` field with a `_base64` one, or one that takes data URLs; an
+    `_urls` list) gets a field of Brigade's beside it (`audio_path`): the teammate names a file in its folder, the
+    runner uploads it straight to the bucket (the operation's `filesFields`, as an email's attachments go), and the
+    call gives the App a link signed for an hour. The bytes never reach the workspace's hub, a Durable Object
+    whose memory all of a workspace's work shares; a tool that takes only base64 gets no such field. An address the
+    tool requires is not required in the schema the teammate gets, which the harness checks before anything is
+    uploaded: the path may fill it, and the API asks for one of the two. The file stays with the thread, as an email's
+    attachment does.
+  - A wait on the thread's machine ends when a message comes in (`apps/runner/src/harness/arrivals.ts`):
+    `run_on_machine` and `machine_run` answer with the command still running, and the turn reads the message with
+    that result. The model reads it only once every result of its step went back and it writes again: until then a
+    wait of the same step ends at once too, one that starts late (its credentials released) included. What the harness
+    shows as a call of its own (a file a patch changed, a compaction) is neither a result nor the model writing. Only they: `start_preview` stops the app it starts when its wait is cut, `check_preview` is the
+    check itself, and `email_wait` waits two minutes at most in the API.
+  - So does one when an update hands the turn over (`handOver`). The harness lets go of a turn only once its host's
+    calls are done, so a wait on a render held it past `HAND_OVER_MS`: the turn was stopped and started again, and
+    the command's id went with its call (Nov 6, 7 turns cut at 6 merges touching the runner; under Bash, before
+    `run_on_machine`, the update handed such commands over). The call now answers with the command's id and a note
+    to wait for it again, kept for the next runner to give the turn, and a wait that starts while the runner leaves
+    ends at once.
 - **A turn a person writes into reads as a chat** (`layoutThread` in `apps/web/components/thread-view.tsx`,
   `lib/chat-turn.ts`). Seen on Nov 4 at 13:45, once messages went into the running turn: every one carried "Steered
   into Riley's running turn", and each cut the turn's steps into pieces between them ("Searched once", "Ran cat …",

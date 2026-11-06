@@ -278,6 +278,21 @@ test('a command longer than the wait goes on, and machine_run waits for it', asy
   )
 })
 
+test('a wait cut before it began (a message came in as the command started) ends at once; the command goes on', async () => {
+  const { control, app } = setup()
+  const begun = Date.now()
+  const started = await control.run(
+    { command: 'sleep 4; echo late > late.txt', cwd: 'app', outputs: ['late.txt'] },
+    30_000,
+    AbortSignal.abort(),
+  )
+  assert.ok(Date.now() - begun < 3_000, `not its 30 s wait: ${Date.now() - begun} ms`)
+  assert.ok(['starting', 'running'].includes(started.status), started.status)
+  const ended = await control.get(started.id, 30_000)
+  assert.equal(ended.status, 'succeeded')
+  assert.equal(readFileSync(join(app, 'late.txt'), 'utf8'), 'late\n')
+})
+
 test('a failed command says so, and what it made still comes back', async () => {
   const { control, app } = setup()
   const result = await control.run(

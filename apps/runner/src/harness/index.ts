@@ -103,7 +103,8 @@ import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
 import { declareDone, Outbox } from './outbox.js'
-import { callFiles } from './call-files.js'
+import { Arrivals } from './arrivals.js'
+import { filesFieldsOf, withUploads } from './call-files.js'
 import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import { backgroundTasks, backgroundWait, reportWaitsFor } from './background.js'
@@ -323,6 +324,7 @@ function createAgent(
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
   machine: MachineRunTools | undefined,
+  arrivals: Arrivals,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -414,7 +416,8 @@ function createAgent(
         }),
         ...previewTools(preview, credentials),
         // Heavy commands on the thread's machine of its own, where its starter chose one.
-        ...(spec.machine && machine ? machineTools(machine, credentials) : {}),
+        // A message or an update ends their waits; the command goes on there (arrivals.ts).
+        ...(spec.machine && machine ? machineTools(machine, credentials, arrivals) : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
         ...(computer ? computerUseTools(computer) : {}),
         // Claude Code asks with its own question tool; Codex's adapter has none.
@@ -571,6 +574,8 @@ export class HarnessThread {
   private quietSince: number | undefined
   /** A person's message steered into the running turn has no reply yet: its answer is coming. */
   private steeredPending = false
+  /** What ends its tools' waits: a message given to the turn, a hand-over (arrivals.ts). */
+  readonly arrivals = new Arrivals()
   /**
    * The running turn is answered, and completed for everyone: Claude Code only writes its guess
    * at the person's next message before its process ends (the bridge's drain). `done` settles
@@ -659,6 +664,8 @@ export class HarnessThread {
       // Blocks a turn cut off left unfinished end with it.
       this.texts.clear()
       this.reasoning.clear()
+      // A new turn reads what it is given now.
+      this.arrivals.started()
     }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Kept whole, as the transcript keeps its latest message: a request often comes after its context.
@@ -1107,6 +1114,9 @@ export class HarnessThread {
     this.steeredPending = true
     // Saved now: the turn may answer it after a restart, or in the runner it is handed over to.
     this.saved!.steered = messageId
+    // Taken by Claude Code (queued, as the bridge answers once it is): a wait under way ends, and
+    // the message goes in with its result.
+    this.arrivals.arrived()
     await this.persist().catch((error) =>
       console.warn(`could not save thread state: ${errorMessage(error)}`),
     )
@@ -1244,6 +1254,10 @@ export class HarnessThread {
       (resume) => resume,
       () => undefined,
     )
+    // A wait of its tools on the thread's machine would hold the turn until its command ends,
+    // past HAND_OVER_MS: it ends now, the command going on there (arrivals.ts). Asked once the
+    // turn is suspending, its result is kept for the next runner to give the turn.
+    this.arrivals.handOver()
     const resume = await Promise.race([detached, sleep(HAND_OVER_MS, undefined, { ref: false })])
     this.handingOver = false
     if (!resume || groups.length === 0) {
@@ -1514,6 +1528,9 @@ export class HarnessThread {
         try {
           for await (const part of stream) {
             mapper.map(part)
+            // A message given to the turn is read once the step's results went back and the
+            // model writes again (arrivals.ts).
+            this.arrivals.saw(part)
             const image = generatedImage(part)
             if (image) await this.keepImage(image)
           }
@@ -2130,6 +2147,7 @@ export class HarnessThread {
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
       this.context.machine,
+      this.arrivals,
     )
     const adopt = await this.takeHandedOver(account)
     const sandbox = createLocalSandboxSession({
@@ -2174,31 +2192,24 @@ export class HarnessThread {
   }
 
   /**
-   * A connector call that sends files (an email's attachments, a Drive upload): the teammate
-   * names them by path, a list or a single one; they go to the API first, and the call
-   * carries their ids in the same shape.
+   * A connector call that sends files (an email's attachments, a Drive upload, a file an MCP
+   * App gets a link to): the teammate names them by path, a list or a single one; they go to
+   * the bucket first, and the call carries their ids in the same shape.
    */
   private async callWithFiles(call: Parameters<ConnectorCaller>[0]) {
-    const field = this.spec.connectors
+    const operation = this.spec.connectors
       .find((c) => c.connectionId === call.connectionId)
-      ?.operations.find((o) => o.name === call.operation)?.filesField
+      ?.operations.find((o) => o.name === call.operation)
     const input = call.input as Record<string, unknown> | null
-    const { paths: files, place } = callFiles(field && input ? input[field] : undefined)
-    if (!field || files.length === 0) return this.callConnector(call)
-    const ids = []
-    for (const file of files) {
-      if (typeof file !== 'string') throw new Error(`${field} lists file paths`)
-      const bytes = await this.readFile(file, ATTACHMENT_MAX, 'Files sent with a call')
-      ids.push(
-        await this.context.uploadFile({
-          sessionId: this.spec.sessionId,
-          teammateId: this.spec.teammate.id,
-          name: basename(file),
-          bytes,
-        }),
-      )
-    }
-    return this.callConnector({ ...call, input: { ...input, [field]: place(ids) } })
+    const sent = await withUploads(input, filesFieldsOf(operation), async (file) =>
+      this.context.uploadFile({
+        sessionId: this.spec.sessionId,
+        teammateId: this.spec.teammate.id,
+        name: basename(file),
+        bytes: await this.readFile(file, ATTACHMENT_MAX, 'Files sent with a call'),
+      }),
+    )
+    return this.callConnector(sent === input ? call : { ...call, input: sent })
   }
 
   /**

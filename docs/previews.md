@@ -708,6 +708,15 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       state file (`machine-runs.json`, with no secret in it). That file keeps the
       last 200 lines of an ended command's output, so `machine_run` still
       answers after a restart (the turn a wake-up starts, say).
+    - **A message ends the wait, not the command** (`apps/runner/src/harness/arrivals.ts`).
+      The turn reads a message given to it only with its next tool result, so
+      a wait of 10 minutes kept a person's message unread as long. A wait under
+      way ends as one is steered in, and so does one that starts before the turn
+      read it: the call answers with the command still running and a note to
+      read the message, then wait again with `machine_run`. An update ends it
+      too, as it hands the turn over: an open call would hold the turn past
+      the hand-over's 20 seconds, and the turn would start again without the
+      command's id.
     - **Its outputs come back, then it ends.** Once it ran, succeeded or not, the
       files and folders it names in `outputs` (inside its folder, 2 GB at most)
       come back to the same place in the teammate's folder, written as the

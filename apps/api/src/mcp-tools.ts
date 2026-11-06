@@ -5,8 +5,15 @@ import { z } from 'zod'
 import { authorisedFetch } from './connector-calls.js'
 import { connectors, mcpToolName } from './connectors/index.js'
 import { callMcpTool, listMcpTools, mcpWrites, type McpTool } from './connectors/mcp.js'
-import { op, type ConnectorKind, type McpServer, type Operation } from './connectors/types.js'
+import {
+  op,
+  type ConnectorContext,
+  type ConnectorKind,
+  type McpServer,
+  type Operation,
+} from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
+import { fileFields, linkFiles, withFiles } from './file-links.js'
 import { perHub } from './hub/context.js'
 import { catalogTools, serverOf } from './mcp-servers.js'
 import { ToolLists } from './tool-lists.js'
@@ -121,7 +128,8 @@ export async function mcpOperationSpecs(
       name,
       description: tool.description ?? server.tools[tool.name]?.description ?? tool.name,
       write: mcpWrites(server, tool),
-      inputSchema: withoutFixed(tool.inputSchema ?? { type: 'object', properties: {} }, fixed),
+      // A file the tool takes by its address goes as a path the runner uploads (file-links.ts).
+      ...withFiles(withoutFixed(tool.inputSchema ?? { type: 'object', properties: {} }, fixed)),
     }))
 }
 
@@ -156,6 +164,13 @@ export async function mcpOperation(
     ...input,
     ...Object.fromEntries(takes.map((key) => [key, fixed[key]])),
   })
+  // The files it takes by their address, given as uploads' ids: links to them, in their place.
+  const files = fileFields(withoutFixed(tool.inputSchema ?? {}, fixed))
+  const linked = (ctx: ConnectorContext, input: Record<string, unknown>) =>
+    linkFiles(input, files, (id) => {
+      if (!ctx.fileLink) throw new Error('Files can be sent to an App only from a thread')
+      return ctx.fileLink(id)
+    })
   return op({
     description: tool.description ?? tool.name,
     write: mcpWrites(server, tool),
@@ -166,7 +181,8 @@ export async function mcpOperation(
       },
     ),
     target: (input) => server.target?.(tool.name, complete(input)) ?? targetOf(input),
-    run: (ctx, input) => callMcpTool(ctx.fetch, server, tool.name, complete(input)),
+    run: async (ctx, input) =>
+      callMcpTool(ctx.fetch, server, tool.name, complete(await linked(ctx, input))),
   })
 }
 

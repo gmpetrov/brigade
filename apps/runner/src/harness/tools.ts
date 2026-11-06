@@ -48,6 +48,7 @@ import {
 } from '@brigade/contracts'
 import { ComputerUseError, type RequestOptions } from '../computer-use.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
+import type { Arrivals, Cut } from './arrivals.js'
 import { answerText, errorMessage } from './events.js'
 import { WIDGET_GUIDE } from './widget-guide.js'
 
@@ -3360,7 +3361,7 @@ export function previewTools(
 }
 
 /** A command on the thread's machine, as machineTools give it back (see machine-runs.ts). */
-type MachineRunResult = {
+export type MachineRunResult = {
   id: string
   command: string
   cwd: string
@@ -3422,6 +3423,45 @@ function machineNote(result: MachineRunResult) {
 
 const withNote = (result: MachineRunResult) => ({ ...result, note: machineNote(result) })
 
+/**
+ * Why the wait ended before the command did (arrivals.ts), and what to do: the command goes on
+ * on the machine either way. Once it ended meanwhile, the call says so as ever.
+ */
+function cutShort(result: ReturnType<typeof withNote>, cut: Cut) {
+  if (result.status !== 'starting' && result.status !== 'running') return result
+  const again = `machine_run({ id: "${result.id}" })`
+  return {
+    ...result,
+    note:
+      cut === 'message'
+        ? 'A message came in while you waited: it comes with this result. Read it, and answer it if ' +
+          `it asks something; the command goes on on the machine. Then wait again with ${again}, or ` +
+          'set a wake-up and end your turn.'
+        : "Brigade's runner is updating, which ended this wait: the command is still running on the " +
+          `machine (id ${result.id}). Wait for it again with ${again}.`,
+  }
+}
+
+/**
+ * Runs a wait of a machine tool, cut short by a message that comes in or a hand-over to the
+ * next runner (or by the call's own abort): the turn reads the message now, and an update
+ * takes the turn over at once rather than stop it.
+ */
+async function cutWait(
+  arrivals: Arrivals | undefined,
+  abortSignal: AbortSignal | undefined,
+  wait: (signal: AbortSignal | undefined) => Promise<MachineRunResult>,
+) {
+  if (!arrivals) return withNote(await wait(abortSignal))
+  const watch = arrivals.watch(abortSignal)
+  try {
+    const result = withNote(await wait(watch.signal))
+    return watch.cut ? cutShort(result, watch.cut) : result
+  } finally {
+    watch.release()
+  }
+}
+
 /** Minutes a call waits, within bounds. */
 const waitMs = (minutes: number | undefined) =>
   Math.min(Math.max(minutes ?? MACHINE_WAIT_MINUTES, 0), MACHINE_WAIT_MAX_MINUTES) * 60_000
@@ -3430,6 +3470,7 @@ const waitMs = (minutes: number | undefined) =>
 export function machineTools(
   runs: MachineRunTools,
   credentials: Pick<Credentials, 'env'>,
+  arrivals?: Arrivals,
 ): Record<string, Tool> {
   return {
     run_on_machine: tool({
@@ -3453,7 +3494,8 @@ export function machineTools(
         'credentials in `credentials`; what it installs stays on its disk. ' +
         'Name in `outputs` the files or folders it makes that you need here (a video, frames to look at, a transcript), ' +
         'relative to cwd: they come back to the same place in your folder once it ends, whether it succeeded or not. ' +
-        'Waits up to `waitMinutes` for it to end; a longer one keeps running there: wait again with machine_run.',
+        'Waits up to `waitMinutes` for it to end, or until a message comes in or Brigade updates; a longer ' +
+        'one keeps running there: wait again with machine_run.',
       inputSchema: jsonSchema<{
         command: string
         cwd?: string
@@ -3516,25 +3558,27 @@ export function machineTools(
           })
           envFiles.push(released.file)
         }
-        const result = await runs.run(
-          {
-            command: input.command,
-            ...(input.cwd ? { cwd: input.cwd } : {}),
-            ...(input.outputs?.length ? { outputs: input.outputs } : {}),
-            ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}),
-            ...(envFiles.length ? { envFiles } : {}),
-            ...(input.timeoutMinutes ? { timeoutMs: input.timeoutMinutes * 60_000 } : {}),
-          },
-          waitMs(input.waitMinutes),
-          abortSignal,
+        return cutWait(arrivals, abortSignal, (signal) =>
+          runs.run(
+            {
+              command: input.command,
+              ...(input.cwd ? { cwd: input.cwd } : {}),
+              ...(input.outputs?.length ? { outputs: input.outputs } : {}),
+              ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}),
+              ...(envFiles.length ? { envFiles } : {}),
+              ...(input.timeoutMinutes ? { timeoutMs: input.timeoutMinutes * 60_000 } : {}),
+            },
+            waitMs(input.waitMinutes),
+            signal,
+          ),
         )
-        return withNote(result)
       },
     }),
     machine_run: tool({
       description:
-        'A command you started with run_on_machine: wait for it to end (up to `waitMinutes`), read more of ' +
-        'its output (`lines`), or stop it (`stop`). Without `id`, lists the commands of this thread.',
+        'A command you started with run_on_machine: wait for it to end (up to `waitMinutes`, or until a ' +
+        'message comes in or Brigade updates), read more of its output (`lines`), or stop it (`stop`). ' +
+        'Without `id`, lists the commands of this thread.',
       inputSchema: jsonSchema<{
         id?: string
         waitMinutes?: number
@@ -3558,8 +3602,9 @@ export function machineTools(
       execute: async (input, { abortSignal }) => {
         if (!input.id) return { commands: runs.list() }
         if (input.stop) return withNote(await runs.stop(input.id))
-        return withNote(
-          await runs.get(input.id, waitMs(input.waitMinutes), input.lines, abortSignal),
+        const id = input.id
+        return cutWait(arrivals, abortSignal, (signal) =>
+          runs.get(id, waitMs(input.waitMinutes), input.lines, signal),
         )
       },
     }),

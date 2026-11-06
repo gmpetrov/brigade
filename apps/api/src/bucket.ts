@@ -305,15 +305,16 @@ const DOWNLOAD_URL_SECONDS = 5 * 60
 /**
  * A short-lived URL the browser can GET one object from, served with the
  * given type and disposition. The bucket answers range requests, so video
- * seeks without the API in the way.
+ * seeks without the API in the way. `seconds`: how long it works, when not the usual.
  */
 export async function presignGet(
   key: string,
   response: { contentType: string; disposition: string },
+  seconds = DOWNLOAD_URL_SECONDS,
 ) {
   if (!r2) throw new Error('Signed downloads need R2')
   const query = new URLSearchParams({
-    'X-Amz-Expires': String(DOWNLOAD_URL_SECONDS),
+    'X-Amz-Expires': String(seconds),
     'response-content-type': response.contentType,
     'response-content-disposition': response.disposition,
   })
@@ -321,7 +322,7 @@ export async function presignGet(
     method: 'GET',
     aws: { signQuery: true },
   })
-  return { url: signed.url, seconds: DOWNLOAD_URL_SECONDS }
+  return { url: signed.url, seconds }
 }
 
 /** The object's size, or null when it is not there. Without reading it. */
