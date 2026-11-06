@@ -493,6 +493,7 @@ test('the receiver drops the bytes of a path it refuses, and applies the frame a
   )
   const rest = Buffer.concat([
     planted,
+    frame({ t: 'file', p: 'empty.txt', s: 0, m: 0o644, mt: 0 }),
     frame(
       { t: 'file', p: 'after.txt', s: 6, m: 0o640, mt: 1_700_000_000_000 },
       Buffer.from('after\n'),
@@ -503,6 +504,7 @@ test('the receiver drops the bytes of a path it refuses, and applies the frame a
   for (let at = 0; at < rest.length; at += 5) await receiver.push(rest.subarray(at, at + 5))
   await receiver.idle()
 
+  assert.equal(text(copy, 'empty.txt'), '', 'a file of no bytes too')
   assert.equal(text(copy, 'after.txt'), 'after\n')
   assert.equal(lstatSync(join(copy, 'after.txt')).mode & 0o777, 0o640)
   assert.equal(Math.trunc(lstatSync(join(copy, 'after.txt')).mtimeMs), 1_700_000_000_000)

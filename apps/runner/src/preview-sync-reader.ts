@@ -370,7 +370,7 @@ export class Reader {
    * The file at `path` as it is now, from one open file: read whole when small, else a chunk at
    * a time as the stream takes them, and always the size its header says. 'changed': it is no
    * longer the file `seen` (replaced, or grown past the limit), or it was cut short on the way,
-   * the rest sent as zeros.
+   * the rest sent as zeros. 'gone': it could not be read (on the way too: then as zeros).
    */
   private async send(path: string, seen: Stats): Promise<'sent' | 'changed' | 'gone'> {
     let file: FileHandle
@@ -397,14 +397,14 @@ export class Reader {
         return 'sent'
       }
       this.index.set(path, { size: stat.size, mtimeMs, mode })
-      let whole = true
+      let went: Awaited<ReturnType<typeof chunks>> = 'whole'
       await this.frame(
         { t: 'file', p: path, s: stat.size, m: mode, mt: mtimeMs },
         async (write) => {
-          whole = await chunks(file, stat.size, write)
+          went = await chunks(file, stat.size, write)
         },
       )
-      return whole ? 'sent' : 'changed'
+      return went === 'whole' ? 'sent' : went === 'short' ? 'changed' : 'gone'
     } catch {
       return 'gone'
     } finally {
@@ -515,23 +515,28 @@ async function readInto(file: FileHandle, buffer: Buffer, position: number) {
 
 /**
  * `size` bytes of an open file from its start, a chunk at a time, each read once the stream took
- * the one before. False when the file was cut short (or could not be read) on the way: what it
- * lacked went as zeros, so the receiver still gets the size the header said.
+ * the one before. 'short': the file ended sooner (cut short on the way), 'failed': it could not
+ * be read; either way what it lacked went as zeros, so the receiver still gets the size the
+ * header said.
  */
 async function chunks(file: FileHandle, size: number, write: Write) {
-  let whole = true
+  let went: 'whole' | 'short' | 'failed' = 'whole'
   for (let at = 0; at < size;) {
     // A buffer of its own each time: the stream may still hold the one before.
     const chunk = Buffer.allocUnsafe(Math.min(CHUNK, size - at))
-    const read = whole ? await readInto(file, chunk, at).catch(() => 0) : 0
-    if (read < chunk.length) {
-      whole = false
-      chunk.fill(0, read)
-    }
+    let read = 0
+    if (went === 'whole')
+      try {
+        read = await readInto(file, chunk, at)
+        if (read < chunk.length) went = 'short'
+      } catch {
+        went = 'failed'
+      }
+    chunk.fill(0, read)
     await write(chunk)
     at += chunk.length
   }
-  return whole
+  return went
 }
 
 /** As a program: the root from argv, frames to stdout, the runner's lines from stdin. */
