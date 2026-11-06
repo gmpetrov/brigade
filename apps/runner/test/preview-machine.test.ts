@@ -31,6 +31,7 @@ import {
 // - the sync starts the reader here and the receiver there, sends the whole checkout, then
 //   each change, and starts again after it was cut, sending only what changed;
 // - a flush waits as long as bytes go to the machine (large files), and gives up once none do;
+//   it fails when the machine's copy of a file is not whole (it changed while it went), naming it;
 // - the app's script sources its settings and credentials, runs the setup only when asked, and
 //   its whole process group stops when signalled, what it left included.
 
@@ -50,13 +51,15 @@ function temp() {
 /**
  * Commands "on the machine" run in `home`, in a session of their own as sshd starts them. The
  * receiver copied there is TypeScript in tests: run with tsx instead. `before`: what its input
- * goes through first (a slow link).
+ * goes through first (a slow link); `receiver`: a script that stands in for it.
  */
-function fakeLink(home: string, before = '') {
+function fakeLink(home: string, before = '', receiver?: string) {
   const command = (line: string) =>
     line.replace(
       'node .brigade/preview-sync-receiver.mjs',
-      `${before}node --import ${shellQuote(tsx)} ${shellQuote(join(src, 'preview-sync-receiver.ts'))}`,
+      receiver
+        ? `node ${shellQuote(receiver)}`
+        : `${before}node --import ${shellQuote(tsx)} ${shellQuote(join(src, 'preview-sync-receiver.ts'))}`,
     )
   const spawnHere = (line: string, stdio: 'pipe' | 'ignore' = 'pipe') =>
     spawn('sh', ['-c', command(line)], {
@@ -179,6 +182,46 @@ test('a flush waits while bytes go to the machine, however long, and gives up on
     assert.ok(Date.now() - stalled >= 1000)
   } finally {
     rmSync(join(home, 'stall'), { force: true })
+    sync.stop()
+  }
+})
+
+/**
+ * Stands in for the receiver: lacks nothing the manifest names, and acknowledges each mark,
+ * naming the files listed in ./partial there as not whole.
+ */
+const PARTIAL_RECEIVER = `
+import { existsSync, readFileSync } from 'node:fs'
+import { createInterface } from 'node:readline'
+const say = (message) => process.stdout.write(JSON.stringify(message) + '\\n')
+createInterface({ input: process.stdin }).on('line', (line) => {
+  let frame
+  try { frame = JSON.parse(line) } catch { return }
+  if (frame.t === 'manifest') say({ t: 'need', paths: [] })
+  if (frame.t !== 'mark') return
+  const partial = existsSync('partial') ? readFileSync('partial', 'utf8').split('\\n').filter(Boolean) : []
+  say({ t: 'ack', id: frame.id, ...(partial.length ? { partial } : {}) })
+})
+`
+
+test('a flush fails, naming the file, when the machine has no whole copy of it', async () => {
+  const root = temp()
+  const home = temp()
+  execFileSync('git', ['init', '-q', root])
+  write(root, 'src/a.ts', 'export const a = 1\n')
+  const stand = join(temp(), 'partial-receiver.mjs')
+  writeFileSync(stand, PARTIAL_RECEIVER)
+  const sync = new MachineSync(fakeLink(home, '', stand), reader(root), 'work/app', () => undefined)
+  try {
+    assert.equal(await sync.flush(), 0)
+    writeFileSync(join(home, 'partial'), 'footage/clip.mov\n')
+    await assert.rejects(
+      sync.flush(),
+      /The thread’s machine has no whole copy of footage\/clip\.mov yet: it kept changing/,
+    )
+    rmSync(join(home, 'partial'))
+    assert.equal(await sync.flush(), undefined, 'still running: the next flush vouches again')
+  } finally {
     sync.stop()
   }
 })

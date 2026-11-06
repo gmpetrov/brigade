@@ -29,6 +29,8 @@ const FILE_MAX = 2 * 1024 ** 3
 const STREAM_MIN = 8 * 1024 ** 2
 /** The chunks a large file goes in. */
 const CHUNK = 1024 ** 2
+/** A file cut short on the way goes again at once, this many times at most. */
+const RESENDS = 3
 /** Changes this close together go as one batch. */
 const BATCH_MS = 15
 
@@ -157,6 +159,12 @@ export class Reader {
   private working: Promise<void> = Promise.resolve()
   private readonly ignores: Ignores
   private readonly warned = new Set<string>()
+  /**
+   * Files whose copy on the machine went cut short (padded with zeros) and not whole since: a
+   * mark names them, and the flush it ends fails rather than vouch for that copy. Each is checked
+   * again (now, or in a batch already scheduled), which notes it again only if cut short again.
+   */
+  private readonly partial = new Set<string>()
 
   constructor(
     private readonly root: string,
@@ -201,7 +209,9 @@ export class Reader {
     clearTimeout(this.timer)
     this.timer = undefined
     this.batch()
-    return this.then(() => this.frame({ t: 'mark', id }))
+    return this.then(() =>
+      this.frame({ t: 'mark', id, ...(this.partial.size ? { partial: [...this.partial] } : {}) }),
+    )
   }
 
   /** After what is under way: one thing at a time, and a failure does not stop what comes next. */
@@ -299,9 +309,12 @@ export class Reader {
 
   /**
    * Look at a path now: send it when it changed (with `send`; else only note it for the
-   * manifest), say it is gone, or walk a new folder. `again`: it changed while it went just now.
+   * manifest), say it is gone, or walk a new folder. `resent`: how many times in a row it just
+   * changed while it went.
    */
-  private async check(path: string, send: boolean, again = false) {
+  private async check(path: string, send: boolean, resent = 0): Promise<void> {
+    // Whatever it is now, it goes as it is (cut short again, it is noted again below).
+    this.partial.delete(path)
     if (!path || skipped(path)) {
       if (!path) await this.rescan('')
       return
@@ -356,23 +369,28 @@ export class Reader {
     if (!(await this.inside(path))) return
     const sent = await this.send(path, stat)
     if (sent === 'gone') return this.gone(path)
-    if (sent === 'changed') {
-      // What the machine has is not this file: noted as no file can be, so that it goes again,
-      // now once, then with a later batch (a file rewritten over and over holds nothing up).
-      const told = this.index.get(path)
-      if (told && !('link' in told)) this.index.set(path, { ...told, size: -1 })
-      if (again) this.schedule(path)
-      else await this.check(path, true, true)
-    }
+    if (sent === 'sent') return
+    // What the machine has is not this file (cut short: padded with zeros), or it was not the
+    // file seen: noted as no file can be, it goes again now, ahead of any mark already asked
+    // for. Cut short that many times, it waits for a later batch, and the next mark names it.
+    const told = this.index.get(path)
+    if (told && !('link' in told)) this.index.set(path, { ...told, size: -1 })
+    if (sent === 'short') this.partial.add(path)
+    if (resent < RESENDS) return this.check(path, true, resent + 1)
+    this.warn(
+      `[preview] ${path} kept changing while it went to the thread's machine: it goes again`,
+    )
+    this.schedule(path)
   }
 
   /**
    * The file at `path` as it is now, from one open file: read whole when small, else a chunk at
-   * a time as the stream takes them, and always the size its header says. 'changed': it is no
-   * longer the file `seen` (replaced, or grown past the limit), or it was cut short on the way,
-   * the rest sent as zeros. 'gone': it could not be read (on the way too: then as zeros).
+   * a time as the stream takes them, and always the size its header says. 'short': it was cut
+   * short on the way, the rest sent as zeros. 'changed': it is no longer the file `seen`
+   * (replaced, or grown past the limit), and nothing went. 'gone': it could not be read (on the
+   * way too: then as zeros).
    */
-  private async send(path: string, seen: Stats): Promise<'sent' | 'changed' | 'gone'> {
+  private async send(path: string, seen: Stats): Promise<'sent' | 'short' | 'changed' | 'gone'> {
     let file: FileHandle
     try {
       // Not held up by what is no file (a pipe put in its place): let go below.
@@ -404,7 +422,7 @@ export class Reader {
           went = await chunks(file, stat.size, write)
         },
       )
-      return went === 'whole' ? 'sent' : went === 'short' ? 'changed' : 'gone'
+      return went === 'whole' ? 'sent' : went === 'short' ? 'short' : 'gone'
     } catch {
       return 'gone'
     } finally {

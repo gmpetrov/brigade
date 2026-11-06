@@ -48,6 +48,17 @@ const FIRST_SYNC_MS = 5 * 60_000
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
+/** Why a flush failed: files that changed while they went, so the machine has no whole copy. */
+export function notWhole(paths: string[]) {
+  const named =
+    paths.slice(0, 3).join(', ') + (paths.length > 3 ? ` and ${paths.length - 3} more` : '')
+  const one = paths.length === 1
+  return (
+    `The thread’s machine has no whole copy of ${named} yet: ${one ? 'it' : 'they'} kept changing ` +
+    `while ${one ? 'it was' : 'they were'} sent. Try again once ${one ? 'it stops' : 'they stop'} changing`
+  )
+}
+
 /** A value for the shell, in single quotes. */
 export const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
 
@@ -337,7 +348,13 @@ export class MachineSync {
       this.log(`[preview] ${d.toString('utf8').trimEnd()}`)
     })
     createInterface({ input: receiver.stdout! }).on('line', (line) => {
-      let message: { t?: string; id?: number; paths?: string[]; message?: string }
+      let message: {
+        t?: string
+        id?: number
+        paths?: string[]
+        message?: string
+        partial?: unknown[]
+      }
       try {
         message = JSON.parse(line) as typeof message
       } catch {
@@ -347,7 +364,12 @@ export class MachineSync {
         reader.stdin!.write(`${JSON.stringify({ t: 'need', paths: message.paths })}\n`)
         this.needWaiter?.(message.paths)
       } else if (message.t === 'ack' && typeof message.id === 'number') {
-        for (const [id, ack] of this.acks) if (id <= message.id) ack.done()
+        // Files that went cut short and not whole since (they changed while they went): the
+        // flush that mark ends does not vouch for them, so a command never runs on that copy.
+        const partial = (message.partial ?? []).filter((p): p is string => typeof p === 'string')
+        for (const [id, ack] of this.acks)
+          if (id < message.id || (id === message.id && !partial.length)) ack.done()
+          else if (id === message.id) ack.fail(new Error(notWhole(partial)))
       } else if (message.t === 'error')
         this.log(`[preview] The machine could not write a file: ${message.message ?? ''}`)
     })

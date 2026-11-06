@@ -36,7 +36,7 @@ type Header =
   | { t: 'file'; p: string; s: number; m: number; mt: number }
   | { t: 'link'; p: string; to: string }
   | { t: 'del'; p: string }
-  | { t: 'mark'; id: number }
+  | { t: 'mark'; id: number; partial?: string[] }
 type FileHeader = Extract<Header, { t: 'file' }>
 
 /**
@@ -220,7 +220,9 @@ export class Receiver {
     if (header.t === 'manifest') return this.manifest(header)
     if (header.t === 'mark') {
       await this.save()
-      return this.say({ t: 'ack', id: header.id })
+      // Files the reader sent cut short and not whole since: the runner fails that flush.
+      const partial = Array.isArray(header.partial) ? header.partial.filter(safePath) : []
+      return this.say({ t: 'ack', id: header.id, ...(partial.length ? { partial } : {}) })
     }
     if (!('p' in header) || !safePath(header.p)) throw new Error('A path outside the copy')
     if (header.t === 'link') return this.writeLink(header.p, header.to)

@@ -25,7 +25,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { PassThrough } from 'node:stream'
+import { PassThrough, Writable } from 'node:stream'
 import { after, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { Reader } from '../src/preview-sync-reader.js'
@@ -42,8 +42,9 @@ import { Receiver, safePath } from '../src/preview-sync-receiver.js'
 // - what the machine asks for is sent only when it is in the reader's own manifest, and never
 //   read through a link out of the checkout: code on the machine cannot fetch other files;
 // - a file up to 2 GB goes, one over 8 MB a chunk at a time as the pipe takes them, never whole
-//   in it; one cut short on the way, or grown, still ends up there as it is here; one over 2 GB
-//   is left out, and goes from the machine;
+//   in it; one cut short on the way, or grown, still ends up there as it is here, and is whole
+//   there before the next mark, or named in it; one over 2 GB is left out, and goes from the
+//   machine;
 // - the receiver drops the bytes of a path it refuses, and applies the frame after them; what it
 //   stages (outside the copy) never stays there; once the link is gone, it saves what it wrote
 //   and ends by itself.
@@ -421,6 +422,136 @@ test('a file cut short while it goes ends up there as it is here', async () => {
     assert.equal(text(copy, 'clip.mov'), now)
     assert.deepEqual(sync.errors, [])
     assert.deepEqual(readdirSync(sync.receiver.staging), [])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+/**
+ * The two halves, joined by a stream that cuts `path` short (`cut`, with the number of the frame
+ * that sends it) as the first bytes of each of its frames go: the reader reads its next chunk
+ * only once the receiver took the last. Each acknowledgement comes with the copy's bytes then.
+ */
+function cutting(root: string, copy: string, path: string, cut: (frame: number) => void) {
+  const acks: { id: number; partial?: string[]; bytes: Buffer; frames: number }[] = []
+  const errors: string[] = []
+  const warnings: string[] = []
+  let needed!: () => void
+  const need = new Promise<void>((done) => (needed = done))
+  // eslint-disable-next-line prefer-const
+  let reader: Reader
+  const receiver = new Receiver(copy, join(temp(), 'state.json'), (message) => {
+    const m = message as { t: string; id?: number; paths?: string[]; partial?: string[] }
+    if (m.t === 'need') {
+      void reader.answerNeed(m.paths!)
+      needed()
+    } else if (m.t === 'ack')
+      acks.push({
+        id: m.id!,
+        partial: m.partial,
+        bytes: readFileSync(join(copy, path)),
+        frames: before.get(m.id!)!,
+      })
+    else if (m.t === 'error') errors.push(String((message as { message?: string }).message))
+  })
+  let left = 0
+  let frames = 0
+  let cutting = false
+  /** How many times it went before each mark. */
+  const before = new Map<number, number>()
+  const out = new Writable({
+    highWaterMark: 1,
+    write(data: Buffer, _encoding, done) {
+      if (left > 0) {
+        left -= data.length
+        if (cutting) {
+          cutting = false
+          cut(frames)
+        }
+      } else {
+        // A header line, written alone: a file's body follows it, its size said.
+        const header = JSON.parse(data.toString('utf8')) as {
+          t: string
+          p?: string
+          s?: number
+          id?: number
+        }
+        if (header.t === 'file') {
+          left = header.s!
+          if (header.p === path) cutting = ++frames > 0
+        } else if (header.t === 'mark') before.set(header.id!, frames)
+      }
+      receiver.push(data).then(() => done(), done)
+    },
+  })
+  reader = new Reader(root, out, { warn: (line) => warnings.push(line) })
+  return {
+    reader,
+    acks,
+    errors,
+    warnings,
+    frames: () => frames,
+    async start() {
+      await reader.start()
+      await need
+    },
+    /** A mark, once the receiver acknowledged it. */
+    async flush(id: number) {
+      await reader.flush(id)
+      await eventually(() => acks.some((ack) => ack.id === id), `the acknowledgement of mark ${id}`)
+      return acks.find((ack) => ack.id === id)!
+    },
+  }
+}
+
+test('a file cut short twice while it goes is whole there at the first mark after it', async () => {
+  const root = checkout()
+  const copy = temp()
+  const outside = temp()
+  randomFile(join(root, 'clip.mov'), 12 * MB)
+  // Another name for it, out of the checkout: what is done through it reaches no watcher.
+  linkSync(join(root, 'clip.mov'), join(outside, 'clip.mov'))
+  const sync = cutting(root, copy, 'clip.mov', (frame) => {
+    if (frame === 1) truncateSync(join(outside, 'clip.mov'), 10 * MB)
+    if (frame === 2) truncateSync(join(outside, 'clip.mov'), 1024)
+  })
+  try {
+    await sync.start()
+    // Asked for while it first goes: what follows (the files sent again) must come before it.
+    const ack = await sync.flush(1)
+    assert.ok(ack.bytes.equals(readFileSync(join(root, 'clip.mov'))), 'at the first mark, as here')
+    assert.equal(ack.partial, undefined)
+    assert.equal(ack.frames, 3, 'sent three times before it: 12 MB cut short, 10 MB, then 1 KB')
+    assert.deepEqual(sync.errors, [])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a file cut short each time it goes again is named in the mark, then goes whole', async () => {
+  const root = checkout()
+  const copy = temp()
+  const outside = temp()
+  randomFile(join(root, 'clip.mov'), 12 * MB)
+  linkSync(join(root, 'clip.mov'), join(outside, 'clip.mov'))
+  // Cut short each time it goes, four times in a row: once, and as many times again as it may be.
+  const sync = cutting(root, copy, 'clip.mov', (frame) => {
+    if (frame <= 4) truncateSync(join(outside, 'clip.mov'), 12 * MB - frame * (MB / 2))
+  })
+  try {
+    await sync.start()
+    const first = await sync.flush(1)
+    assert.equal(first.frames, 4, 'sent four times before it, each cut short')
+    assert.deepEqual(first.partial, ['clip.mov'], 'not vouched for: its copy there is cut short')
+    assert.deepEqual(sync.warnings, [
+      "[preview] clip.mov kept changing while it went to the thread's machine: it goes again",
+    ])
+    // It stopped changing: it goes again, whole, and the next mark vouches for it.
+    await eventually(() => sync.frames() === 5, 'sent once more')
+    const second = await sync.flush(2)
+    assert.equal(second.partial, undefined)
+    assert.ok(second.bytes.equals(readFileSync(join(root, 'clip.mov'))))
+    assert.deepEqual(sync.errors, [])
   } finally {
     sync.reader.close()
   }

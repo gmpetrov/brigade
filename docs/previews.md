@@ -497,7 +497,10 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       filesystem). The staging folder (`.brigade/sync/<id>.staging`) is emptied
       as the receiver starts, and keeps nothing of a file placed, refused or
       cut by the link's end. A file cut short while it goes still gets the size
-      its line said, the rest as zeros, and goes again at once; one that grew
+      its line said, the rest as zeros, and goes again at once, up to three
+      times, ahead of any mark asked for meanwhile; one still cut short then is
+      named in the next mark, and that flush fails (no command starts on a copy
+      padded with zeros) until the file goes whole; one that grew
       goes as its line said, its watcher sending the rest; one that cannot be
       read is deleted there, as before. The receiver decides a path on its
       line: the bytes of one it refuses are read and dropped, and the next
