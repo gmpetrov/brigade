@@ -425,3 +425,50 @@ test(
     }
   },
 )
+
+// A message given to the turn ends the waits of its tools on the thread's machine until the turn
+// reads it, with the next tool's result (arrivals.ts): only after Claude Code took it.
+test(
+  'a message steered in ends the waits of the turn until a tool result takes it in',
+  { timeout: 20_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([waitingWord(true)], { signal: stop.signal })
+    try {
+      while (!t.played.emit) await sleep(1)
+      let taken!: () => void
+      const live = t.live() as unknown as { agent: { experimental_steer: unknown } }
+      live.agent.experimental_steer = () => new Promise<void>((done) => (taken = done))
+      const waiting = t.thread.arrivals.watch()
+      const steered = t.thread.steer('Is the render done?', 'member-message-3')
+      await sleep(20)
+      assert.equal(waiting.signal.aborted, false, 'not before Claude Code took the message')
+      taken()
+      await steered
+      assert.ok(waiting.signal.aborted && waiting.byMessage, 'a wait under way ends')
+      waiting.release()
+      const early = t.thread.arrivals.watch()
+      assert.ok(early.signal.aborted, 'one that starts before the turn read it ends at once')
+      early.release()
+      t.played.emit({
+        type: 'tool-call',
+        toolCallId: 'b1',
+        toolName: 'Bash',
+        input: '{"command":"ls"}',
+        providerExecuted: true,
+      })
+      t.played.emit({ type: 'tool-result', toolCallId: 'b1', toolName: 'Bash', result: 'ok' })
+      for (let i = 0; i < 200 && !t.events.some((e) => e.type === 'tool.finished'); i++)
+        await sleep(10)
+      assert.ok(t.events.some((e) => e.type === 'tool.finished'), 'the result went to the model')
+      const after = t.thread.arrivals.watch()
+      assert.equal(after.signal.aborted, false, 'read with that result: the next wait waits')
+      after.release()
+      assert.equal(t.thread.arrivals.listening, 0)
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)

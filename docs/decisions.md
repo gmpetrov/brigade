@@ -161,6 +161,20 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   meanwhile) waits quietly and is read with the others in the next turn. The dashboard shows a person's messages not
   read yet as they look once read, at the end of the thread above its Working line, where the turn will read them, with
   the status under them; their actions sit in a menu shown while the pointer is over one (always on phones).
+- **A message is read at the turn's next step, so no step may hold it for minutes.** On Nov 6 a teammate sent 24 KB
+  of audio to OpenRouter's transcription by writing it into the call as base64: 2 minutes 30 and 23,000 output
+  tokens per call, twice, and the person's question waited for the first. Two changes:
+  - A file goes to an MCP App as a link, never through the API (`apps/api/src/file-links.ts`). A tool that takes a
+    file's address beside the file itself (an `_url` field with a `_base64` one, or one that takes data URLs; an
+    `_urls` list) gets a field of Brigade's beside it (`audio_path`): the teammate names a file in its folder, the
+    runner uploads it straight to the bucket (the operation's `filesFields`, as an email's attachments go), and the
+    call gives the App a link signed for an hour. The bytes never reach the workspace's hub, a Durable Object
+    whose memory all of a workspace's work shares; a tool that takes only base64 gets no such field. The file stays
+    with the thread, as an email's attachment does.
+  - A wait on the thread's machine ends when a message comes in (`apps/runner/src/harness/arrivals.ts`):
+    `run_on_machine` and `machine_run` answer with the command still running, and the turn reads the message with
+    that result. Only they: `start_preview` stops the app it starts when its wait is cut, `check_preview` is the
+    check itself, and `email_wait` waits two minutes at most in the API.
 - **A turn a person writes into reads as a chat** (`layoutThread` in `apps/web/components/thread-view.tsx`,
   `lib/chat-turn.ts`). Seen on Nov 4 at 13:45, once messages went into the running turn: every one carried "Steered
   into Riley's running turn", and each cut the turn's steps into pieces between them ("Searched once", "Ran cat …",

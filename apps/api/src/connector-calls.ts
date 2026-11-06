@@ -10,6 +10,8 @@ import type {
 import { usableIn } from './apps.js'
 import { keepConnectorFile, readAttachment } from './attachments.js'
 import { audit } from './audit.js'
+import { attachmentKey, directUploads, presignGet } from './bucket.js'
+import { FILE_LINK_SECONDS } from './file-links.js'
 import { connectors } from './connectors/index.js'
 import {
   GitHubInstallationGone,
@@ -494,6 +496,25 @@ export async function handleConnectorCall(
             contentType: row.contentType,
             bytes: await readAttachment(scope, row.id),
           }
+        },
+        // The same files, as a link the App fetches from the bucket: never read here.
+        fileLink: async (id) => {
+          const row = await db.attachment.findFirst({
+            where: { id, source: 'teammate', sessionId: session.id, status: 'ready' },
+            select: { id: true, name: true, contentType: true },
+          })
+          if (!row) throw new Error(`No file ${id} to send from this thread`)
+          if (!directUploads)
+            throw new Error('Files go to an App as links only with a bucket (R2) behind Brigade')
+          const signed = await presignGet(
+            attachmentKey(scope, row.id),
+            {
+              contentType: row.contentType,
+              disposition: `inline; filename*=UTF-8''${encodeURIComponent(row.name)}`,
+            },
+            FILE_LINK_SECONDS,
+          )
+          return signed.url
         },
         ...(checkedSha ? { checkedSha } : {}),
       },

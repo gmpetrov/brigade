@@ -68,6 +68,11 @@ export type ConnectorContext = {
   /** A file the teammate sends with this call, by the id the runner gave its upload. */
   readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
   /**
+   * Such a file as a link the App fetches it from, signed for a while (file-links.ts): its bytes
+   * stay in the bucket. Only for a call from a thread.
+   */
+  fileLink?: (id: string) => Promise<string>
+  /**
    * A merge a playbook lets through on its own because its checks passed: the head commit they
    * passed on. The merge goes through only on that commit, never on one pushed since.
    */
