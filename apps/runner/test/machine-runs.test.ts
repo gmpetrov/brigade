@@ -177,6 +177,27 @@ test('a command runs in its copy on the machine; its output, status and outputs 
   assert.deepEqual(holds.calls, [`up run:${result.id}`, `release run:${result.id} 1000`])
 })
 
+test('what came back is not sent to the machine again with the next command', async () => {
+  const { control, app } = setup()
+  // Not ignored by git, made with a mode of its own: the next sync compares it whole.
+  const made = await control.run(
+    {
+      command: 'mkdir -p data && echo result > data/r.json && chmod 664 data/r.json',
+      cwd: 'app',
+      outputs: ['data/r.json'],
+    },
+    30_000,
+  )
+  assert.equal(made.status, 'succeeded')
+  assert.equal(readFileSync(join(app, 'data/r.json'), 'utf8'), 'result\n')
+  const next = await control.run({ command: 'cat data/r.json', cwd: 'app' }, 30_000)
+  assert.equal(next.status, 'succeeded')
+  assert.ok(
+    !next.notes.some((note) => note.startsWith('Sent ')),
+    `nothing sent: ${JSON.stringify(next.notes)}`,
+  )
+})
+
 test('a command longer than the wait goes on, and machine_run waits for it', async () => {
   const { control, app } = setup()
   const started = await control.run(

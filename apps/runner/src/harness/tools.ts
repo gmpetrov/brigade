@@ -3418,7 +3418,8 @@ export function machineTools(
         'The folder in `cwd` goes to the machine first: the whole checkout it is in, without .git, node_modules, ' +
         'what git ignores (.env files aside) and files over 100 MB, or the folder alone outside a checkout. Your ' +
         'copy there stays between commands, with what they installed: the next ones send only what changed. ' +
-        "The machine has none of this computer's environment, services or credentials: the command installs " +
+        'It runs Ubuntu with Node.js, pnpm, Docker, Python, ffmpeg and Chrome, and sudo for anything else ' +
+        "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
         'what it needs (e.g. "pnpm install --frozen-lockfile && pnpm test"), with settings in `env` and vault ' +
         'credentials in `credentials`; what it installs stays on its disk. ' +
         'Name in `outputs` the files or folders it makes that you need here (a video, a report, a build), ' +

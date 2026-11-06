@@ -435,6 +435,11 @@ export class MachineRuns {
       notes: [],
     })
     run.hidden = credentials.flatMap(secretValues)
+    // Counted again now: another call may have started one while this one read its folder.
+    if (thread.active.size >= RUNS_AT_ONCE)
+      throw new Error(
+        `${thread.active.size} commands already run on this thread's machine: wait for one (machine_run)`,
+      )
     this.runs.set(run.id, run)
     thread.active.add(run)
     this.save()
@@ -673,6 +678,7 @@ export class MachineRuns {
         )
         .then((out) => out.trim())
         .catch(() => null)
+      if (this.detached) return
       if (state?.startsWith('exit ')) {
         run.exitCode = Number(state.slice(5))
         run.status = run.ending ?? (run.exitCode === 0 ? 'succeeded' : 'failed')
@@ -753,11 +759,14 @@ export class MachineRuns {
     link: MachineLink | undefined,
     ran: boolean,
   ) {
+    // The runner is stopping: left as it is in the state file, for the next one to finish it
+    // (its outputs come back then).
+    if (this.detached) return
     clearTimeout(run.timer)
     if (run.status === 'starting' || run.status === 'running') run.status = run.ending ?? 'failed'
     const tail = run.decoder.end()
     if (tail) this.append(run, tail)
-    if (ran && link && run.outputs.length && !this.detached)
+    if (ran && link && run.outputs.length)
       await this.bringBack(run, link).catch((error: unknown) => {
         run.notes.push(`Its outputs could not come back: ${errorText(error)}`)
       })
@@ -765,7 +774,6 @@ export class MachineRuns {
     thread.active.delete(run)
     this.save()
     run.finished()
-    if (this.detached) return
     if (!thread.active.size) {
       clearInterval(thread.touchTimer)
       thread.touchTimer = undefined
@@ -807,11 +815,13 @@ export class MachineRuns {
       return
     }
     const paths = [...present.keys()]
+    // With their times to the nanosecond (pax) and their modes as they are: what comes back is
+    // what the machine has, so the next command's sync does not send it there again.
     const source = link.spawn(
-      `cd -- ${there} && exec tar -c -f - -- ${paths.map(shellQuote).join(' ')}`,
+      `cd -- ${there} && exec tar --format=posix -c -f - -- ${paths.map(shellQuote).join(' ')}`,
       'ignore',
     )
-    const tarArgs = ['tar', '-x', '-f', '-', '-C', run.localCwd]
+    const tarArgs = ['tar', '-x', '-p', '-f', '-', '-C', run.localCwd]
     const sink = run.seat.runAs
       ? spawn('sudo', ['-n', '-u', run.seat.runAs, '--', ...tarArgs], {
           cwd: '/',
