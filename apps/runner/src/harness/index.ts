@@ -1377,7 +1377,8 @@ export class HarnessThread {
     let staleTold = false
     const staleWait = () => {
       staleTimer = undefined
-      if (this.waitingSince === undefined) return
+      // Parked or handed over: the turn is the next session's to end, or to go on with.
+      if (this.waitingSince === undefined || frozenUnder()) return
       const again = (ms: number) => {
         staleTimer = setTimeout(staleWait, ms)
         staleTimer.unref?.()

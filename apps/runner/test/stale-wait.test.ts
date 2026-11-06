@@ -172,6 +172,11 @@ async function stuckTurn(
     ended,
     played,
     started,
+    thread,
+    /** What the runner keeps on disk for the next one (SavedState). */
+    saved: () => internals.saved,
+    /** The live session, as an update finds it: its harness in a process group of its own. */
+    live: () => internals.live as { sandbox: object; session: object },
     async cleanup() {
       await sandbox.destroy().catch(() => undefined)
       await rm(dir, { recursive: true, force: true })
@@ -271,3 +276,38 @@ test('a turn handed over while working is not ended for it', { timeout: 10_000 }
     await t.cleanup()
   }
 })
+
+test(
+  'an update hands the wait over with the turn, and leaves ending it to the next runner',
+  { timeout: 10_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([waitingWord(true)], { signal: stop.signal })
+    try {
+      await sleep(50)
+      const live = t.live()
+      Object.assign(live.sandbox, { groups: () => [4242] })
+      Object.assign(live.session, {
+        detach: async () => ({
+          type: 'resume-session',
+          harnessId: 'scripted',
+          specificationVersion: 'harness-v1',
+          data: {},
+        }),
+      })
+      const groups = await t.thread.handOver()
+      assert.deepEqual(groups, [{ pgid: 4242 }])
+      const handed = (t.saved() as { handedOver?: { waitingSince?: number; background?: unknown } })
+        .handedOver
+      assert.ok(handed?.waitingSince && handed.waitingSince <= Date.now(), JSON.stringify(handed))
+      assert.deepEqual(handed.background, [])
+      // Past the wait, this runner ends nothing: the turn is the next one's.
+      await sleep(WAIT_MS * 3)
+      assert.deepEqual(t.ended(), [])
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)
