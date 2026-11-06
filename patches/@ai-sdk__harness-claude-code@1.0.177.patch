@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 2aceefb..eda0737 100644
+index 2aceefb..97fd7d6 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1,10 +1,19 @@
@@ -915,7 +915,7 @@ index 2aceefb..eda0737 100644
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -2035,6 +2645,79 @@ async function runTurn(start, turn) {
+@@ -2035,6 +2645,81 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -925,6 +925,8 @@ index 2aceefb..eda0737 100644
 +	// answered the last report.
 +	const HELD_TASKS = new Set(["local_agent", "remote_agent", "local_workflow", "local_bash", "monitor_mcp"]);
 +	const heldTasks = new Set();
++	// Started in the foreground, with the tool call that started them waiting on them: held only once moved to the background.
++	const foreground = new Set();
 +	// Running now; and ended, with their notification (which starts the turn that reads it) still to come.
 +	let running = new Set();
 +	const ended = new Set();
@@ -995,7 +997,7 @@ index 2aceefb..eda0737 100644
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -2075,6 +2758,19 @@ async function runTurn(start, turn) {
+@@ -2075,6 +2760,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -1015,7 +1017,7 @@ index 2aceefb..eda0737 100644
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -2086,8 +2782,43 @@ async function runTurn(start, turn) {
+@@ -2086,8 +2784,46 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -1030,7 +1032,10 @@ index 2aceefb..eda0737 100644
  			}
 +			received++;
 +			clearTimeout(reportTimer);
-+			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
++			// One started in the foreground is its tool call's own result, read in the turn that made
++			// the call: its notification starts no turn. It reports back once moved to the background.
++			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) (msg.is_backgrounded === false ? foreground : heldTasks).add(msg.task_id);
++			if (type === "system" && msg.subtype === "task_updated" && msg.patch?.is_backgrounded === true && foreground.has(msg.task_id)) heldTasks.add(msg.task_id);
 +			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
 +				const now = new Set(msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type)).map((t) => t.task_id));
 +				for (const id of now) heldTasks.add(id);
@@ -1059,7 +1064,7 @@ index 2aceefb..eda0737 100644
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2123,34 +2854,64 @@ async function runTurn(start, turn) {
+@@ -2123,34 +2859,64 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -1132,7 +1137,7 @@ index 2aceefb..eda0737 100644
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
-@@ -2159,9 +2920,10 @@ async function runTurn(start, turn) {
+@@ -2159,9 +2925,10 @@ async function runTurn(start, turn) {
  			raw: "stop"
  		},
  		totalUsage: turnUsage ?? streamEventState.stepUsage ?? defaultUsage(),

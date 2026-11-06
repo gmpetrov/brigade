@@ -30,6 +30,13 @@ export function backgroundTasks(event: AgentEvent): BackgroundWork[] | undefined
   })
 }
 
+/** The bridge's word on whether the turn only waits on background work, from a harness event. */
+export function backgroundWait(event: AgentEvent): boolean | undefined {
+  if (event.type !== 'raw' || event.source !== 'harness') return
+  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
+  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
+}
+
 /**
  * Why a child's report is not sent now, or undefined when it can be. It goes to its parent as
  * the whole result: made while the teammate's own sub-agents are still at work, it would leave

@@ -64,7 +64,7 @@ import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, missedLines, ownReports, type Indexed, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { keepReplyImages, type StoreImage } from './reply-images.js'
-import { backgroundTasks } from './harness/background.js'
+import { backgroundTasks, backgroundWait } from './harness/background.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -288,13 +288,6 @@ type Seat = {
   told: Set<string>
   /** What the running turn runs in the background now: shells, Monitors, agents. */
   background: BackgroundWork[]
-}
-
-/** The bridge's word on whether the turn only waits on background work, from a harness event. */
-function backgroundWait(event: AgentEvent): boolean | undefined {
-  if (event.type !== 'raw' || event.source !== 'harness') return
-  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
-  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
 }
 
 export { backgroundTasks }

@@ -29,6 +29,7 @@ const { isOwnAlert, alertsAddress } = await import('../src/ops/alerts.js')
 const {
   RULES,
   eventsWaitingProblems,
+  silentTurnProblems,
   backlogMatters,
   backlogProblem,
   BACKLOG_AGE_MS,
@@ -158,6 +159,30 @@ describe('alerts on what waits', () => {
     assert.equal(alert!.severity, 'critical')
     assert.match(alert!.title, /Box \(Acme, c1\)/)
     assert.match(alert!.detail!, /2 thread\(s\)/)
+  })
+
+  test('threads running with nothing from their runner for an hour alert, by computer; 4 h, critical', () => {
+    const names = new Map([['c1', 'Box (Acme, c1)']])
+    const thread = (id: string, computerId: string, quiet: number) => ({
+      id,
+      title: 'Santé quotidienne',
+      computerId,
+      lastAt: new Date(now - quiet),
+    })
+    assert.deepEqual(silentTurnProblems([thread('s1', 'c1', 50 * MIN)], names, now), [])
+    const [alert, ...others] = silentTurnProblems(
+      [thread('s1', 'c1', 61 * MIN), thread('s2', 'c1', 7 * 60 * MIN), thread('s3', 'c2', MIN)],
+      names,
+      now,
+    )
+    assert.equal(others.length, 0)
+    assert.equal(alert!.key, 'turn-silent:c1')
+    assert.equal(alert!.severity, 'critical')
+    assert.match(alert!.title, /Box \(Acme, c1\)/)
+    assert.match(alert!.detail!, /2 thread\(s\)/)
+    assert.match(alert!.detail!, /s2 \(Santé quotidienne\)/)
+    const [warning] = silentTurnProblems([thread('s1', 'c1', 90 * MIN)], names, now)
+    assert.equal(warning!.severity, 'warning')
   })
 
   test('a backlog of commands: by count, or by the age of the oldest', () => {
