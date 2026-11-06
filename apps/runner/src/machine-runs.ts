@@ -265,7 +265,8 @@ export function secretValues(text: string) {
       } else if (c === '"') {
         i++
         while (i < text.length && text[i] !== '"') {
-          if (text[i] === '\\' && '$`"\\\n'.includes(text[i + 1] ?? '')) i++
+          const next = text[i + 1]
+          if (text[i] === '\\' && next !== undefined && '$`"\\\n'.includes(next)) i++
           value += text[i]
           i++
         }
