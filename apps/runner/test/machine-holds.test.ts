@@ -1,18 +1,27 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { after, test } from 'node:test'
 import { MachineHolds } from '../src/machine-holds.js'
 
 // Who uses a thread's machine (machine-holds.ts): its preview and the commands run there.
 // - the preview going to sleep does not stop the machine while a command runs there;
-// - after the last command, the machine stays up a while for the next one, then stops;
+// - after the last command, the machine stays up a while for the next one, said to the API as it
+//   begins, then stops;
 // - a command that comes within that while keeps it up;
 // - a sleep decided before an up reaches the API before it, never after;
 // - an up that gets no machine holds nothing, and stops nothing;
-// - a release this runner knew nothing of (it started since) still stops the machine.
+// - a release this runner knew nothing of (it started since) still stops the machine;
+// - a runner started again (an update) stops a machine left waiting after a command when it was
+//   due to, and at once one whose time was up;
+// - it never stops one that a preview it took up or a command it follows again holds, nor one a
+//   command came for within the wait; and it stops nothing before it took up all it was left,
+//   even when a preview it took up gives its machine back first.
 
 const machine = { id: 'm', host: 'h', port: 22, user: 'u', hostKey: 'k', size: 'test' }
 
-function api(options: { slowSleep?: Promise<void>; none?: boolean } = {}) {
+function api(options: { slowSleep?: Promise<void>; none?: boolean; gone?: boolean } = {}) {
   const calls: string[] = []
   return {
     calls,
@@ -21,6 +30,8 @@ function api(options: { slowSleep?: Promise<void>; none?: boolean } = {}) {
       return options.none ? { machine: null, reason: 'none here' } : { machine }
     },
     sleep: async (sessionId: string) => {
+      // The runner's connection closed as it updated: the sleep never reaches the API.
+      if (options.gone) throw new Error('Lost the connection to Brigade during this call')
       calls.push(`sleep ${sessionId} started`)
       await options.slowSleep
       calls.push(`sleep ${sessionId}`)
@@ -31,6 +42,24 @@ function api(options: { slowSleep?: Promise<void>; none?: boolean } = {}) {
 
 const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
+const made: string[] = []
+after(() => {
+  for (const dir of made) rmSync(dir, { recursive: true, force: true })
+})
+
+/** Where a runner keeps its threads' machines, as each runner on the computer finds it. */
+function stateFile() {
+  const dir = mkdtempSync(join(tmpdir(), 'machine-holds-'))
+  made.push(dir)
+  return join(dir, 'machine-holds.json')
+}
+
+/** A runner that started with nothing to take up (or took it up): it stops machines at once. */
+function settled(holds: MachineHolds) {
+  holds.rearm()
+  return holds
+}
+
 test('the preview going to sleep leaves the machine up while a command runs there', async () => {
   const calls = api()
   const holds = new MachineHolds(calls)
@@ -39,9 +68,13 @@ test('the preview going to sleep leaves the machine up while a command runs ther
   await holds.release('t', 'preview')
   assert.deepEqual(calls.calls, ['up t', 'up t'], 'not stopped: the command holds it')
   await holds.release('t', 'run:a', 50)
-  assert.deepEqual(calls.calls, ['up t', 'up t'], 'kept a while for the next command')
+  assert.deepEqual(
+    calls.calls,
+    ['up t', 'up t', 'touch t'],
+    'kept a while for the next command, said to the API as that begins',
+  )
   await wait(120)
-  assert.deepEqual(calls.calls, ['up t', 'up t', 'sleep t started', 'sleep t'])
+  assert.deepEqual(calls.calls, ['up t', 'up t', 'touch t', 'sleep t started', 'sleep t'])
   assert.deepEqual(holds.holders('t'), [])
 })
 
@@ -112,4 +145,85 @@ test('a release this runner knew nothing of still stops the machine', async () =
   const holds = new MachineHolds(calls)
   await holds.release('t', 'preview')
   assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'])
+})
+
+test('a runner started again stops a machine left waiting after a command, when it was due', async () => {
+  const file = stateFile()
+  // The runner before: a command ended, its machine kept a while; then it updated, its timers
+  // and its connection gone with it.
+  const before = settled(new MachineHolds(api({ gone: true }), { stateFile: file }))
+  await before.up('t', 'run:a', 'key')
+  await before.release('t', 'run:a', 150)
+  const calls = api()
+  const next = new MachineHolds(calls, { stateFile: file })
+  next.rearm()
+  await wait(60)
+  assert.deepEqual(calls.calls, [], 'still kept for the next command')
+  await wait(200)
+  assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'], 'stopped once its while was over')
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), [], 'and forgotten')
+})
+
+test('a runner started again stops at once a machine whose time was up', async () => {
+  const file = stateFile()
+  // Its preview stopped as the runner updated, and the sleep was lost with the connection.
+  const before = settled(new MachineHolds(api({ gone: true }), { stateFile: file }))
+  await before.up('t', 'preview', 'key')
+  await before.release('t', 'preview')
+  const calls = api()
+  const next = new MachineHolds(calls, { stateFile: file })
+  await wait(20)
+  assert.deepEqual(calls.calls, [], 'nothing stopped before it took up what it was left')
+  next.rearm()
+  await wait(20)
+  assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'])
+})
+
+test('a runner started again never stops a machine a preview or a command it took up holds', async () => {
+  const file = stateFile()
+  const before = settled(new MachineHolds(api({ gone: true }), { stateFile: file }))
+  await before.up('p', 'preview', 'key')
+  await before.up('c', 'run:a', 'key')
+  // Its time up (its sleep lost with the connection).
+  await before.up('w', 'run:b', 'key')
+  await before.release('w', 'run:b')
+  // Waiting after a command, a while left.
+  await before.up('n', 'run:c', 'key')
+  await before.release('n', 'run:c', 300)
+  const calls = api()
+  const next = new MachineHolds(calls, { stateFile: file })
+  // The preview handed over is taken up, the command followed again: each holds its machine.
+  await next.up('p', 'preview', 'key')
+  await next.up('c', 'run:a', 'key')
+  // A new command comes for the machine whose time was up, before the runner settled.
+  await next.up('w', 'run:d', 'key')
+  next.rearm()
+  await wait(50)
+  // A command comes for the machine still kept, within its while.
+  await next.up('n', 'run:e', 'key')
+  await wait(400)
+  assert.deepEqual(calls.calls, ['up p', 'up c', 'up w', 'up n'], 'none stopped under them')
+  await next.release('c', 'run:a')
+  assert.deepEqual(calls.calls.slice(4), ['sleep c started', 'sleep c'], 'once given back, it is')
+})
+
+test('a runner started again stops nothing before it took up all it was left', async () => {
+  const file = stateFile()
+  // A preview and a command on the machine as the runner updates.
+  const before = settled(new MachineHolds(api({ gone: true }), { stateFile: file }))
+  await before.up('t', 'preview', 'key')
+  await before.up('t', 'run:a', 'key')
+  const calls = api()
+  const next = new MachineHolds(calls, { stateFile: file })
+  // The preview is taken up and goes to sleep before the command is followed again.
+  await next.up('t', 'preview', 'key')
+  await next.release('t', 'preview')
+  await wait(20)
+  assert.deepEqual(calls.calls, ['up t'], 'not stopped under the command not followed yet')
+  await next.up('t', 'run:a', 'key')
+  next.rearm()
+  await wait(20)
+  assert.deepEqual(calls.calls, ['up t', 'up t'], 'nor once it holds it')
+  await next.release('t', 'run:a')
+  assert.deepEqual(calls.calls, ['up t', 'up t', 'sleep t started', 'sleep t'])
 })

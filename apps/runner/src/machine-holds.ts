@@ -4,7 +4,10 @@
 // once the last of them is done with it, and after a command, only once nobody came for a while
 // (the next command of a turn often follows within minutes, and each start counts at the provider).
 // A thread's ups and sleeps go to the API one after the other, so a sleep decided before an up
-// never lands after it.
+// never lands after it. Which threads' machines may be up, and when each may stop, is kept in a
+// state file: the next runner (an update, a restart) stops them when this one would have.
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import type { PreviewMachineUp } from '@brigade/contracts'
 
 export type MachineApi = {
@@ -31,10 +34,45 @@ type Held = {
   up: boolean
 }
 
+/** What the state file keeps: each thread whose machine may be up, and its keepUntil. */
+type Saved = [sessionId: string, keepUntil: number][]
+
 export class MachineHolds {
   private readonly threads = new Map<string, Held>()
+  /**
+   * The runner took up what the one before it left (rearm). Until then no machine is stopped:
+   * a command it follows again, or a preview it takes up, may not hold it yet.
+   */
+  private settled: boolean
 
-  constructor(private readonly api: MachineApi) {}
+  constructor(
+    private readonly api: MachineApi,
+    private readonly options: {
+      /**
+       * Where the threads whose machine may be up are kept, with when each may stop: the next
+       * runner stops them then (rearm). Without one, nothing outlives this runner.
+       */
+      stateFile?: string
+    } = {},
+  ) {
+    this.settled = !options.stateFile
+    if (!options.stateFile) return
+    let saved: Saved = []
+    try {
+      saved = JSON.parse(readFileSync(options.stateFile, 'utf8')) as Saved
+    } catch {
+      // None yet.
+    }
+    // Nobody holds them here yet: those still in use are held again as they are taken up.
+    for (const [sessionId, keepUntil] of Array.isArray(saved) ? saved : [])
+      if (typeof sessionId === 'string' && typeof keepUntil === 'number')
+        this.threads.set(sessionId, {
+          holders: new Set(),
+          calls: Promise.resolve(),
+          keepUntil,
+          up: true,
+        })
+  }
 
   /**
    * The thread's machine, up, for `holder`. When the API gives none (the thread has no machine,
@@ -67,18 +105,29 @@ export class MachineHolds {
     if (!known) held.up = true
     held.holders.delete(holder)
     held.keepUntil = Math.max(held.keepUntil, Date.now() + idleMs)
+    this.save()
     if (held.holders.size) return Promise.resolve()
-    clearTimeout(held.timer)
-    held.timer = undefined
-    if (!held.up) {
-      this.forget(sessionId, held)
-      return Promise.resolve()
-    }
-    const wait = held.keepUntil - Date.now()
-    if (wait <= 0) return this.sleepIfIdle(sessionId, held)
-    held.timer = setTimeout(() => void this.sleepIfIdle(sessionId, held), wait)
-    held.timer.unref()
-    return Promise.resolve()
+    // Kept up a while for whoever comes next: said to the API now, so that its stop of a machine
+    // nobody touched (the sweep's UNUSED_STOP_MS) counts from here, not from the last touch.
+    if (held.up && idleMs > 0)
+      void this.api
+        .touch(sessionId)
+        .catch((error: unknown) =>
+          console.warn(`the machine of ${sessionId}: could not say it is kept: ${String(error)}`),
+        )
+    return this.arm(sessionId, held)
+  }
+
+  /**
+   * Once the runner took up what the one before it left (the previews it handed over taken up,
+   * its commands followed again: each holds its machine again): every machine nobody holds stops
+   * when it was due to, at once if that passed. Only the first call does anything.
+   */
+  rearm() {
+    if (this.settled) return
+    this.settled = true
+    for (const [sessionId, held] of [...this.threads])
+      if (!held.holders.size) void this.arm(sessionId, held)
   }
 
   /** Still in use: said to the API as is. */
@@ -96,8 +145,28 @@ export class MachineHolds {
     if (!held) {
       held = { holders: new Set(), calls: Promise.resolve(), keepUntil: 0, up: false }
       this.threads.set(sessionId, held)
+      this.save()
     }
     return held
+  }
+
+  /**
+   * Nobody holds it: it stops at its keepUntil, at once if that passed; not before the runner
+   * settled (rearm judges it then). Resolves once it stopped, or at once when it stays up.
+   */
+  private arm(sessionId: string, held: Held) {
+    clearTimeout(held.timer)
+    held.timer = undefined
+    if (!held.up) {
+      this.forget(sessionId, held)
+      return Promise.resolve()
+    }
+    if (!this.settled) return Promise.resolve()
+    const wait = held.keepUntil - Date.now()
+    if (wait <= 0) return this.sleepIfIdle(sessionId, held)
+    held.timer = setTimeout(() => void this.sleepIfIdle(sessionId, held), wait)
+    held.timer.unref()
+    return Promise.resolve()
   }
 
   /** After the thread's API calls under way: one at a time. */
@@ -109,8 +178,25 @@ export class MachineHolds {
 
   /** Nobody holds it and nothing is pending: the thread is forgotten. */
   private forget(sessionId: string, held: Held) {
-    if (!held.holders.size && !held.timer && !held.up && this.threads.get(sessionId) === held)
+    if (!held.holders.size && !held.timer && !held.up && this.threads.get(sessionId) === held) {
       this.threads.delete(sessionId)
+      this.save()
+    }
+  }
+
+  /** The threads whose machine may be up, and when each may stop: for the runner after this one. */
+  private save() {
+    const file = this.options.stateFile
+    if (!file) return
+    const saved: Saved = [...this.threads].map(([sessionId, held]) => [sessionId, held.keepUntil])
+    try {
+      mkdirSync(dirname(file), { recursive: true })
+      const temp = `${file}.${process.pid}.tmp`
+      writeFileSync(temp, JSON.stringify(saved))
+      renameSync(temp, file)
+    } catch (error) {
+      console.warn(`could not save which threads' machines may be up: ${String(error)}`)
+    }
   }
 
   /** Nobody holds it and its time is up: it stops, judged again once the calls before it are done. */

@@ -41,7 +41,8 @@ import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 // - its output is followed again after the follow was cut, losing and repeating nothing, even
 //   when it ended meanwhile;
 // - the runner after this one follows it to its end, outputs included, even when it stopped while
-//   they came back; an ended one's output is still there after a restart;
+//   they came back, and holds its machine again as soon as it resumed; an ended one's output is
+//   still there after a restart;
 // - two commands of the thread at once share the copy of their folder;
 // - the thread's attached files are fetched by the machine itself from the bucket (a server here,
 //   the API a function answering with its redirect), checked, and put at the same place as in the
@@ -430,7 +431,10 @@ test('the runner after this one follows a command to its end, its outputs includ
   await until(() => control.list()[0]?.status === 'running', 'running')
   runs.detach()
   const next = make()
-  next.resume()
+  await next.resume()
+  // Followed again, it holds its machine as soon as resume() is over, long before it ends: the
+  // runner stops machines nobody holds only after that (MachineHolds.rearm).
+  assert.deepEqual(holds.calls, [`up run:${started.id}`, `up run:${started.id}`])
   const ended = await next.forSeat(seat).get(started.id, 30_000)
   assert.equal(ended.status, 'succeeded')
   assert.match(ended.output ?? '', /bye/)

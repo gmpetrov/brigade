@@ -21,7 +21,8 @@ import { sessionStub } from './session-stub.js'
 //   provider failed leaves it running, and the next sweep stops it; a machine being stopped keeps
 //   its slot until the provider stopped it, and a stop its process lost is taken up by the sweep;
 // - the sweep destroys the machine of a deleted thread and one stopped twelve days, stops one
-//   its runner forgot, and undoes a making cut short; an `up` meanwhile never gets a machine being
+//   its runner forgot (untouched for 20 minutes, never one a runner may still keep, untouched
+//   for up to 15), and undoes a making cut short; an `up` meanwhile never gets a machine being
 //   destroyed; it judges each row again as it acts, under the lock an up takes; rows with nothing
 //   due never hold back those that have;
 // - the preference is offered only to members with the feature (404 for the others), and /me
@@ -406,6 +407,30 @@ describe('preview machines', { skip: !database && 'no database answers' }, () =>
     assert.ok(machines.destroyed.includes(cutVm), 'the machine of the making cut short')
     assert.equal(await prisma.previewMachine.count({ where: { sessionId: cut } }), 0)
     assert.equal(machines.destroyed.length, 3)
+  })
+
+  test('the sweep stops a machine untouched for 20 minutes, not one a runner may still keep', async () => {
+    await prisma.previewMachine.deleteMany({ where: { workspaceId: ids.workspace } })
+    const machines = new FakeMachines()
+    const now = new Date()
+    const ago = (ms: number) => new Date(now.getTime() - ms)
+    const untouched = async (minutes: number) => {
+      const sessionId = await thread('ada')
+      await machineUp(machines, runner(), sessionId, KEY)
+      await prisma.previewMachine.update({
+        where: { sessionId },
+        data: { usedAt: ago(minutes * 60_000) },
+      })
+      return sessionId
+    }
+    // Kept 10 minutes after a command, the touch as that began lost: the last one, 5 minutes
+    // before it, and a minute late.
+    const kept = await untouched(16)
+    const forgotten = await untouched(21)
+    await sweepPreviewMachines(now, machines)
+    assert.equal((await row(kept)).status, 'running', 'the one a runner may still keep')
+    assert.equal((await row(forgotten)).status, 'stopped', 'the one its runner forgot')
+    assert.equal(machines.stopped.length, 1)
   })
 
   test('starts in several threads at once never run more than the most at once', async () => {

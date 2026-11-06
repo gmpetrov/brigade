@@ -416,11 +416,16 @@ export class MachineRuns {
     return (this.threads.get(sessionId)?.active.size ?? 0) > 0
   }
 
-  /** Once connected: follow again the commands the runner before this one followed. */
+  /**
+   * Once connected: follow again the commands the runner before this one followed. Resolves
+   * once each holds its machine again (it asked for it: MachineHolds), or could not.
+   */
   resume() {
     const runs = this.unfollowed
     this.unfollowed = []
-    for (const run of runs) void this.follow(run)
+    return Promise.all(
+      runs.map((run) => new Promise<void>((held) => void this.follow(run, held).finally(held))),
+    ).then(() => undefined)
   }
 
   /** The thread was deleted: its commands stop, and nothing comes back. */
@@ -569,10 +574,15 @@ export class MachineRuns {
     return thread
   }
 
-  /** The machine up for the run, connected: its link, made the first time, else told where it is. */
-  private async machine(run: Run, thread: ThreadMachine) {
+  /**
+   * The machine up for the run, connected: its link, made the first time, else told where it is.
+   * `held`: called once the run holds it, as soon as it asked for it.
+   */
+  private async machine(run: Run, thread: ThreadMachine, held?: () => void) {
     const key = await machineKey(this.options.home)
-    const answer = await this.options.holds.up(run.seat.sessionId, holderOf(run), key.publicKey)
+    const up = this.options.holds.up(run.seat.sessionId, holderOf(run), key.publicKey)
+    held?.()
+    const answer = await up
     if (!answer.machine)
       throw new Error(
         `This thread has no machine of its own${answer.reason ? ` now: ${answer.reason}` : ''}. Run it here instead`,
@@ -778,14 +788,14 @@ export class MachineRuns {
   }
 
   /** A command the runner before this one started: followed again where it is. */
-  private async follow(run: Run) {
+  private async follow(run: Run, held: () => void) {
     const thread = this.thread(run.seat.sessionId)
     thread.active.add(run)
     // Its credentials' values went with the runner before: nothing to hide them with.
     if (run.secret) run.blind = true
     let link: MachineLink
     try {
-      link = await this.machine(run, thread)
+      link = await this.machine(run, thread, held)
     } catch (error) {
       run.notes.push(`Its machine could not be reached again: ${errorText(error)}`)
       return this.finish(run, thread, undefined, { status: 'failed', ran: false })
