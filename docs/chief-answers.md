@@ -8,7 +8,9 @@ It works for the person in two ways that take no turn on each question:
 - **A daily pass**: once a day, Chief goes through what waits on them, settles what their rules
   settle, and leaves them the rest, prepared, on Today.
 
-People call them **Your rules** and **Daily pass** (Preferences → Chief).
+People call them **Your rules** and **Daily pass** (Preferences → Chief). **For now, both only
+recommend** (see the first decision): the pass settles nothing, and no teammate reads the rules,
+until the person has seen how Chief reads them.
 
 Code: `apps/api/src/chief-rules.ts`, `apps/api/src/chief-pass.ts`,
 `apps/api/src/chief-answers.ts` (answers in the person's name), `apps/api/src/chief-order.ts`,
@@ -16,6 +18,27 @@ Code: `apps/api/src/chief-rules.ts`, `apps/api/src/chief-pass.ts`,
 and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
 
 ## Decisions
+
+- **For now Chief only recommends, while rules are calibrated** (the member's choice, 6 Nov, after
+  a broad rule, "go ahead on next steps of work I asked for", had the first pass start work he did
+  not want). Acting is the `chief_acts` feature (`packages/contracts/src/features.ts`,
+  `chiefActs`), off for everyone. Without it:
+  - the pass answers and retries nothing: `chief_answer` and `chief_retry` are refused
+    (`RECOMMEND_ONLY`), its runner offers only `chief_report` (`ThreadSpec.pass.acts`, unset:
+    recommends), its instructions say so (`recommendingPass`), and so does its brief
+    (`CHIEF_RECOMMENDS_ONLY`), for a runner older than this;
+  - its report gives every item what Chief would do, and for a question its pick and the rule it
+    goes by (`decisions[].rule`). Today shows them with **Use it** (its pick, sent as the person's
+    answer) and, for a thread still failed, **Try again**;
+  - Today shows how Chief reads the person (`passView.calibration`): over the last
+    `CHIEF_CALIBRATION_DAYS` of passes, each question Chief picked for (once, by its latest pick)
+    counts when the person answered it, the first message after its card being theirs, as the same
+    answer or another (`pickOutcomes`), by the rule the pick went by. It tells which rules Chief
+    reads right, before it acts on any;
+  - the rules reach no teammate (`ThreadSpec.rules` unset, `chiefAnswers` false): they would act
+    on them. Teammates ask as before, and Chief is told so (`rulesAct`, `rulesForChief`).
+
+  With `chief_acts`, everything below holds as written.
 
 - **Off is Brigade as before.** Both are a member's (`Member.chiefRules`, `Member.chiefPass`, off
   and empty by default; `PUT /me/chief`). With no rules, the spec has none (`ThreadSpec.rules`);
@@ -34,7 +57,8 @@ and `chiefTools`, and `apps/web/components/chief-pass.tsx`.
   their teammates leave to act), or takes the lines a pass proposes (`POST /me/chief/rules`; a
   refused line is kept in `chiefRulesRefused` and never proposed again). Each is taken or refused
   under their row's lock (`decideRule`): several at once all stay.
-- **Every teammate working for the person reads them** (`specFor`): the thread's person is its
+- **Every teammate working for the person reads them, once Chief acts on them** (`specFor`,
+  `chiefActs`): the thread's person is its
   asker (`askedBy`), or its starter when nobody asked (a routine's, a trigger's run); none in a
   thread several people ask in, a playbook's run, or a pass. The runner puts them in the
   instructions (`rules`): decide what they settle, say so in a line, ask the person only the rest;
