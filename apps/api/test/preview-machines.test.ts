@@ -12,6 +12,7 @@ import { sessionStub } from './session-stub.js'
 // with the provider faked; skipped when no database answers:
 // - a thread gets a machine only when its starter has the preview_machines feature and turned
 //   it on, and only on a cloud computer; nobody else gets one, and their previews run as before;
+//   its spec says so, which gives its teammates the tools to run commands there;
 // - the same machine each time: started again once stopped, made again once the provider lost
 //   it; two starts at once make one;
 // - past the most a workspace runs at once, a preview runs on the computer, and says why;
@@ -244,6 +245,39 @@ describe('preview machines', { skip: !database && 'no database answers' }, () =>
     // A thread of another computer is refused.
     await assert.rejects(machineUp(machines, runner(), onMac, KEY), /Unknown thread/)
     assert.equal(machines.made.length, 1, 'one machine, Ada’s first thread’s')
+  })
+
+  test("a thread's spec says it has a machine only where its starter would get one", async () => {
+    const { specFor, loadThread } = await import('../src/thread-spec.js')
+    for (const [who, computer] of [
+      ['ada', 'cloud'],
+      ['ada', 'mac'],
+      ['bob', 'cloud'],
+    ] as const)
+      await db.account.create({
+        data: {
+          memberId: ids[who],
+          computerId: ids[computer],
+          provider: 'claude_code',
+          label: 'Claude',
+          status: 'ready',
+          isDefault: true,
+        },
+      } as never)
+    // Its teammates get the tools to run heavy commands there (run_on_machine) when it says so.
+    const machine = async (id: string) => (await specFor(db, await loadThread(db, id))).machine
+    try {
+      assert.equal(await machine(await thread('ada')), true)
+      assert.equal(await machine(await thread('ada', 'mac')), false, 'not on her own machine')
+      await prisma.member.update({ where: { id: ids.bob }, data: { previewMachines: true } })
+      assert.equal(await machine(await thread('bob')), false, 'Bob has not the feature')
+      await prisma.member.update({ where: { id: ids.ada }, data: { previewMachines: false } })
+      assert.equal(await machine(await thread('ada')), false, 'Ada turned it off')
+    } finally {
+      await prisma.member.update({ where: { id: ids.bob }, data: { previewMachines: false } })
+      await prisma.member.update({ where: { id: ids.ada }, data: { previewMachines: true } })
+      await prisma.account.deleteMany({ where: { memberId: { in: [ids.ada, ids.bob] } } })
+    }
   })
 
   test('the same machine each time: started again when stopped, made again when gone', async () => {

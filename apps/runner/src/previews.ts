@@ -81,6 +81,7 @@ import {
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
 import type { Candidate } from './memory-guard.js'
 import { processGroups } from './process-groups.js'
+import { runAsUser } from './run-as.js'
 import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { composeProject, containerEnv, teammateHome } from './teammates.js'
 import { holderOwner, takenPorts, whoHolds } from './port-holders.js'
@@ -2077,26 +2078,6 @@ function withAddresses(
       ),
     ]),
   )
-}
-
-/** Run a command as the teammate (or the runner's user), with text on its stdin. */
-function runAsUser(args: string[], runAs: string | undefined, input = '') {
-  return new Promise<string>((done, fail) => {
-    const child = runAs
-      ? spawn('sudo', ['-n', '-u', runAs, '--', ...args], { cwd: '/' })
-      : spawn(args[0]!, args.slice(1), { cwd: '/' })
-    let out = ''
-    let err = ''
-    child.stdout.on('data', (d: Buffer) => (out += d.toString('utf8')))
-    child.stderr.on('data', (d: Buffer) => (err += d.toString('utf8')))
-    child.on('error', fail)
-    child.on('close', (code) =>
-      code === 0 ? done(out) : fail(new Error(err.trim() || `${args[0]} exited with ${code}`)),
-    )
-    // A command that exits without reading its input closes the pipe: not an error.
-    child.stdin.on('error', () => undefined)
-    child.stdin.end(input)
-  })
 }
 
 /** A dotenv line: quoted when the value needs it. */

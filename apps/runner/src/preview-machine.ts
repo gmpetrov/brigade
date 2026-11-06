@@ -195,7 +195,7 @@ export class MachineLink {
       }
       master.kill()
       if (Date.now() > deadline)
-        throw new Error(`Could not reach the preview's machine over SSH${said ? `: ${said}` : ''}`)
+        throw new Error(`Could not reach the thread's machine over SSH${said ? `: ${said}` : ''}`)
       await sleep(2000)
     }
   }
@@ -221,7 +221,7 @@ export class MachineLink {
         clearTimeout(timer)
         if (code === 0) done(out)
         else
-          fail(new Error(err.trim() || `The command on the preview's machine exited with ${code}`))
+          fail(new Error(err.trim() || `The command on the thread's machine exited with ${code}`))
       })
       child.stdin.on('error', () => undefined)
       child.stdin.end(input)
@@ -284,7 +284,10 @@ export class MachineSync {
   async start(): Promise<number> {
     this.stop()
     await this.link.exec(
-      `mkdir -p ${REMOTE_DIR} && cat > ${REMOTE_DIR}/preview-sync-receiver.mjs`,
+      // Written aside, then moved in place: a sync starting meanwhile (the preview's, a
+      // command's) never runs it half written.
+      `mkdir -p ${REMOTE_DIR} && cat > ${REMOTE_DIR}/preview-sync-receiver.mjs.$$ && ` +
+        `mv -f ${REMOTE_DIR}/preview-sync-receiver.mjs.$$ ${REMOTE_DIR}/preview-sync-receiver.mjs`,
       readFileSync(RECEIVER, 'utf8'),
     )
     const state = `${REMOTE_DIR}/sync/${createHash('sha256').update(this.remoteRoot).digest('hex').slice(0, 16)}.json`
@@ -341,7 +344,7 @@ export class MachineSync {
     // reader sends before the mark of the flush below.
     const needed = await new Promise<string[]>((done, fail) => {
       const timer = setTimeout(
-        () => fail(new Error('The preview’s machine did not answer the sync')),
+        () => fail(new Error('The thread’s machine did not answer the sync')),
         FIRST_SYNC_MS,
       )
       this.needWaiter = (paths) => {
@@ -354,7 +357,7 @@ export class MachineSync {
         clearTimeout(timer)
         fail(
           new Error(
-            `The sync with the preview’s machine stopped (${cutBy || 'this computer’s side'})`,
+            `The sync with the thread’s machine stopped (${cutBy || 'this computer’s side'})`,
           ),
         )
       })
@@ -375,12 +378,12 @@ export class MachineSync {
   async flush(timeoutMs = FLUSH_MS): Promise<number | undefined> {
     if (this.broken) return this.start()
     const reader = this.reader
-    if (!reader?.stdin) throw new Error('The sync with the preview’s machine is not running')
+    if (!reader?.stdin) throw new Error('The sync with the thread’s machine is not running')
     const id = ++this.marks
     const acked = new Promise<undefined>((done, fail) => {
       const timer = setTimeout(() => {
         this.acks.delete(id)
-        fail(new Error('The preview’s machine did not confirm the latest changes in time'))
+        fail(new Error('The thread’s machine did not confirm the latest changes in time'))
       }, timeoutMs)
       this.acks.set(id, {
         done: () => {
@@ -406,7 +409,7 @@ export class MachineSync {
     this.receiver = undefined
     this.broken = true
     for (const ack of [...this.acks.values()])
-      ack.fail(new Error('The sync with the preview’s machine stopped'))
+      ack.fail(new Error('The sync with the thread’s machine stopped'))
     reader?.stdin?.end()
     reader?.kill()
     receiver?.stdin?.end()

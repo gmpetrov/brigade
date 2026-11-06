@@ -320,7 +320,7 @@ export class Reader {
     if (stat.size > FILE_MAX) {
       if (!this.warned.has(path)) {
         this.warned.add(path)
-        this.warn(`[preview] ${path} is not sent to the preview's machine: over 100 MB`)
+        this.warn(`[preview] ${path} is not sent to the thread's machine: over 100 MB`)
       }
       return
     }

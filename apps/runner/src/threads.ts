@@ -56,6 +56,7 @@ import {
 import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
 import type { HandedOver } from './hand-over.js'
+import type { MachineRuns } from './machine-runs.js'
 import type { Previews } from './previews.js'
 import { memoryRun } from './memory.js'
 import { memoryNews, threadMemory } from './memory-layers.js'
@@ -486,9 +487,11 @@ export class Threads {
       /** A teammate's reply mentioned others in the thread: ask the API to have them answer next. */
       handoff: (sessionId: string, fromTeammateId: string, teammateIds: string[]) => void
       /** The library and memory threads reach. */
-      context: Omit<ThreadContext, 'callLibrary' | 'callSchedule' | 'preview'>
+      context: Omit<ThreadContext, 'callLibrary' | 'callSchedule' | 'preview' | 'machine'>
       /** Apps teammates run for people to try, one per thread. */
       previews: Previews
+      /** Commands teammates run on their thread's machine (machine-runs.ts), on a cloud computer. */
+      machineRuns?: MachineRuns
       /** Put an image a reply shows in its thread's bucket folder (reply-images.ts). */
       storeImage: StoreImage
       /**
@@ -2462,6 +2465,16 @@ export class Threads {
             workDir: folder.workDir,
             ...(user ? { runAs: user } : {}),
           }),
+          ...(this.options.machineRuns
+            ? {
+                machine: this.options.machineRuns.forSeat({
+                  sessionId: spec.sessionId,
+                  teammateId,
+                  workDir: folder.workDir,
+                  ...(user ? { runAs: user } : {}),
+                }),
+              }
+            : {}),
         },
         user,
       )

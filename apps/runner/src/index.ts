@@ -60,6 +60,8 @@ import { imageStore } from './reply-images.js'
 import { bundleStore, cleanStaging, libraryMessage } from './uploads.js'
 import { MemoryGuard, memoryRoom, turnsAtOnce } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
+import { MachineHolds } from './machine-holds.js'
+import { MachineRuns } from './machine-runs.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
 import { teammateUser } from './teammates.js'
@@ -259,7 +261,8 @@ async function start() {
         return response.status === 410
       },
     },
-    inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
+    inUse: (sessionId): boolean =>
+      threads.inUse(sessionId) || previews.has(sessionId) || !!machineRuns?.active(sessionId),
     quiet: (name) => previews.archive(name.sessionId),
     // While on disk, a cloud computer's thread folders are backed up too, for a computer that
     // replaces this one (computer-backups.ts), with what their turns run in the background.
@@ -313,6 +316,22 @@ async function start() {
         }),
     }
   }
+  // Threads' machines of their own (preview_machines), on a cloud computer: their previews and the
+  // commands teammates run there share each, which stops once neither uses it.
+  const holds = CLOUD
+    ? new MachineHolds({
+        up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
+        sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
+        touch: (sessionId) => connection.previewMachine(sessionId, 'touch'),
+      })
+    : null
+  const machineRuns = holds
+    ? new MachineRuns({
+        holds,
+        home: paths.state,
+        stateFile: join(paths.state, 'machine-runs.json'),
+      })
+    : null
   // Apps teammates run for people to try. On a cloud computer the API has their ports hosted.
   const previews = new Previews({
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
@@ -328,12 +347,12 @@ async function start() {
     stateFile: join(paths.state, 'previews.json'),
     busy: (sessionId) => threads.inUse(sessionId),
     // Previews on a machine of their own, for threads whose starter chose them (preview_machines).
-    ...(CLOUD
+    ...(holds
       ? {
           machines: {
-            up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
-            sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
-            touch: (sessionId) => connection.previewMachine(sessionId, 'touch'),
+            up: (sessionId, publicKey) => holds.up(sessionId, 'preview', publicKey),
+            sleep: (sessionId) => holds.release(sessionId, 'preview'),
+            touch: (sessionId) => holds.touch(sessionId),
             home: paths.state,
           },
         }
@@ -362,6 +381,7 @@ async function start() {
   const threads = new Threads({
     concurrency,
     previews,
+    ...(machineRuns ? { machineRuns } : {}),
     folders,
     streamEnded: (teammateId, sessionId, workDir) =>
       usageLogs.turnEnded(teammateId, sessionId, workDir),
@@ -511,8 +531,9 @@ async function start() {
         ])
           arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
-        // The previews an update stopped (once, after it).
+        // The previews an update stopped (once, after it), and the commands it stopped following.
         void previews.startAgain()
+        machineRuns?.resume()
         threads.requeueLost(message.requeue ?? [], unacknowledged)
         const requeued = new Set(
           (message.requeue ?? []).map((p) => `${p.thread.sessionId}:${p.messageId}`),
@@ -700,6 +721,7 @@ async function start() {
         return threads.noteFromOutside(message.sessionId, message.text)
       case 'thread.deleted':
         await previews.stop(message.sessionId, 'The thread was deleted')
+        await machineRuns?.forgetThread(message.sessionId)
         threads.forget(message.sessionId)
         return folders
           .removeThread(message.sessionId)
@@ -803,6 +825,8 @@ async function start() {
       clearTimeout(closing)
       terminals.closeAll()
       await previews.stopForUpdate()
+      // Commands on threads' machines go on there: the next runner follows them.
+      machineRuns?.detach()
       connection.close()
     },
   })
@@ -838,6 +862,7 @@ async function start() {
     terminals.closeAll()
     // Reported before the connection closes; the outbox keeps it otherwise.
     await previews.stopAll('The computer stopped')
+    machineRuns?.detach()
     connection.close()
     await threads.stop()
     process.exit(0)

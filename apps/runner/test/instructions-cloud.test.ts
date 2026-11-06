@@ -32,3 +32,36 @@ test("on a cloud computer, a teammate keeps what it makes in its thread's folder
   assert.match(text, /what lies outside them stays on the disk for good/)
   assert.match(text, /Delete large temporary files/)
 })
+
+test('a thread with a machine of its own says to run heavy work there; one without says nothing of it', () => {
+  const spec = (machine: boolean) =>
+    ThreadSpec.parse({
+      sessionId: 's1',
+      teammate: {
+        id: 'riley',
+        name: 'Riley',
+        instructions: '',
+        harness: 'claude_code',
+        model: null,
+      },
+      permissionMode: 'allow-all',
+      account: { id: 'a1', provider: 'claude_code', source: 'machine' },
+      fallbacks: [],
+      machine,
+    })
+  const text = (machine: boolean) =>
+    instructions(
+      spec(machine),
+      threadMemory(
+        spec(machine),
+        { workspace: '', teammate: '', lines: {} },
+        '/threads/s1',
+        new Date(),
+      ),
+      '/library',
+      { ready: true },
+    )
+  assert.match(text(true), /## Heavy work\n\nBesides this computer/)
+  assert.match(text(true), /run_on_machine/)
+  assert.doesNotMatch(text(false), /Heavy work|run_on_machine/)
+})

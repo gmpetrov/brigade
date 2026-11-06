@@ -16,9 +16,10 @@ export const FEATURES = {
   },
   preview_machines: {
     description:
-      'Previews on a machine of their own (docs/previews.md): a member who has it can turn it on ' +
-      'in Preferences, and the previews of the threads they start then run on a cloud machine of ' +
-      'their own, with their code kept in sync as it changes. Being tried by the team first.',
+      'A machine of their own for threads (docs/previews.md): a member who has it can turn it on ' +
+      'in Preferences, and each thread they start gets a cloud machine of its own, where its ' +
+      'preview runs, with its code kept in sync as it changes, and where its teammates run heavy ' +
+      'commands (renders, builds, test suites). Being tried by the team first.',
     default: false,
   },
 } as const satisfies Record<string, { description: string; default: boolean }>
