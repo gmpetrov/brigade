@@ -416,7 +416,7 @@ function createAgent(
         }),
         ...previewTools(preview, credentials),
         // Heavy commands on the thread's machine of its own, where its starter chose one.
-        // A message that comes in ends their waits: the turn reads it now (arrivals.ts).
+        // A message or an update ends their waits; the command goes on there (arrivals.ts).
         ...(spec.machine && machine ? machineTools(machine, credentials, arrivals) : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
         ...(computer ? computerUseTools(computer) : {}),
@@ -574,7 +574,7 @@ export class HarnessThread {
   private quietSince: number | undefined
   /** A person's message steered into the running turn has no reply yet: its answer is coming. */
   private steeredPending = false
-  /** Messages given to the running turn, which end the waits of its tools (arrivals.ts). */
+  /** What ends its tools' waits: a message given to the turn, a hand-over (arrivals.ts). */
   readonly arrivals = new Arrivals()
   /**
    * The running turn is answered, and completed for everyone: Claude Code only writes its guess
