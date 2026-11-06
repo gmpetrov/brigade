@@ -356,6 +356,7 @@ pnpm format       # Prettier
 | Usage and caps                     | [docs/usage.md](docs/usage.md)                     |
 | Billing                            | [docs/billing.md](docs/billing.md)                 |
 | Cloud computer backups             | [docs/cloud-backups.md](docs/cloud-backups.md)     |
+| What VMs cost at the provider      | [docs/vm-costs.md](docs/vm-costs.md)               |
 | Monitoring                         | [docs/monitoring.md](docs/monitoring.md)           |
 | Deployment                         | [docs/deployment-plan.md](docs/deployment-plan.md) |
 | The public demo                    | [docs/demo.md](docs/demo.md)                       |
