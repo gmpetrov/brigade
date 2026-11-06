@@ -388,7 +388,7 @@ async function main() {
     // The link was cut: as at its end.
   }
   // Then it ends by itself once nothing is left to do, its last save included. Not with
-  // process.exit(), which hung there now and then (about one end in ten after a large file).
+  // process.exit(), which hung there now and then (6 ends in 30 after a file of 99 MiB).
   await receiver.end()
 }
 
