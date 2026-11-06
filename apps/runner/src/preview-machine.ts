@@ -34,9 +34,16 @@ export const REMOTE_WORK = 'work'
 
 /** How long a machine that just started may refuse SSH (boat: restoring, securing). */
 const CONNECT_MS = 90_000
-/** How long a flush waits for the machine to say all is written. */
+/**
+ * How long a flush waits for the machine to say all is written while nothing goes there: it
+ * waits as long as bytes go (a file of 2 GB takes tens of seconds between two machines).
+ */
 const FLUSH_MS = 60_000
-/** How long the first sync (the whole checkout) may take. */
+/**
+ * The same for the first sync (the whole checkout), which may meet files read for the first
+ * time since the computer started (restored from its snapshot as they are read); and how long
+ * the machine may take to say what it lacks.
+ */
 const FIRST_SYNC_MS = 5 * 60_000
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
@@ -270,6 +277,8 @@ export class MachineSync {
   private readonly acks = new Map<number, { done: () => void; fail: (error: Error) => void }>()
   private needWaiter?: (paths: string[]) => void
   private broken = true
+  /** When bytes last went from the reader towards the machine: a flush waits while they do. */
+  private moved = 0
 
   constructor(
     private readonly link: MachineLink,
@@ -315,6 +324,8 @@ export class MachineSync {
     receiver.on('error', cut('the machine’s side'))
     reader.on('error', cut('this computer’s side'))
     reader.stdout!.pipe(receiver.stdin!)
+    // Taken only as fast as the machine takes them (the pipe waits): bytes that move are progress.
+    reader.stdout!.on('data', () => (this.moved = Date.now()))
     receiver.stdin!.on('error', () => undefined)
     reader.stdin!.on('error', () => undefined)
     reader.stderr!.on('data', (d: Buffer) => {
@@ -373,18 +384,27 @@ export class MachineSync {
 
   /**
    * Everything changed so far is on the machine: resolves once it says so. When the sync had to
-   * start (the first time, or after it was cut), resolves to the number of files it sent.
+   * start (the first time, or after it was cut), resolves to the number of files it sent. Fails
+   * once `timeoutMs` passed without it and without a byte going to the machine: while bytes go
+   * (large files), it waits as long as they take.
    */
   async flush(timeoutMs = FLUSH_MS): Promise<number | undefined> {
     if (this.broken) return this.start()
     const reader = this.reader
     if (!reader?.stdin) throw new Error('The sync with the thread’s machine is not running')
     const id = ++this.marks
+    const since = Date.now()
     const acked = new Promise<undefined>((done, fail) => {
-      const timer = setTimeout(() => {
+      const wait = () => {
+        const still = Math.max(since, this.moved) + timeoutMs - Date.now()
+        if (still > 0) {
+          timer = setTimeout(wait, still)
+          return
+        }
         this.acks.delete(id)
         fail(new Error('The thread’s machine did not confirm the latest changes in time'))
-      }, timeoutMs)
+      }
+      let timer = setTimeout(wait, timeoutMs)
       this.acks.set(id, {
         done: () => {
           clearTimeout(timer)

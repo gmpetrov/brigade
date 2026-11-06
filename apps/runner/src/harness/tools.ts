@@ -3416,7 +3416,7 @@ export function machineTools(
         "a build, a full test suite, or a big repository's typecheck or lint. Not for quick commands (git, reading " +
         'or searching files, small scripts): those are faster here. ' +
         'The folder in `cwd` goes to the machine first: the whole checkout it is in, without .git, node_modules, ' +
-        'what git ignores (.env files aside) and files over 100 MB, or the folder alone outside a checkout. Your ' +
+        'what git ignores (.env files aside) and files over 2 GB, or the folder alone outside a checkout. Your ' +
         'copy there stays between commands, with what they installed: the next ones send only what changed. ' +
         'It runs Ubuntu with Node.js, pnpm, Docker, Python, ffmpeg and Chrome, and sudo for anything else ' +
         "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
