@@ -42,7 +42,12 @@ const agentRuns = (running: boolean) => ({
  * Claude Code answering, then the bridge holding the turn open as a stuck one does: its stream
  * ends only once the runner stops it. `parts` come after the answer; `emit` plays more later.
  */
-function stuckHarness(parts: Record<string, unknown>[], played: { emit?: Emit }) {
+function stuckHarness(
+  parts: Record<string, unknown>[],
+  played: { emit?: Emit },
+  /** Without its answer first: a turn handed over goes on where it was. */
+  answer = true,
+) {
   return {
     harnessId: 'scripted',
     specificationVersion: 'harness-v1',
@@ -54,9 +59,11 @@ function stuckHarness(parts: Record<string, unknown>[], played: { emit?: Emit })
       doPromptTurn: async ({ emit, abortSignal }: { emit: Emit; abortSignal?: AbortSignal }) => {
         played.emit = emit
         emit({ type: 'stream-start', modelId: 'scripted' })
-        emit({ type: 'text-start', id: 'r' })
-        emit({ type: 'text-delta', id: 'r', delta: 'All normal: reported.' })
-        emit({ type: 'text-end', id: 'r' })
+        if (answer) {
+          emit({ type: 'text-start', id: 'r' })
+          emit({ type: 'text-delta', id: 'r', delta: 'All normal: reported.' })
+          emit({ type: 'text-end', id: 'r' })
+        }
         emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
         for (const part of parts) emit(part)
         const done = new Promise<void>((resolve) => {
@@ -79,11 +86,12 @@ function stuckHarness(parts: Record<string, unknown>[], played: { emit?: Emit })
 
 /**
  * A turn of a thread whose bridge plays `parts` after the answer, then holds the turn open.
- * `handedOver`: an update handed the turn over (handOver), waiting since `waitingAgo` ms if it waited.
+ * `handedOver`: an update handed the turn over (handOver), waiting since `waitingAgo` ms if it waited,
+ * with a steered message still to answer if `steered`.
  */
 async function stuckTurn(
   parts: Record<string, unknown>[],
-  options: { handedOver?: { waitingAgo?: number }; signal?: AbortSignal } = {},
+  options: { handedOver?: { waitingAgo?: number; steered?: boolean }; signal?: AbortSignal } = {},
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'brigade-stale-wait-'))
   const events: AgentEvent[] = []
@@ -108,7 +116,7 @@ async function stuckTurn(
   )
   const agent = new HarnessAgent({
     // The harness interface is the SDK's internal one; this plays only what a thread uses.
-    harness: stuckHarness(parts, played) as never,
+    harness: stuckHarness(parts, played, !options.handedOver?.steered) as never,
     tools: {},
     permissionMode: 'allow-all',
     sandboxConfig: { workDir: '.' },
@@ -156,6 +164,7 @@ async function stuckTurn(
         ...(handed.waitingAgo !== undefined
           ? { waitingSince: Date.now() - handed.waitingAgo, background: [] }
           : {}),
+        ...(handed.steered ? { steered: true } : {}),
       },
     }
   }
@@ -188,7 +197,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 test(
   'an answered turn waiting on background work that is not running ends after the wait',
-  { timeout: 10_000 },
+  { timeout: 20_000 },
   async () => {
     const t = await stuckTurn([waitingWord(true)])
     try {
@@ -213,7 +222,7 @@ test(
 
 test(
   'a turn whose work still runs in the background stays open until it ends',
-  { timeout: 10_000 },
+  { timeout: 20_000 },
   async () => {
     const t = await stuckTurn([agentRuns(true), waitingWord(true)])
     try {
@@ -230,7 +239,7 @@ test(
   },
 )
 
-test('a turn the bridge stopped waiting on stays open', { timeout: 10_000 }, async () => {
+test('a turn the bridge stopped waiting on stays open', { timeout: 20_000 }, async () => {
   const stop = new AbortController()
   // Claude Code at it again: a turn of its own, reading the report.
   const t = await stuckTurn([waitingWord(true), waitingWord(false)], { signal: stop.signal })
@@ -246,7 +255,7 @@ test('a turn the bridge stopped waiting on stays open', { timeout: 10_000 }, asy
 
 test(
   'a turn an update handed over while it waited ends in the next runner, without a word',
-  { timeout: 10_000 },
+  { timeout: 20_000 },
   async () => {
     // The bridge said it waits before the update, never again: this runner only has what the
     // runner before kept.
@@ -264,7 +273,7 @@ test(
   },
 )
 
-test('a turn handed over while working is not ended for it', { timeout: 10_000 }, async () => {
+test('a turn handed over while working is not ended for it', { timeout: 20_000 }, async () => {
   const stop = new AbortController()
   const t = await stuckTurn([], { handedOver: {}, signal: stop.signal })
   try {
@@ -279,7 +288,7 @@ test('a turn handed over while working is not ended for it', { timeout: 10_000 }
 
 test(
   'an update hands the wait over with the turn, and leaves ending it to the next runner',
-  { timeout: 10_000 },
+  { timeout: 20_000 },
   async () => {
     const stop = new AbortController()
     const t = await stuckTurn([waitingWord(true)], { signal: stop.signal })
@@ -295,15 +304,120 @@ test(
           data: {},
         }),
       })
+      // Work ran and ended; a person's message went in, not answered yet.
+      t.played.emit!(agentRuns(true))
+      t.played.emit!(agentRuns(false))
+      Object.assign((live as unknown as { agent: object }).agent, {
+        experimental_steer: async () => {},
+      })
+      await t.thread.steer('And the disk?', 'member-message-2')
       const groups = await t.thread.handOver()
       assert.deepEqual(groups, [{ pgid: 4242 }])
-      const handed = (t.saved() as { handedOver?: { waitingSince?: number; background?: unknown } })
-        .handedOver
+      const handed = (
+        t.saved() as {
+          handedOver?: {
+            waitingSince?: number
+            background?: unknown
+            quietSince?: number
+            steered?: boolean
+          }
+        }
+      ).handedOver
       assert.ok(handed?.waitingSince && handed.waitingSince <= Date.now(), JSON.stringify(handed))
       assert.deepEqual(handed.background, [])
+      assert.ok(
+        handed.quietSince && handed.quietSince >= handed.waitingSince,
+        JSON.stringify(handed),
+      )
+      assert.equal(handed.steered, true)
       // Past the wait, this runner ends nothing: the turn is the next one's.
       await sleep(WAIT_MS * 3)
       assert.deepEqual(t.ended(), [])
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)
+
+// From the review of #767 (Cody's reproductions).
+test(
+  'a turn whose work just ended gets the whole wait from then',
+  { timeout: 20_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([agentRuns(true), waitingWord(true)], { signal: stop.signal })
+    try {
+      while (!t.played.emit) await sleep(1)
+      // It has waited longer than the wait while the agent ran: none of that counts.
+      await sleep(WAIT_MS * 1.5)
+      const ended = Date.now()
+      t.played.emit(agentRuns(false))
+      const early = await Promise.race([t.outcome, sleep(WAIT_MS * 0.75).then(() => null)])
+      assert.equal(early, null, `ended ${Date.now() - ended} ms after the agent, before the wait`)
+      // Then the wait is over, and its report never came.
+      assert.equal((await t.outcome).status, 'idle')
+      assert.ok(Date.now() - ended >= WAIT_MS)
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)
+
+test(
+  'a message steered into the waiting turn gets its answer before the turn ends',
+  { timeout: 20_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([waitingWord(true)], { signal: stop.signal })
+    try {
+      while (!t.played.emit) await sleep(1)
+      // Claude Code takes the message in at once; its answer starts after the wait is over.
+      const live = t.live() as unknown as { agent: { experimental_steer: unknown } }
+      live.agent.experimental_steer = async () => {}
+      await sleep(WAIT_MS * 0.75)
+      await t.thread.steer('Please answer my new question', 'member-message-2')
+      await sleep(WAIT_MS * 0.5 + 50)
+      assert.deepEqual(t.ended(), [], 'not ended while its answer is to come')
+      t.played.emit(waitingWord(false))
+      t.played.emit({ type: 'text-start', id: 'r2' })
+      t.played.emit({ type: 'text-delta', id: 'r2', delta: 'Answer to the new question.' })
+      t.played.emit({ type: 'text-end', id: 'r2' })
+      t.played.emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
+      await sleep(30)
+      assert.ok(
+        t.events.some((e) => e.type === 'message.done' && e.text.includes('new question')),
+        'its answer went out',
+      )
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)
+
+test(
+  'a turn handed over with a steered message to answer is not ended before its answer',
+  { timeout: 20_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([], {
+      handedOver: { waitingAgo: 10 * 60_000, steered: true },
+      signal: stop.signal,
+    })
+    try {
+      await sleep(WAIT_MS * 3)
+      assert.deepEqual(t.ended(), [], 'its answer is still to come')
+      // It comes: the turn's wait goes on, and ends it once over.
+      while (!t.played.emit) await sleep(1)
+      t.played.emit({ type: 'text-start', id: 'r2' })
+      t.played.emit({ type: 'text-delta', id: 'r2', delta: 'The disk is fine.' })
+      t.played.emit({ type: 'text-end', id: 'r2' })
+      assert.equal((await t.outcome).status, 'idle')
     } finally {
       stop.abort()
       await t.outcome

@@ -20,6 +20,7 @@ import {
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
   ANSWER_MESSAGE_TOOL,
+  hasVisibleText,
   SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
@@ -255,9 +256,14 @@ type SavedState = {
     /** The text and thinking blocks it was writing, so far, by id. */
     texts?: [string, string][]
     reasoning?: [string, string][]
-    /** Since when the turn only waited on work in the background, and what ran there (staleWait). */
+    /**
+     * Since when the turn only waited on work in the background, what ran there, since when none
+     * did, and whether a message steered into it was still unanswered (staleWait).
+     */
     waitingSince?: number
     background?: BackgroundWork[]
+    quietSince?: number
+    steered?: boolean
   }
 }
 
@@ -487,9 +493,10 @@ function frozenMidRun(resume: unknown) {
 const HAND_OVER_MS = 20_000
 
 /**
- * How long an answered turn may wait on work in the background, by the bridge's word, while
- * none runs as the runner sees it, before the runner ends it (staleWait). The bridge waits 60 s
- * at most for a report of work that ended; past this, nothing is coming.
+ * How long an answered turn may wait on work in the background, by the bridge's word, with none
+ * running as the runner sees it, before the runner ends it (staleWait): counted from the later
+ * of the bridge's word and the end of the last work. The bridge waits 60 s at most for a report
+ * of work that ended; past this, nothing is coming.
  */
 const STALE_WAIT_MS = Number(process.env.BRIGADE_STALE_WAIT_MS) || 5 * 60_000
 /** How soon a turn past that wait that could not end then is looked at again. */
@@ -555,6 +562,10 @@ export class HarnessThread {
   private background: BackgroundWork[] = []
   /** Since when the running turn only waits on work in the background, by the bridge's word. */
   private waitingSince: number | undefined
+  /** Since when nothing has run in the background, once something did in the running turn. */
+  private quietSince: number | undefined
+  /** A person's message steered into the running turn has no reply yet: its answer is coming. */
+  private steeredPending = false
   /**
    * The running turn is answered, and completed for everyone: Claude Code only writes its guess
    * at the person's next message before its process ends (the bridge's drain). `done` settles
@@ -1087,6 +1098,8 @@ export class HarnessThread {
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
     this.replies.steered()
+    // Read by Claude Code, which answers it: the turn is not over until it has (staleWait).
+    this.steeredPending = true
     // Saved now: the turn may answer it after a restart, or in the runner it is handed over to.
     this.saved!.steered = messageId
     await this.persist().catch((error) =>
@@ -1247,7 +1260,12 @@ export class HarnessThread {
         reasoning: [...this.reasoning],
         // The bridge said so before the update, and says it only once: the next runner keeps it.
         ...(this.waitingSince !== undefined
-          ? { waitingSince: this.waitingSince, background: this.background }
+          ? {
+              waitingSince: this.waitingSince,
+              background: this.background,
+              ...(this.quietSince !== undefined ? { quietSince: this.quietSince } : {}),
+              ...(this.steeredPending ? { steered: true } : {}),
+            }
           : {}),
       },
     }
@@ -1271,6 +1289,8 @@ export class HarnessThread {
       // The turn goes on where it was: waiting on work in the background, if it was.
       this.waitingSince = handed.waitingSince
       this.background = handed.background ?? []
+      this.quietSince = handed.quietSince
+      this.steeredPending = !!handed.steered
       return handed.groups
     }
     for (const pgid of handed.groups) stopGroup(pgid, this.runAs)
@@ -1310,6 +1330,8 @@ export class HarnessThread {
     let attached: Live | undefined
     // A turn before this one waits on nothing now; a turn handed over goes on waiting (attach).
     this.waitingSince = undefined
+    this.quietSince = undefined
+    this.steeredPending = false
     // What the turn told the harness as a message (a restart, an aside), for a new session.
     let said: string | undefined
     const say = (prompt: string) => (said = prompt)
@@ -1361,32 +1383,32 @@ export class HarnessThread {
     // runner sees it for STALE_WAIT_MS, nothing is coming (a bridge that took a command run in
     // the foreground for background work kept a turn open for 7 hours, and through each update
     // of the runner): the turn ends, answered, as at a guess no longer wanted (stopDrain). One
-    // that still owes a reply ends too, rather than never.
+    // that owes the person a reply after its last step ends too, rather than never; never one
+    // whose steered message is still to be answered: its answer is on its way.
     let staleTimer: NodeJS.Timeout | undefined
+    const staleAt = () => Math.max(this.waitingSince ?? 0, this.quietSince ?? 0) + STALE_WAIT_MS
+    const again = (ms: number) => {
+      clearTimeout(staleTimer)
+      staleTimer = setTimeout(staleWait, Math.max(0, ms))
+      staleTimer.unref?.()
+    }
+    // Armed while the turn waits with nothing running; work that runs is watched again once it ends.
     const watchWait = () => {
       clearTimeout(staleTimer)
       staleTimer = undefined
-      if (this.waitingSince === undefined) return
-      staleTimer = setTimeout(
-        staleWait,
-        Math.max(0, this.waitingSince + STALE_WAIT_MS - Date.now()),
-      )
-      staleTimer.unref?.()
+      if (this.waitingSince === undefined || this.background.length > 0) return
+      again(staleAt() - Date.now())
     }
     // Told once that the turn cannot end yet (its last stream not started, a stop under way).
     let staleTold = false
     const staleWait = () => {
       staleTimer = undefined
       // Parked or handed over: the turn is the next session's to end, or to go on with.
-      if (this.waitingSince === undefined || frozenUnder()) return
-      const again = (ms: number) => {
-        staleTimer = setTimeout(staleWait, ms)
-        staleTimer.unref?.()
-      }
-      // Work still runs: it reports once it ends, and the bridge says so. Looked at again later.
-      if (this.background.length > 0) return again(STALE_WAIT_MS)
+      if (this.waitingSince === undefined || frozenUnder() || this.background.length > 0) return
+      const left = staleAt() - Date.now()
+      if (left > 0) return again(left)
       const since = Math.round((Date.now() - this.waitingSince) / 1000)
-      if (!answerNow(false)) {
+      if (this.steeredPending || !answerNow(false)) {
         if (!staleTold)
           console.warn(
             `thread ${this.spec.sessionId}: its turn waits on background work that is not running (${since} s), and cannot end yet`,
@@ -1424,8 +1446,9 @@ export class HarnessThread {
           this.browserUsed(event.toolName)
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
+        if (event.type === 'message.done' && hasVisibleText(event.text)) this.steeredPending = false
         this.noteBackground(event)
-        if (backgroundWait(event) !== undefined) watchWait()
+        if (backgroundWait(event) !== undefined || backgroundTasks(event)) watchWait()
         // A turn's usage says whose account spent it: the stream's own, which after running out
         // of usage (switchTo) is the next account's, not the one the turn started on.
         this.outbox.send(
@@ -2301,13 +2324,19 @@ export class HarnessThread {
   /** What the turn runs in the background now, from its events (background.ts). */
   private noteBackground(event: AgentEvent) {
     const background = backgroundTasks(event)
-    if (background) this.background = background
+    if (background) {
+      // The last of its work ended: what it reports may take a while to come (staleWait).
+      if (background.length === 0 && this.background.length > 0) this.quietSince = Date.now()
+      this.background = background
+    }
     const waiting = backgroundWait(event)
     if (waiting !== undefined)
       this.waitingSince = waiting ? (this.waitingSince ?? Date.now()) : undefined
     if (event.type === 'turn.completed' || event.type === 'error') {
       this.background = []
       this.waitingSince = undefined
+      this.quietSince = undefined
+      this.steeredPending = false
     }
   }
 

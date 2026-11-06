@@ -212,7 +212,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     (`is_backgrounded: false`), whose result is its tool call's: it holds nothing unless it is moved to the background.
     Taken for background work, it kept the 2026-11-06 health check's turn open for 7 hours (60 s each since #757).
   - **The runner ends a wait nothing will end.** A turn the bridge says waits on background work, while none runs as
-    the runner sees it (`background_tasks_changed`) for 5 minutes, ends, answered (`staleWait`). A bridge's process
+    the runner sees it (`background_tasks_changed`) for 5 minutes since the later of that word and the end of its last
+    work, ends, answered (`staleWait`); never while a person's message steered into it is still unanswered. A bridge's process
     outlives runner updates, so a fix to the bridge never reaches a turn already stuck in an older one; the wait goes
     over with a handed-over turn, for the next runner to end. Threads running with nothing from a connected runner
     for an hour raise the `turn-silent` alert (docs/monitoring.md).
