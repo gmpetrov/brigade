@@ -22,6 +22,11 @@ A widget is a visual you draw in the thread with \`show_widget\`: a few options 
 - Its height follows its content. Never use \`vh\`, \`height: 100%\` on the page, or anything that grows to fill: give charts and canvases a fixed height.
 - Keep it under ${Math.round(WIDGET_HTML_MAX / 2000)} KB (the limit is ${WIDGET_HTML_MAX / 1000} KB): it is written in one go and shows only when done.
 
+## Language
+
+- Write the widget in the language of the person's latest message: its title, option names, descriptions, labels and notes.
+- When it draws a product's own screens (a button, a sidebar, a page), the text inside those parts stays as the product shows it: a mockup of an English interface keeps "Inbox" and "Open", while the card around it is in the person's language.
+
 ## Theme
 
 The dashboard passes in its theme, light or dark. Use these variables for every color, font and corner, never a hard-coded color, so the widget works in both:
