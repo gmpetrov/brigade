@@ -15,6 +15,15 @@
 /** Why a wait ended before its time. */
 export type Cut = 'message' | 'handover'
 
+/** A part of the turn's stream, as far as reading a message goes. */
+type StreamPart = { type: string; id?: unknown; toolCallId?: unknown; preliminary?: unknown }
+
+/**
+ * What the harness shows as a call and a result of its own, the model writing nothing (the
+ * pinned @ai-sdk/harness's translateStreamPart: a file a patch changed, a compaction).
+ */
+const HARNESS_CALL = /^harness-(file-change|compaction)-/
+
 export type Watch = {
   /** Aborted when the call is, or once a message comes in or the turn is handed over. */
   signal: AbortSignal
@@ -60,6 +69,31 @@ export class Arrivals {
       this.calls.add(callId)
     }
     if (this.returned) this.unread = this.returned = false
+  }
+
+  /**
+   * A part of the turn's stream: a result going back to the model, or the model writing again.
+   * What the harness shows as a call of its own is neither (from the review of #772: a file a
+   * sibling patch changed read the message, and a late sibling wait kept it 10 minutes more).
+   */
+  saw(part: StreamPart) {
+    if (typeof part.toolCallId === 'string' && HARNESS_CALL.test(part.toolCallId)) return
+    switch (part.type) {
+      case 'tool-result':
+        // A result still coming in parts goes back once whole.
+        if (part.preliminary !== true) this.resulted()
+        return
+      case 'tool-error':
+      case 'tool-output-denied':
+        return this.resulted()
+      case 'tool-call':
+        return this.wrote(typeof part.toolCallId === 'string' ? part.toolCallId : undefined)
+      case 'tool-input-start':
+        return this.wrote(typeof part.id === 'string' ? part.id : undefined)
+      case 'text-start':
+      case 'reasoning-start':
+        return this.wrote()
+    }
   }
 
   /** A new turn: it reads what it is given now. */

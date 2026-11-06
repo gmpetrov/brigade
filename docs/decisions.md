@@ -176,7 +176,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   - A wait on the thread's machine ends when a message comes in (`apps/runner/src/harness/arrivals.ts`):
     `run_on_machine` and `machine_run` answer with the command still running, and the turn reads the message with
     that result. The model reads it only once every result of its step went back and it writes again: until then a
-    wait of the same step ends at once too, one that starts late (its credentials released) included. Only they: `start_preview` stops the app it starts when its wait is cut, `check_preview` is the
+    wait of the same step ends at once too, one that starts late (its credentials released) included. What the harness
+    shows as a call of its own (a file a patch changed, a compaction) is neither a result nor the model writing. Only they: `start_preview` stops the app it starts when its wait is cut, `check_preview` is the
     check itself, and `email_wait` waits two minutes at most in the API.
   - So does one when an update hands the turn over (`handOver`). The harness lets go of a turn only once its host's
     calls are done, so a wait on a render held it past `HAND_OVER_MS`: the turn was stopped and started again, and

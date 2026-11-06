@@ -52,6 +52,32 @@ test('what the model writes before a result went back, or a call it wrote before
   assert.equal(arrivals.watch().cut, undefined)
 })
 
+test("the harness's own calls (a file a patch changed, a compaction) neither bring nor read it", () => {
+  const arrivals = new Arrivals()
+  arrivals.arrived()
+  // As the pinned @ai-sdk/harness shows a file change and a compaction: a call, then its result.
+  for (const id of ['harness-file-change-x1', 'harness-compaction-x2']) {
+    arrivals.saw({ type: 'tool-call', toolCallId: id })
+    arrivals.saw({ type: 'tool-result', toolCallId: id })
+  }
+  arrivals.saw({ type: 'text-start', id: 't1' })
+  assert.equal(arrivals.watch().cut, 'message', 'no result of the model went back')
+  arrivals.saw({ type: 'tool-result', toolCallId: 'w1' })
+  // From the review of #772: a file a sibling patch changed is not the model writing again.
+  arrivals.saw({ type: 'tool-call', toolCallId: 'harness-file-change-x3' })
+  arrivals.saw({ type: 'tool-result', toolCallId: 'harness-file-change-x3' })
+  assert.equal(arrivals.watch().cut, 'message')
+  // A result still coming in parts goes back once whole.
+  const parts = new Arrivals()
+  parts.arrived()
+  parts.saw({ type: 'tool-result', toolCallId: 'w2', preliminary: true })
+  parts.saw({ type: 'text-start', id: 't2' })
+  assert.equal(parts.watch().cut, 'message')
+  // The model writes: a new call of its own.
+  arrivals.saw({ type: 'tool-call', toolCallId: 'toolu_01' })
+  assert.equal(arrivals.watch().cut, undefined)
+})
+
 test('a new turn reads what it is given now', () => {
   const arrivals = new Arrivals()
   arrivals.arrived()

@@ -1530,16 +1530,7 @@ export class HarnessThread {
             mapper.map(part)
             // A message given to the turn is read once the step's results went back and the
             // model writes again (arrivals.ts).
-            if (
-              part.type === 'tool-result' ||
-              part.type === 'tool-error' ||
-              part.type === 'tool-output-denied'
-            )
-              this.arrivals.resulted()
-            else if (part.type === 'tool-call') this.arrivals.wrote(part.toolCallId)
-            else if (part.type === 'tool-input-start') this.arrivals.wrote(part.id)
-            else if (part.type === 'text-start' || part.type === 'reasoning-start')
-              this.arrivals.wrote()
+            this.arrivals.saw(part)
             const image = generatedImage(part)
             if (image) await this.keepImage(image)
           }

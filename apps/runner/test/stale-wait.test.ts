@@ -610,7 +610,7 @@ test(
 // late). The model reads the message only with the step's last result: the second wait must end
 // at once too, not keep the message 10 minutes more.
 test(
-  'a message cuts every wait of the step it came in, one that starts after a sibling result too',
+  'a message cuts every wait of the step it came in, one that starts after a sibling result and a file change too',
   { timeout: 20_000 },
   async () => {
     const stop = new AbortController()
@@ -686,6 +686,12 @@ test(
         t.events.some((e) => e.type === 'tool.finished' && e.toolName === name)
       for (let i = 0; i < 1000 && !finished('machine_run'); i++) await sleep(1)
       assert.ok(finished('machine_run'), 'the first wait ended, its result went back')
+      // From the review of #772: a file a sibling patch changed, shown by the harness as a call
+      // of its own, is not the model writing again.
+      t.played.emit({ type: 'file-change', event: 'modify', path: 'src/example.ts' })
+      for (let i = 0; i < 1000 && !finished('fileChange'); i++) await sleep(1)
+      assert.ok(finished('fileChange'), 'the file change was shown')
+      assert.equal(cutNow(t.thread), 'message', 'still not read')
       release()
       for (let i = 0; i < 1000 && !finished('run_on_machine'); i++) await sleep(1)
       assert.ok(finished('run_on_machine'), 'the second one answered')
