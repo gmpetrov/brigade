@@ -5,8 +5,9 @@
 // again may take the old one's answer for its own. So each group is noted in a
 // file as it starts, and the next runner stops what is left of those, with what
 // they started that is still their child (a harness runs commands in groups of
-// their own). A cloud computer needs none of it: systemd stops all the runner's
-// service holds (its cgroup) when the runner stops.
+// their own), but those an update handed over (turns, previews). A cloud computer
+// needs none of it: systemd stops all the runner's service holds (its cgroup)
+// when the service stops.
 import { execFile } from 'node:child_process'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { uptime } from 'node:os'

@@ -216,6 +216,85 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   1, 3 and 10 seconds; a fourth stop within 10 minutes fails the preview. An app
   that never answered fails at once, as before: its command is wrong, and the
   teammate should see that.
+- **A runner update keeps previews running.** The runner updates itself several
+  times a day (each merge that changes its bundle), and restarting every preview
+  with its setup took minutes for Brigade's own. Now the runner hands its
+  previews over to the next one, as it hands over turns (`handOver` and
+  `adopt` in `previews.ts`):
+  - **The app is detached from the runner.** On this computer it runs under a
+    wrapper shell of the runner's user (`WRAPPER`), which leads its process
+    group and notes how it ended in a file, since only the process that started
+    it could wait for it. Its output goes to a file in the runner's state
+    (`preview-runs/<thread>-<run>/output.log`), not a pipe that would end with
+    the runner (a dev server writing to it then dies of `EPIPE`); the runner
+    reads it as it grows. Past 16 MB read, what was read becomes a hole: its
+    disk comes back, while the file's size, every offset and what the app
+    writes meanwhile stay (emptying it lost the lines written between the last
+    read and the truncation, review of #762). On Linux with `fallocate
+--punch-hole`, on macOS with `fcntl(F_PUNCHHOLE)` through the system's
+    perl. Where neither works (another filesystem), the file is emptied once
+    read to a line's end past 64 MB, and the log says a line written at that
+    moment may be missing: the disk stays bounded. Each run has its own file
+    (`output-<run>.log`), so a hole meant for one run never lands in the next
+    one's (a restart's). On a thread's machine the app runs
+    in a session of its own there (`setsid nohup`, as its commands do), its
+    output in `.brigade/run/output-<run>.log`, how it ended and the machine's boot id
+    beside it, followed with `tail -f --pid` from the byte reached: a cut
+    connection is made again and read on, rather than ending the app. Its
+    disk comes back the same way past 16 MB read.
+  - **The old runner hands over.** Nothing more starts, restarts, freezes or
+    stops on its own; what is under way (a freeze, a launch or sleep on the
+    machine) gets 20 seconds to end. Each preview's state goes to
+    `previews-handed.json` (0600): its seat, start, addresses, process group,
+    cgroup, frozen or asleep, paused containers, the env files its credentials
+    were released as, restarts, last use, the log people saw and the byte its
+    output is read to (the start of the line not finished). No secret's value
+    in it: the repository's settings are kept, its secrets by name. The values
+    its log hides go in a file of their own beside its output (`hidden`, 0600,
+    the runner's), read and removed as the next runner takes it up: the app
+    still holds those, whatever the API holds by then (a secret changed since
+    would otherwise show in its log, review of #762); a preview whose file
+    could not be written is not handed over, nor one whose values were lost on
+    the way (its output hidden since): it stops and starts again, as with
+    what the API holds now. Its proxy closes,
+    and on its machine its sync, log reader and connection end; the app, its
+    cgroup, its containers and the machine are left as they are.
+  - **The next runner takes them up** as it starts, before anything looks for
+    quiet threads (`processGroups.reap` keeps their groups on a Mac). For each:
+    the app's leader still runs (its pid, started when noted, `ps`), its proxy
+    listens again on the same port (so the same addresses and origins), it is
+    said running again (the API takes a preview reported before the runner's
+    process started as lost), and its log is read on. A frozen preview stays
+    frozen (its cgroup, or `SIGSTOP`, and its paused containers, kept out of
+    those the runner resumes as it starts), one asleep on its machine stays
+    asleep, and restarts, freezing and the TTL go on from what was noted. Once
+    connected: a preview with secret variables reads them again (`variables`,
+    audited) before its log is read, hiding those too, and its environment is
+    made again for a restart; on its machine, the machine is asked `up` (held for
+    the preview again), reached, its app's state asked there, its ports
+    forwarded, the sync started and its log followed. People find its port
+    closed only from the old runner's exit to the new one's start, and on its
+    machine until the new runner is connected.
+  - **Otherwise it starts again, and says why.** A preview whose app died
+    meanwhile, or that could not be taken up (its port, its machine, a reboot
+    or a hand-over older than 10 minutes), starts again as it last started,
+    with the credentials it was given, and its log says why; one nobody was
+    using (frozen, asleep) stops. One the old runner could not hand over (a
+    restart after a crash under way, its machine waking) stops and starts
+    again as before. Secrets that could not be read again keep it from
+    starting again after a crash; values to hide that were lost leave its
+    output hidden.
+  - **What keeps the app alive.** On a cloud computer, the wrapper
+    (`bin/brigade-runner`) starts the new runner itself on exit code 75, so
+    systemd never stops the service: `KillMode=mixed` (SIGKILL to what is left
+    in the service's cgroup) applies only when the service stops, and previews
+    sit in `previews/` beside `runner/` in the service's delegated cgroup,
+    where the new runner finds them. The app is in a session of its own
+    (`detached`), so no hang-up reaches it. On a Mac, the desktop app signals
+    only the wrapper's process group, and only when it stops the runner; the
+    wrapper loops there too. A runner stopped for good (the computer stops, the
+    app quits) still stops its previews.
+
 - **New tab as the way out.** The pane has an "Open in a new tab" button and,
   under the frame, a line saying to use it when signing in does not work.
   Opened in a tab the preview is a first-party site and everything works.
@@ -304,7 +383,7 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   `startedAt`, and their `running` still reads as running.
 - **Its last start is remembered** per thread, in the runner's state
   (`previews.json`), so Start again works after it expired, failed or the runner
-  restarted. Not its credentials: a preview that uses vault credentials is
+  restarted (a running one goes on through an update, above). Not its credentials: a preview that uses vault credentials is
   started again by its teammate, who releases them. While one runs, its
   credentials' env files are copied beside the turn's (removed when it ends), so
   a restart after a crash, or by a person, still has them after the turn parked.
@@ -413,8 +492,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   feature, `src/preview-machines.ts` in the API, `apps/runner/src/preview-machine.ts`).
   A cloud computer runs every teammate's turns, typechecks and previews in its
   8 GB; a preview's dev server and database take one to three of them. A member
-  with the feature (docs/feature-flags.md) turns on "Run previews and heavy work
-  on their own machine" in Preferences (`Member.previewMachines`, off by default;
+  with the feature (docs/feature-flags.md) turns on "Keep heavy work off the
+  shared computer" in Preferences (`Member.previewMachines`, off by default;
   the switch shows only to members who have the feature, and
   `PUT /me/preview-machines` answers 404 to the others). Then each thread they
   start gets a VM of its own at the provider (boat's `large`: 8 vCPU, 16 GB),
@@ -514,8 +593,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     twice (seen on November 6, 2026: once while lazyfs served the home, once
     just after, for what it wrote meanwhile). A preview unused 4 hours stops,
     its machine stays stopped.
-    A replaced preview, or one the next runner starts again after an update,
-    keeps its machine up for it.
+    A replaced preview, or one the next runner takes up or starts again after an
+    update, keeps its machine up for it.
   - **Heavy commands there too** (`apps/runner/src/machine-runs.ts`). A thread
     with a machine (`ThreadSpec.machine`, which the API sets as it would give
     one: the feature, the starter's switch, a cloud computer) gives its

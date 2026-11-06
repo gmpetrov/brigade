@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { SettingRow, SettingsGroup } from '@/components/settings-group'
 import { Label } from '@/components/ui/label'
 import { api, ApiError } from '@/lib/api'
 import { DEMO } from '@/lib/demo/flag'
@@ -289,19 +290,23 @@ export function DeleteAccount() {
   const [open, setOpen] = useState(false)
   if (DEMO) return null
   return (
-    <DangerZone detail="Your account, across every organization you are in.">
-      <div className="flex items-center justify-between gap-4">
-        <div className="grid gap-1 text-sm">
-          <span className="font-medium">Delete my account</span>
-          <span className="text-xs text-muted-foreground">
-            You are signed out, and cannot sign in again with it.
-          </span>
-        </div>
-        <Button variant="danger" onClick={() => setOpen(true)}>
-          <Trash2 aria-hidden />
-          Delete account
-        </Button>
-      </div>
+    <SettingsGroup title="Danger zone" className="border-destructive/40">
+      <SettingRow
+        title="Delete my account"
+        detail="Across every organization you are in. You are signed out, and cannot sign in again with it."
+        control={({ id, describedBy }) => (
+          <Button
+            id={id}
+            aria-describedby={describedBy}
+            variant="danger"
+            size="sm"
+            onClick={() => setOpen(true)}
+          >
+            <Trash2 aria-hidden />
+            Delete account
+          </Button>
+        )}
+      />
       <DeleteDialog
         open={open}
         onOpenChange={setOpen}
@@ -330,6 +335,6 @@ export function DeleteAccount() {
           window.location.href = '/'
         }}
       />
-    </DangerZone>
+    </SettingsGroup>
   )
 }
