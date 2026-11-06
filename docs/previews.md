@@ -585,8 +585,14 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     stopped with the machine, and a machine made again (the provider lost the
     old one) has none of it. Waking (measured): the machine is up in about 6
     seconds and answers SSH a few later; Brigade's app again in 25 to 40
-    seconds, its setup included. A preview unused 4 hours stops, its machine
-    stays stopped.
+    seconds, its setup included. For a few minutes after a wake, boat serves
+    the machine's home through `ascii-lazyfs`, which keeps whole seconds of a
+    file's time only. So the receiver takes two times as the same when they are
+    equal, or in the same second with one of them having nothing under it:
+    compared to the millisecond, the whole checkout went again after each wake,
+    twice (seen on November 6, 2026: once while lazyfs served the home, once
+    just after, for what it wrote meanwhile). A preview unused 4 hours stops,
+    its machine stays stopped.
     A replaced preview, or one the next runner takes up or starts again after an
     update, keeps its machine up for it.
   - **Heavy commands there too** (`apps/runner/src/machine-runs.ts`). A thread

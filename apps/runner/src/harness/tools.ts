@@ -820,13 +820,15 @@ export const showWidgetTool = tool({
   description:
     'Draw a visual in the thread: options side by side, a diagram, a chart of data you have. For seeing ' +
     `something now, not for keeping (that is a design). Call ${WIDGET_GUIDE_TOOL} once before your first widget ` +
-    'in a thread. To let the person pick among options it shows, end your reply with a choices block.',
+    'in a thread. To let the person pick among options it shows, end your reply with a choices block. ' +
+    "Write its title and text in the language of the person's latest message; only the product's own interface " +
+    'drawn in it stays as the product has it.',
   inputSchema: jsonSchema<Widget>({
     type: 'object',
     properties: {
       title: {
         type: 'string',
-        description: 'What it shows, a few words, e.g. "Six ways to show the shortcut"',
+        description: `What it shows, a few words in the person's language, e.g. "Six ways to show the shortcut"`,
       },
       html: {
         type: 'string',
