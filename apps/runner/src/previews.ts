@@ -1847,8 +1847,14 @@ export class Previews {
         if (over) return
         over = true
         clearInterval(timer)
-        if (run.following) this.readRun(preview, run, files.output)
-        done(code ?? exitStatus(files.exit))
+        // Handed over: the app goes on, nothing waits for it here.
+        if (!run.following) return done(null)
+        // Its wrapper ended, which a stop's signal ends first: over once the app it led is gone
+        // too, which may hold its ports a moment longer (a pipe waited for it, a file does not).
+        void groupGone(run.pid).then(() => {
+          this.readRun(preview, run, files.output)
+          done(code ?? exitStatus(files.exit))
+        })
       }
       const timer = setInterval(() => {
         this.readRun(preview, run, files.output)
@@ -2813,6 +2819,21 @@ function alive(pid: number | undefined) {
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === 'EPERM'
   }
+}
+
+/** Once nothing is left in a process group (a teammate's process too), or `ms` passed. */
+async function groupGone(pgid: number | undefined, ms = 10_000) {
+  if (!pgid) return
+  const until = Date.now() + ms
+  const left = () => {
+    try {
+      process.kill(-pgid, 0)
+      return true
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === 'EPERM'
+    }
+  }
+  while (left() && Date.now() < until) await sleep(50)
 }
 
 /** ps gives start times to the second, and a run is noted just after its leader started. */
