@@ -1373,6 +1373,7 @@ model PullRequestReview {
   createdAt      DateTime      @default(now())
 
   @@index([pullRequestId, createdAt])
+  @@index([sessionId])
 }
 
 /// A human comment on a diff or a thread.
