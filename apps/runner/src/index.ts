@@ -345,6 +345,17 @@ async function start() {
           of: (seat) => threads.attachmentsFor(seat.sessionId, seat.teammateId),
           api: config,
         },
+        // Files a command makes for the library go there from the machine: the API signs where it
+        // PUTs each, then the hub saves it as the teammate, as it does save_to_library's.
+        library: {
+          api: config,
+          save: (seat, operation) =>
+            connection.callLibrary({
+              sessionId: seat.sessionId,
+              teammateId: seat.teammateId,
+              operation,
+            }),
+        },
       })
     : null
   // Apps teammates run for people to try. On a cloud computer the API has their ports hosted.

@@ -180,6 +180,21 @@ export async function readyUpload(
   return row
 }
 
+/**
+ * Take a checked upload for its one use, before using it: of two uses at once, one gets it. False
+ * when something took it already. Blocked from then on, its row is dated from then too: the sweep
+ * leaves a blocked upload's bytes alone until its URL's life has passed since that date, long
+ * enough for the use to copy them (a slow upload's row may be older than that already). They go
+ * once it is discarded, or with the sweep should the use fail.
+ */
+export async function claimUpload(db: ScopedDb, id: string) {
+  const claimed = await db.upload.updateMany({
+    where: { id, status: 'ready' },
+    data: { status: 'blocked', createdAt: new Date() },
+  })
+  return claimed.count === 1
+}
+
 /** Where a checked upload's bytes are, to copy or read them: never changed once checked. */
 export const uploadBytesKey = (scope: Scope, row: { id: string; checked: string }) =>
   checkedUploadKey(scope, row.id, row.checked)

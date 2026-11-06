@@ -97,6 +97,12 @@ export const STILL_WAITING =
   'or go on with work that does not depend on it.'
 
 /**
+ * A call's failure that says what became of it: the API answered it (a refusal), or it never went.
+ * Any other (the connection lost while it was under way) may have been made all the same.
+ */
+const markAnswered = (error: Error) => Object.assign(error, { answered: true as const })
+
+/**
  * A command that could not be taken yet (its spec's parts did not come, say): it is not
  * acknowledged, so the API sends it again a little later, and opens a ticket after a day.
  */
@@ -205,7 +211,7 @@ export class Connection {
         this.calls.delete(message.callId)
         if (message.decision) call.onDecision(message.decision)
         if (message.ok) call.resolve(message)
-        else call.reject(new Error(message.error ?? 'The connector call failed'))
+        else call.reject(markAnswered(new Error(message.error ?? 'The connector call failed')))
       } else if (message.type === 'update.available') {
         this.onBundle(message.bundle, false)
       } else if (message.type === 'update.required') {
@@ -514,7 +520,8 @@ export class Connection {
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
     callId = randomUUID(),
   ): Promise<Result> {
-    if (!this.ready) return Promise.reject(new Error('Not connected to Brigade; try again shortly'))
+    if (!this.ready)
+      return Promise.reject(markAnswered(new Error('Not connected to Brigade; try again shortly')))
     return new Promise((resolve, reject) => {
       this.calls.set(callId, { resolve, reject, ...hooks })
       this.send({ ...message, callId } as RunnerToApi)

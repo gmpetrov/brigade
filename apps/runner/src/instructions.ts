@@ -136,7 +136,7 @@ export function instructions(
     spec.git && code(spec),
     PREVIEWS,
     // Where its starter chose a machine of its own for the thread (the preview_machines feature).
-    spec.machine && CLOUD && MACHINE,
+    spec.machine && CLOUD && machine(spec),
     skills(spec),
     threadsOfTheirOwn(spec),
     lists(spec),
@@ -430,10 +430,13 @@ function rulesForChief(acts: boolean) {
   ].join('\n\n')
 }
 
-/** Designs are for teammates who can save them to the library. */
-const canSaveDesigns = (spec: ThreadSpec) =>
+/** A teammate that may save somewhere in the library: it has save_to_library. */
+const canSaveToLibrary = (spec: ThreadSpec) =>
   spec.library === 'read_write' ||
   (spec.libraryFolders ?? []).some((f) => f.access === 'read_write')
+
+/** Designs are for teammates who can save them to the library. */
+const canSaveDesigns = canSaveToLibrary
 
 /** Designs: when to make one, here; how, in Brigade's design skills. */
 function designs(spec: ThreadSpec) {
@@ -848,9 +851,11 @@ const PREVIEWS =
 
 /**
  * Heavy work: a thread with a machine of its own runs there what the shared computer cannot take
- * (video and audio, Docker), and keeps code work here (machine-runs.ts, docs/previews.md).
+ * (video and audio, Docker), and keeps code work here (machine-runs.ts, docs/previews.md). A
+ * teammate that may save to the library saves what it makes there straight from the machine
+ * (machine-library.ts).
  */
-const MACHINE =
+const machine = (spec: ThreadSpec) =>
   '## Heavy work\n\n' +
   'This thread has a machine of its own (8 vCPU, 16 GB), beside this computer, whose memory every teammate of ' +
   'the workspace shares; its preview runs there. Run there, with `run_on_machine` and not in your shell, the ' +
@@ -865,8 +870,15 @@ const MACHINE =
   'goes to the machine first, then only what changed, and what commands install there stays for the next ones; ' +
   "the machine has none of this computer's environment. The thread's attached files are there too, whatever " +
   'their size, at the same path relative to your working directory as here (`attachments/…`): name them as ' +
-  'you would here. Name in `outputs` the files you need back here (a ' +
-  "render, frames to look at, a report). A command longer than the call's wait goes on there: wait for it with " +
+  'you would here. ' +
+  (canSaveToLibrary(spec)
+    ? 'Save what it makes for the library (a render, a video) straight from there with `library` ' +
+      '(`[{ from: "renders/video.mp4", to: "Projects/X/videos/video.mp4" }]`), never by bringing it back to ' +
+      'save it: it goes from the machine to storage, with the same access and checks as `save_to_library`, and ' +
+      'its mention comes back for your reply. Name in `outputs` only the files you need back here (frames to ' +
+      'look at, a transcript, a report). '
+    : 'Name in `outputs` the files you need back here (a render, frames to look at, a report). ') +
+  "A command longer than the call's wait goes on there: wait for it with " +
   '`machine_run`, or set a wake-up and end your turn.'
 
 /** How to start, check and save a preview: Brigade's skill for it. */

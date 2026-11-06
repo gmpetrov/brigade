@@ -4,12 +4,15 @@
 // its computer, and teammates in them.
 //   POST /runner/uploads               { purpose, sessionId, teammateId, name, size, sha256 }  → where to PUT them
 //   POST /runner/uploads/:id/complete  → checked against the SHA-256; a skill's file is then kept
-import { StartRunnerUpload } from '@brigade/contracts'
+// A library file whose path the teammate may not save to is refused before its bytes go (403, as
+// its save would be): a render sent from the thread's machine is not uploaded for nothing.
+import { LibraryPath, StartRunnerUpload } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { skillFileKey } from '../bucket.js'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
+import { saveRefusal, teammateLibraryAccess } from '../library-folders.js'
 import { parseBody } from '../scope.js'
 import { actingTeammate } from '../thread-spec.js'
 import {
@@ -40,6 +43,13 @@ export const runnerUploads = new Hono<{ Variables: { runner: Runner } }>()
     if (!session) throw new HTTPException(404, { message: 'Unknown thread' })
     const teammate = await actingTeammate(db, session, input.teammateId)
     if (!teammate) throw new HTTPException(403, { message: 'That teammate is not in this thread' })
+    // Its library path, as its save will name it; the save checks again whatever it names.
+    const path = input.purpose === 'library' ? LibraryPath.safeParse(input.name) : null
+    if (path?.success) {
+      const access = (await teammateLibraryAccess(db, teammate)).of(path.data)
+      const refusal = saveRefusal(teammate.name, access, path.data)
+      if (refusal) throw new HTTPException(403, { message: refusal })
+    }
     const owner = { computerId: runner.computerId, sessionId: session.id, teammateId: teammate.id }
     return c.json(await startFileUpload(db, runner, owner, input), 201)
   })

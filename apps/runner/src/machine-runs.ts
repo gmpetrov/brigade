@@ -11,7 +11,8 @@
 // detached there (its own session), its output in a file the runner follows: a cut connection,
 // or the runner starting again after an update, loses none of it, and a run outlives the tool
 // call that started it. Once it ends, the files the teammate named come back into its folder,
-// written as the teammate. The machine stays up while a command runs (MachineHolds), then a
+// written as the teammate; those it named for the library go there from the machine itself, once
+// it succeeded (machine-library.ts), never through this computer. The machine stays up while a command runs (MachineHolds), then a
 // while for the next one, then stops.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -20,6 +21,14 @@ import { dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:p
 import { StringDecoder } from 'node:string_decoder'
 import type { PreviewMachineAccess, ThreadAttachmentRef } from '@brigade/contracts'
 import { placeAttachments, type FilesApi } from './machine-files.js'
+import {
+  libraryPath,
+  plainPath,
+  saveFromMachine,
+  type LibrarySave,
+  type LibrarySaver,
+  type SavedFile,
+} from './machine-library.js'
 import type { MachineHolds } from './machine-holds.js'
 import {
   envFileText,
@@ -44,6 +53,11 @@ export type MachineRunInput = {
   cwd?: string
   /** Files or folders it makes, relative to cwd: they come back here once it ends. */
   outputs?: string[]
+  /**
+   * Files it makes, relative to cwd, saved to the library from the machine once it succeeded:
+   * `to` is its library path. They do not come back here unless named in `outputs` too.
+   */
+  library?: LibrarySave[]
   /** Settings it gets, on top of nothing of this computer's environment. */
   env?: Record<string, string>
   /** Released credentials' env files (read as the teammate): their variables, for this run only. */
@@ -65,6 +79,8 @@ export type MachineRunView = {
   output?: string
   /** What came back from the machine, relative to the working directory, with sizes. */
   files?: string[]
+  /** What it saved to the library from the machine: each file, its library path and mention. */
+  library?: { file: string; path: string; size: string; mention?: string }[]
   notes: string[]
 }
 
@@ -95,6 +111,8 @@ const TAIL_CHARS = 20_000
 const PARTIAL_MAX = 16_000
 /** What may come back of one command, at most. */
 const OUTPUTS_MAX = 2 * 1024 ** 3
+/** Files one command may save to the library, at most. */
+const LIBRARY_MAX = 20
 /** Ended commands remembered, latest first. */
 const KEPT = 50
 /** After asking a command to stop, how long before it is killed. */
@@ -117,6 +135,15 @@ type Run = {
   command: string
   cwd: string
   outputs: string[]
+  /**
+   * What it saves to the library once it succeeded; `saved`, those saved so far. `sends`, the
+   * others it tried: one with its `upload` and not `done` was sent and its answer not heard yet
+   * (a runner after this one sends that very save again); a `done` one failed, said in its notes,
+   * and is not tried again. Each kept as it comes, for a runner after this one.
+   */
+  library?: LibrarySave[]
+  saved?: SavedFile[]
+  sends?: LibrarySend[]
   /** Here: where it runs, and the folder that goes to the machine (the checkout it is in). */
   localCwd: string
   root: string
@@ -168,6 +195,9 @@ type SavedRun = { tail?: string[] } & Pick<
   | 'command'
   | 'cwd'
   | 'outputs'
+  | 'library'
+  | 'saved'
+  | 'sends'
   | 'localCwd'
   | 'root'
   | 'remoteRoot'
@@ -182,6 +212,9 @@ type SavedRun = { tail?: string[] } & Pick<
   | 'files'
   | 'notes'
 >
+
+/** A library save a run tried: sent by its upload and not answered yet, or failed (`done`). */
+type LibrarySend = LibrarySave & { upload?: string; done?: true }
 
 /** A thread's machine as its commands use it: one link, the teammates' copies there. */
 type ThreadMachine = {
@@ -353,6 +386,11 @@ export class MachineRuns {
         /** Where the API has them: its redirect to the bucket gives each one's signed URL. */
         api: FilesApi
       }
+      /**
+       * Saving what a command made to the library, from the machine (machine-library.ts): the API
+       * signs where the machine PUTs each file and checks it, the hub's library.call saves it.
+       */
+      library?: { api: FilesApi; save: LibrarySaver }
       /** Tests: the sync's reader for a folder, as the teammate. */
       reader?: (seat: RunSeat, net: ThreadNet | null, root: string) => ChildProcess
       /** Tests: after a thread's last command, how long its machine stays up. */
@@ -428,11 +466,12 @@ export class MachineRuns {
     ).then(() => undefined)
   }
 
-  /** The thread was deleted: its commands stop, and nothing comes back. */
+  /** The thread was deleted: its commands stop, and nothing comes back, nor goes to the library. */
   async forgetThread(sessionId: string) {
     const thread = this.threads.get(sessionId)
     for (const run of [...(thread?.active ?? [])]) {
       run.outputs = []
+      run.library = []
       await this.end(run, 'stopped')
     }
     for (const run of [...this.runs.values()])
@@ -495,6 +534,20 @@ export class MachineRuns {
       if (!clean) throw new Error(`${path}: outputs are paths inside cwd`)
       outputs.push(clean)
     }
+    const library: LibrarySave[] = []
+    if (input.library?.length && !this.options.library)
+      throw new Error('Files cannot be saved to the library from the machine here: bring them back')
+    if ((input.library?.length ?? 0) > LIBRARY_MAX)
+      throw new Error(`A command saves ${LIBRARY_MAX} files to the library at most`)
+    for (const item of input.library ?? []) {
+      const from = typeof item?.from === 'string' ? outputPath(item.from) : null
+      if (!from || !plainPath(from))
+        throw new Error(`${item?.from}: each \`from\` in library is a file inside cwd`)
+      const to = typeof item?.to === 'string' ? libraryPath(item.to) : null
+      if (!to)
+        throw new Error(`${item?.to}: not a library path (e.g. "Projects/X/videos/video.mp4")`)
+      library.push({ from, to })
+    }
     const there = (path: string) =>
       posix.join(
         COPIES,
@@ -516,6 +569,7 @@ export class MachineRuns {
       command,
       cwd: relative(seat.workDir, localCwd).split(sep).join('/') || '.',
       outputs,
+      ...(library.length ? { library } : {}),
       localCwd,
       root,
       remoteRoot: there(root),
@@ -976,6 +1030,19 @@ export class MachineRuns {
       // Its files are not all back: the next runner brings them back, then says it ended.
       if (this.detached) return
     }
+    if (run.library?.length) {
+      if (outcome.ran && link && outcome.status === 'succeeded') {
+        await this.saveToLibrary(run, link).catch((error: unknown) => {
+          run.notes.push(`Its files could not be saved to the library: ${errorText(error)}`)
+        })
+        // Not all saved: the next runner saves the rest, then says it ended.
+        if (this.detached) return
+      } else
+        run.notes.push(
+          'Nothing saved to the library: it did not succeed. What it made stays on the machine: once ' +
+            'it is right, a command such as `true` in the same cwd with the same `library` saves it',
+        )
+    }
     run.status = outcome.status
     run.endedAt = Date.now()
     thread.active.delete(run)
@@ -996,6 +1063,74 @@ export class MachineRuns {
       holderOf(run),
       this.options.idleMs ?? IDLE_MS,
     )
+  }
+
+  /**
+   * The files it named for the library, from the machine straight to the bucket, then saved as
+   * the teammate. Each outcome is kept in its state as it comes, and each save by its upload before
+   * it goes (it does not go unless kept): the runner after this one saves only the rest, sends a
+   * save it had sent that very way again, and leaves one that may have been made alone.
+   */
+  private async saveToLibrary(run: Run, link: MachineLink) {
+    const library = this.options.library
+    if (!library) {
+      run.notes.push('Nothing saved to the library: this runner cannot save from the machine')
+      return
+    }
+    const key = (item: LibrarySave) => `${item.from}\n${item.to}`
+    const done = new Set([
+      ...(run.saved ?? []).map(key),
+      ...(run.sends ?? []).filter((send) => send.done).map(key),
+    ])
+    const sent = new Map(
+      (run.sends ?? []).flatMap((send) =>
+        send.upload && !send.done ? [[key(send), send.upload] as const] : [],
+      ),
+    )
+    const saves = (run.library ?? [])
+      .filter((item) => !done.has(key(item)))
+      .map((item) => {
+        const upload = sent.get(key(item))
+        return upload ? { ...item, upload } : item
+      })
+    /** This save's outcome, in place of what was kept of it before. */
+    const keep = (item: LibrarySave, send?: LibrarySend) => {
+      const others = (run.sends ?? []).filter((other) => key(other) !== key(item))
+      run.sends = send ? [...others, send] : others
+    }
+    await saveFromMachine({
+      link,
+      api: library.api,
+      save: library.save,
+      seat: { sessionId: run.seat.sessionId, teammateId: run.seat.teammateId },
+      cwd: run.remoteCwd,
+      saves,
+      saving: (save) => {
+        if (this.detached) throw new Error('the runner is stopping')
+        keep(save, save)
+        // Not kept, not sent: a runner after this one would not know it went.
+        if (!this.save()) {
+          keep(save)
+          throw new Error('its state could not be kept here, so it was not sent')
+        }
+      },
+      saved: (file) => {
+        run.saved = [...(run.saved ?? []), file]
+        keep(file)
+        if (!this.detached) this.save()
+      },
+      failed: (item, why, unsure) => {
+        if (this.detached) return
+        run.notes.push(
+          unsure
+            ? `${item.from} may already be in the library at ${item.to}: ${why}`
+            : `${item.from} was not saved to the library at ${item.to}: ${why}`,
+        )
+        keep(item, { ...item, done: true })
+        this.save()
+      },
+      stopped: () => this.detached,
+    })
   }
 
   /** The outputs it made, from its folder there into the same place here, as the teammate. */
@@ -1127,6 +1262,16 @@ export class MachineRuns {
       seconds: Math.round((end - run.startedAt) / 1000),
       ...(output !== undefined ? { output } : {}),
       ...(run.files ? { files: run.files } : {}),
+      ...(run.saved?.length
+        ? {
+            library: run.saved.map((file) => ({
+              file: run.cwd === '.' ? file.from : `${run.cwd}/${file.from}`,
+              path: file.path,
+              size: size(file.size),
+              ...(file.mention ? { mention: file.mention } : {}),
+            })),
+          }
+        : {}),
       notes,
     }
   }
@@ -1150,7 +1295,10 @@ export class MachineRuns {
     if (onAbort) signal?.removeEventListener('abort', onAbort)
   }
 
-  /** What a runner after this one needs to follow its commands, and to say how the last ones went. */
+  /**
+   * What a runner after this one needs to follow its commands, and to say how the last ones went.
+   * Whether it was written.
+   */
   private save() {
     const all = [...this.runs.values()].sort((a, b) => b.startedAt - a.startedAt)
     const keep = all.filter((run) => !ended(run.status))
@@ -1162,6 +1310,9 @@ export class MachineRuns {
       command: run.command,
       cwd: run.cwd,
       outputs: run.outputs,
+      ...(run.library?.length ? { library: run.library } : {}),
+      ...(run.saved?.length ? { saved: run.saved } : {}),
+      ...(run.sends?.length ? { sends: run.sends } : {}),
       localCwd: run.localCwd,
       root: run.root,
       remoteRoot: run.remoteRoot,
@@ -1183,8 +1334,10 @@ export class MachineRuns {
       const temp = `${this.options.stateFile}.${process.pid}.tmp`
       writeFileSync(temp, JSON.stringify(saved))
       renameSync(temp, this.options.stateFile)
+      return true
     } catch (error) {
       console.warn(`could not save the machine commands: ${String(error)}`)
+      return false
     }
   }
 }

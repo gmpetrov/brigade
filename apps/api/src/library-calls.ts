@@ -15,7 +15,7 @@ import { scoped, type Scope } from './db.js'
 import { personEdits, saveTeammateDesignSystem } from './designs.js'
 import { hubs } from './hub.js'
 import { libraryChangeRefusal } from './library-changes.js'
-import { moveFolder, teammateLibraryAccess, trashFolder } from './library-folders.js'
+import { moveFolder, saveRefusal, teammateLibraryAccess, trashFolder } from './library-folders.js'
 import { trashLibraryFile } from './library-history.js'
 import {
   editMemory,
@@ -27,7 +27,7 @@ import {
 } from './library.js'
 import { proposeSkill } from './skills.js'
 import { actingTeammate } from './thread-spec.js'
-import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
+import { claimUpload, discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
@@ -147,12 +147,8 @@ export async function handleLibraryCall(
     return access === 'none'
       ? fail(`${teammate.name} has no access to that folder of the library.`)
       : done(await personEdits(db, session, op.path))
-  if (access !== 'read_write')
-    return fail(
-      access === 'none'
-        ? `${teammate.name} has no access to that folder of the library.`
-        : `${teammate.name} may read ${op.path.includes('/') ? 'that folder of ' : ''}the library but not save to it. An admin can allow it in the library or on the teammate's page.`,
-    )
+  const refusal = saveRefusal(teammate.name, access, op.path)
+  if (refusal) return fail(refusal)
   const actor = { type: 'teammate' as const, id: teammate.id }
   let row
   if (op.upload) {
@@ -162,6 +158,10 @@ export async function handleLibraryCall(
       const upload = await readyUpload(db, owner, op.upload.id, 'library')
       if (upload.size > LIBRARY_FILE_MAX)
         return fail('Files saved from a thread can be up to 500 MB')
+      // Taken for this save alone: the same save sent again (a runner that restarted before it
+      // heard this one's answer) writes nothing, rather than over what was saved there since.
+      if (!(await claimUpload(db, upload.id)))
+        return fail('This upload was used or refused; upload it again')
       row = await saveLibraryFile(
         db,
         scope,

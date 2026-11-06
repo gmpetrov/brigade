@@ -41,7 +41,12 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   it. A member's file can be up to 500 MB, of any type, as on Claude and ChatGPT (500 and 512 MB), 10 to a message:
   the API never holds it whole (its size from the bucket, its SHA-256 and text as it streams by), and the dashboard
   and the runner get a large one, audio or video from a signed bucket URL the API redirects to; the runner writes it
-  to its cache as it arrives. Files from a connection or a teammate stay at 25 MB (Gmail's own limit; the API or the
+  to its cache as it arrives, kept a week for the thread's other teammates. A file of 100 MB or more is not cached:
+  on a cloud computer, whose disk every teammate shares, it would be there twice. It streams straight into the
+  teammate's folder, hashed on the way, under a name of its own beside its place (`.brigade-<id>.part`, written over
+  by the next try when a download is cut), then moves there once its SHA-256 matches; another teammate of the thread
+  fetches it again from the bucket. A folder's deliveries run one after the other. Cleaning the cache (at each start)
+  removes any large file a runner before this one kept there, however recently it was used. Files from a connection or a teammate stay at 25 MB (Gmail's own limit; the API or the
   runner holds them), 50 MB in all. Without R2 uploads go through the API, up to 25 MB. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
   `attachments/<name>` (`-2` on a clash). The thread's spec lists all of them; before each turn the runner copies the
   ones a teammate's folder lacks, once (its edits stay), never executable, and the prompt says where they are.

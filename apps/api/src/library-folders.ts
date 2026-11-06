@@ -58,6 +58,14 @@ export async function teammateLibraryAccess(
   }
 }
 
+/** Why a teammate may not save a file at `path`, with this access to it; null when it may. */
+export function saveRefusal(name: string, access: FolderAccess, path: string) {
+  if (access === 'read_write') return null
+  return access === 'none'
+    ? `${name} has no access to that folder of the library.`
+    : `${name} may read ${path.includes('/') ? 'that folder of ' : ''}the library but not save to it. An admin can allow it in the library or on the teammate's page.`
+}
+
 /** Make a folder (and nothing else): an empty one shows in the library until removed. */
 export async function createFolder(db: ScopedDb, scope: Scope, actor: Actor, path: string) {
   if (await db.document.findFirst({ where: { kind: 'library', path } }))
