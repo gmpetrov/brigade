@@ -31,8 +31,7 @@ import { parseEnv } from 'node:util'
 // - the parent may ask for the review of its child's pull request: it runs under the child, and
 //   the parent waits for the child again, with a deadline even for one it did not wait for;
 //   closing it lets the child it held report;
-// - no review starts below a child's review: a teammate there is told so, and a person's ask
-//   runs in a thread of its own;
+// - no review starts below a child's review, whoever asks: a teammate there is told so;
 // - such a review sits under the thread at the top: archived with it, and a ticket there brings
 //   it back and keeps it from being done.
 const envFile = new URL('../.env', import.meta.url)
@@ -988,7 +987,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.ok(after.awaitUntil!.getTime() > review.awaitUntil!.getTime())
   })
 
-  test('no review starts below a child’s review: a teammate there is told so, a person’s ask runs apart', async () => {
+  test('no review starts below a child’s review, whoever asks', async () => {
     const { handleReviewCall, requestReview } = await import('../src/reviews.js')
     const parent = await thread(ids.web, 'Deep work.')
     const child = await childOf(parent, 'Fix the sync.')
@@ -1008,17 +1007,19 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
       )) as { error?: string }
       assert.match(asked.error ?? '', /starts no review below it/)
     }
-    // A person asks on its page: it runs in a thread of its own, out of the tree.
-    const { threadId } = await requestReview(
-      { ...scope, userId: `owner-${suffix}`, memberId: ids.owner, role: 'owner' },
-      repo,
-      907,
-      { reviewerId: ids.kai },
+    // A person on its page too: out of the tree, it would run on its starter's accounts with
+    // none of its limits (who asked there, whether it is private).
+    await assert.rejects(
+      requestReview(
+        { ...scope, userId: `owner-${suffix}`, memberId: ids.owner, role: 'owner' },
+        repo,
+        907,
+        { reviewerId: ids.kai },
+      ),
+      /below which Brigade starts no review/,
     )
-    const pr = await row(907)
-    assert.equal(pr.reviewSessionId, threadId)
-    assert.equal(pr.reviewSession?.parentId, null)
-    assert.equal(pr.sessionId, below, 'the pull request stays where it was opened')
+    assert.equal((await row(907)).reviewSessionId, null)
+    assert.equal(await db.session.count({ where: { title: 'Review #907: Change 907' } }), 0)
   })
 
   test('closing its pull request stops the review, and the child it held reports', async () => {

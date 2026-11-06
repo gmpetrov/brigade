@@ -384,7 +384,7 @@ async function defaultComputer(db: ScopedDb, memberId: string) {
 /** Why a thread under a child thread (a child's review) starts no review of what it opens. */
 const DEEP_NOTE =
   'This thread is under a child thread: Brigade starts no review below it. Say in your report that ' +
-  'this pull request needs one; a person can ask for it on its page.'
+  'this pull request needs one.'
 
 /** Whether a thread sits under a child thread: a child's review, below which no review starts. */
 async function underChild(db: ScopedDb, thread: { parentId: string | null } | null) {
@@ -473,7 +473,7 @@ async function startClaimed(
     })
   // The review runs in a child of the thread that opened it, whose author it wakes: a child
   // thread's too, which reports to its own parent once the review is done. Below a child's
-  // review, never: threads go two levels deep at most (src/thread-root.ts).
+  // review, never, whoever asks: threads go two levels deep at most (src/thread-root.ts).
   const home = row.sessionId ? await loadThread(db, row.sessionId) : null
   const deep = await underChild(db, home)
   const by = input.by
@@ -493,12 +493,18 @@ async function startClaimed(
         message: 'A person has control of the thread that opened it. Hand it back first.',
       })
   }
-  const memberId = home?.startedByMemberId ?? (by.kind === 'member' ? by.memberId : null)
+  // A person's ask too: out of the tree, it would run on its starter's accounts with none of its
+  // limits (who asked there, whether it is private).
+  if (deep)
+    throw new HTTPException(409, {
+      message:
+        'It was opened in a review under a child thread, below which Brigade starts no review. Ask ' +
+        'for one in a thread of yours.',
+    })
+  const parent = home
+  const memberId = parent?.startedByMemberId ?? (by.kind === 'member' ? by.memberId : null)
   if (!memberId) throw new HTTPException(409, { message: 'This pull request has no thread' })
-  const computer = home?.computer ?? (await defaultComputer(db, memberId))
-  // Where it runs: a child of that thread; a person's ask for one a review under a child opened,
-  // in a thread of its own, as one opened outside Brigade.
-  const parent = deep ? null : home
+  const computer = parent?.computer ?? (await defaultComputer(db, memberId))
   const author = row.authorTeammate
   const reviewer = await pickReviewer(db, scope, {
     repo: input.repo,
@@ -509,7 +515,7 @@ async function startClaimed(
   })
   const [checks, asked] = await Promise.all([
     checksRun(gh, input.repo, p).catch(() => []),
-    home ? firstAsk(db, home.id) : '',
+    parent ? firstAsk(db, parent.id) : '',
   ])
   const instructions = reviewBrief({
     repo: input.repo,
@@ -547,8 +553,8 @@ async function startClaimed(
           },
         }
       : {}),
-    projectId: home?.projectId ?? (await projectOfRepository(db, input.repo)),
-    effort: (home?.effort as never) ?? null,
+    projectId: parent?.projectId ?? (await projectOfRepository(db, input.repo)),
+    effort: (parent?.effort as never) ?? null,
   })
   if (outcome === 'offline') {
     // It never ran: nothing waits for it.
