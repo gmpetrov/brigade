@@ -1036,17 +1036,6 @@
   }
 }
 
-/* While a phone's keyboard is up, a page one screen tall (an expanded thread or panel) fits
- * in what the keyboard leaves (keyboard-viewport.tsx) and holds still: Safari would otherwise
- * let it scroll by the keyboard's height, its header out of sight. */
-html[data-keyboard]:has([data-expanded]) {
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-html[data-keyboard]:has([data-expanded]) [data-slot='sidebar-wrapper'] {
-  min-height: var(--viewport-h);
-}
-
 /* The Inbox's columns each scroll on their own on a wide screen: past a column's end, the
  * page neither scrolls nor bounces (a Mac's rubber band), so its header stays in place. */
 @media (width >= 64rem) {
