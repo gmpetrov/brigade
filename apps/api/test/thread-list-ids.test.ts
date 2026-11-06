@@ -9,7 +9,8 @@ import { sessionStub } from './session-stub.js'
 // GET /api/threads?id=…, repeated: threads as the sidebar's list has them, by id, however old.
 // The sidebar asks for the one open and for those waiting on the member that are older than
 // the latest it loaded, so they show with the others waiting. A child thread brings its parent,
-// and under it carries what its menu in the sidebar needs.
+// and under it carries what its menu in the sidebar needs; the review of a pull request a child
+// opened brings the thread at the top, under that child.
 // Against the API's development database (apps/api/.env), in an organization of its own
 // removed at the end; skipped when no database answers.
 const envFile = new URL('../.env', import.meta.url)
@@ -175,5 +176,45 @@ describe('threads by id', { skip: !database && 'no database answers' }, () => {
     assert.equal(review(work.id), false)
     assert.equal(review(latest.id), true)
     assert.equal(review(earlier.id), true)
+  })
+
+  // A child thread's pull request is reviewed in a child of that child (src/reviews.ts): the
+  // sidebar shows it there when it needs the member, and the thread at the top works meanwhile.
+  test('the review of a pull request a child opened brings the thread at the top, under that child', async () => {
+    const top = await thread('Large files')
+    const child = await thread('Send files up to 2 GB', top.id)
+    const review = await thread('Review #8: Send files', child.id)
+    await db.session.update({ where: { id: child.id }, data: { awaited: true } })
+    await db.session.update({
+      where: { id: review.id },
+      data: { awaited: true, status: 'running' },
+    })
+    await db.pullRequest.create({
+      data: {
+        repository: 'acme/web',
+        number: 8,
+        title: 'Send files',
+        headRef: 'brigade/y',
+        baseRef: 'main',
+        sessionId: child.id,
+        reviewSessionId: review.id,
+      },
+    } as never)
+    assert.deepEqual(await list(`id=${review.id}`), ['Large files'])
+    const res = await app.request(`/api/threads?id=${top.id}`)
+    assert.equal(res.status, 200, await res.clone().text())
+    const [row] = (await res.json()) as {
+      childrenWorking: number
+      children: {
+        id: string
+        children?: { id: string; review: boolean; parent: { id: string } }[]
+      }[]
+    }[]
+    const under = row!.children.find((c) => c.id === child.id)!.children ?? []
+    assert.deepEqual(
+      under.map((c) => ({ id: c.id, review: c.review, parent: c.parent.id })),
+      [{ id: review.id, review: true, parent: child.id }],
+    )
+    assert.equal(row!.childrenWorking, 1, 'the review its child waits for works')
   })
 })

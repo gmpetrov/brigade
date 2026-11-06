@@ -169,8 +169,7 @@ export async function reviewHold(
   })
   if (!pulls.length) return null
   const running = pulls.find((p) => p.reviewSession && reviewUnderWay(p.reviewSession))
-  if (running)
-    return { number: running.number, reviewer: running.reviewSession!.teammate.name }
+  if (running) return { number: running.number, reviewer: running.reviewSession!.teammate.name }
   // Its report is in, and wakes this thread when it can take it (queued behind the turn at work,
   // say): the turn that reads it reports, not one before. One that never showed a while after it
   // went (a person took the thread over meanwhile) holds nothing more.
@@ -185,13 +184,13 @@ export async function reviewHold(
       (!!last.firedAt &&
         Date.now() - last.firedAt.getTime() < REPORT_AFTER_PERSON_MINUTES * 60_000 &&
         !(await db.sessionEvent.findFirst({
-        where: {
-          sessionId,
-          type: 'message.user',
-          data: { path: ['messageId'], equals: wakeupMessageId(last.id) },
-        },
-        select: { seq: true },
-      }))))
+          where: {
+            sessionId,
+            type: 'message.user',
+            data: { path: ['messageId'], equals: wakeupMessageId(last.id) },
+          },
+          select: { seq: true },
+        }))))
   const pull = pulls[0]!
   return unread ? { number: pull.number, reviewer: pull.reviewSession!.teammate.name } : null
 }
@@ -201,7 +200,7 @@ export async function reviewHold(
  * child reports to its parent once it is done, so a report it made in this turn, or a
  * conversation's last word still to go, waits for it too, and its parent's wait outlasts the
  * review's. Its parent asking for it (request_review on a pull request its child opened) waits
- * for the child again, as message_thread does.
+ * for the child again, as message_thread does, as long.
  */
 export async function holdForReview(
   scope: Scope,
@@ -219,7 +218,6 @@ export async function holdForReview(
         reportDeliveredAt: null,
         reportDueAt: null,
         awaited: true,
-        awaitUntil: waitUntil(undefined),
         parentTeammateId: options.askedBy,
       },
     })
@@ -604,7 +602,13 @@ export async function reportHeld(scope: Scope, childId: string) {
   const db = scoped(scope)
   const child = await db.session.findFirst({
     where: { id: childId },
-    select: { parentId: true, status: true, report: true, reportDeliveredAt: true, reportDueAt: true },
+    select: {
+      parentId: true,
+      status: true,
+      report: true,
+      reportDeliveredAt: true,
+      reportDueAt: true,
+    },
   })
   if (!child?.parentId || child.reportDeliveredAt || child.reportDueAt || reportOf(child.report))
     return

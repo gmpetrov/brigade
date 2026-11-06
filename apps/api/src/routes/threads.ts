@@ -733,34 +733,34 @@ export const threads = new Hono<AppEnv>()
     const hub = hubs.get(c.var.scope.workspaceId)
     const [pin, later, presence, waitingSince, names, chiefDecisions, ticketsBelow] =
       await Promise.all([
-      c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
-      c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
-      hub.presence([thread.computer.id]),
-      hub.eventsWaitingSince([thread.id]),
-      // Who declared it done, by name.
-      thread.doneByType && thread.doneById
-        ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
-        : null,
-      // Chief's decisions on its questions (src/chief-answers.ts), each shown on its question.
-      threadDecisions(c.var.db, thread.id),
-      // The open tickets of its children's reviews: each shows on that child, whose page has it.
-      thread.children.length
-        ? c.var.db.ticket.findMany({
-            where: {
-              status: 'open',
-              session: { parentId: { in: thread.children.map((child) => child.id) } },
-            },
-            select: {
-              id: true,
-              type: true,
-              title: true,
-              createdAt: true,
-              session: { select: { parentId: true } },
-            },
-            orderBy: { createdAt: 'asc' },
-          })
-        : [],
-    ])
+        c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
+        c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
+        hub.presence([thread.computer.id]),
+        hub.eventsWaitingSince([thread.id]),
+        // Who declared it done, by name.
+        thread.doneByType && thread.doneById
+          ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
+          : null,
+        // Chief's decisions on its questions (src/chief-answers.ts), each shown on its question.
+        threadDecisions(c.var.db, thread.id),
+        // The open tickets of its children's reviews: each shows on that child, whose page has it.
+        thread.children.length
+          ? c.var.db.ticket.findMany({
+              where: {
+                status: 'open',
+                session: { parentId: { in: thread.children.map((child) => child.id) } },
+              },
+              select: {
+                id: true,
+                type: true,
+                title: true,
+                createdAt: true,
+                session: { select: { parentId: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            })
+          : [],
+      ])
     return c.json({
       ...thread,
       // Whether it is there, for everyone in the thread: /computers lists only the member's own.

@@ -455,10 +455,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       ids.length
         ? db.session.findMany({
             where: {
-              OR: [
-                { parentId: { in: ids } },
-                { parent: { parentId: { in: ids }, awaited: true } },
-              ],
+              OR: [{ parentId: { in: ids } }, { parent: { parentId: { in: ids }, awaited: true } }],
               awaited: true,
               status: { in: ['starting', 'running'] },
             },

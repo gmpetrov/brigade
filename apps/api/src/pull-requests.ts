@@ -2239,7 +2239,7 @@ async function reportUnread(
  * Why Brigade may not merge it on its own now, as far as Brigade knows; null when it may. Its
  * thread's member turned Auto-merge on and may merge; a teammate opened it in that thread, which
  * is done with nothing asked (a child's, once its report reached the thread that started it, done
- * too: that one decides whether it gets a review; a report that wakes it, a schedule's run's say,
+ * too: that one may still ask for a review; a report that wakes it, a schedule's run's say,
  * once the turn that read it ended: reportUnread); no review of it is starting or under way, and
  * its latest one, if any, approved it. headSha, once GitHub was asked: that approval holds for it
  * (holdsFor: it read it, or a conflict resolution kept what it approved).

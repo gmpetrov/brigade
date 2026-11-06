@@ -534,4 +534,33 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
       undefined,
     )
   })
+
+  // A child thread's pull request is reviewed in a child of that child (src/reviews.ts): what
+  // happens there shows on the card of the thread at the top, as a child's own would.
+  test('the review under a child: its ticket puts the thread at the top in Needs you, its work in progress', async () => {
+    const top = await thread('Large files')
+    const child = await thread('Send files up to 2 GB', {
+      parentId: top,
+      origin: 'child',
+      awaited: true,
+    })
+    const review = await thread('Review #9: Send files', {
+      parentId: child,
+      origin: 'child',
+      awaited: true,
+      status: 'running',
+    })
+    let b = await board(db, scope, now)
+    const card = (id: string) => b.cards.find((c) => c.key === `thread:${id}`)
+    assert.equal(card(top)?.column, 'in_progress')
+    assert.equal(card(top)?.reason, 'working')
+    await db.session.updateMany({ where: { id: review }, data: { status: 'idle' } })
+    await db.ticket.create({
+      data: { sessionId: review, type: 'question', title: 'Which branch?' },
+    } as never)
+    b = await board(db, scope, now)
+    assert.equal(card(top)?.column, 'needs_you')
+    assert.equal(card(top)?.reason, 'ticket')
+    assert.equal(card(child), undefined, 'a child is no card of its own')
+  })
 })

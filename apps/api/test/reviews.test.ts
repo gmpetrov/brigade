@@ -771,10 +771,15 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
 
   /** A child thread of Riley's under `parentId`, which waits for it (start_child). */
   const childOf = async (parentId: string, ask: string) => {
-    const id = await thread(ids.web, ask)
-    await db.session.updateMany({
-      where: { id },
+    const session = await db.session.create({
       data: {
+        teammateId: ids.riley,
+        startedByMemberId: ids.owner,
+        computerId: ids.computer,
+        title: ask,
+        projectId: ids.web,
+        status: 'idle',
+        lastSeq: 1,
         parentId,
         parentTeammateId: ids.riley,
         origin: 'child',
@@ -782,7 +787,20 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         awaitUntil: new Date(Date.now() + 30 * 60_000),
       } as never,
     })
-    return id
+    await db.threadTeammate.create({
+      data: { sessionId: session.id, teammateId: ids.riley } as never,
+    })
+    // Its first message is its parent's teammate's, not a person's.
+    await db.sessionEvent.create({
+      data: {
+        sessionId: session.id,
+        seq: 1,
+        type: 'message.user',
+        data: { type: 'message.user', text: ask },
+        at: new Date(),
+      } as never,
+    })
+    return session.id
   }
 
   /** The thread's next event, as its runner stores it; when. */
@@ -869,7 +887,11 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     await db.session.updateMany({
       where: { id: review.id },
       data: {
-        report: { status: 'report', summary: 'Approve: nothing blocks.', at: new Date().toISOString() },
+        report: {
+          status: 'report',
+          summary: 'Approve: nothing blocks.',
+          at: new Date().toISOString(),
+        },
       } as never,
     })
     await deliverReport(scope, review.id)
@@ -976,7 +998,9 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     // Its teammate is told it waits on a person, before it says the work is done.
     const work = await openWork(db, parent)
     assert.ok(
-      work.some((line) => /The question “Which branch\?” in the child thread “Review #904/.test(line)),
+      work.some((line) =>
+        /The question “Which branch\?” in the child thread “Review #904/.test(line),
+      ),
       work.join('\n'),
     )
   })
