@@ -69,10 +69,17 @@ export const blockSelection = (doc: Node, from: number, to: number) => {
   return new Lines(doc.resolve(from), doc.resolve(to))
 }
 
+/**
+ * A line's own content, not its sub-lines: in its block, or in the frame BlockNote draws around
+ * a toggle (its chevron, then a slot holding its content and its sub-lines).
+ */
+export const LINE_CONTENT =
+  ':scope > .bn-block > .bn-block-content, :scope > .bn-block > .bn-toggle-frame > .bn-toggle-slot > .bn-block-content'
+
 /** The rect of a line's own content, not its sub-lines; none when a list's filter hides it. */
 export function contentRect(view: EditorView, pos: number) {
   const rect = (view.nodeDOM(pos) as HTMLElement | null)
-    ?.querySelector(':scope > .bn-block > .bn-block-content')
+    ?.querySelector(LINE_CONTENT)
     ?.getBoundingClientRect()
   return rect && rect.height > 0 ? rect : undefined
 }

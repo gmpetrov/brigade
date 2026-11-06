@@ -35,26 +35,26 @@ const LEFT = 100
 /**
  * An editor over `lines` with the first `dragged` line dragged by its handle: each line's
  * text a row of 24 px from the top, indented by its depth. Lines whose text starts with `~`
- * are hidden, as a list's filter hides them: they take no row.
+ * are hidden, as a list's filter hides them: they take no row. Lines whose text starts with
+ * `>` are open toggles with no sub-lines: BlockNote's "Add block" button takes the next row.
  */
 function dragging(lines: Node[], dragged: number, together = 0) {
   const doc = schema.node('doc', null, schema.node('blockGroup', null, lines))
   const rects = new Map<number, DOMRect>()
+  const rooms = new Map<number, DOMRect>()
   const starts: number[] = []
   let row = 0
+  const rect = (top: number, height: number, left: number) =>
+    ({ top, bottom: top + height, height, left, right: 800 }) as DOMRect
   doc.descendants((node, pos) => {
     if (node.type.name !== 'blockContainer') return true
     const depth = (doc.resolve(pos).depth - 1) / 2
-    const hidden = node.firstChild!.textContent.startsWith('~')
-    const top = hidden ? 0 : row++ * ROW
-    const height = hidden ? 0 : 24
-    rects.set(pos, {
-      top,
-      bottom: top + height,
-      height,
-      left: LEFT + depth * INDENT,
-      right: 800,
-    } as DOMRect)
+    const text = node.firstChild!.textContent
+    const hidden = text.startsWith('~')
+    const left = LEFT + depth * INDENT
+    rects.set(pos, rect(hidden ? 0 : row++ * ROW, hidden ? 0 : 24, left))
+    if (text.startsWith('>') && node.childCount === 1)
+      rooms.set(pos, rect(row++ * ROW, 24, left + INDENT))
     starts.push(pos)
     return true
   })
@@ -76,7 +76,12 @@ function dragging(lines: Node[], dragged: number, together = 0) {
     },
     dragging: { slice, move: true },
     nodeDOM: (pos: number) => ({
-      querySelector: () => ({ getBoundingClientRect: () => rects.get(pos) }),
+      querySelector: (selector: string) => {
+        const rect = selector.includes('bn-toggle-add-block-button')
+          ? rooms.get(pos)
+          : rects.get(pos)
+        return rect ? { getBoundingClientRect: () => rect } : null
+      },
     }),
     dispatch: (tr: Parameters<typeof state.apply>[0]) => void (state = state.apply(tr)),
   }
@@ -218,4 +223,37 @@ test('lines selected together with hidden ones between them: the hidden ones sta
   const editor = dragging([line('A'), line('~hidden'), line('C'), line('D'), line('E')], 0, 4)
   assert.equal(editor.drop(LEFT + 50, 110), '~hidden, E, A, C, D')
   assert.equal(editor.selected(), 'A, C, D')
+})
+
+test('an open toggle with no sub-lines takes a drop into it, down to its "Add block" button', () => {
+  // Rows: A 0, T 30, its "Add block" button 60, D 90.
+  const lines = () => [A(), line('>T'), line('D')]
+  // T's lower half, and the button's upper half: into T.
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 50), '>T(A), D')
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 65), '>T(A), D')
+  // The button's lower half, and D's upper half: after T.
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 80), '>T, A, D')
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 95), '>T, A, D')
+})
+
+test('the drop line into an empty toggle sits under it, at its text; after it, under its button', () => {
+  const editor = dragging([A(), line('>T'), line('D')], 0)
+  // Between T (30–54) and its button (60–84), at T's text.
+  assert.deepEqual(editor.target(LEFT + 50, 50)?.line, { y: 57, left: LEFT, right: 800 })
+  assert.equal(editor.line(LEFT + 50, 50), editor.target(LEFT + 50, 50)?.pos)
+  // Between its button and D (90–114).
+  assert.equal(editor.lineY(LEFT + 50, 80), 87)
+  assert.equal(editor.lineY(LEFT + 50, 95), 87)
+})
+
+test('lines selected together dropped into an empty toggle stay selected there', () => {
+  // Rows: A 0, B 30, T 60, its button 90.
+  const editor = dragging([A(), line('B'), line('>T')], 0, 2)
+  assert.equal(editor.drop(LEFT + 50, 80), '>T(A, B)')
+  assert.equal(editor.selected(), 'A, B')
+})
+
+test('a toggle is not dropped into itself', () => {
+  const editor = dragging([A(), line('>T'), line('D')], 1)
+  assert.equal(editor.drop(LEFT + 50, 50), 'A, >T, D')
 })
