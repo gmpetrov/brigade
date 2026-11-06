@@ -7,7 +7,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { mayWrite } from './account-sharing.js'
-import { personRules } from './chief-rules.js'
+import { chiefActs, personRules } from './chief-rules.js'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
@@ -251,15 +251,24 @@ export async function specFor(
   // Chief's daily pass for a person (src/chief-pass.ts): it reads and answers by their rules, with
   // no App, repository or computer of anyone's to act on.
   const passing = !!thread.chiefPassId && teammate.kind === 'chief'
-  // The person the thread works for (src/chief-rules.ts): their rules reach its teammates, and with
-  // their pass on, each is told what Chief's answers in their name are, in their own threads, where
-  // a pass answers. Not in a playbook's run, which its playbook says how to run, nor in a pass, whose
-  // brief has them, nor in a thread several people ask in: whose rules would they be?
+  // The person the thread works for (src/chief-rules.ts): once Chief acts on their rules
+  // (chiefActs), they reach its teammates, and with their pass on, each is told what Chief's answers
+  // in their name are, in their own threads, where a pass answers. While rules are calibrated, only
+  // their pass reads them, to recommend: teammates ask as before. Not in a playbook's run, which its
+  // playbook says how to run, nor in a pass, whose brief has them, nor in a thread several people
+  // ask in: whose rules would they be?
   const asker = await askedBy(db, thread.id)
   const personId = asker === SEVERAL_ASKERS ? null : (asker ?? thread.startedByMemberId)
   const person = personId && !playbook && !passing ? await personRules(db, personId) : null
-  const personRule = person?.text ? { person: person.person, text: person.text } : null
-  const chiefAnswers = !!person?.pass && thread.origin === 'member' && !thread.parentId
+  // The pass's person, or the thread's: whether their rules act. Asked only of someone with rules,
+  // a pass on, or a pass running.
+  const rulesAct = passing
+    ? await chiefActs(thread.startedByMemberId, thread.workspaceId)
+    : !!personId &&
+      (!!person?.text || !!person?.pass) &&
+      (await chiefActs(personId, thread.workspaceId))
+  const personRule = rulesAct && person?.text ? { person: person.person, text: person.text } : null
+  const chiefAnswers = rulesAct && !!person?.pass && thread.origin === 'member' && !thread.parentId
   const grants = passing ? [] : await usableGrants(db, thread, teammate.id, granted, playbook)
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
@@ -339,9 +348,12 @@ export async function specFor(
     // Chief's answers in the person's name, by their pass: false when it is off, and the
     // instructions are as before.
     chiefAnswers,
-    // Their rules: none, and the instructions are as before. Older runners ignore them.
+    // Their rules, once they act: none, and the instructions are as before. Older runners ignore them.
     rules: personRule,
-    ...(passing ? { pass: { id: thread.chiefPassId! } } : {}),
+    // What Chief tells of their rules: that they act, or that its pass only recommends by them.
+    rulesAct,
+    // A pass that only recommends is told so by its brief too, whatever its runner.
+    ...(passing ? { pass: { id: thread.chiefPassId!, acts: rulesAct } } : {}),
     // What the instructions and tools offer depends on it (schedules, wake-ups, a merge's wake-up).
     origin: thread.origin,
     // Older runners ignore it, and offer no command on the machine.

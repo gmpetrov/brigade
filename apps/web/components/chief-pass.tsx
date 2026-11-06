@@ -1,8 +1,9 @@
 'use client'
-// Chief's daily pass on Today (docs/chief-answers.md): what it settled in the person's name this
-// morning (each answer may be marked wrong), what is still theirs with what Chief would do (one
-// click takes its pick, as theirs), what it noticed across their threads, and rules it proposes
-// from their answers. Shown only to a person whose pass ran lately.
+// Chief's daily pass on Today (docs/chief-answers.md): what is theirs with what Chief would do (one
+// click takes its pick, as theirs; a failed thread is tried again), how often its picks matched
+// their answers this week, by rule, what it noticed across their threads, and rules it proposes
+// from their answers; with chief_acts, what it settled in their name too (each answer may be marked
+// wrong). Shown only to a person whose pass ran lately.
 import type { ChiefPassView } from '@brigade/contracts'
 import { ArrowUpRight, Crown } from 'lucide-react'
 import Link from 'next/link'
@@ -85,6 +86,31 @@ const answerState = (s: ChiefPassView['settled'][number]) =>
         ? 'Left to you: it answered there three times in a row.'
         : null
 
+/** How often Chief's pick was the person's answer this week, by the rule it went by. */
+function Calibration({ rows }: { rows: ChiefPassView['calibration'] }) {
+  const same = rows.reduce((n, r) => n + r.same, 0)
+  const answered = rows.reduce((n, r) => n + r.answered, 0)
+  if (!answered) return null
+  return (
+    <Group title="How Chief reads you">
+      <li className="px-4 py-2.5 text-sm">
+        This week, its pick was your answer {same} {same === 1 ? 'time' : 'times'} out of {answered}
+        .
+      </li>
+      {rows.map((r) => (
+        <li key={r.rule ?? ''} className="flex items-baseline justify-between gap-3 px-4 py-2">
+          <span className="min-w-0 truncate text-sm text-muted-foreground">
+            {r.rule ? `By “${r.rule}”` : 'By no rule of yours'}
+          </span>
+          <span className="flex-none text-sm tabular-nums">
+            {r.same} of {r.answered}
+          </span>
+        </li>
+      ))}
+    </Group>
+  )
+}
+
 export function ChiefPassSection() {
   // Read again as threads change: the pass's own as it reports, the others' as they are answered.
   const { data } = useApi<{ pass: ChiefPassView | null }>('/me/chief/pass', ['thread.updated'])
@@ -108,6 +134,11 @@ export function ChiefPassSection() {
         </h2>
         {how}
       </div>
+      {!pass.acts && (
+        <p className="-mt-2 text-sm text-muted-foreground">
+          Recommendations only, for now: nothing goes without you.
+        </p>
+      )}
       {pass.status === 'running' ? (
         <p className="text-sm text-muted-foreground">Chief is going through what waits on you…</p>
       ) : (
@@ -126,8 +157,16 @@ export function ChiefPassSection() {
                     <ThreadLink thread={d.thread} />
                     <p className="text-xs text-muted-foreground">{d.what}</p>
                     <p className="text-sm">{d.recommendation}</p>
+                    {d.rule && (
+                      <p className="text-xs text-muted-foreground">By your rule: {d.rule}</p>
+                    )}
+                    {d.answered && (
+                      <p className="text-xs text-muted-foreground">
+                        {d.answered === 'same' ? 'You took its pick.' : 'You answered otherwise.'}
+                      </p>
+                    )}
                   </div>
-                  {d.option && d.open && d.thread && !d.option.design && (
+                  {d.kind === 'question' && d.option && d.open && d.thread && !d.option.design && (
                     <Act
                       label={`Use it: ${d.option.label}`}
                       done="Sent as yours"
@@ -137,6 +176,13 @@ export function ChiefPassSection() {
                           body: { text: d.option!.message },
                         })
                       }
+                    />
+                  )}
+                  {d.kind === 'failed' && d.open && d.thread && (
+                    <Act
+                      label="Try again"
+                      done="Its turn starts again"
+                      run={() => api(`/threads/${d.thread!.id}/retry`, { body: {} })}
                     />
                   )}
                 </li>
@@ -177,6 +223,7 @@ export function ChiefPassSection() {
               ))}
             </Group>
           )}
+          <Calibration rows={pass.calibration} />
           {pass.notes.length > 0 && (
             <Group title="Worth knowing">
               {pass.notes.map((n, i) => (
@@ -221,7 +268,8 @@ export function ChiefPassSection() {
             !pass.decisions.length &&
             !pass.settled.length &&
             !pass.notes.length &&
-            !rules.length && (
+            !rules.length &&
+            !pass.calibration.length && (
               <p className="px-4 py-3 text-sm text-muted-foreground">
                 Nothing to settle or flag this morning.
               </p>

@@ -228,7 +228,7 @@ export const workspaces = new Hono<AppEnv>()
    * timezone their pass runs in.
    */
   .get('/me/chief', requireWorkspace, async (c) => {
-    return c.json(await chiefSettings(c.var.db, c.var.scope.memberId))
+    return c.json(await chiefSettings(c.var.db, c.var.scope))
   })
 
   /**
@@ -248,7 +248,7 @@ export const workspaces = new Hono<AppEnv>()
 
   /** This member's latest daily pass here, as Today shows it; null when none ran lately. */
   .get('/me/chief/pass', requireWorkspace, async (c) => {
-    return c.json({ pass: await passView(c.var.db, c.var.scope.memberId) })
+    return c.json({ pass: await passView(c.var.db, c.var.scope) })
   })
 
   /** The order this member dragged their sidebar's teammates and projects to, in this workspace. */

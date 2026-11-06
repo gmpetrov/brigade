@@ -22,6 +22,14 @@ export const FEATURES = {
       'commands (renders, builds, test suites). Being tried by the team first.',
     default: false,
   },
+  chief_acts: {
+    description:
+      "Chief acts on a person's rules (docs/chief-answers.md): their daily pass answers in their " +
+      'name the questions their rules settle and tries failed threads again, and their teammates ' +
+      'decide what the rules settle instead of asking. Without it, while rules are calibrated, ' +
+      'the pass only recommends, and teammates still ask.',
+    default: false,
+  },
 } as const satisfies Record<string, { description: string; default: boolean }>
 
 export type Feature = keyof typeof FEATURES
