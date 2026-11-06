@@ -7,8 +7,11 @@
 // change it, double-click to reset; remembered in this browser. Escape closes it. Panels open together
 // share the right edge: the last one opened, or brought forward, is on top.
 // PanelExpandButton in its header lays it over the whole window and back; not
-// on a phone, where it already is.
+// on a phone, where it already is. A document stops at the sidebar instead, so
+// the sidebar still shows (besideSidebar); between a phone and a wide screen,
+// where a sheet from the bottom would leave little of either, it always lies so.
 import { Maximize2, Minimize2 } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import {
   createContext,
   useCallback,
@@ -25,6 +28,7 @@ import {
 } from 'react'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 const WIDTH_KEY = 'brigade:panel-width'
@@ -271,6 +275,32 @@ function writeFull(key: string, full: boolean) {
 }
 
 /**
+ * Where the page beside the sidebar starts, in pixels from the window's left, while `on`:
+ * kept up to date as the sidebar folds, unfolds or the window is resized.
+ */
+function usePageLeft(on: boolean) {
+  const [left, setLeft] = useState<number>()
+  useEffect(() => {
+    if (!on) return setLeft(undefined)
+    const page = document.querySelector('[data-slot="sidebar-inset"]')
+    if (!page) return
+    const measure = () => setLeft(Math.max(0, Math.round(page.getBoundingClientRect().left)))
+    measure()
+    // Folding the sidebar animates its width: the page's left edge moves, not its size alone.
+    const sidebar = document.querySelector('[data-slot="sidebar-gap"]')
+    const observer = new ResizeObserver(measure)
+    observer.observe(page)
+    if (sidebar) observer.observe(sidebar)
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [on])
+  return left
+}
+
+/**
  * A panel beside the page. Put a header row and a scrolling body inside.
  * Expanded, the same panel takes the page's place instead: in the page's flow,
  * its full width and the window's height, with nothing beside it to resize.
@@ -284,6 +314,8 @@ export function SidePanel({
   raiseKey,
   rememberFull,
   hidden = false,
+  besideSidebar = false,
+  onPageChange,
   style,
   ...props
 }: ComponentProps<'aside'> & {
@@ -305,6 +337,15 @@ export function SidePanel({
    * of the page's layout, and what it shows keeps its state. Shown again, it comes in front.
    */
   hidden?: boolean
+  /**
+   * Laid over the page only, not the whole window: the sidebar still shows beside it. Going
+   * to another page, from the sidebar or elsewhere, brings it back to the panel, so that page
+   * shows. Between a phone and a wide screen it is always laid so, with no panel to go back
+   * to: going to another page calls onPageChange (the document panel minimizes), as on a phone.
+   */
+  besideSidebar?: boolean
+  /** With besideSidebar: another page shows while it covers the page (below wide screens). */
+  onPageChange?: () => void
 }) {
   const panel = useRef<HTMLElement>(null)
   const stack = usePanelStack(!expanded && !hidden, name, raiseKey)
@@ -319,8 +360,24 @@ export function SidePanel({
     (next: boolean) => (rememberFull ? writeFull(rememberFull, next) : setOwn(next)),
     [rememberFull],
   )
-  const over = full && !expanded
+  // Between a phone and a wide screen: no room beside the page, and a sheet hides most of it.
+  const medium = useMediaQuery('(min-width: 768px) and (max-width: 1279.98px)', false)
+  const wide = useMediaQuery('(min-width: 1280px)')
+  const overPage = besideSidebar && medium && !expanded
+  const over = (full && !expanded) || overPage
   const back = useCallback(() => setFull(false), [setFull])
+  const pageLeft = usePageLeft(over && besideSidebar)
+  const pathname = usePathname()
+  const shownAt = useRef(pathname)
+  const latest = useRef({ covers: !wide && !hidden, onPageChange })
+  latest.current = { covers: !wide && !hidden, onPageChange }
+  useEffect(() => {
+    if (shownAt.current === pathname) return
+    shownAt.current = pathname
+    if (!besideSidebar) return
+    setFull(false)
+    if (latest.current.covers) latest.current.onPageChange?.()
+  }, [pathname, besideSidebar, setFull])
   // Another panel brought in front: it goes back, so it does not hide that one.
   // Only once it was in front: as it opens, it is not yet.
   const wasFront = useRef(false)
@@ -329,9 +386,10 @@ export function SidePanel({
     wasFront.current = stack.front
   }, [stack.front, hidden, setFull])
   // Laid over the window, Escape brings it back to the panel first.
-  useEscapeToClose(panel, stack.front ? (over ? back : onClose) : undefined)
+  useEscapeToClose(panel, stack.front ? (over && !overPage ? back : onClose) : undefined)
   return (
-    <FullContext.Provider value={expanded ? null : { full, setFull }}>
+    // Laid over the page for good, it has no panel to go back to: no Expand.
+    <FullContext.Provider value={expanded || overPage ? null : { full, setFull }}>
       <aside
         ref={panel}
         // The page makes room for it only while it shows (globals.css).
@@ -349,7 +407,15 @@ export function SidePanel({
           className,
           hidden && 'hidden',
         )}
-        style={expanded ? style : { ...stack.style, ...style }}
+        style={
+          expanded
+            ? style
+            : {
+                ...stack.style,
+                ...(pageLeft !== undefined && { left: pageLeft }),
+                ...style,
+              }
+        }
         {...props}
       >
         {!expanded && !over && <PanelResizeHandle />}

@@ -15,7 +15,9 @@ import { sessionStub } from './session-stub.js'
 // - a name as typed is found before newer ones that only share its words, past the limit of each kind;
 // - another workspace's rows never turn up, whatever matches;
 // - punctuation separates words, as in a file's name, and matches nothing on its own;
-// - a query of only words under 3 characters ("pr", "#12") is found, without the typo ranking.
+// - a query of only words under 3 characters ("pr", "#12") is found, without the typo ranking;
+// - a file says whether the document editor opens it: Markdown small enough, not a bigger one
+//   nor an image, which open in the library.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL || undefined
@@ -97,6 +99,14 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
         headRef: 'fix-login',
         baseRef: 'main',
       },
+    } as never)
+    // Found by name, but not for the editor: too big, or not Markdown.
+    const db = scoped({ organizationId: orgs[0]!, workspaceId: workspaces[0]! })
+    await db.document.create({
+      data: { path: 'notes/oversized-notes.md', contentType: 'text/markdown', size: 3 << 20 },
+    } as never)
+    await db.document.create({
+      data: { path: 'brand/oversized-logo.png', contentType: 'image/png', size: 100 },
     } as never)
     // Same names elsewhere: never shown here.
     await workspace(orgs[1]!, ['Launch checklist elsewhere'], ['launch-checklist.md'])
@@ -180,6 +190,18 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     ])
     assert.deepEqual(titles(await find('100% done'), 'file'), ['notes/100% done.md'])
     assert.deepEqual(await find('%_'), [])
+  })
+
+  test('a file says whether the document editor opens it', async () => {
+    const editor = (results: SearchResult[]) =>
+      Object.fromEntries(results.filter((r) => r.kind === 'file').map((r) => [r.title, r.editor]))
+    assert.deepEqual(editor(await find('launch-checklist')), {
+      'Projects/Brigade/launch-checklist.md': true,
+    })
+    assert.deepEqual(editor(await find('oversized')), {
+      'notes/oversized-notes.md': false,
+      'brand/oversized-logo.png': false,
+    })
   })
 
   test('a query of only short words finds rows, alone or with a longer word', async () => {

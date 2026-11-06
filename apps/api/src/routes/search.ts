@@ -7,7 +7,7 @@ import { SCORE, titleScore, type SearchResult } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { usableBy } from '../account-sharing.js'
 import { prisma, Prisma, type Scope } from '../db.js'
-import { search as searchDocuments } from '../library.js'
+import { isMarkdown, search as searchDocuments } from '../library.js'
 import { requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Per kind; the popup shows a handful of each. */
@@ -322,6 +322,13 @@ export const search = new Hono<AppEnv>()
       else
         files.push(result({ kind: 'file', id: f.id, title: f.path, score: score(f.path, 'file') }))
     }
+    // Those the document editor opens, beside the page; the others open in the library.
+    const opened = await db.document.findMany({
+      where: { id: { in: files.map((f) => f.id) }, kind: 'library', deletedAt: null },
+      select: { id: true, contentType: true, size: true },
+    })
+    const editable = new Set(opened.filter((d) => isMarkdown(d)).map((d) => d.id))
+    for (const f of files) f.editor = editable.has(f.id)
     // Best named first; the order found within a score.
     const ranked = (list: SearchResult[]) => [...list].sort((a, b) => b.score - a.score)
 

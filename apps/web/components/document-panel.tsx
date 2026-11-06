@@ -3,7 +3,9 @@
 // artifact opens beside a chat: from the library, a thread, search. Each one
 // opened is a tab; from two on, a row of tabs shows them, with a dot on those
 // a teammate changed since you last looked. The panel stays open while you
-// move between pages, and its tabs across a reload.
+// move between pages, and its tabs across a reload. Minimized (⌄, ⌘. or a
+// swipe down on a phone), it waits in a pill at the bottom right, with what it
+// shows kept as it was: a click on the pill brings it back.
 import type { EditTarget, LibraryFile } from '@brigade/contracts'
 import {
   ArrowUpRight,
@@ -11,6 +13,7 @@ import {
   ChevronDown,
   FileText,
   History,
+  List,
   MessageSquare,
   X,
 } from 'lucide-react'
@@ -28,7 +31,7 @@ import { useDocumentDiscussion } from '@/components/document-discussion'
 import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
-import { PanelExpandButton, SidePanel } from '@/components/side-panel'
+import { editable, PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import {
@@ -40,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { api } from '@/lib/api'
 import { changedSince, type Stamps } from '@/lib/document-changes'
+import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -52,8 +56,10 @@ export type OpenDocument = {
 }
 
 type DocumentPanel = {
-  /** The tab in front, while the panel shows. */
+  /** The tab in front, while the panel shows (not minimized). */
   current: OpenDocument | null
+  /** The tab in front while the panel is minimized to its pill. */
+  minimized: OpenDocument | null
   tabs: OpenDocument[]
   /** Library files a teammate changed since you last had them in front. */
   changed: ReadonlySet<string>
@@ -61,6 +67,9 @@ type DocumentPanel = {
   open: (document: OpenDocument) => void
   /** Hides the panel; its tabs come back with the next document opened. */
   close: () => void
+  /** Puts it away in a pill, what it shows kept; `restore` (or opening a document) brings it back. */
+  minimize: () => void
+  restore: () => void
   /** Closes a document's tab, e.g. once the file is deleted. */
   remove: (target: EditTarget) => void
   /** Closes every tab, and the panel. */
@@ -99,7 +108,7 @@ export function libraryDocument(file: { id: string; path: string }): OpenDocumen
   }
 }
 
-type Tabs = { tabs: OpenDocument[]; active: string | null }
+type Tabs = { tabs: OpenDocument[]; active: string | null; minimized?: boolean }
 
 export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Tabs>({ tabs: [], active: null })
@@ -147,14 +156,31 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
       seen(document.target)
       update(({ tabs, active }) => {
         const at = tabs.findIndex((t) => keyOf(t.target) === key)
-        if (at >= 0) return { tabs: tabs.with(at, document), active: key }
+        if (at >= 0) return { tabs: tabs.with(at, document), active: key, minimized: false }
         const after = tabs.findIndex((t) => keyOf(t.target) === active)
-        return { tabs: tabs.toSpliced(after + 1, 0, document), active: key }
+        return { tabs: tabs.toSpliced(after + 1, 0, document), active: key, minimized: false }
       })
     },
     [update, seen],
   )
-  const close = useCallback(() => update((s) => ({ ...s, active: null })), [update])
+  const close = useCallback(
+    () => update((s) => ({ ...s, active: null, minimized: false })),
+    [update],
+  )
+  const minimize = useCallback(
+    () => update((s) => (s.active ? { ...s, minimized: true } : s)),
+    [update],
+  )
+  const restore = useCallback(
+    () =>
+      update((s) => {
+        // What changed while it was put away has been seen once it is back.
+        const front = s.tabs.find((t) => keyOf(t.target) === s.active)
+        if (front) seen(front.target)
+        return { ...s, minimized: false }
+      }),
+    [update, seen],
+  )
   const closeAll = useCallback(() => update(() => ({ tabs: [], active: null })), [update])
   const remove = useCallback(
     (target: EditTarget) => {
@@ -173,10 +199,37 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
     [update, seen],
   )
 
-  const current = state.tabs.find((t) => keyOf(t.target) === state.active) ?? null
+  const front = state.tabs.find((t) => keyOf(t.target) === state.active) ?? null
+  const current = state.minimized ? null : front
+  const minimized = state.minimized ? front : null
   const value = useMemo(
-    () => ({ current, tabs: state.tabs, changed, open, close, remove, closeAll, asked, setAsked }),
-    [current, state.tabs, changed, open, close, remove, closeAll, asked],
+    () => ({
+      current,
+      minimized,
+      tabs: state.tabs,
+      changed,
+      open,
+      close,
+      minimize,
+      restore,
+      remove,
+      closeAll,
+      asked,
+      setAsked,
+    }),
+    [
+      current,
+      minimized,
+      state.tabs,
+      changed,
+      open,
+      close,
+      minimize,
+      restore,
+      remove,
+      closeAll,
+      asked,
+    ],
   )
   // Kept while the panel is hidden, so what changed meanwhile still shows when it comes back.
   const stamps = useRef<Stamps>(new Map())
@@ -184,11 +237,12 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider value={value}>
       {children}
-      {current && state.tabs.length > 1 && watched.length > 0 && (
+      {front && (state.tabs.length > 1 || state.minimized) && watched.length > 0 && (
         <WatchChanges
           stamps={stamps.current}
           ids={watched}
-          front={current.target.kind === 'library' ? current.target.id : null}
+          // Minimized, the one in front is out of sight too: its changes are marked.
+          front={!state.minimized && front.target.kind === 'library' ? front.target.id : null}
           onChanged={(ids) => setChanged((c) => new Set([...c, ...ids]))}
         />
       )}
@@ -242,7 +296,20 @@ function WatchChanges({
 
 /** The open document, beside the page. Rendered once, by the dashboard. */
 export function DocumentPanel() {
-  const { current, tabs, close, closeAll, setAsked } = useDocumentPanel()
+  const {
+    current: shown,
+    minimized,
+    tabs,
+    close,
+    closeAll,
+    minimize,
+    restore,
+    setAsked,
+  } = useDocumentPanel()
+  // Minimized, it stays mounted, hidden: an edit not saved yet is still there when it is back.
+  const current = shown ?? minimized
+  useMinimizeShortcut(Boolean(shown), Boolean(minimized), minimize, restore)
+  const swipe = useSwipeDown(minimize)
   const [history, setHistory] = useState(false)
   // The editor again after a restore, with what was restored.
   const [opened, setOpened] = useState(0)
@@ -282,87 +349,291 @@ export function DocumentPanel() {
   const target = current.target
   const tabbed = tabs.length > 1
   return (
-    <SidePanel aria-label={current.title} onClose={close} raiseKey={current}>
-      {tabbed && <DocumentTabs />}
-      <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
-        <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* With tabs, the tab names it: only its folder here. */}
-          {!(tabbed && current.subtitle) && (
-            <strong className="truncate text-sm font-semibold">{current.title}</strong>
-          )}
-          {current.subtitle && (
-            <span
-              className={cn(
-                'truncate text-xs text-muted-foreground',
-                current.target.kind === 'library' && 'font-mono',
+    <>
+      <SidePanel
+        aria-label={current.title}
+        onClose={close}
+        onPageChange={minimize}
+        raiseKey={current}
+        besideSidebar
+        hidden={!shown}
+      >
+        {/* On a phone, where it fills the screen: swiped down, it goes to its pill. */}
+        <div {...swipe} className="shrink-0">
+          <div
+            aria-hidden
+            className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/40 md:hidden"
+          />
+          {tabbed && <DocumentTabs />}
+          <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
+            <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            <div className="flex min-w-0 flex-1 flex-col">
+              {/* With tabs, the tab names it: only its folder here. */}
+              {!(tabbed && current.subtitle) && (
+                <strong className="truncate text-sm font-semibold">{current.title}</strong>
               )}
-              title={current.subtitle}
+              {current.subtitle && (
+                <span
+                  className={cn(
+                    'truncate text-xs text-muted-foreground',
+                    current.target.kind === 'library' && 'font-mono',
+                  )}
+                  title={current.subtitle}
+                >
+                  {current.subtitle}
+                </span>
+              )}
+            </div>
+            {discussion?.teammate && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void onAsk?.()}
+                tooltip={`Talk about this file with ${discussion.teammate.name}`}
+              >
+                <MessageSquare aria-hidden />
+                Ask {discussion.teammate.name}
+              </Button>
+            )}
+            {target.kind === 'library' && (
+              <Button
+                type="button"
+                variant={history ? 'secondary' : 'ghost'}
+                size="icon-sm"
+                onClick={() => setHistory((h) => !h)}
+                aria-pressed={history}
+                aria-label="History"
+                tooltip="History"
+              >
+                <History aria-hidden />
+              </Button>
+            )}
+            {/* What acts on the panel itself, apart from what acts on the file. */}
+            <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
+            <MinimizeButton onMinimize={minimize} />
+            <PanelExpandButton />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={closeAll}
+              aria-label={tabbed ? 'Close all documents' : 'Close document'}
+              tooltip={tabbed ? 'Close all' : 'Close'}
             >
-              {current.subtitle}
-            </span>
-          )}
+              <X aria-hidden />
+            </Button>
+          </div>
         </div>
-        {discussion?.teammate && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => void onAsk?.()}
-            tooltip={`Talk about this file with ${discussion.teammate.name}`}
-          >
-            <MessageSquare aria-hidden />
-            Ask {discussion.teammate.name}
-          </Button>
+        {history && target.kind === 'library' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <FileHistory
+              file={{ id: target.id, path: path ?? current.title }}
+              onRestored={() => {
+                setHistory(false)
+                setOpened((n) => n + 1)
+              }}
+            />
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+            <DocumentEditor
+              key={`${key}:${opened}`}
+              target={current.target}
+              label={current.title}
+              className="min-h-full"
+              ask={ask}
+            />
+          </div>
         )}
-        {target.kind === 'library' && (
-          <Button
-            type="button"
-            variant={history ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            onClick={() => setHistory((h) => !h)}
-            aria-pressed={history}
-            aria-label="History"
-            tooltip="History"
-          >
-            <History aria-hidden />
-          </Button>
-        )}
-        <PanelExpandButton />
-        <Button
+        {handOff.dialog}
+      </SidePanel>
+      {minimized && <MinimizedPill document={minimized} onRestore={restore} />}
+    </>
+  )
+}
+
+/** ⌘. (Ctrl+. elsewhere) minimizes the document in front, and brings it back. */
+function useMinimizeShortcut(
+  shown: boolean,
+  minimized: boolean,
+  minimize: () => void,
+  restore: () => void,
+) {
+  useEffect(() => {
+    if (!shown && !minimized) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.shiftKey || e.altKey) return
+      const command = isMac() ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+      if (!command || e.code !== 'Period') return
+      // Not over a dialog, which has the keyboard.
+      if (document.querySelector('[role=dialog][data-state=open]')) return
+      e.preventDefault()
+      if (minimized) restore()
+      else minimize()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [shown, minimized, minimize, restore])
+}
+
+/** A swipe down with a finger, from the top of the panel: `onSwipe`. Only a touch, never a mouse. */
+function useSwipeDown(onSwipe: () => void) {
+  const start = useRef<{ x: number; y: number } | null>(null)
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const touch = e.touches[0]
+      start.current =
+        e.touches.length === 1 && touch ? { x: touch.clientX, y: touch.clientY } : null
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const from = start.current
+      const touch = e.changedTouches[0]
+      start.current = null
+      if (!from || !touch) return
+      const dy = touch.clientY - from.y
+      const dx = Math.abs(touch.clientX - from.x)
+      if (dy > 64 && dx < dy / 2) onSwipe()
+    },
+    onTouchCancel: () => {
+      start.current = null
+    },
+  }
+}
+
+function MinimizeButton({ onMinimize }: { onMinimize: () => void }) {
+  const mac = useIsMac()
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      onClick={onMinimize}
+      aria-label="Minimize"
+      tooltip={`Minimize (${mac ? '⌘' : 'Ctrl+'}.)`}
+    >
+      <ChevronDown aria-hidden />
+    </Button>
+  )
+}
+
+/**
+ * Where the pill sits, from the window's bottom right: over a composer at the bottom (a
+ * thread's), just above it and lined up with its right edge, so it reads as part of the page
+ * and the send button stays in reach.
+ */
+function usePillPlace() {
+  const BASE = 16
+  const [place, setPlace] = useState({ bottom: BASE, right: BASE, lifted: false })
+  useEffect(() => {
+    let frame = 0
+    const measure = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const height = window.innerHeight
+        const width = window.innerWidth
+        let next = { bottom: BASE, right: BASE, lifted: false }
+        for (const el of document.querySelectorAll('[data-composer-frame]')) {
+          const box = el.getBoundingClientRect()
+          // Only one in view, low in the window, wide enough to carry the pill above it.
+          if (!box.height || box.top >= height || box.bottom < height - 240) continue
+          if (box.width < 280) continue
+          const bottom = height - box.top + 8
+          if (bottom > next.bottom)
+            next = { bottom, right: Math.max(BASE, Math.round(width - box.right)), lifted: true }
+        }
+        setPlace((p) => (p.bottom === next.bottom && p.right === next.right ? p : next))
+      })
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(document.body)
+    const changes = new MutationObserver(measure)
+    changes.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, { capture: true, passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      changes.disconnect()
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, { capture: true })
+    }
+  }, [])
+  return place
+}
+
+/** On a touch screen, whether its keyboard is likely up: something to type in has focus. */
+function useTyping() {
+  const [typing, setTyping] = useState(false)
+  useEffect(() => {
+    if (!window.matchMedia('(pointer: coarse)').matches) return
+    const check = () => {
+      const focus = document.activeElement
+      setTyping(Boolean(focus && editable(focus)))
+    }
+    check()
+    document.addEventListener('focusin', check)
+    document.addEventListener('focusout', check)
+    return () => {
+      document.removeEventListener('focusin', check)
+      document.removeEventListener('focusout', check)
+    }
+  }, [])
+  return typing
+}
+
+/** The minimized document, at the bottom right of every page: a click brings it back. */
+function MinimizedPill({ document, onRestore }: { document: OpenDocument; onRestore: () => void }) {
+  const { tabs, changed, closeAll } = useDocumentPanel()
+  const mac = useIsMac()
+  const place = usePillPlace()
+  const typing = useTyping()
+  const Icon = document.target.kind === 'library' ? FileText : BookOpen
+  const others = tabs.length - 1
+  const anyChanged = tabs.some((t) => t.target.kind === 'library' && changed.has(t.target.id))
+  if (typing) return null
+  return (
+    <div
+      role="region"
+      aria-label="Minimized document"
+      className="fixed z-40 flex max-w-[calc(100vw-2rem)] items-center gap-0.5 rounded-full border bg-card py-1 pr-1 pl-1 shadow-lg"
+      style={{
+        right: place.right,
+        // Above a composer, which keeps clear of the phone's edge already.
+        bottom: place.lifted
+          ? place.bottom
+          : `calc(${place.bottom}px + env(safe-area-inset-bottom))`,
+      }}
+    >
+      <Hint label={`Open ${document.title} (${mac ? '⌘' : 'Ctrl+'}.)`}>
+        <button
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={closeAll}
-          aria-label={tabbed ? 'Close all documents' : 'Close document'}
-          tooltip={tabbed ? 'Close all' : 'Close'}
+          onClick={onRestore}
+          aria-label={`Open ${document.title}`}
+          className="flex min-w-0 items-center gap-2 rounded-full py-1 pr-2 pl-2.5 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <X aria-hidden />
-        </Button>
-      </div>
-      {history && target.kind === 'library' ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <FileHistory
-            file={{ id: target.id, path: path ?? current.title }}
-            onRestored={() => {
-              setHistory(false)
-              setOpened((n) => n + 1)
-            }}
-          />
-        </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
-          <DocumentEditor
-            key={`${key}:${opened}`}
-            target={current.target}
-            label={current.title}
-            className="min-h-full"
-            ask={ask}
-          />
-        </div>
-      )}
-      {handOff.dialog}
-    </SidePanel>
+          <Icon aria-hidden className="size-4 shrink-0 text-primary" />
+          <span className="max-w-56 truncate font-medium">{document.title}</span>
+          {others > 0 && (
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">+{others}</span>
+          )}
+          {anyChanged && <ChangedDot />}
+          {anyChanged && <span className="sr-only">, changed</span>}
+        </button>
+      </Hint>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="shrink-0 rounded-full"
+        onClick={closeAll}
+        aria-label={others > 0 ? 'Close all documents' : `Close ${document.title}`}
+        tooltip={others > 0 ? 'Close all' : 'Close'}
+      >
+        <X aria-hidden />
+      </Button>
+    </div>
   )
 }
 
@@ -459,7 +730,8 @@ function DocumentTabs() {
             tooltip="All open documents"
             className="relative"
           >
-            <ChevronDown aria-hidden />
+            {/* Not a chevron: the one below it minimizes. */}
+            <List aria-hidden />
             {tabs.some((t) => isChanged(t)) && (
               <span className="absolute top-1 right-1 flex">
                 <ChangedDot />
