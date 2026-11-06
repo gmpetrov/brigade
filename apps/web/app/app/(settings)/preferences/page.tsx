@@ -140,8 +140,9 @@ const RULES_EXAMPLE =
   '- Brigade: go ahead on next steps of work I asked for\n- Anything visual (a design, a wording): ask me\n- Small fixes: open the pull request without asking'
 
 /**
- * Their rules and Chief's daily pass (docs/chief-answers.md). Theirs alone: their teammates read
- * their rules, and Chief acts in their name by them.
+ * Their rules and Chief's daily pass (docs/chief-answers.md). Theirs alone. While rules are
+ * calibrated (ChiefSettings.acts false), the pass only recommends by them, on Today; with
+ * chief_acts, their teammates read them and Chief acts in their name by them.
  */
 function ChiefSection() {
   const { data, setData } = useApi<ChiefSettings>('/me/chief')
@@ -174,7 +175,11 @@ function ChiefSection() {
     <SettingsGroup title="Chief">
       <SettingRow
         title="Your rules"
-        detail="What your teammates may decide without asking you. Merging, sending, publishing or paying still waits for you."
+        detail={
+          data.acts
+            ? 'What your teammates may decide without asking you. Merging, sending, publishing or paying still waits for you.'
+            : 'How you would answer your teammates. For now Chief only recommends by them, on Today, and your teammates still ask you.'
+        }
       >
         {({ id, describedBy }) => (
           <div className="flex flex-col gap-2">
@@ -214,7 +219,7 @@ function ChiefSection() {
               {saved && !changed && (
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Check aria-hidden className="size-3.5 text-success" />
-                  Saved for teammates&apos; next session
+                  {data.acts ? 'Saved for teammates’ next session' : 'Saved for Chief’s next pass'}
                 </span>
               )}
             </div>
@@ -223,14 +228,26 @@ function ChiefSection() {
       </SettingRow>
       <SettingRow
         title="Daily pass"
-        detail="When something waits on you, Chief settles what your rules cover and leaves the rest on Today."
+        detail={
+          data.acts
+            ? 'When something waits on you, Chief settles what your rules cover and leaves the rest on Today.'
+            : 'When something waits on you, Chief recommends what to do with each, on Today. Nothing goes without you.'
+        }
         chips={[`Each morning · ${data.hour}:00${data.timezone ? ` ${data.timezone}` : ''}`]}
         more={
-          <>
-            It answers in your name the questions your rules settle, tries failed threads again, and
-            says on Today what it would do with the rest, and rules you may want to add. Off,
-            nothing runs.
-          </>
+          data.acts ? (
+            <>
+              It answers in your name the questions your rules settle, tries failed threads again,
+              and says on Today what it would do with the rest, and rules you may want to add. Off,
+              nothing runs.
+            </>
+          ) : (
+            <>
+              Each question gets the answer Chief would pick and the rule it goes by: Use it sends
+              it as yours. A failed thread gets Try again. Today shows how often its pick matched
+              your answer this week, by rule, and rules you may want to add. Off, nothing runs.
+            </>
+          )
         }
         control={({ id, describedBy }) => (
           <Switch

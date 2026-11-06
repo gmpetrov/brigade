@@ -1765,7 +1765,10 @@ const TIMEZONE =
  * it: answer a question in the person's name, try a failed thread again, and report what is left
  * to them. Elsewhere: their rules, written with them.
  */
-export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Record<string, Tool> {
+export function chiefTools(
+  call: ScheduleCaller,
+  options: { pass: boolean; acts?: boolean },
+): Record<string, Tool> {
   if (!options.pass)
     return {
       chief_rules: tool({
@@ -1792,7 +1795,7 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
           }),
       }),
     }
-  return {
+  const pass = {
     chief_answer: tool({
       description:
         "Answer a question item of your brief in the person's name, when one of their rules plainly settles it: the " +
@@ -1845,7 +1848,7 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
         'Once, last: what is still theirs (each with what you would do), what you noticed across their threads, and ' +
         'new rules worth proposing from their recent answers. Then end your turn without a reply.',
       inputSchema: jsonSchema<{
-        decisions?: { item: number; recommendation: string; option?: number }[]
+        decisions?: { item: number; recommendation: string; option?: number; rule?: string }[]
         notes?: { item?: number; text: string }[]
         rules?: { line: string; why: string }[]
       }>({
@@ -1862,6 +1865,11 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
                 option: {
                   type: 'number',
                   description: 'For a question: the answer you would pick, by its number',
+                },
+                rule: {
+                  type: 'string',
+                  description:
+                    'For a question: their rule your pick goes by, in their words; leave it out when none settles it',
                 },
               },
               required: ['item', 'recommendation'],
@@ -1904,6 +1912,7 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
               item: Math.round(d.item),
               recommendation: d.recommendation,
               ...(d.option !== undefined ? { option: Math.round(d.option) } : {}),
+              ...(d.rule?.trim() ? { rule: d.rule.trim() } : {}),
             })),
             notes: (input.notes ?? []).map((n) => ({
               ...(n.item !== undefined ? { item: Math.round(n.item) } : {}),
@@ -1917,6 +1926,8 @@ export function chiefTools(call: ScheduleCaller, options: { pass: boolean }): Re
         }),
     }),
   }
+  // While it only recommends (no chief_acts), its report is its one way out.
+  return options.acts ? pass : { chief_report: pass.chief_report }
 }
 
 /**

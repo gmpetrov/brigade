@@ -355,7 +355,11 @@ function createAgent(
             ...machineToolsInView(spec, machine),
             ...(chief ? [PROPOSE_TEAM_TOOL] : []),
             // A pass's ways out, loaded with no tool search before them.
-            ...(spec.pass && chief ? ['chief_answer', 'chief_retry', 'chief_report'] : []),
+            ...(spec.pass && chief
+              ? spec.pass.acts === true
+                ? ['chief_answer', 'chief_retry', 'chief_report']
+                : ['chief_report']
+              : []),
             // A big App's catalog (catalogTools): a few small tools, found then called, without a
             // tool search before them.
             ...Object.entries(apps)
@@ -364,15 +368,15 @@ function createAgent(
           ].map((name) => [name, { alwaysLoad: true }]),
         ),
       })
-  // Chief's daily pass for a person (docs/chief-answers.md): it reads and acts on its brief's items,
-  // and nothing else; the API gives it no App.
+  // Chief's daily pass for a person (docs/chief-answers.md): it reads its brief's items and reports
+  // on them (or, with chief_acts, acts on them), and nothing else; the API gives it no App.
   const passing = !!spec.pass && chief
   const tools = passing
     ? {
         search_workspace: libraryTools({ ...library, access: 'read', folders: [] })
           .search_workspace!,
         list_items: listTools(callSchedule).list_items!,
-        ...chiefTools(callSchedule, { pass: true }),
+        ...chiefTools(callSchedule, { pass: true, acts: spec.pass?.acts === true }),
       }
     : {
         ...apps,

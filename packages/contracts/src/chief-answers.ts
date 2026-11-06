@@ -144,6 +144,11 @@ export type ChiefSettings = {
   timezone: string | null
   /** Their pass runs from this hour of their day. */
   hour: number
+  /**
+   * Chief acts on their rules (the chief_acts feature): the pass answers in their name and their
+   * teammates decide by them. Else, while rules are calibrated, the pass only recommends.
+   */
+  acts: boolean
 }
 
 /** The person takes a rule Chief proposed into their rules, or refuses it (POST /me/chief/rules). */
@@ -209,9 +214,17 @@ const BRIEF_HEAD = "Chief's pass for "
 const clip = (text: string, max: number) =>
   text.length <= max ? text : `…${text.slice(text.length - max)}`
 
+/** A pass that only recommends (no chief_acts), as its brief tells Chief whatever its runner. */
+export const CHIEF_RECOMMENDS_ONLY =
+  'For now they want recommendations only: answer nothing and try nothing again in their name ' +
+  '(chief_answer and chief_retry are refused). In chief_report, give every item what you would do; ' +
+  'for a question, the answer you would pick and the rule of theirs it goes by. They decide on ' +
+  'Today, which shows how often your pick matched theirs.'
+
 /**
  * The first message of the person's pass: their rules, what waits on them, numbered, and their
- * recent answers. Everything Chief goes by is here: it reads no thread.
+ * recent answers. Everything Chief goes by is here: it reads no thread. acts: Chief may answer and
+ * retry in their name (chief_acts); else it only recommends, which the brief says.
  */
 export function chiefPassBrief(b: {
   person: string
@@ -220,6 +233,7 @@ export function chiefPassBrief(b: {
   refused: string[]
   items: ChiefPassItem[]
   answers: ChiefRecentAnswer[]
+  acts: boolean
 }) {
   const item = (i: ChiefPassItem) => {
     const head = `${i.n}. "${oneLine(i.title)}"`
@@ -250,10 +264,13 @@ export function chiefPassBrief(b: {
     '',
     `Go through what waits on ${b.person} this morning, as their chief of staff (see your instructions), then ` +
       'call chief_report once and end your turn.',
+    ...(b.acts ? [] : ['', CHIEF_RECOMMENDS_ONLY]),
     '',
     `## ${b.person}'s rules`,
     b.rules?.trim() ||
-      `(None yet. Answer nothing in their name; from their recent answers below, propose rules they may want.)`,
+      (b.acts
+        ? `(None yet. Answer nothing in their name; from their recent answers below, propose rules they may want.)`
+        : `(None yet. Recommend from their recent answers below, and propose rules they may want.)`),
     '',
     '## What waits on them',
     ...b.items.map(item),
@@ -287,6 +304,8 @@ export const ChiefPassReport = z.object({
         item: z.number().int().positive(),
         recommendation: Line(400),
         option: z.number().int().positive().max(10).optional(),
+        /** For a question: the person's rule the pick goes by, in their words; none: no rule settles it. */
+        rule: Line(300).optional(),
       }),
     )
     .max(30)
@@ -382,9 +401,26 @@ export type ChiefPassView = {
     recommendation: string
     /** The answer it would pick, for a question still open: a click sends it as theirs. */
     option: ChiefOption | null
-    /** A question still open: its answer may be sent from Today. */
+    /** The person's rule its pick goes by. */
+    rule: string | null
+    /** A question still open, or a thread still failed: Today may answer it, or try it again. */
     open: boolean
+    /** Once the person answered a question Chief picked for: the same answer, or another. */
+    answered: ChiefPickOutcome | null
   }[]
   notes: { thread: PassThread; text: string }[]
   rules: { line: string; why: string; state: 'proposed' | 'added' | 'refused' }[]
+  /** Whether Chief acts on their rules (chief_acts), or only recommends. */
+  acts: boolean
+  /** How Chief's picks compare with the person's answers, over CHIEF_CALIBRATION_DAYS, by rule. */
+  calibration: ChiefCalibration[]
 }
+
+/** The person's answer to a question Chief picked for: its pick, or another. */
+export type ChiefPickOutcome = 'same' | 'otherwise'
+
+/** Chief's picks the person answered lately: CHIEF_CALIBRATION_DAYS of passes. */
+export const CHIEF_CALIBRATION_DAYS = 7
+
+/** Chief's picks by one rule (none: by no rule), and how many the person answered the same way. */
+export type ChiefCalibration = { rule: string | null; same: number; answered: number }

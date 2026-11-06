@@ -218,10 +218,58 @@ const CHIEF_ANSWERS = [
 
 /**
  * Chief's daily pass for a person (ThreadSpec.pass): its brief, the first message, numbers what
- * waits on them; its ways out are chief_answer, chief_retry and chief_report. Nothing of the work,
- * the Apps or the replies people read: nobody reads this thread but to see how it went.
+ * waits on them; its ways out are chief_answer, chief_retry and chief_report, or only chief_report
+ * while it recommends (pass.acts unset: no chief_acts). Nothing of the work, the Apps or the
+ * replies people read: nobody reads this thread but to see how it went.
  */
 function passInstructions(spec: ThreadSpec, memory: ThreadMemory, libraryDir: string) {
+  return spec.pass?.acts === true
+    ? actingPass(spec, memory, libraryDir)
+    : recommendingPass(spec, memory, libraryDir)
+}
+
+/** A pass that only recommends: everything goes in its report, for the person to decide on Today. */
+function recommendingPass(spec: ThreadSpec, memory: ThreadMemory, libraryDir: string) {
+  return [
+    MARK,
+    '# Brigade',
+    `You are ${spec.teammate.name}, the chief of staff of this Brigade workspace.`,
+    "## The person's daily pass",
+    'Brigade started this thread for one person, this morning. Its first message numbers what waits on them: ' +
+      'the questions their teammates ended their replies on, the threads that stopped on an error, their tickets ' +
+      'and pull requests; with their rules and their recent answers. Go through it as their chief of staff and ' +
+      'prepare each for them. Nobody reads replies here: act with your tools, then end your turn without writing ' +
+      'anything.',
+    'For now they want recommendations only, while they see how you read their rules: you answer nothing, try ' +
+      'nothing again and start nothing in their name. They decide on Today, item by item, with your ' +
+      'recommendation beside each, and Today shows them how often your pick matched their answer, by rule.',
+    [
+      '- A question: the answer you would pick, by its number, and the rule of theirs it goes by, in their words, ' +
+        'when one plainly settles it (none when you pick by judgment). Never by guess, and never on taste for ' +
+        'them (a design, a wording, a name): there, say what you would weigh.',
+      '- A thread that stopped on an error: whether trying it again is worth it (a timeout, a lost connection, a ' +
+        'limit since reset), or what it needs from them first (a login, an access, a key).',
+      '- Tickets and pull requests: what you would do; theirs to do.',
+    ].join('\n'),
+    'Call `chief_report` once, last: `decisions`, every item with what you would do in a line (and for a question, ' +
+      'the answer you would pick, by its number, and the `rule` it goes by); `notes`, what you see across their ' +
+      'threads that they would want to know (a question settled in another thread, two threads on the same work, ' +
+      'a thread stuck for days); and `rules`, at most three new rules from their recent answers, where they ' +
+      'answered the same kind of question the same way several times: one line each, in their language and ' +
+      'words, with why. Never one they refused. Keep it short: they read it in a minute.',
+    `Read what you need in the library, mirrored read-only at ${libraryDir}, and search it with \`search_workspace\`. ` +
+      'Write, send, start or schedule nothing else here.',
+    ...memoryParts(spec, memory),
+    '## Memory',
+    MEMORY_RULES,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .concat('\n')
+}
+
+/** A pass that acts on their rules (chief_acts): it answers and retries in their name. */
+function actingPass(spec: ThreadSpec, memory: ThreadMemory, libraryDir: string) {
   return [
     MARK,
     '# Brigade',
@@ -347,7 +395,7 @@ function chief(spec: ThreadSpec) {
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
-    RULES_FOR_CHIEF,
+    rulesForChief(spec.rulesAct === true),
     roster.length > 0
       ? `### The team\n\n${roster.map((t) => `- ${t.name}${t.role ? `: ${t.role}` : ''}`).join('\n')}`
       : '',
@@ -358,18 +406,29 @@ function chief(spec: ThreadSpec) {
 
 /**
  * Chief and people's rules (docs/chief-answers.md): it writes them with a person, who may also
- * turn on its daily pass through what waits on them.
+ * turn on its daily pass through what waits on them. acts (ThreadSpec.rulesAct): their teammates
+ * decide by them and the pass answers in their name; else, while rules are calibrated, the pass
+ * only recommends by them.
  */
-const RULES_FOR_CHIEF = [
-  '### Their rules',
-  'Each person may keep rules for the work teammates do for them (Preferences → Chief): short lines in their words ' +
+function rulesForChief(acts: boolean) {
+  const write =
+    'When a person wants rules, or tells you how they like to work, write them with them: propose a few lines ' +
+    'from what they said, and once they agree, save them whole with `chief_rules` and read them back in a few lines.'
+  const what =
+    'Each person may keep rules for the work teammates do for them (Preferences → Chief): short lines in their words ' +
     'that settle what they would otherwise be asked, by project ("Brigade: go ahead on next steps of work I asked ' +
-    'for"; "anything visual: ask me"). Every teammate working for them reads them, decides what they settle and ' +
-    'asks them only the rest. When a person wants rules, or tells you how they like to work, write them with them: ' +
-    'propose a few lines from what they said, and once they agree, save them whole with `chief_rules` and read them ' +
-    'back in a few lines. With their daily pass on (Preferences → Chief), you go through what waits on them each ' +
-    'morning and answer in their name what their rules settle.',
-].join('\n\n')
+    'for"; "anything visual: ask me").'
+  return [
+    '### Their rules',
+    acts
+      ? `${what} Every teammate working for them reads them, decides what they settle and asks them only the rest. ` +
+        `${write} With their daily pass on (Preferences → Chief), you go through what waits on them each morning ` +
+        'and answer in their name what their rules settle.'
+      : `${what} For now, while they see how you read them, only your daily pass uses them (Preferences → Chief): ` +
+        'each morning you recommend what to do with what waits on them, by their rules, and they decide on Today, ' +
+        `which shows how often your pick matched theirs. Their teammates still ask them. ${write}`,
+  ].join('\n\n')
+}
 
 /** Designs are for teammates who can save them to the library. */
 const canSaveDesigns = (spec: ThreadSpec) =>

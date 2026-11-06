@@ -9,13 +9,16 @@
 // only on what its brief lists, by number. Off (Member.chiefPass, the default), nothing runs.
 import { randomUUID } from 'node:crypto'
 import {
+  CHIEF_CALIBRATION_DAYS,
   CHIEF_PASS_HOUR,
   CHIEF_PASS_PROTOCOL,
+  type ChiefCalibration,
   type ChiefOperation,
   type ChiefOption,
   ChiefPassItem,
   ChiefPassReport,
   type ChiefPassView,
+  type ChiefPickOutcome,
   type ChiefRecentAnswer,
   chiefPassBrief,
   choiceMessage,
@@ -30,7 +33,7 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { answerInTheirName, openAsk, optionsOf, UNSETTLED } from './chief-answers.js'
 import { passRetryCommandId, questionClosed } from './chief-order.js'
-import { personRules, ruleState, setRulesByChief } from './chief-rules.js'
+import { chiefActs, personRules, ruleState, setRulesByChief } from './chief-rules.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { failedThreadsOf } from './failed.js'
 import { hubs, threadUpdated } from './hub.js'
@@ -416,10 +419,11 @@ export async function startPass(scope: Scope, memberId: string, day: string, now
     await end('failed')
     return pass.id
   }
-  const [rules, member, answers] = await Promise.all([
+  const [rules, member, answers, acts] = await Promise.all([
     personRules(db, memberId),
     db.member.findFirst({ where: { id: memberId }, select: { chiefRulesRefused: true } }),
     recentAnswers(db, scope, memberId, now),
+    chiefActs(memberId, scope.workspaceId),
   ])
   try {
     // Imported here: work.ts reaches this file through the events it notes.
@@ -438,6 +442,7 @@ export async function startPass(scope: Scope, memberId: string, day: string, now
         refused: member?.chiefRulesRefused ?? [],
         items,
         answers,
+        acts,
       }),
       // A read and a few calls, not work; but each a judgment made in their name.
       effort: 'medium',
@@ -492,6 +497,11 @@ const itemsOf = (value: unknown): Item[] =>
 const retried = z.array(
   z.object({ kind: z.literal('retried'), item: z.number(), reason: z.string() }),
 )
+
+/** While their rules are calibrated (no chief_acts): Chief only recommends. */
+const RECOMMEND_ONLY =
+  'For now they want recommendations only: nothing goes in their name. Put it in chief_report instead: ' +
+  'what you would do, and for a question the answer you would pick and the rule of theirs it goes by.'
 
 const PASS_OFF =
   'Their daily pass is over, or they turned it off: nothing more goes in their name. End your turn now, without a reply.'
@@ -559,6 +569,12 @@ export async function handleChiefCall(
   if (!(await passOn(db, pass))) return { error: PASS_OFF }
   const items = itemsOf(pass.items)
   const byNumber = (n: number) => items.find((i) => i.n === n)
+  // While their rules are calibrated, Chief answers and retries nothing in their name.
+  if (
+    (op.name === 'chief_answer' || op.name === 'chief_retry') &&
+    !(await chiefActs(pass.memberId, scope.workspaceId))
+  )
+    return { error: RECOMMEND_ONLY }
 
   if (op.name === 'chief_answer') {
     const item = byNumber(op.item)
@@ -675,12 +691,102 @@ function described(item: Item) {
 const threadOf = (item: Item | undefined) =>
   item?.sessionId ? { id: item.sessionId, title: item.title } : null
 
+/** A question Chief picked an answer for, in a pass's report. */
+type Pick = {
+  sessionId: string
+  askSeq: number
+  options: ChiefOption[]
+  /** Its pick, from 1. */
+  option: number
+  rule: string | null
+}
+
+const cardKey = (sessionId: string, askSeq: number) => `${sessionId}:${askSeq}`
+
+/**
+ * The person's answer to each question Chief picked for, once they gave it: the first message the
+ * thread's teammate got after the card (message.user), when it is theirs, compared with Chief's pick
+ * (its words, its label or the choice it names). One still queued counts once it goes, in the words
+ * it goes with (edited meanwhile or not); cancelled, never. Brigade's first (a wake-up, an answer of
+ * Chief's), or none yet: no outcome.
+ */
+async function pickOutcomes(db: ScopedDb, memberId: string, picks: Pick[]) {
+  const outcomes = new Map<string, ChiefPickOutcome>()
+  if (!picks.length) return outcomes
+  const rows = await db.$queryRaw<
+    { session: string; seq: number; member: string | null; text: string | null }[]
+  >`
+    SELECT q.session, q.seq, e.data->>'memberId' AS member, e.data->>'text' AS text
+    FROM unnest(${picks.map((p) => p.sessionId)}::text[], ${picks.map((p) => p.askSeq)}::int[])
+      AS q(session, seq)
+    CROSS JOIN LATERAL (
+      SELECT data FROM "SessionEvent" e
+      WHERE e."sessionId" = q.session AND e.seq > q.seq AND e.type = 'message.user'
+      ORDER BY e.seq ASC LIMIT 1
+    ) e`
+  const byCard = new Map(picks.map((p) => [cardKey(p.sessionId, p.askSeq), p]))
+  for (const row of rows) {
+    const pick = byCard.get(cardKey(row.session, row.seq))
+    if (!pick || row.member !== memberId || !row.text?.trim()) continue
+    const theirs = picked(pick.options, row.text)
+    const chiefs = pick.options[pick.option - 1]
+    outcomes.set(
+      cardKey(row.session, row.seq),
+      theirs && chiefs && theirs.message === chiefs.message ? 'same' : 'otherwise',
+    )
+  }
+  return outcomes
+}
+
+/** The questions Chief picked for in these passes' reports: each card once, by its latest pick. */
+function picksOf(passes: { items: unknown; report: unknown }[]) {
+  const picks = new Map<string, Pick>()
+  for (const pass of passes) {
+    const items = itemsOf(pass.items)
+    const report = ChiefPassReport.safeParse(pass.report ?? {}).data
+    for (const d of report?.decisions ?? []) {
+      const item = items.find((i) => i.n === d.item)
+      if (item?.kind !== 'question' || !d.option || !item.options[d.option - 1]) continue
+      const key = cardKey(item.sessionId, item.askSeq)
+      if (!picks.has(key))
+        picks.set(key, {
+          sessionId: item.sessionId,
+          askSeq: item.askSeq,
+          options: item.options,
+          option: d.option,
+          rule: d.rule?.trim() || null,
+        })
+    }
+  }
+  return picks
+}
+
+/**
+ * How Chief's picks compared with the person's answers over the last CHIEF_CALIBRATION_DAYS, by the
+ * rule each went by (none: by no rule): what tells them which rules Chief reads right.
+ */
+function calibrate(picks: Map<string, Pick>, outcomes: Map<string, ChiefPickOutcome>) {
+  const byRule = new Map<string | null, ChiefCalibration>()
+  for (const [key, pick] of picks) {
+    const outcome = outcomes.get(key)
+    if (!outcome) continue
+    const row = byRule.get(pick.rule) ?? { rule: pick.rule, same: 0, answered: 0 }
+    row.answered++
+    if (outcome === 'same') row.same++
+    byRule.set(pick.rule, row)
+  }
+  return [...byRule.values()].sort(
+    (a, b) => b.answered - a.answered || (a.rule ?? '~').localeCompare(b.rule ?? '~'),
+  )
+}
+
 /** A member's latest pass in this workspace, as Today shows it: null when none ran lately. */
 export async function passView(
   db: ScopedDb,
-  memberId: string,
+  scope: Scope & { memberId: string },
   now = new Date(),
 ): Promise<ChiefPassView | null> {
+  const { memberId } = scope
   const pass = await db.chiefPass.findFirst({
     where: {
       memberId,
@@ -706,11 +812,38 @@ export async function passView(
     notes: [],
     rules: [],
   }
-  const member = await db.member.findFirst({
-    where: { id: memberId },
-    select: { chiefRules: true, chiefRulesRefused: true },
-  })
-  const answered = new Set(pass.decisions.map((d) => `${d.sessionId}:${d.askSeq}`))
+  // The week's passes, this one first: each card counts once, by its latest pick.
+  const [member, acts, week] = await Promise.all([
+    db.member.findFirst({
+      where: { id: memberId },
+      select: { chiefRules: true, chiefRulesRefused: true },
+    }),
+    chiefActs(memberId, scope.workspaceId),
+    db.chiefPass.findMany({
+      where: {
+        memberId,
+        status: { in: ['done', 'failed'] },
+        createdAt: { gte: new Date(now.getTime() - CHIEF_CALIBRATION_DAYS * DAY), lte: now },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { items: true, report: true },
+    }),
+  ])
+  const picks = picksOf(week)
+  const outcomes = await pickOutcomes(db, memberId, [...picks.values()])
+  // A failed thread still failed may be tried again from Today.
+  const failedIds = items.flatMap((i) => (i.kind === 'failed' ? [i.sessionId] : []))
+  const stillFailed = new Set(
+    failedIds.length
+      ? (
+          await db.session.findMany({
+            where: { id: { in: failedIds }, status: 'failed' },
+            select: { id: true },
+          })
+        ).map((s) => s.id)
+      : [],
+  )
+  const answered = new Set(pass.decisions.map((d) => cardKey(d.sessionId, d.askSeq)))
   const decisions: ChiefPassView['decisions'] = []
   for (const d of report.decisions) {
     const item = byNumber(d.item)
@@ -718,16 +851,22 @@ export async function passView(
     const option =
       item.kind === 'question' && d.option ? (item.options[d.option - 1] ?? null) : null
     const open =
-      item.kind === 'question' &&
-      !answered.has(`${item.sessionId}:${item.askSeq}`) &&
-      !(await questionClosed(db, item.sessionId, item.askSeq))
+      item.kind === 'question'
+        ? !answered.has(cardKey(item.sessionId, item.askSeq)) &&
+          !(await questionClosed(db, item.sessionId, item.askSeq))
+        : item.kind === 'failed' && stillFailed.has(item.sessionId)
     decisions.push({
       kind: item.kind,
       thread: threadOf(item),
       what: described(item),
       recommendation: d.recommendation,
       option,
+      rule: item.kind === 'question' ? d.rule?.trim() || null : null,
       open,
+      answered:
+        item.kind === 'question' && option
+          ? (outcomes.get(cardKey(item.sessionId, item.askSeq)) ?? null)
+          : null,
     })
   }
   return {
@@ -765,5 +904,7 @@ export async function passView(
       why: r.why,
       state: member ? ruleState(member, r.line) : 'proposed',
     })),
+    acts,
+    calibration: calibrate(picks, outcomes),
   }
 }

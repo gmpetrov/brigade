@@ -1,8 +1,10 @@
-// A person's rules (docs/chief-answers.md): a text in their words that every teammate working for
-// them reads (ThreadSpec.rules), deciding what it settles and asking them only the rest. They keep
-// it in Preferences → Chief, write it with Chief in a thread (chief_rules), and take the rules
-// Chief's daily pass proposes from their answers (decideRule). With their daily pass (chiefPass),
-// set here too, Chief answers in their name what the rules settle (src/chief-pass.ts).
+// A person's rules (docs/chief-answers.md): a text in their words. They keep it in Preferences →
+// Chief, write it with Chief in a thread (chief_rules), and take the rules Chief's daily pass
+// proposes from their answers (decideRule). While rules are calibrated (no chief_acts feature),
+// only their pass reads them, to recommend; once Chief acts on them (chiefActs), every teammate
+// working for them reads them (ThreadSpec.rules), deciding what they settle and asking only the
+// rest, and their daily pass (chiefPass), set here too, answers in their name what they settle
+// (src/chief-pass.ts).
 import {
   CHIEF_PASS_HOUR,
   CHIEF_RULES_MAX,
@@ -14,6 +16,16 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import type { Scope, ScopedDb } from './db.js'
+import { featuresOfMember } from './features.js'
+
+/**
+ * Whether Chief acts on a person's rules in a workspace (the chief_acts feature): their pass
+ * answers and retries in their name, and their teammates decide by them. Off for everyone while
+ * rules are calibrated: the pass only recommends, and teammates still ask.
+ */
+export async function chiefActs(memberId: string, workspaceId: string) {
+  return (await featuresOfMember(memberId, workspaceId)).has('chief_acts')
+}
 
 /** A timezone the platform knows (IANA): a pass runs in the person's morning by it. */
 export function validTimezone(timezone: string) {
@@ -44,16 +56,23 @@ const bare = (line: string) =>
 const holds = (rules: string, line: string) => rules.split('\n').map(bare).includes(bare(line))
 
 /** What a member set for Chief (GET /me/chief). */
-export async function chiefSettings(db: ScopedDb, memberId: string): Promise<ChiefSettings> {
-  const member = await db.member.findFirst({
-    where: { id: memberId },
-    select: { chiefPass: true, chiefRules: true, timezone: true },
-  })
+export async function chiefSettings(
+  db: ScopedDb,
+  scope: Scope & { memberId: string },
+): Promise<ChiefSettings> {
+  const [member, acts] = await Promise.all([
+    db.member.findFirst({
+      where: { id: scope.memberId },
+      select: { chiefPass: true, chiefRules: true, timezone: true },
+    }),
+    chiefActs(scope.memberId, scope.workspaceId),
+  ])
   return {
     pass: member?.chiefPass ?? false,
     rules: member?.chiefRules ?? '',
     timezone: member?.timezone ?? null,
     hour: CHIEF_PASS_HOUR,
+    acts,
   }
 }
 
@@ -96,7 +115,7 @@ export async function setChief(
             : 'chief.rules_changed',
       target: { type: 'member', id: scope.memberId },
     })
-  return chiefSettings(db, scope.memberId)
+  return chiefSettings(db, scope)
 }
 
 /**
@@ -146,7 +165,7 @@ export async function decideRule(
     target: { type: 'member', id: scope.memberId },
     data: { line: input.line },
   })
-  return chiefSettings(db, scope.memberId)
+  return chiefSettings(db, scope)
 }
 
 /** Where a proposed rule stands for a person: in their rules, refused, or still a proposal. */

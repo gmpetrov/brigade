@@ -6,6 +6,7 @@ import {
   chiefAnswerNote,
   chiefOverruledMessage,
   chiefOverruledNote,
+  CHIEF_RECOMMENDS_ONLY,
   chiefPassBrief,
   isChiefOperation,
   isChiefPassBrief,
@@ -56,6 +57,7 @@ test('a pass brief numbers what waits, with the rules, a design as theirs, and s
   const brief = chiefPassBrief({
     person: 'Ada',
     day: '2026-11-06',
+    acts: true,
     rules: null,
     refused: ['Never ask about tests'],
     items: [
@@ -123,7 +125,41 @@ test('a pass brief numbers what waits, with the rules, a design as theirs, and s
     brief,
     /## Rules they refused \(never propose these again\)\n- Never ask about tests/,
   )
+  assert.ok(!brief.includes(CHIEF_RECOMMENDS_ONLY))
   assert.ok(!isChiefPassBrief('Add the migration.'))
+})
+
+test('a pass that only recommends is told so by its brief, whatever its runner', () => {
+  const brief = (rules) =>
+    chiefPassBrief({
+      person: 'Ada',
+      day: '2026-11-06',
+      acts: false,
+      rules,
+      refused: [],
+      items: [
+        {
+          kind: 'failed',
+          n: 1,
+          title: 'Rollout',
+          sessionId: 's2',
+          teammate: 'Riley',
+          error: 'Timed out',
+        },
+      ],
+      answers: [],
+    })
+  assert.ok(isChiefPassBrief(brief(null)))
+  assert.match(
+    brief(null),
+    /then call chief_report once and end your turn\.\n\nFor now they want recommendations only: answer nothing and try nothing again in their name/,
+  )
+  assert.match(
+    brief(null),
+    /## Ada's rules\n\(None yet\. Recommend from their recent answers below/,
+  )
+  assert.match(brief('- Admin work: go ahead'), /## Ada's rules\n- Admin work: go ahead/)
+  assert.ok(brief('- Admin work: go ahead').includes(CHIEF_RECOMMENDS_ONLY))
 })
 
 test("Chief's operations go through the schedule calls", () => {
@@ -138,6 +174,16 @@ test("Chief's operations go through the schedule calls", () => {
   const report = ScheduleOperation.parse({ name: 'chief_report' })
   assert.ok(isChiefOperation(report))
   assert.deepEqual(report, { name: 'chief_report', decisions: [], notes: [], rules: [] })
+  // A pick with the rule it goes by.
+  assert.deepEqual(
+    ScheduleOperation.parse({
+      name: 'chief_report',
+      decisions: [
+        { item: 1, recommendation: 'Build it.', option: 1, rule: 'Go ahead on next steps' },
+      ],
+    }).decisions,
+    [{ item: 1, recommendation: 'Build it.', option: 1, rule: 'Go ahead on next steps' }],
+  )
   assert.ok(isChiefOperation(ScheduleOperation.parse({ name: 'chief_rules', rules: '- x' })))
   assert.ok(
     isChiefOperation(ScheduleOperation.parse({ name: 'chief_retry', item: 2, reason: 'r' })),
