@@ -3435,9 +3435,11 @@ export function machineTools(
     run_on_machine: tool({
       description:
         "Run a shell command on this thread's machine of its own (8 vCPU, 16 GB) instead of this computer, which " +
-        'every teammate of the workspace shares: for work that takes much CPU or memory, such as a video render, ' +
-        "a build, a full test suite, or a big repository's typecheck or lint. Not for quick commands (git, reading " +
-        'or searching files, small scripts): those are faster here. ' +
+        'every teammate of the workspace shares: for work it cannot take without slowing everyone, a render or ' +
+        'encode of video or audio, a transcription, a model run on video or images, Docker. Not for code work ' +
+        '(installs, builds, a typecheck, lint, the tests of a change: here, since starting the machine takes ' +
+        "longer; a whole suite: the repository's checks) nor quick commands (git, reading or searching files, " +
+        'small scripts). ' +
         'The folder in `cwd` goes to the machine first: the whole checkout it is in, without .git, node_modules, ' +
         'what git ignores (.env files aside) and files over 2 GB, or the folder alone outside a checkout. Your ' +
         'copy there stays between commands, with what they installed: the next ones send only what changed. ' +
@@ -3447,9 +3449,9 @@ export function machineTools(
         'folder, which goes as it is. ' +
         'It runs Ubuntu with Node.js, pnpm, Docker, Python, ffmpeg and Chrome, and sudo for anything else ' +
         "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
-        'what it needs (e.g. "pnpm install --frozen-lockfile && pnpm test"), with settings in `env` and vault ' +
+        'what it needs (e.g. "pip install faster-whisper && python transcribe.py"), with settings in `env` and vault ' +
         'credentials in `credentials`; what it installs stays on its disk. ' +
-        'Name in `outputs` the files or folders it makes that you need here (a video, a report, a build), ' +
+        'Name in `outputs` the files or folders it makes that you need here (a video, frames to look at, a transcript), ' +
         'relative to cwd: they come back to the same place in your folder once it ends, whether it succeeded or not. ' +
         'Waits up to `waitMinutes` for it to end; a longer one keeps running there: wait again with machine_run.',
       inputSchema: jsonSchema<{
@@ -3466,7 +3468,7 @@ export function machineTools(
           command: {
             type: 'string',
             description:
-              'Run with bash in cwd on the machine, e.g. "pnpm install --frozen-lockfile && pnpm typecheck"',
+              'Run with bash in cwd on the machine, e.g. "npx hyperframes render --quality looks -o renders/video.mp4"',
           },
           cwd: {
             type: 'string',

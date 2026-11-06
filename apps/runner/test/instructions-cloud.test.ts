@@ -63,7 +63,9 @@ test('a thread with a machine of its own says to run heavy work there; one witho
     )
   assert.match(text(true), /## Heavy work\n\nThis thread has a machine of its own/)
   // A skill's own steps (a render it shows run here) go there too.
-  assert.match(text(true), /even where a skill shows it run here: renders and encodes/)
+  assert.match(text(true), /even where a skill shows it run here: renders and\s+encodes/)
+  // Code work stays on the shared computer: starting the machine takes longer than a typecheck.
+  assert.match(text(true), /Code work stays here, whatever the repository/)
   assert.match(text(true), /run_on_machine/)
   assert.doesNotMatch(text(false), /Heavy work|run_on_machine/)
 })
