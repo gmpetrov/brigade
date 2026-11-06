@@ -9,6 +9,7 @@ import {
   appState,
   clearRun,
   envFileText,
+  freeOutput,
   MachineSync,
   readOutput,
   remoteScript,
@@ -284,4 +285,20 @@ test('a run left before the machine last started is not running, nor signalled',
   } finally {
     other.kill('SIGKILL')
   }
+})
+
+test('the app’s output gives back its disk once read, its size and offsets kept', async () => {
+  const home = temp()
+  mkdirSync(join(home, '.brigade/run'), { recursive: true })
+  const link = fakeLink(home)
+  const file = join(home, '.brigade/run/output.log')
+  writeFileSync(file, 'x'.repeat(64 * 1024) + 'after\n')
+  await freeOutput(link, 64 * 1024)
+  const blocks = Number(execFileSync('stat', ['-c', '%b', file]).toString())
+  assert.ok(blocks * 512 <= 8 * 1024, `${blocks} blocks left`)
+  assert.equal(
+    await read(readOutput(link, 64 * 1024, false)),
+    'after\n',
+    'read on from the same byte',
+  )
 })

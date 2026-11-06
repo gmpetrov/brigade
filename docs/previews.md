@@ -227,20 +227,29 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     it could wait for it. Its output goes to a file in the runner's state
     (`preview-runs/<thread>-<run>/output.log`), not a pipe that would end with
     the runner (a dev server writing to it then dies of `EPIPE`); the runner
-    reads it as it grows, and empties it past 16 MB once read to a line's end
-    (the app appends, so nothing breaks). On a thread's machine the app runs
+    reads it as it grows. Past 16 MB read, what was read becomes a hole
+    (`fallocate --punch-hole`): its disk comes back, while the file's size,
+    every offset and what the app writes meanwhile stay (emptying it lost the
+    lines written between the last read and the truncation, review of #762).
+    On a Mac there is no punching: the file grows until the preview ends. On a thread's machine the app runs
     in a session of its own there (`setsid nohup`, as its commands do), its
     output in `.brigade/run/output.log`, how it ended and the machine's boot id
     beside it, followed with `tail -f --pid` from the byte reached: a cut
-    connection is made again and read on, rather than ending the app.
+    connection is made again and read on, rather than ending the app. Its
+    disk comes back the same way past 16 MB read.
   - **The old runner hands over.** Nothing more starts, restarts, freezes or
     stops on its own; what is under way (a freeze, a launch or sleep on the
     machine) gets 20 seconds to end. Each preview's state goes to
     `previews-handed.json` (0600): its seat, start, addresses, process group,
     cgroup, frozen or asleep, paused containers, the env files its credentials
     were released as, restarts, last use, the log people saw and the byte its
-    output is read to (the start of the line not finished). No secret's value:
-    the repository's settings are kept, its secrets by name. Its proxy closes,
+    output is read to (the start of the line not finished). No secret's value
+    in it: the repository's settings are kept, its secrets by name. The values
+    its log hides go in a file of their own beside its output (`hidden`, 0600,
+    the runner's), read and removed as the next runner takes it up: the app
+    still holds those, whatever the API holds by then (a secret changed since
+    would otherwise show in its log, review of #762); a preview whose file
+    could not be written is not handed over. Its proxy closes,
     and on its machine its sync, log reader and connection end; the app, its
     cgroup, its containers and the machine are left as they are.
   - **The next runner takes them up** as it starts, before anything looks for
@@ -253,8 +262,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     those the runner resumes as it starts), one asleep on its machine stays
     asleep, and restarts, freezing and the TTL go on from what was noted. Once
     connected: a preview with secret variables reads them again (`variables`,
-    audited) before its log is read, to hide them, and its environment is made
-    again for a restart; on its machine, the machine is asked `up` (held for
+    audited) before its log is read, hiding those too, and its environment is
+    made again for a restart; on its machine, the machine is asked `up` (held for
     the preview again), reached, its app's state asked there, its ports
     forwarded, the sync started and its log followed. People find its port
     closed only from the old runner's exit to the new one's start, and on its
@@ -265,8 +274,9 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     with the credentials it was given, and its log says why; one nobody was
     using (frozen, asleep) stops. One the old runner could not hand over (a
     restart after a crash under way, its machine waking) stops and starts
-    again as before. Secrets that could not be read again leave its output
-    hidden, and it is not started again after a crash.
+    again as before. Secrets that could not be read again keep it from
+    starting again after a crash; values to hide that were lost leave its
+    output hidden.
   - **What keeps the app alive.** On a cloud computer, the wrapper
     (`bin/brigade-runner`) starts the new runner itself on exit code 75, so
     systemd never stops the service: `KillMode=mixed` (SIGKILL to what is left

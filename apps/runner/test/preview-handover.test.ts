@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import http from 'node:http'
 import { createConnection, createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -19,6 +27,7 @@ import { after, test } from 'node:test'
 const home = mkdtempSync(join(tmpdir(), 'preview-handover-'))
 process.env.BRIGADE_HOME = join(home, 'runner')
 delete process.env.BRIGADE_CLOUD
+process.env.BRIGADE_PREVIEW_OUTPUT_MAX = String(16 * 1024)
 const { Previews } = await import('../src/previews.js')
 after(() => rmSync(home, { recursive: true, force: true }))
 
@@ -88,6 +97,7 @@ let n = 0
 require('http')
   .createServer((q, s) => {
     console.log('hit ' + ++n + ' by ' + process.pid)
+    if (process.env.TOKEN) console.log('token ' + process.env.TOKEN)
     s.end('ok ' + process.pid)
   })
   .listen(Number(process.env.PORT), '127.0.0.1', () => console.log('listening'))
@@ -100,7 +110,19 @@ require('http')
  * A runner before this one, in a process of its own: it starts the preview, does `then` (freeze
  * it), hands it over and exits, as an updating runner does. Its start's result.
  */
-async function runnerBefore(seat: object, stateFile: string, port: number, then = '') {
+type Variables = { env: Record<string, string>; secrets: string[] }
+
+/** A repository's preview variables, as the API gives them. */
+const recipes = (variables?: Variables) => async (_s: string, _t: string, op: { name: string }) =>
+  op.name === 'variables' ? (variables ?? { env: {}, secrets: [] }) : { recipe: null }
+
+async function runnerBefore(
+  seat: object,
+  stateFile: string,
+  port: number,
+  then = '',
+  variables?: Variables,
+) {
   const code = `
 const { Previews } = await import(${JSON.stringify(SOURCE)})
 const seat = ${JSON.stringify(seat)}
@@ -108,11 +130,16 @@ const previews = new Previews({
   emit: () => undefined,
   expose: null,
   viewUrl: null,
-  recipes: async () => ({ recipe: null }),
+  recipes: async (_s, _t, op) =>
+    op.name === 'variables' ? ${JSON.stringify(variables ?? { env: {}, secrets: [] })} : { recipe: null },
   seat: () => seat,
   stateFile: ${JSON.stringify(stateFile)},
 })
-const result = await previews.forSeat(seat).start({ command: 'node app.cjs', port: ${port} })
+const result = await previews.forSeat(seat).start({
+  command: 'node app.cjs',
+  port: ${port},
+  ${variables ? "repository: 'acme/app'," : ''}
+})
 await new Promise((done) => setTimeout(done, 300))
 ${then}
 await previews.handOver()
@@ -137,12 +164,17 @@ process.exit(0)
   return result
 }
 
-function nextRunner(seat: { sessionId: string }, stateFile: string, events: unknown[] = []) {
+function nextRunner(
+  seat: { sessionId: string },
+  stateFile: string,
+  events: unknown[] = [],
+  variables?: Variables,
+) {
   return new Previews({
     emit: (_sessionId, event) => events.push(event),
     expose: null,
     viewUrl: null,
-    recipes: async () => ({ recipe: null }),
+    recipes: recipes(variables) as never,
     seat: () => seat as never,
     stateFile,
   }) as Manager
@@ -367,4 +399,84 @@ test('on its machine, the app runs on through an update and the next runner foll
   }
   await until(() => !running(pid), 'a stop ends it there')
   assert.ok(calls.includes('sleep remote'), 'and its machine sleeps')
+})
+
+test('its log hides the secrets the app was given, even once they changed', async () => {
+  const work = app('secret')
+  const seat = { sessionId: 'secret', teammateId: 't', workDir: work }
+  const stateFile = join(home, 'secret-state', 'previews.json')
+  const port = await freePort()
+  const before = await runnerBefore(
+    seat,
+    stateFile,
+    port,
+    `await fetch('http://127.0.0.1:${port}/')`,
+    { env: { TOKEN: 'old-secret-value' }, secrets: ['TOKEN'] },
+  )
+  const pid = Number(readFileSync(join(work, 'app.pid'), 'utf8'))
+  // Changed in Brigade meanwhile: the app still holds the old one.
+  const previews = nextRunner(seat, stateFile, [], {
+    env: { TOKEN: 'new-secret-value' },
+    secrets: ['TOKEN'],
+  })
+  try {
+    await previews.adopt()
+    await previews.startAgain()
+    assert.equal(await get(before.origins[port]!), `ok ${pid}`)
+    await until(() => previews.logs('secret').includes('hit 2 by'), 'its log goes on')
+    await new Promise((done) => setTimeout(done, 400))
+    const log = previews.logs('secret')
+    assert.doesNotMatch(log, /old-secret-value/, log)
+    assert.match(log, /hit 2 by \d+\ntoken ••••••/, log)
+  } finally {
+    await previews.stop('secret', 'done')
+  }
+})
+
+test('a long log gives its disk back as it is read, losing nothing the app writes meanwhile', async () => {
+  const stateFile = join(home, 'long-state', 'previews.json')
+  mkdirSync(join(home, 'long-state'), { recursive: true })
+  const previews = nextRunner({ sessionId: 'long' }, stateFile) as Manager & {
+    took(preview: unknown, run: { offset: number }, chunk: Buffer): void
+  }
+  const preview = {
+    seat: { sessionId: 'long' },
+    info: { previewId: 'long-run-1' },
+    lines: [] as string[],
+    partial: '',
+    written: 0,
+    hidden: [],
+  }
+  const files = (previews.runFiles as (p: unknown) => { dir: string; output: string }).call(
+    previews,
+    preview,
+  )
+  mkdirSync(files.dir, { recursive: true })
+  const line = `${'x'.repeat(1023)}\n`
+  writeFileSync(files.output, line.repeat(64))
+  // The app writes on while a read is under way, past the size that read began from.
+  const took = previews.took.bind(previews)
+  let wrote = false
+  previews.took = (p, run, chunk) => {
+    took(p, run, chunk)
+    if (!wrote && run.offset >= 32 * 1024) {
+      wrote = true
+      appendFileSync(files.output, 'written meanwhile\n')
+    }
+  }
+  const run = (previews.newRun as (pid: number) => { stopFollowing(): void }).call(
+    previews,
+    process.pid,
+  )
+  ;(previews.followLocal as (p: unknown, r: unknown) => void).call(previews, preview, run)
+  try {
+    await until(() => preview.lines.includes('written meanwhile'), 'what it wrote meanwhile, read')
+    assert.equal(preview.lines.filter((l) => l.startsWith('x')).length, 64)
+    const blocks = () => Number(execFileSync('stat', ['-c', '%b', files.output]).toString())
+    // 65 KB written, 16 KB at most kept once read (BRIGADE_PREVIEW_OUTPUT_MAX).
+    await until(() => blocks() * 512 <= 20 * 1024, 'its disk given back')
+    assert.ok(statSync(files.output).size > 64 * 1024, 'its size, and so its offsets, the same')
+  } finally {
+    run.stopFollowing()
+  }
 })

@@ -93,6 +93,7 @@ import {
   MachineSync,
   machineKey,
   READER,
+  freeOutput,
   readOutput,
   REMOTE_WORK,
   remoteScript,
@@ -122,6 +123,8 @@ import {
 } from './repo-settings.js'
 
 const run = promisify(execFile)
+/** execFile, where a parameter named run hides `run`. */
+const execFileAsync = run
 
 /** A preview nobody used for this long stops. */
 const TTL_MS = Number(process.env.BRIGADE_PREVIEW_TTL_MS) || 30 * 60_000
@@ -193,8 +196,12 @@ const HIDDEN_MIN = 6
 const HIDDEN = '••••••'
 /** How often the app's output file is read. */
 const OUTPUT_POLL_MS = 250
-/** The app's output file is emptied past this, once read: a dev server's log grows for hours. */
-const OUTPUT_MAX = 16 * 1024 ** 2
+/**
+ * Past this much read, the app's output file gives back the disk it holds (a dev server's log
+ * grows for hours): what was read becomes a hole (fallocate --punch-hole, Linux), so its size and
+ * every offset stay as they are, and nothing the app writes meanwhile is lost.
+ */
+const OUTPUT_MAX = Number(process.env.BRIGADE_PREVIEW_OUTPUT_MAX) || 16 * 1024 ** 2
 /** A hand-over older than this is from another restart: what it names is not ours to take up. */
 const HANDED_FRESH_MS = 10 * 60_000
 /**
@@ -359,6 +366,10 @@ type AppRun = {
   follower?: ChildProcess
   /** On its machine: its connection was lost, and could not be made again. */
   lost?: boolean
+  /** Bytes at its start already given back to the disk, and how to give back more (none on macOS). */
+  freed: number
+  freeing?: boolean
+  release?: (length: number) => Promise<unknown>
 }
 
 /** A preview the runner before this one handed over (handOver), for this one to take up (adopt). */
@@ -447,6 +458,8 @@ type Preview = {
   secretNames: string[]
   /** Its secrets' values are not known (a runner after an update could not read them): its output is not shown. */
   blind?: boolean
+  /** Its environment could not be made again after an update (its secrets unread): it cannot run again. */
+  envLost?: boolean
   lines: string[]
   /** Lines appended since it started, including those the log no longer keeps. */
   written: number
@@ -938,7 +951,7 @@ export class Previews {
     const handed: Handed[] = []
     for (const preview of [...this.previews.values()]) {
       const saved = this.handable(preview)
-      if (!saved) continue
+      if (!saved || !this.keepMasks(preview)) continue
       handed.push(saved)
       // Its app goes on: only this runner's hold on it ends.
       this.previews.delete(preview.seat.sessionId)
@@ -995,6 +1008,40 @@ export class Previews {
         ),
       ),
     )
+  }
+
+  /**
+   * The values its log hides, as the app was given them, for the next runner: in a file of the
+   * runner's own (0600) beside its output, read and removed as it is taken up. Not read from the
+   * API again, which may have others by then (a secret changed since), the app still holding
+   * these. False when it could not be kept: then it is not handed over.
+   */
+  private keepMasks(preview: Preview) {
+    if (!preview.hidden.length) return true
+    try {
+      const { dir } = this.runFiles(preview)
+      mkdirSync(dir, { recursive: true, mode: 0o700 })
+      writeFileSync(join(dir, 'hidden'), JSON.stringify(preview.hidden), { mode: 0o600 })
+      return true
+    } catch (error) {
+      console.warn(
+        `could not keep what the log of ${preview.seat.sessionId} hides: ${String(error)}`,
+      )
+      return false
+    }
+  }
+
+  /** The values its log hid in the runner before this one, as keepMasks kept them; removed once read. */
+  private keptMasks(preview: Preview) {
+    const file = join(this.runFiles(preview).dir, 'hidden')
+    try {
+      const values = JSON.parse(readFileSync(file, 'utf8')) as unknown
+      return Array.isArray(values) ? values.filter((v): v is string => typeof v === 'string') : null
+    } catch {
+      return null
+    } finally {
+      rmSync(file, { force: true })
+    }
   }
 
   /** What the next runner needs to take a preview up; null when it cannot be handed over as it is. */
@@ -1147,6 +1194,12 @@ export class Previews {
       notes: [],
       ...(remote ? { remote } : {}),
     }
+    // Its secrets as the app was given them; without them (lost), its output is not shown.
+    if (saved.secrets.length) {
+      const masks = this.keptMasks(preview)
+      if (masks) preview.hidden = masks
+      else preview.blind = true
+    }
     return preview
   }
 
@@ -1199,7 +1252,10 @@ export class Previews {
   ) {
     const current = () => this.previews.get(preview.seat.sessionId) === preview && !preview.stopping
     if (variables) {
-      preview.hidden = hiddenValues(variables)
+      // Those the app was given, and those a restart would give it, longest first.
+      preview.hidden = [...new Set([...preview.hidden, ...hiddenValues(variables)])].sort(
+        (a, b) => b.length - a.length,
+      )
       const { env, remoteEnv } = await appEnv(
         preview.seat,
         preview.input,
@@ -1210,12 +1266,17 @@ export class Previews {
       preview.env = env
       if (preview.remote) preview.remote.env = remoteEnv
     } else {
-      preview.blind = true
+      preview.envLost = true
       this.append(
         preview,
-        '[preview] Its output after the update is not shown: its secret variables could not be read again\n',
+        '[preview] Its secret variables could not be read again after the update: it is not started again after a crash\n',
       )
     }
+    if (preview.blind)
+      this.append(
+        preview,
+        '[preview] Its output after the update is not shown: the values it hides were lost\n',
+      )
     if (!current()) return
     const run = this.newRun(saved.run.pid, saved.run.offset)
     run.at = saved.run.at
@@ -1831,6 +1892,7 @@ export class Previews {
       decoder: new StringDecoder('utf8'),
       following: true,
       stopFollowing: () => undefined,
+      freed: 0,
     }
   }
 
@@ -1841,6 +1903,16 @@ export class Previews {
    */
   private followLocal(preview: Preview, run: AppRun, closed?: Promise<number | null>) {
     const files = this.runFiles(preview)
+    if (process.platform === 'linux')
+      run.release = (length) =>
+        execFileAsync('fallocate', [
+          '--punch-hole',
+          '--offset',
+          '0',
+          '--length',
+          String(length),
+          files.output,
+        ])
     preview.exited = new Promise<number | null>((done) => {
       let over = false
       const finish = (code: number | null | undefined) => {
@@ -1870,12 +1942,12 @@ export class Previews {
     void preview.exited.then((code) => this.afterExit(preview, run, code))
   }
 
-  /** What the app wrote since it was last read, into its log; the file emptied once it grows too big. */
+  /** What the app wrote since it was last read, into its log. */
   private readRun(preview: Preview, run: AppRun, file: string) {
     if (!run.following) return
     let fd: number
     try {
-      fd = openSync(file, 'r+')
+      fd = openSync(file, 'r')
     } catch {
       return
     }
@@ -1888,11 +1960,6 @@ export class Previews {
         const read = readSync(fd, buffer, 0, Math.min(buffer.length, size - run.offset), run.offset)
         if (read <= 0) break
         this.took(preview, run, buffer.subarray(0, read))
-      }
-      // Read to a line's end: nothing is lost by emptying it, and the app appends from its start.
-      if (run.offset > OUTPUT_MAX && run.lineOffset === run.offset) {
-        ftruncateSync(fd, 0)
-        run.offset = run.lineOffset = 0
       }
     } catch (error) {
       console.warn(
@@ -1909,6 +1976,25 @@ export class Previews {
     if (newline >= 0) run.lineOffset = run.offset + newline + 1
     run.offset += chunk.length
     if (!preview.blind) this.append(preview, run.decoder.write(chunk))
+    // What was read, whole pages of it, given back to the disk.
+    const read = Math.floor(run.lineOffset / 4096) * 4096
+    if (run.release && !run.freeing && read - run.freed > OUTPUT_MAX) {
+      run.freeing = true
+      void run.release(read).then(
+        () => {
+          run.freed = read
+          run.freeing = false
+        },
+        (error: unknown) => {
+          // Not given back (a filesystem without holes): tried again only that much later.
+          console.warn(
+            `preview of ${preview.seat.sessionId}: its log kept its disk: ${String(error)}`,
+          )
+          run.freed = read
+          run.freeing = false
+        },
+      )
+    }
   }
 
   /** The app's run ended (not handed over): reported, or started again when it had run. */
@@ -2126,6 +2212,7 @@ export class Previews {
    */
   private followRemote(preview: Preview, remote: Remote, run: AppRun) {
     preview.run = run
+    run.release = (length) => freeOutput(remote.link, length)
     preview.exited = new Promise<number | null>((done) => {
       run.stopFollowing = () => {
         run.following = false
@@ -2265,7 +2352,7 @@ export class Previews {
       // its environment is made again.
       await remote.sleeping
       await preview.ready
-      if (preview.blind) {
+      if (preview.envLost) {
         await this.stop(
           sessionId,
           'Its secret variables could not be read again after Brigade updated: start the preview again',
@@ -2326,7 +2413,7 @@ export class Previews {
     preview.restarts = preview.restarts.filter((at) => now - at < RESTART_WINDOW_MS)
     const delay = RESTART_DELAYS_MS[preview.restarts.length]
     // Without its secrets (a runner after an update could not read them), it cannot run again.
-    if (delay === undefined || preview.blind || this.handedOver) return false
+    if (delay === undefined || preview.envLost || this.handedOver) return false
     preview.restarts.push(now)
     preview.restarting = true
     preview.info = {

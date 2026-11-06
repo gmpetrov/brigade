@@ -532,6 +532,18 @@ export function readOutput(link: MachineLink, offset: number, follow: boolean) {
 }
 
 /**
+ * Give back the disk the first `length` bytes of the app's output hold there, once read: they
+ * become a hole, so the file's size and every offset stay, and what the app writes goes on.
+ */
+export function freeOutput(link: MachineLink, length: number) {
+  return link.exec(
+    `fallocate --punch-hole --offset 0 --length ${length} ${OUTPUT_FILE}`,
+    '',
+    15_000,
+  )
+}
+
+/**
  * How the app stands on the machine: running, ended with its exit status, ended without one (its
  * machine stopped, or it was killed), or gone (no run there: the machine was made again).
  * Null when the machine could not be asked.
