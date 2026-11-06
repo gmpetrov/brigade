@@ -741,8 +741,12 @@ export class MachineRuns {
       if (this.detached) return
       if (state?.startsWith('exit ') || state === 'ended') {
         // What it wrote after the follow was cut (the connection lost as it ended), to its end.
-        await this.readLog(run, link, false)
+        const read = await this.drain(run, thread, link)
         if (this.detached) return
+        if (!read)
+          run.notes.push(
+            `Its last output could not be read here: it is on the machine, in ${runDir(run.id)}/output.log`,
+          )
         if (state.startsWith('exit ')) {
           const exitCode = Number(state.slice(5))
           return this.finish(run, thread, link, {
@@ -785,6 +789,23 @@ export class MachineRuns {
         return this.finish(run, thread, undefined, { status: 'failed', ran: false })
       }
     }
+  }
+
+  /**
+   * Its output file read to its end, from the byte read so far: tried again, the connection made
+   * again, when a read fails (each goes on from where the last stopped). Whether it got there.
+   */
+  private async drain(run: Run, thread: ThreadMachine, link: MachineLink) {
+    for (let tries = 0; tries < 5; tries++) {
+      if (this.detached) return false
+      if ((await this.readLog(run, link, false)) === 0) return true
+      await new Promise((done) => setTimeout(done, 1000))
+      thread.connecting ??= link.connect().finally(() => {
+        thread.connecting = undefined
+      })
+      await thread.connecting.catch(() => undefined)
+    }
+    return false
   }
 
   /**

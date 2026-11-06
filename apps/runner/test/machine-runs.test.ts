@@ -76,13 +76,17 @@ function folderLink(home: string) {
     followers: [] as ChildProcess[],
     /** Called before each exec: a test holds one back. */
     before: undefined as ((line: string) => Promise<void>) | undefined,
+    /** A spawn it matches fails once, as ssh does when the connection is lost (255). */
+    failOnce: undefined as ((line: string) => boolean) | undefined,
     size: 'test',
     connect: async () => undefined,
     close: () => undefined,
     update: () => undefined,
     alive: async () => true,
     spawn: (line: string, stdio: 'pipe' | 'ignore' = 'pipe') => {
-      const child = spawnHere(line, stdio)
+      const fails = link.failOnce?.(line) ?? false
+      if (fails) link.failOnce = undefined
+      const child = spawnHere(fails ? 'exit 255' : line, stdio)
       if (line.includes('tail -c')) link.followers.push(child)
       return child
     },
@@ -438,6 +442,27 @@ test('what it wrote as the follow was cut, the moment it ended, is still read', 
   const ended = await control.get(started.id, 30_000)
   assert.equal(ended.status, 'failed')
   assert.match(ended.output ?? '', /final-error-message/)
+})
+
+test('a read of its last output that fails is tried again before it ends', async () => {
+  const { control, link } = setup()
+  let slow = false
+  link.before = async (line) => {
+    if (slow && line.includes('echo gone')) await new Promise((done) => setTimeout(done, 1500))
+  }
+  const started = await control.run(
+    { command: 'echo before; sleep 1; echo final-error-message; exit 1', cwd: 'app' },
+    0,
+  )
+  await viewUntil(control, started.id, (output) => output.includes('before'))
+  slow = true
+  // The connection is lost for the read of what is left too, once.
+  link.failOnce = (line) => line.includes('exec tail -c') && !line.includes(' -f ')
+  link.followers.at(-1)!.kill('SIGKILL')
+  const ended = await control.get(started.id, 30_000)
+  assert.equal(ended.status, 'failed')
+  assert.match(ended.output ?? '', /final-error-message/)
+  assert.equal(link.failOnce, undefined, 'the read did fail once')
 })
 
 test('a runner that stops while the outputs come back leaves them to the next one', async () => {
