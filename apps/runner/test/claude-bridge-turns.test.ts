@@ -214,3 +214,60 @@ for (const accounts of [['gmpetrov'], ['gmpetrov (all repositories)', 'acme']])
       )
     }
   })
+
+/**
+ * Claude Code kept between turns (allow-all), whose background shell ends while the turn still
+ * runs: the teammate reads its result in that same turn, so no turn of its own comes for it.
+ * Then Claude Code idles, as a kept process does, until its next message; that one it answers.
+ */
+const FOLDED_REPORT_SDK = `import { appendFileSync } from 'node:fs'
+const note = (what) => appendFileSync(process.env.FAKE_SDK_RECORD, JSON.stringify({ what, at: Date.now() }) + '\\n')
+export function query({ prompt }) {
+  const input = prompt[Symbol.asyncIterator]()
+  async function* run() {
+    const base = { session_id: 'fake-session', usage: { input_tokens: 1, output_tokens: 1 } }
+    const said = (text) => ({ type: 'assistant', parent_tool_use_id: null, session_id: 'fake-session', message: { id: 'm-' + text, role: 'assistant', content: [{ type: 'text', text }] } })
+    const first = await input.next()
+    yield { type: 'system', subtype: 'init', session_id: 'fake-session' }
+    yield said('Waiting on CI.')
+    yield { type: 'system', subtype: 'task_started', task_id: 'b1', task_type: 'local_bash', description: 'Wait for CI', session_id: 'fake-session' }
+    yield { type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'b1', task_type: 'local_bash', description: 'Wait for CI' }], session_id: 'fake-session' }
+    yield { type: 'system', subtype: 'background_tasks_changed', tasks: [], session_id: 'fake-session' }
+    yield { type: 'system', subtype: 'task_notification', task_id: 'b1', status: 'completed', summary: 'CI passed', session_id: 'fake-session' }
+    yield said('CI passed: reported.')
+    yield { type: 'result', subtype: 'success', is_error: false, result: 'CI passed: reported.', user_message_uuid: first.value.uuid, ...base }
+    for (;;) {
+      const next = await input.next()
+      if (next.done) return note('input closed')
+      note('next message')
+      yield said('Answer.')
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'Answer.', user_message_uuid: next.value.uuid, ...base }
+    }
+  }
+  const messages = run()
+  messages.interrupt = async () => {}
+  return messages
+}
+`
+
+test(
+  'a turn that read its background work itself ends once the wait for its report is over',
+  { timeout: 30_000 },
+  async () => {
+    const { turns, record } = await bridgeTurn(FOLDED_REPORT_SDK, {
+      permissionMode: 'allow-all',
+      // A child thread's: no guess at the next message, so nothing else ends the turn.
+      env: { ...claudeSettingsEnv(), BRIGADE_REPORT_WAIT_MS: '300' },
+      prompts: ['hello', 'and now?'],
+    })
+    // The first turn waited on the report, then ended, without a turn of Claude Code's for it.
+    assert.deepEqual(waitingWords(turns[0] as never), [true])
+    assert.equal(turns[0]!.filter((p) => p.type === 'finish').length, 1)
+    // The thread goes on: its next message reaches Claude Code and is answered.
+    assert.ok(
+      record.some((r) => r.what === 'next message'),
+      JSON.stringify(record),
+    )
+    assert.equal(turns[1]!.filter((p) => p.type === 'finish').length, 1)
+  },
+)
