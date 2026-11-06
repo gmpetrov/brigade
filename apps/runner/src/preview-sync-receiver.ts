@@ -33,6 +33,18 @@ type Header =
   | { t: 'del'; p: string }
   | { t: 'mark'; id: number }
 
+/**
+ * Two times of a file, in whole milliseconds, the same: equal, or in the same second when one has
+ * nothing under it, as a filesystem that keeps whole seconds leaves it. Boat serves a woken
+ * machine's home through ascii-lazyfs for a few minutes, which does: compared to the millisecond,
+ * every file would go again after each wake.
+ */
+function sameTime(a: number, b: number) {
+  return (
+    a === b || (Math.floor(a / 1000) === Math.floor(b / 1000) && (a % 1000 === 0 || b % 1000 === 0))
+  )
+}
+
 /** A path the reader may name: relative, inside the root, never through `..`. */
 export function safePath(path: unknown): path is string {
   if (typeof path !== 'string' || !path || path.length > 4096) return false
@@ -137,7 +149,7 @@ export class Receiver {
       if (
         !stat?.isFile() ||
         stat.size !== size ||
-        Math.trunc(stat.mtimeMs) !== mtimeMs ||
+        !sameTime(Math.trunc(stat.mtimeMs), mtimeMs) ||
         (stat.mode & 0o777) !== mode
       )
         need.push(path)
