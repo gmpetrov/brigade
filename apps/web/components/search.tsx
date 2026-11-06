@@ -27,7 +27,9 @@ import {
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAdmin, NAV, useDashboard } from '@/components/dashboard'
+import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { isMac, useIsMac } from '@/lib/platform'
+import { markdownFile } from '@/lib/search-open'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { api, pullHref } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -43,6 +45,8 @@ type Item = {
   href: string
   /** How well it matches (SCORE); none for recent rows. */
   score?: number
+  /** A file the document editor opens, beside the page (SearchResult). */
+  editor?: boolean
 }
 
 const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
@@ -151,6 +155,7 @@ export function SearchDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
+  const documents = useDocumentPanel()
   const mac = useIsMac()
   const { me, projects } = useDashboard()
   const workspaceId = me.activeWorkspaceId ?? ''
@@ -240,6 +245,7 @@ export function SearchDialog({
         snippet: r.snippet,
         href: hrefOf(r),
         score: r.score,
+        ...(r.editor && { editor: true }),
       })),
     ]
     // A name that matches leads on its own; the rest keep their kind's group.
@@ -275,9 +281,11 @@ export function SearchDialog({
         return
       }
       onOpenChange(false)
-      router.push(item.href)
+      const markdown = markdownFile(item)
+      if (markdown) documents.open(libraryDocument(markdown))
+      else router.push(item.href)
     },
-    [onOpenChange, router, workspaceId],
+    [onOpenChange, router, workspaceId, documents],
   )
 
   function onKeyDown(e: React.KeyboardEvent) {
