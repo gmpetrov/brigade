@@ -288,6 +288,7 @@ export type WorkspaceWhereInput = {
   listItemThreads?: Prisma.ListItemThreadListRelationFilter
   listItemPulls?: Prisma.ListItemPullListRelationFilter
   specPulls?: Prisma.SpecPullListRelationFilter
+  vmRuns?: Prisma.VmRunListRelationFilter
 }
 
 export type WorkspaceOrderByWithRelationInput = {
@@ -371,6 +372,7 @@ export type WorkspaceOrderByWithRelationInput = {
   listItemThreads?: Prisma.ListItemThreadOrderByRelationAggregateInput
   listItemPulls?: Prisma.ListItemPullOrderByRelationAggregateInput
   specPulls?: Prisma.SpecPullOrderByRelationAggregateInput
+  vmRuns?: Prisma.VmRunOrderByRelationAggregateInput
 }
 
 export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
@@ -457,6 +459,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   listItemThreads?: Prisma.ListItemThreadListRelationFilter
   listItemPulls?: Prisma.ListItemPullListRelationFilter
   specPulls?: Prisma.SpecPullListRelationFilter
+  vmRuns?: Prisma.VmRunListRelationFilter
 }, "id">
 
 export type WorkspaceOrderByWithAggregationInput = {
@@ -571,6 +574,7 @@ export type WorkspaceCreateInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateInput = {
@@ -653,6 +657,7 @@ export type WorkspaceUncheckedCreateInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUpdateInput = {
@@ -735,6 +740,7 @@ export type WorkspaceUpdateInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateInput = {
@@ -817,6 +823,7 @@ export type WorkspaceUncheckedUpdateInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateManyInput = {
@@ -1657,6 +1664,20 @@ export type WorkspaceUpdateOneRequiredWithoutPreviewRecipesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPreviewRecipesInput, Prisma.WorkspaceUpdateWithoutPreviewRecipesInput>, Prisma.WorkspaceUncheckedUpdateWithoutPreviewRecipesInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutVmRunsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutVmRunsInput, Prisma.WorkspaceUncheckedCreateWithoutVmRunsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutVmRunsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutVmRunsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutVmRunsInput, Prisma.WorkspaceUncheckedCreateWithoutVmRunsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutVmRunsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutVmRunsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutVmRunsInput, Prisma.WorkspaceUpdateWithoutVmRunsInput>, Prisma.WorkspaceUncheckedUpdateWithoutVmRunsInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutPreviewVariablesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPreviewVariablesInput, Prisma.WorkspaceUncheckedCreateWithoutPreviewVariablesInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPreviewVariablesInput
@@ -2016,6 +2037,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
@@ -2097,6 +2119,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutBillingSubscriptionsInput = {
@@ -2194,6 +2217,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
@@ -2275,6 +2299,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutOrganizationInput = {
@@ -2356,6 +2381,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
@@ -2437,6 +2463,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutOrganizationInput = {
@@ -2560,6 +2587,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutComputersInput = {
@@ -2641,6 +2669,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutComputersInput = {
@@ -2738,6 +2767,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutComputersInput = {
@@ -2819,6 +2849,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutRunnersInput = {
@@ -2900,6 +2931,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutRunnersInput = {
@@ -2981,6 +3013,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutRunnersInput = {
@@ -3078,6 +3111,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
@@ -3159,6 +3193,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTeammatesInput = {
@@ -3240,6 +3275,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
@@ -3321,6 +3357,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTeammatesInput = {
@@ -3418,6 +3455,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
@@ -3499,6 +3537,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadReadsInput = {
@@ -3580,6 +3619,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
@@ -3661,6 +3701,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadReadsInput = {
@@ -3758,6 +3799,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
@@ -3839,6 +3881,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadPinsInput = {
@@ -3920,6 +3963,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
@@ -4001,6 +4045,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadPinsInput = {
@@ -4098,6 +4143,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
@@ -4179,6 +4225,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSidebarOrdersInput = {
@@ -4260,6 +4307,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
@@ -4341,6 +4389,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSidebarOrdersInput = {
@@ -4438,6 +4487,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
@@ -4519,6 +4569,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadLatersInput = {
@@ -4600,6 +4651,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
@@ -4681,6 +4733,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadLatersInput = {
@@ -4778,6 +4831,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
@@ -4859,6 +4913,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutHomeDismissalsInput = {
@@ -4940,6 +4995,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
@@ -5021,6 +5077,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutHomeDismissalsInput = {
@@ -5118,6 +5175,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
@@ -5199,6 +5257,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionsInput = {
@@ -5280,6 +5339,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionsInput = {
@@ -5361,6 +5421,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionsInput = {
@@ -5458,6 +5519,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
@@ -5539,6 +5601,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTasksInput = {
@@ -5620,6 +5683,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTasksInput = {
@@ -5701,6 +5765,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTasksInput = {
@@ -5798,6 +5863,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTasksInput = {
@@ -5879,6 +5945,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSchedulesInput = {
@@ -5960,6 +6027,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
@@ -6041,6 +6109,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSchedulesInput = {
@@ -6138,6 +6207,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
@@ -6219,6 +6289,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutChiefDecisionsInput = {
@@ -6300,6 +6371,7 @@ export type WorkspaceCreateWithoutChiefDecisionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
@@ -6381,6 +6453,7 @@ export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutChiefDecisionsInput = {
@@ -6478,6 +6551,7 @@ export type WorkspaceUpdateWithoutChiefDecisionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
@@ -6559,6 +6633,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutChiefPassesInput = {
@@ -6640,6 +6715,7 @@ export type WorkspaceCreateWithoutChiefPassesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutChiefPassesInput = {
@@ -6721,6 +6797,7 @@ export type WorkspaceUncheckedCreateWithoutChiefPassesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutChiefPassesInput = {
@@ -6818,6 +6895,7 @@ export type WorkspaceUpdateWithoutChiefPassesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutChiefPassesInput = {
@@ -6899,6 +6977,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefPassesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutWakeupsInput = {
@@ -6980,6 +7059,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
@@ -7061,6 +7141,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutWakeupsInput = {
@@ -7158,6 +7239,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
@@ -7239,6 +7321,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutReplyWatchesInput = {
@@ -7320,6 +7403,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
@@ -7401,6 +7485,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutReplyWatchesInput = {
@@ -7498,6 +7583,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
@@ -7579,6 +7665,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadSeatsInput = {
@@ -7660,6 +7747,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
@@ -7741,6 +7829,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadSeatsInput = {
@@ -7838,6 +7927,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
@@ -7919,6 +8009,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionEventsInput = {
@@ -8000,6 +8091,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
@@ -8081,6 +8173,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionEventsInput = {
@@ -8178,6 +8271,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
@@ -8259,6 +8353,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutEventDaysInput = {
@@ -8340,6 +8435,7 @@ export type WorkspaceCreateWithoutEventDaysInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
@@ -8421,6 +8517,7 @@ export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutEventDaysInput = {
@@ -8518,6 +8615,7 @@ export type WorkspaceUpdateWithoutEventDaysInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
@@ -8599,6 +8697,7 @@ export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTokenUsageInput = {
@@ -8680,6 +8779,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
@@ -8761,6 +8861,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTokenUsageInput = {
@@ -8858,6 +8959,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
@@ -8939,6 +9041,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAccountsInput = {
@@ -9020,6 +9123,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAccountsInput = {
@@ -9101,6 +9205,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAccountsInput = {
@@ -9198,6 +9303,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
@@ -9279,6 +9385,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestsInput = {
@@ -9360,6 +9467,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
@@ -9441,6 +9549,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestsInput = {
@@ -9538,6 +9647,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
@@ -9619,6 +9729,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestReviewsInput = {
@@ -9700,6 +9811,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
@@ -9781,6 +9893,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestReviewsInput = {
@@ -9878,6 +9991,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
@@ -9959,6 +10073,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCommentsInput = {
@@ -10040,6 +10155,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCommentsInput = {
@@ -10121,6 +10237,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCommentsInput = {
@@ -10218,6 +10335,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
@@ -10299,6 +10417,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAppsInput = {
@@ -10380,6 +10499,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAppsInput = {
@@ -10461,6 +10581,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAppsInput = {
@@ -10558,6 +10679,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAppsInput = {
@@ -10639,6 +10761,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionsInput = {
@@ -10720,6 +10843,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
@@ -10801,6 +10925,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionsInput = {
@@ -10898,6 +11023,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
@@ -10979,6 +11105,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutVaultSecretsInput = {
@@ -11060,6 +11187,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
@@ -11141,6 +11269,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutVaultSecretsInput = {
@@ -11238,6 +11367,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
@@ -11319,6 +11449,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialsInput = {
@@ -11400,6 +11531,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
@@ -11481,6 +11613,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialsInput = {
@@ -11578,6 +11711,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
@@ -11659,6 +11793,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialGrantsInput = {
@@ -11740,6 +11875,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
@@ -11821,6 +11957,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialGrantsInput = {
@@ -11918,6 +12055,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
@@ -11999,6 +12137,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutGrantsInput = {
@@ -12080,6 +12219,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutGrantsInput = {
@@ -12161,6 +12301,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutGrantsInput = {
@@ -12258,6 +12399,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
@@ -12339,6 +12481,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionCallsInput = {
@@ -12420,6 +12563,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
@@ -12501,6 +12645,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionCallsInput = {
@@ -12598,6 +12743,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
@@ -12679,6 +12825,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTriggersInput = {
@@ -12760,6 +12907,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTriggersInput = {
@@ -12841,6 +12989,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTriggersInput = {
@@ -12938,6 +13087,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
@@ -13019,6 +13169,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSubscriptionsInput = {
@@ -13100,6 +13251,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
@@ -13181,6 +13333,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSubscriptionsInput = {
@@ -13278,6 +13431,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
@@ -13359,6 +13513,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTicketsInput = {
@@ -13440,6 +13595,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTicketsInput = {
@@ -13521,6 +13677,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTicketsInput = {
@@ -13618,6 +13775,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
@@ -13699,6 +13857,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDocumentsInput = {
@@ -13780,6 +13939,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
@@ -13861,6 +14021,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDocumentsInput = {
@@ -13958,6 +14119,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
@@ -14039,6 +14201,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemsInput = {
@@ -14120,6 +14283,7 @@ export type WorkspaceCreateWithoutListItemsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemsInput = {
@@ -14201,6 +14365,7 @@ export type WorkspaceUncheckedCreateWithoutListItemsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemsInput = {
@@ -14298,6 +14463,7 @@ export type WorkspaceUpdateWithoutListItemsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
@@ -14379,6 +14545,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemThreadsInput = {
@@ -14460,6 +14627,7 @@ export type WorkspaceCreateWithoutListItemThreadsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
@@ -14541,6 +14709,7 @@ export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemThreadsInput = {
@@ -14638,6 +14807,7 @@ export type WorkspaceUpdateWithoutListItemThreadsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
@@ -14719,6 +14889,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListItemPullsInput = {
@@ -14800,6 +14971,7 @@ export type WorkspaceCreateWithoutListItemPullsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
@@ -14881,6 +15053,7 @@ export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListItemPullsInput = {
@@ -14978,6 +15151,7 @@ export type WorkspaceUpdateWithoutListItemPullsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
@@ -15059,6 +15233,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutListPinsInput = {
@@ -15140,6 +15315,7 @@ export type WorkspaceCreateWithoutListPinsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutListPinsInput = {
@@ -15221,6 +15397,7 @@ export type WorkspaceUncheckedCreateWithoutListPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutListPinsInput = {
@@ -15318,6 +15495,7 @@ export type WorkspaceUpdateWithoutListPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
@@ -15399,6 +15577,7 @@ export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDocumentPinsInput = {
@@ -15480,6 +15659,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
@@ -15561,6 +15741,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDocumentPinsInput = {
@@ -15658,6 +15839,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
@@ -15739,6 +15921,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFoldersInput = {
@@ -15820,6 +16003,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
@@ -15901,6 +16085,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFoldersInput = {
@@ -15998,6 +16183,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
@@ -16079,6 +16265,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
@@ -16160,6 +16347,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
@@ -16241,6 +16429,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput = {
@@ -16338,6 +16527,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
@@ -16419,6 +16609,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAuditEntriesInput = {
@@ -16500,6 +16691,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
@@ -16581,6 +16773,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAuditEntriesInput = {
@@ -16678,6 +16871,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
@@ -16759,6 +16953,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAttachmentsInput = {
@@ -16840,6 +17035,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
@@ -16921,6 +17117,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAttachmentsInput = {
@@ -17018,6 +17215,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
@@ -17099,6 +17297,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadAttachmentsInput = {
@@ -17180,6 +17379,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
@@ -17261,6 +17461,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadAttachmentsInput = {
@@ -17358,6 +17559,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
@@ -17439,6 +17641,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDesignSystemsInput = {
@@ -17520,6 +17723,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
@@ -17601,6 +17805,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDesignSystemsInput = {
@@ -17698,6 +17903,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
@@ -17779,6 +17985,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillsInput = {
@@ -17860,6 +18067,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillsInput = {
@@ -17941,6 +18149,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillsInput = {
@@ -18038,6 +18247,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
@@ -18119,6 +18329,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillPacksInput = {
@@ -18200,6 +18411,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
@@ -18281,6 +18493,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillPacksInput = {
@@ -18378,6 +18591,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
@@ -18459,6 +18673,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPreviewRecipesInput = {
@@ -18540,6 +18755,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
@@ -18621,6 +18837,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewRecipesInput = {
@@ -18718,6 +18935,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
@@ -18774,6 +18992,351 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
   skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutVmRunsInput = {
+  id?: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutVmRunsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainUncheckedCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactUncheckedCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutVmRunsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutVmRunsInput, Prisma.WorkspaceUncheckedCreateWithoutVmRunsInput>
+}
+
+export type WorkspaceUpsertWithoutVmRunsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutVmRunsInput, Prisma.WorkspaceUncheckedUpdateWithoutVmRunsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutVmRunsInput, Prisma.WorkspaceUncheckedCreateWithoutVmRunsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutVmRunsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutVmRunsInput, Prisma.WorkspaceUncheckedUpdateWithoutVmRunsInput>
+}
+
+export type WorkspaceUpdateWithoutVmRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutVmRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
   previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18880,6 +19443,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
@@ -18961,6 +19525,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewVariablesInput = {
@@ -19058,6 +19623,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
@@ -19139,6 +19705,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectsInput = {
@@ -19220,6 +19787,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectsInput = {
@@ -19301,6 +19869,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectsInput = {
@@ -19398,6 +19967,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
@@ -19479,6 +20049,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectRepositoriesInput = {
@@ -19560,6 +20131,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
@@ -19641,6 +20213,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectRepositoriesInput = {
@@ -19738,6 +20311,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
@@ -19819,6 +20393,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPushNoticesInput = {
@@ -19900,6 +20475,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
@@ -19981,6 +20557,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPushNoticesInput = {
@@ -20078,6 +20655,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
@@ -20159,6 +20737,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
@@ -20240,6 +20819,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
@@ -20321,6 +20901,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookInstallationsInput = {
@@ -20418,6 +20999,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
@@ -20499,6 +21081,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookActionsInput = {
@@ -20580,6 +21163,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
@@ -20661,6 +21245,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookActionsInput = {
@@ -20758,6 +21343,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
@@ -20839,6 +21425,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookRunsInput = {
@@ -20920,6 +21507,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
@@ -21001,6 +21589,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookRunsInput = {
@@ -21098,6 +21687,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
@@ -21179,6 +21769,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
@@ -21260,6 +21851,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
@@ -21341,6 +21933,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookDryRunsInput = {
@@ -21438,6 +22031,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
@@ -21519,6 +22113,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadFollowsInput = {
@@ -21600,6 +22195,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
@@ -21681,6 +22277,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadFollowsInput = {
@@ -21778,6 +22375,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
@@ -21859,6 +22457,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailProjectsInput = {
@@ -21940,6 +22539,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
@@ -22021,6 +22621,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailProjectsInput = {
@@ -22118,6 +22719,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
@@ -22199,6 +22801,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailAliasesInput = {
@@ -22280,6 +22883,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
@@ -22361,6 +22965,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailAliasesInput = {
@@ -22458,6 +23063,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
@@ -22539,6 +23145,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailMessagesInput = {
@@ -22620,6 +23227,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
@@ -22701,6 +23309,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailMessagesInput = {
@@ -22798,6 +23407,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
@@ -22879,6 +23489,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutMailDomainsInput = {
@@ -22960,6 +23571,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
@@ -23041,6 +23653,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutMailDomainsInput = {
@@ -23138,6 +23751,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
@@ -23219,6 +23833,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutContactsInput = {
@@ -23300,6 +23915,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutContactsInput = {
@@ -23381,6 +23997,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutContactsInput = {
@@ -23478,6 +24095,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutContactsInput = {
@@ -23559,6 +24177,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutContactHandlesInput = {
@@ -23640,6 +24259,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
@@ -23721,6 +24341,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutContactHandlesInput = {
@@ -23818,6 +24439,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
@@ -23899,6 +24521,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutHeldCallsInput = {
@@ -23980,6 +24603,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
@@ -24061,6 +24685,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutHeldCallsInput = {
@@ -24158,6 +24783,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
@@ -24239,6 +24865,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutRunnerCommandsInput = {
@@ -24320,6 +24947,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
@@ -24401,6 +25029,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutRunnerCommandsInput = {
@@ -24498,6 +25127,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
@@ -24579,6 +25209,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSpecPartsInput = {
@@ -24660,6 +25291,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
@@ -24741,6 +25373,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSpecPartsInput = {
@@ -24838,6 +25471,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
@@ -24919,6 +25553,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
@@ -25000,6 +25635,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
@@ -25081,6 +25717,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
   specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTriggerDeliveriesInput = {
@@ -25178,6 +25815,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
@@ -25259,6 +25897,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSpecPullsInput = {
@@ -25340,6 +25979,7 @@ export type WorkspaceCreateWithoutSpecPullsInput = {
   listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSpecPullsInput = {
@@ -25421,6 +26061,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPullsInput = {
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
   listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSpecPullsInput = {
@@ -25518,6 +26159,7 @@ export type WorkspaceUpdateWithoutSpecPullsInput = {
   listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSpecPullsInput = {
@@ -25599,6 +26241,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPullsInput = {
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateManyOrganizationInput = {
@@ -25692,6 +26335,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
@@ -25773,6 +26417,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
   listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
   specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateManyWithoutOrganizationInput = {
@@ -25862,6 +26507,7 @@ export type WorkspaceCountOutputType = {
   listItemThreads: number
   listItemPulls: number
   specPulls: number
+  vmRuns: number
 }
 
 export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -25934,6 +26580,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   listItemThreads?: boolean | WorkspaceCountOutputTypeCountListItemThreadsArgs
   listItemPulls?: boolean | WorkspaceCountOutputTypeCountListItemPullsArgs
   specPulls?: boolean | WorkspaceCountOutputTypeCountSpecPullsArgs
+  vmRuns?: boolean | WorkspaceCountOutputTypeCountVmRunsArgs
 }
 
 /**
@@ -26429,6 +27076,13 @@ export type WorkspaceCountOutputTypeCountSpecPullsArgs<ExtArgs extends runtime.T
   where?: Prisma.SpecPullWhereInput
 }
 
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountVmRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VmRunWhereInput
+}
+
 
 export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -26511,6 +27165,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   listItemThreads?: boolean | Prisma.Workspace$listItemThreadsArgs<ExtArgs>
   listItemPulls?: boolean | Prisma.Workspace$listItemPullsArgs<ExtArgs>
   specPulls?: boolean | Prisma.Workspace$specPullsArgs<ExtArgs>
+  vmRuns?: boolean | Prisma.Workspace$vmRunsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
 
@@ -26627,6 +27282,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   listItemThreads?: boolean | Prisma.Workspace$listItemThreadsArgs<ExtArgs>
   listItemPulls?: boolean | Prisma.Workspace$listItemPullsArgs<ExtArgs>
   specPulls?: boolean | Prisma.Workspace$specPullsArgs<ExtArgs>
+  vmRuns?: boolean | Prisma.Workspace$vmRunsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WorkspaceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -26709,6 +27365,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     listItemThreads: Prisma.$ListItemThreadPayload<ExtArgs>[]
     listItemPulls: Prisma.$ListItemPullPayload<ExtArgs>[]
     specPulls: Prisma.$SpecPullPayload<ExtArgs>[]
+    vmRuns: Prisma.$VmRunPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -27205,6 +27862,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   listItemThreads<T extends Prisma.Workspace$listItemThreadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listItemThreadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemThreadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listItemPulls<T extends Prisma.Workspace$listItemPullsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listItemPullsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPullPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   specPulls<T extends Prisma.Workspace$specPullsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$specPullsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SpecPullPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  vmRuns<T extends Prisma.Workspace$vmRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$vmRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VmRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -29298,6 +29956,30 @@ export type Workspace$specPullsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.SpecPullScalarFieldEnum | Prisma.SpecPullScalarFieldEnum[]
+}
+
+/**
+ * Workspace.vmRuns
+ */
+export type Workspace$vmRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VmRun
+   */
+  select?: Prisma.VmRunSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VmRun
+   */
+  omit?: Prisma.VmRunOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VmRunInclude<ExtArgs> | null
+  where?: Prisma.VmRunWhereInput
+  orderBy?: Prisma.VmRunOrderByWithRelationInput | Prisma.VmRunOrderByWithRelationInput[]
+  cursor?: Prisma.VmRunWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VmRunScalarFieldEnum | Prisma.VmRunScalarFieldEnum[]
 }
 
 /**

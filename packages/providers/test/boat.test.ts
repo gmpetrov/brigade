@@ -5,9 +5,11 @@ import {
   BOAT_REQUEST_MS,
   boatClient,
   boatDeadlineMs,
+  createBoatLedger,
   createBoatMachines,
   createBoatProvider,
 } from '../src/boat/index.js'
+import { VM_PRICES, vmCost } from '../src/boat/prices.js'
 import { DesktopNotReady } from '../src/types.js'
 
 // Each request to boat has a deadline (src/boat/index.ts): one boat never answered held the
@@ -123,8 +125,17 @@ test('a preview machine is made large, without secrets, under its key, and named
       ? { sandbox: { id: 'sb9', state: 'provisioning' } }
       : { sandbox: { id: 'sb9', state: 'ready' } },
   )
-  const ref = await machines.create({ name: 'brigade-preview-row1', key: 'brigade-preview-row1-0' })
+  const calls: string[] = []
+  const ref = await machines.create({
+    name: 'brigade-preview-row1',
+    key: 'brigade-preview-row1-0',
+    onCreated: (made) => {
+      calls.push(`created ${made.id} after ${asked.length} requests`)
+    },
+  })
   assert.deepEqual(ref, { provider: 'boat', id: 'sb9' })
+  // Told as soon as boat has it, before it is named or waited for: it bills from then.
+  assert.deepEqual(calls, ['created sb9 after 1 requests'])
   const made = asked.find((a) => a.method === 'POST' && a.path === '/sandboxes')!
   assert.deepEqual(made.body, { type: 'large', noEnv: true, ttlSeconds: 7200 })
   assert.equal(made.headers.get('idempotency-key'), 'brigade-preview-row1-0')
@@ -166,4 +177,98 @@ test('a key is let into a preview machine, reached where boat says', async () =>
   // No host key to pin: not connected to blindly.
   const unpinned = boatAnswering(() => ({ machineIp: '51.91.2.48' }))
   await assert.rejects(unpinned.machines.authorize(ref, 'ssh-ed25519 AAAAkey'), /no host key/)
+})
+
+// What VMs cost (docs/vm-costs.md): a start says when it resumed; boat's own figures are read.
+test('a start says when boat resumed the VM, or that it was up already', async () => {
+  const answering = (state: string) => {
+    let resumed = false
+    const send = (async (url: string | URL | Request, init?: RequestInit) => {
+      const path = new URL(String(url)).pathname
+      if (init?.method === 'POST' && path.endsWith('/resume')) resumed = true
+      const now = resumed ? 'ready' : state
+      return new Response(JSON.stringify({ sandbox: { id: 'sb1', state: now } }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as typeof fetch
+    return createBoatProvider({ apiKey: 'key', basePath: 'https://boat.test/api/v1', send })
+  }
+  const before = Date.now()
+  const stopped = await answering('archived').start({ provider: 'boat', id: 'sb1' })
+  assert.ok(stopped && stopped.resumedAt && stopped.resumedAt.getTime() >= before)
+  assert.deepEqual(await answering('ready').start({ provider: 'boat', id: 'sb1' }), {
+    resumedAt: null,
+  })
+})
+
+test('the ledger lists every sandbox page by page, and reads one’s usage unscaled', async () => {
+  const asked: string[] = []
+  const send = (async (url: string | URL | Request) => {
+    const u = new URL(String(url))
+    asked.push(u.pathname.replace('/api/v1', '') + u.search)
+    const body = u.pathname.endsWith('/usage')
+      ? {
+          ok: true,
+          type: 'sandbox.usage',
+          sandboxId: 'sb2',
+          sandboxType: 'large',
+          billingMultiplier: 2,
+          since: '2026-11-01T00:00:00.000Z',
+          until: '2026-11-02T00:00:00.000Z',
+          seconds: 7200,
+          dollars: 0.072,
+          secondsPerDollar: 100000,
+          running: false,
+        }
+      : u.searchParams.get('cursor')
+        ? {
+            ok: true,
+            type: 'sandbox.list',
+            sandboxes: [
+              {
+                id: 'sb3',
+                state: 'provisioning',
+                desktopAvailable: false,
+                snapshotAvailable: false,
+              },
+            ],
+            pageInfo: { hasMore: false, nextCursor: null, limit: 100 },
+          }
+        : {
+            ok: true,
+            type: 'sandbox.list',
+            sandboxes: [
+              { id: 'sb1', state: 'idle', desktopAvailable: false, snapshotAvailable: false },
+              { id: 'sb2', state: 'archived', desktopAvailable: false, snapshotAvailable: false },
+              { id: 'sb4', state: 'error', desktopAvailable: false, snapshotAvailable: false },
+            ],
+            pageInfo: { hasMore: true, nextCursor: 'c2', limit: 100 },
+          }
+    return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
+  }) as typeof fetch
+  const ledger = createBoatLedger({ apiKey: 'key', basePath: 'https://boat.test/api/v1', send })
+  assert.deepEqual(
+    [...(await ledger.states())],
+    [
+      ['sb1', 'running'],
+      ['sb2', 'stopped'],
+      ['sb4', 'error'],
+      ['sb3', 'starting'],
+    ],
+  )
+  assert.deepEqual(asked, ['/sandboxes?limit=100', '/sandboxes?limit=100&cursor=c2'])
+  const usage = await ledger.usage(
+    'sb2',
+    new Date('2026-11-01T00:00:00Z'),
+    new Date('2026-11-02T00:00:00Z'),
+  )
+  // 7200 billable seconds of a large VM (twice a default's rate): one hour of it running.
+  assert.deepEqual(usage, { runSeconds: 3600, dollars: 0.072, running: false })
+  assert.match(
+    asked.at(-1)!,
+    /^\/sandboxes\/sb2\/usage\?since=2026-11-01T00%3A00%3A00.000Z&until=2026-11-02T00%3A00%3A00.000Z$/,
+  )
+  // The same hour at Brigade's own constants.
+  assert.equal(vmCost('8x16', 1), VM_PRICES.hourly['8x16'])
+  assert.equal(vmCost('8x16', 1), usage.dollars)
 })

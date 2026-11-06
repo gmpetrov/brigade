@@ -181,6 +181,11 @@ const Env = z.object({
   /** Bearer token for GET /health/ops, the alerts open now, for an uptime monitor outside. */
   OPS_TOKEN: z.string().min(24).optional(),
   /**
+   * The signing secret (whsec_…) of boat's webhook to POST /api/boat/webhook: its stops come in
+   * at once (docs/vm-costs.md). Without it, the minute's check with boat's list sees them.
+   */
+  BOAT_WEBHOOK_SECRET: z.string().optional(),
+  /**
    * Cloudflare's analytics, for the Workers' failed invocations (exceptions, exceeded
    * limits): an API token with Account Analytics: Read, and the account's id.
    */

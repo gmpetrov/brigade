@@ -943,6 +943,57 @@ export type EnumPreviewMachineStatusWithAggregatesFilter<$PrismaModel = never> =
   _max?: Prisma.NestedEnumPreviewMachineStatusFilter<$PrismaModel>
 }
 
+export type EnumVmKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmKind | Prisma.EnumVmKindFieldRefInput<$PrismaModel>
+  in?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmKindFilter<$PrismaModel> | $Enums.VmKind
+}
+
+export type EnumVmStartFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmStart | Prisma.EnumVmStartFieldRefInput<$PrismaModel>
+  in?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmStartFilter<$PrismaModel> | $Enums.VmStart
+}
+
+export type EnumVmRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmRunStatus | Prisma.EnumVmRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel> | $Enums.VmRunStatus
+}
+
+export type EnumVmKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmKind | Prisma.EnumVmKindFieldRefInput<$PrismaModel>
+  in?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmKindWithAggregatesFilter<$PrismaModel> | $Enums.VmKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmKindFilter<$PrismaModel>
+}
+
+export type EnumVmStartWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmStart | Prisma.EnumVmStartFieldRefInput<$PrismaModel>
+  in?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmStartWithAggregatesFilter<$PrismaModel> | $Enums.VmStart
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmStartFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmStartFilter<$PrismaModel>
+}
+
+export type EnumVmRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmRunStatus | Prisma.EnumVmRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.VmRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel>
+}
+
 export type EnumPreviewVariableKindFilter<$PrismaModel = never> = {
   equals?: $Enums.PreviewVariableKind | Prisma.EnumPreviewVariableKindFieldRefInput<$PrismaModel>
   in?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
@@ -2033,6 +2084,57 @@ export type NestedEnumPreviewMachineStatusWithAggregatesFilter<$PrismaModel = ne
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPreviewMachineStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPreviewMachineStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumVmKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmKind | Prisma.EnumVmKindFieldRefInput<$PrismaModel>
+  in?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmKindFilter<$PrismaModel> | $Enums.VmKind
+}
+
+export type NestedEnumVmStartFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmStart | Prisma.EnumVmStartFieldRefInput<$PrismaModel>
+  in?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmStartFilter<$PrismaModel> | $Enums.VmStart
+}
+
+export type NestedEnumVmRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmRunStatus | Prisma.EnumVmRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel> | $Enums.VmRunStatus
+}
+
+export type NestedEnumVmKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmKind | Prisma.EnumVmKindFieldRefInput<$PrismaModel>
+  in?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmKind[] | Prisma.ListEnumVmKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmKindWithAggregatesFilter<$PrismaModel> | $Enums.VmKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmKindFilter<$PrismaModel>
+}
+
+export type NestedEnumVmStartWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmStart | Prisma.EnumVmStartFieldRefInput<$PrismaModel>
+  in?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmStart[] | Prisma.ListEnumVmStartFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmStartWithAggregatesFilter<$PrismaModel> | $Enums.VmStart
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmStartFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmStartFilter<$PrismaModel>
+}
+
+export type NestedEnumVmRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.VmRunStatus | Prisma.EnumVmRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.VmRunStatus[] | Prisma.ListEnumVmRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumVmRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.VmRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumVmRunStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumPreviewVariableKindFilter<$PrismaModel = never> = {

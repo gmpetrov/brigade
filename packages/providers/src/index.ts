@@ -1,8 +1,10 @@
 // ComputerProvider implementations. No code outside this package names a provider.
-import { createBoatMachines, createBoatProvider } from './boat/index.js'
-import type { ComputerProvider, MachineProvider } from './types.js'
+import { createBoatLedger, createBoatMachines, createBoatProvider } from './boat/index.js'
+export { MACHINE_COMPUTER_SIZE } from './boat/index.js'
+import type { ComputerProvider, MachineProvider, ProviderLedger } from './types.js'
 
 export { DesktopNotReady } from './types.js'
+export { VM_PRICES, vmCost } from './boat/prices.js'
 
 export type {
   ComputerProvider,
@@ -13,8 +15,12 @@ export type {
   ExecResult,
   HostedPort,
   MachineProvider,
+  ProviderLedger,
   RestoreState,
   SshAccess,
+  StartResult,
+  VmState,
+  VmUsage,
 } from './types.js'
 
 /** The configured cloud computer provider, or null when none is configured. */
@@ -47,5 +53,14 @@ export function machinesFromEnv(env: Record<string, string | undefined>): Machin
     apiKey: env.BOAT_API_KEY,
     ...(env.BOAT_BASE_URL ? { basePath: env.BOAT_BASE_URL } : {}),
     autoStopSeconds: MACHINE_AUTO_STOP_SECONDS,
+  })
+}
+
+/** The provider's own figures of what its VMs ran (docs/vm-costs.md), or null without one. */
+export function ledgerFromEnv(env: Record<string, string | undefined>): ProviderLedger | null {
+  if (!env.BOAT_API_KEY) return null
+  return createBoatLedger({
+    apiKey: env.BOAT_API_KEY,
+    ...(env.BOAT_BASE_URL ? { basePath: env.BOAT_BASE_URL } : {}),
   })
 }

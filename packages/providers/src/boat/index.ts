@@ -7,7 +7,10 @@ import {
   type ComputerSize,
   type ComputerStatus,
   type MachineProvider,
+  type ProviderLedger,
   type RestoreState,
+  type StartResult,
+  type VmState,
 } from '../types.js'
 
 const PROVIDER = 'boat'
@@ -114,18 +117,21 @@ export function createBoatProvider(options: {
         ttlSeconds: options.autoStopSeconds ?? null,
       })
       const sandboxId = created.sandbox.id
+      await spec.onCreated?.({ provider: PROVIDER, id: sandboxId })
       await boat.update({ sandboxId, name: `brigade-${spec.workspaceId}` })
       await waitUntilReady(boat, sandboxId)
       return { provider: PROVIDER, id: sandboxId }
     },
 
-    async start(ref) {
+    async start(ref): Promise<StartResult> {
       const sandboxId = idOf(ref)
       // A stop snapshots the disk first; resume once that has finished. A
       // failed resume leaves the sandbox in 'error': resuming again is boat's remedy.
+      let resumedAt: Date | null = null
       for (let i = 0; i < 120; i++) {
         const { sandbox } = await boat.get({ sandboxId })
         if (sandbox.state === 'archived' || sandbox.state === 'error') {
+          resumedAt = new Date()
           await boat.resume({ sandboxId, noEnv: true })
           break
         }
@@ -133,6 +139,7 @@ export function createBoatProvider(options: {
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
       await waitUntilReady(boat, sandboxId)
+      return { resumedAt }
     },
 
     async stop(ref) {
@@ -219,8 +226,9 @@ export function createBoatProvider(options: {
   }
 }
 
-/** A preview machine's size at boat (docs.boat.dev/machines), and what it has, for people. */
-const MACHINE_TYPE = 'large'
+/** A preview machine's size (docs.boat.dev/machines), and what it has, for people. */
+export const MACHINE_COMPUTER_SIZE: ComputerSize = '8x16'
+const MACHINE_TYPE = SIZES[MACHINE_COMPUTER_SIZE]
 export const MACHINE_SIZE = '8 vCPU, 16 GB'
 
 /**
@@ -242,7 +250,7 @@ export function createBoatMachines(options: {
   return {
     size: MACHINE_SIZE,
 
-    async create({ name, key }) {
+    async create({ name, key, onCreated }) {
       // Sent again with the same key (a retry after an answer that never came), boat gives the
       // same sandbox rather than a second one.
       const created = await boat.create(
@@ -252,6 +260,7 @@ export function createBoatMachines(options: {
         }),
       )
       const sandboxId = created.sandbox.id
+      await onCreated?.({ provider: PROVIDER, id: sandboxId })
       await boat.update({ sandboxId, name })
       await waitUntilReady(boat, sandboxId)
       return { provider: PROVIDER, id: sandboxId }
@@ -278,6 +287,72 @@ export function createBoatMachines(options: {
         user: answer.sshUser || 'user',
         hostKey,
       }
+    },
+  }
+}
+
+/** Where a sandbox is, in Brigade's terms: boat bills `running` only (docs.boat.dev/pricing). */
+export function vmState(state: string): VmState {
+  switch (state) {
+    case 'ready':
+    case 'idle':
+    case 'running':
+      return 'running'
+    case 'archiving':
+    case 'archived':
+    case 'cancelled':
+      return 'stopped'
+    case 'error':
+      return 'error'
+    default:
+      return 'starting'
+  }
+}
+
+/** Pages of the account's sandboxes read at most, of LIST_PAGE each. */
+const LIST_PAGES = 50
+const LIST_PAGE = 100
+
+/**
+ * boat's own figures (docs/vm-costs.md): the account's sandboxes and their states, a page at a
+ * time, and what one ran over a window (GET /sandboxes/{id}/usage, at list price).
+ */
+export function createBoatLedger(options: {
+  apiKey: string
+  basePath?: string
+  send?: typeof fetch
+}): ProviderLedger {
+  const boat = boatClient(options.apiKey, options.basePath, options.send)
+  return {
+    async states() {
+      const states = new Map<string, VmState>()
+      let cursor: string | null = null
+      for (let page = 0; page < LIST_PAGES; page++) {
+        const list = await boat.sandboxes({ limit: LIST_PAGE, ...(cursor ? { cursor } : {}) })
+        for (const sandbox of list.sandboxes) states.set(sandbox.id, vmState(sandbox.state))
+        cursor = list.pageInfo?.hasMore ? list.pageInfo.nextCursor : null
+        if (!cursor) return states
+      }
+      throw new Error(`boat listed more than ${LIST_PAGES * LIST_PAGE} sandboxes`)
+    },
+
+    async usage(id, since, until) {
+      const usage = await boat.usage({
+        sandboxId: id,
+        since: since.toISOString(),
+        until: until.toISOString(),
+      })
+      // `seconds` is scaled by the size's multiplier (2 for large): the time it ran is unscaled.
+      const multiplier = usage.billingMultiplier > 0 ? usage.billingMultiplier : 1
+      return {
+        runSeconds: usage.seconds / multiplier,
+        dollars: usage.dollars,
+        running: usage.running,
+      }
+    },
+
+    async limits() {
+      return boat.limits({})
     },
   }
 }

@@ -21,6 +21,7 @@ import { Prisma, prisma } from './db.js'
 import { featuresOfMember } from './features.js'
 import type { PreviewMachine, Runner } from './generated/prisma/client.js'
 import type { PreviewMachineStatus } from './generated/prisma/enums.js'
+import { beginRun, MACHINE_SIZE, runMade, runStarted, runStopped } from './vm-costs.js'
 
 /** The configured provider of preview machines; null without one (no cloud provider). */
 const configured = machinesFromEnv(process.env)
@@ -78,6 +79,29 @@ const making = (row: Pick<PreviewMachine, 'id' | 'generation'>) => ({
   name: `brigade-preview-${row.id}`,
   key: `brigade-preview-${row.id}-${row.generation}`,
 })
+
+/** What a machine's VM runs are of (src/vm-costs.ts): its thread's, at the machines' size. */
+const ofMachine = (
+  row: Pick<PreviewMachine, 'id' | 'organizationId' | 'workspaceId' | 'sessionId'>,
+) => ({
+  kind: 'machine' as const,
+  machineId: row.id,
+  sessionId: row.sessionId,
+  organizationId: row.organizationId,
+  workspaceId: row.workspaceId,
+  size: MACHINE_SIZE,
+})
+
+/**
+ * Make the machine under its key, its run written first (src/vm-costs.ts) and given its VM as
+ * soon as the provider has it: a making retried under the same key is the same run.
+ */
+async function make(machines: MachineProvider, row: PreviewMachine) {
+  const run = await beginRun(ofMachine(row), 'create', null)
+  const ref = await machines.create({ ...making(row), onCreated: (made) => runMade(run, made.id) })
+  await runStarted(run, ref.id, { resumedAt: null })
+  return ref
+}
 
 /**
  * Whether the thread's preview runs on a machine of its own: its starter has the feature and
@@ -180,12 +204,13 @@ async function bringUp(machines: MachineProvider, held: PreviewMachine) {
         ref = null
       } else if (status !== 'running') {
         // Stopped, stopping or in error: the provider starts it again (boat's remedy for an
-        // error is a resume), and waits for a stop under way to end first.
-        await machines.start(ref)
+        // error is a resume), and waits for a stop under way to end first. Its run first.
+        const run = await beginRun(ofMachine(held), 'resume', ref.id)
+        await runStarted(run, ref.id, await machines.start(ref))
       }
     }
     const made = !ref
-    if (!ref) ref = await machines.create(making(held))
+    if (!ref) ref = await make(machines, held)
     const { count } = await prisma.previewMachine.updateMany({
       where: mine,
       data: {
@@ -280,10 +305,16 @@ async function finishStop(machines: MachineProvider, held: PreviewMachine, now: 
   const ref = refOf(held.providerRef)
   const mine = { id: held.id, claimedUntil: held.claimedUntil! }
   try {
-    if (ref)
-      await machines.stop(ref).catch((error: unknown) => {
-        if (!missing(error)) throw error
-      })
+    if (ref) {
+      const gone = await machines.stop(ref).then(
+        () => false,
+        (error: unknown) => {
+          if (!missing(error)) throw error
+          return true
+        },
+      )
+      await runStopped(ref.id, new Date(), gone ? 'destroyed' : 'brigade')
+    }
   } catch (error) {
     await prisma.previewMachine.updateMany({
       where: mine,
@@ -308,10 +339,11 @@ async function finishStop(machines: MachineProvider, held: PreviewMachine, now: 
  * provider fails, the row stays `destroying`, due for the next sweep once its claim ran out.
  */
 async function finishDestroy(machines: MachineProvider, held: PreviewMachine) {
-  const ref = refOf(held.providerRef) ?? (await machines.create(making(held)))
+  const ref = refOf(held.providerRef) ?? (await make(machines, held))
   await machines.destroy(ref).catch((error: unknown) => {
     if (!missing(error)) throw error
   })
+  await runStopped(ref.id, new Date(), 'destroyed')
   await prisma.previewMachine.deleteMany({
     where: { id: held.id, claimedUntil: held.claimedUntil, status: 'destroying' },
   })

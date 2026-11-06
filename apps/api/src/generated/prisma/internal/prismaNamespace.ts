@@ -471,6 +471,7 @@ export const ModelName = {
   SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
   PreviewMachine: 'PreviewMachine',
+  VmRun: 'VmRun',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
@@ -516,7 +517,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5996,6 +5997,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    VmRun: {
+      payload: Prisma.$VmRunPayload<ExtArgs>
+      fields: Prisma.VmRunFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VmRunFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VmRunFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        findFirst: {
+          args: Prisma.VmRunFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VmRunFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        findMany: {
+          args: Prisma.VmRunFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>[]
+        }
+        create: {
+          args: Prisma.VmRunCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        createMany: {
+          args: Prisma.VmRunCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VmRunCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>[]
+        }
+        delete: {
+          args: Prisma.VmRunDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        update: {
+          args: Prisma.VmRunUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        deleteMany: {
+          args: Prisma.VmRunDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VmRunUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VmRunUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>[]
+        }
+        upsert: {
+          args: Prisma.VmRunUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VmRunPayload>
+        }
+        aggregate: {
+          args: Prisma.VmRunAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVmRun>
+        }
+        groupBy: {
+          args: Prisma.VmRunGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VmRunGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VmRunCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VmRunCountAggregateOutputType> | number
+        }
+      }
+    }
     PreviewVariable: {
       payload: Prisma.$PreviewVariablePayload<ExtArgs>
       fields: Prisma.PreviewVariableFieldRefs
@@ -9533,6 +9608,29 @@ export const PreviewMachineScalarFieldEnum = {
 export type PreviewMachineScalarFieldEnum = (typeof PreviewMachineScalarFieldEnum)[keyof typeof PreviewMachineScalarFieldEnum]
 
 
+export const VmRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  kind: 'kind',
+  computerId: 'computerId',
+  machineId: 'machineId',
+  sessionId: 'sessionId',
+  sandboxId: 'sandboxId',
+  size: 'size',
+  start: 'start',
+  status: 'status',
+  startedAt: 'startedAt',
+  stoppedAt: 'stoppedAt',
+  stoppedBy: 'stoppedBy',
+  seenAt: 'seenAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VmRunScalarFieldEnum = (typeof VmRunScalarFieldEnum)[keyof typeof VmRunScalarFieldEnum]
+
+
 export const PreviewVariableScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -10675,6 +10773,48 @@ export type ListEnumPreviewMachineStatusFieldRefInput<$PrismaModel> = FieldRefIn
 
 
 /**
+ * Reference to a field of type 'VmKind'
+ */
+export type EnumVmKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmKind'>
+    
+
+
+/**
+ * Reference to a field of type 'VmKind[]'
+ */
+export type ListEnumVmKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmKind[]'>
+    
+
+
+/**
+ * Reference to a field of type 'VmStart'
+ */
+export type EnumVmStartFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmStart'>
+    
+
+
+/**
+ * Reference to a field of type 'VmStart[]'
+ */
+export type ListEnumVmStartFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmStart[]'>
+    
+
+
+/**
+ * Reference to a field of type 'VmRunStatus'
+ */
+export type EnumVmRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmRunStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'VmRunStatus[]'
+ */
+export type ListEnumVmRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VmRunStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'PreviewVariableKind'
  */
 export type EnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewVariableKind'>
@@ -11080,6 +11220,7 @@ export type GlobalOmitConfig = {
   skillPack?: Prisma.SkillPackOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
   previewMachine?: Prisma.PreviewMachineOmit
+  vmRun?: Prisma.VmRunOmit
   previewVariable?: Prisma.PreviewVariableOmit
   project?: Prisma.ProjectOmit
   projectRepository?: Prisma.ProjectRepositoryOmit

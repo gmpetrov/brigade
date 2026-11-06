@@ -18,6 +18,7 @@ import { attachments } from './routes/attachments.js'
 import { localBucket } from './routes/bucket.js'
 import { billing } from './routes/billing.js'
 import { usage } from './routes/usage.js'
+import { allVmCosts, boatWebhook, monthOf, providerLimits, workspaceVmCosts } from './vm-costs.js'
 import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
@@ -135,6 +136,46 @@ app.post('/ops/hubs', async (c) => {
   console.log(`hub of ${input.data.workspaceId} moved to ${input.data.mode}`)
   return c.json({ workspaceId: input.data.workspaceId, mode: input.data.mode })
 })
+
+/** Whether the request carries OPS_TOKEN as its bearer token. */
+function opsAllowed(c: Context) {
+  const token = c.req.header('authorization')?.replace(/^Bearer /, '') ?? ''
+  return Boolean(env.OPS_TOKEN && safeEqual(token, env.OPS_TOKEN))
+}
+
+/**
+ * What each workspace's VMs cost at the provider over a month (?month=2026-11, this one by
+ * default), the costliest first, with the account's starts and plan (docs/vm-costs.md). Needs
+ * OPS_TOKEN as a bearer token.
+ */
+app.get('/ops/vm-costs', async (c) => {
+  if (!opsAllowed(c)) return c.json({ error: 'Not found' }, 404)
+  const month = monthOf(c.req.query('month'))
+  if (!month) return c.json({ error: 'Expected ?month=YYYY-MM' }, 400)
+  const [costs, limits] = await Promise.all([allVmCosts(month), providerLimits()])
+  return c.json({ ...costs, provider: limits })
+})
+
+/**
+ * One workspace's: its cloud computer's VMs, each thread's machine, and beside each VM the
+ * provider's own figure for the month. Needs OPS_TOKEN as a bearer token.
+ */
+app.get('/ops/vm-costs/:workspaceId', async (c) => {
+  if (!opsAllowed(c)) return c.json({ error: 'Not found' }, 404)
+  const month = monthOf(c.req.query('month'))
+  if (!month) return c.json({ error: 'Expected ?month=YYYY-MM' }, 400)
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: c.req.param('workspaceId') },
+    select: { id: true, name: true },
+  })
+  if (!workspace) return c.json({ error: 'No such workspace' }, 404)
+  const costs = await workspaceVmCosts(workspace.id, month, { reconcile: true })
+  return c.json({ name: workspace.name, ...costs })
+})
+
+// boat's webhook (src/vm-costs.ts): its own stops end their VM's run at once. Verified by its
+// signature (BOAT_WEBHOOK_SECRET); needs no session.
+app.post('/api/boat/webhook', (c) => boatWebhook(c.req.raw, env.BOAT_WEBHOOK_SECRET))
 
 app.on(['GET', 'POST'], '/api/auth/*', (c) =>
   authRouteClosed(c.req.raw)
