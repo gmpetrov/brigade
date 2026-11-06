@@ -282,11 +282,11 @@ test('a wait cut before it began (a message came in as the command started) ends
   const { control, app } = setup()
   const begun = Date.now()
   const started = await control.run(
-    { command: 'sleep 1; echo late > late.txt', cwd: 'app', outputs: ['late.txt'] },
+    { command: 'sleep 4; echo late > late.txt', cwd: 'app', outputs: ['late.txt'] },
     30_000,
     AbortSignal.abort(),
   )
-  assert.ok(Date.now() - begun < 5_000, `not its 30 s wait: ${Date.now() - begun} ms`)
+  assert.ok(Date.now() - begun < 3_000, `not its 30 s wait: ${Date.now() - begun} ms`)
   assert.ok(['starting', 'running'].includes(started.status), started.status)
   const ended = await control.get(started.id, 30_000)
   assert.equal(ended.status, 'succeeded')

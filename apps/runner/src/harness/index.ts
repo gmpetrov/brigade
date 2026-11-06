@@ -1254,6 +1254,10 @@ export class HarnessThread {
       (resume) => resume,
       () => undefined,
     )
+    // A wait of its tools on the thread's machine would hold the turn until its command ends,
+    // past HAND_OVER_MS: it ends now, the command going on there (arrivals.ts). Asked once the
+    // turn is suspending, its result is kept for the next runner to give the turn.
+    this.arrivals.handOver()
     const resume = await Promise.race([detached, sleep(HAND_OVER_MS, undefined, { ref: false })])
     this.handingOver = false
     if (!resume || groups.length === 0) {

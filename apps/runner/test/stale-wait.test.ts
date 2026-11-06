@@ -17,6 +17,7 @@ import { createLocalSandboxSession } from '../src/harness/local-sandbox.js'
 const WAIT_MS = 300
 process.env.BRIGADE_STALE_WAIT_MS = String(WAIT_MS)
 const { HarnessThread } = await import('../src/harness/index.js')
+const { machineTools } = await import('../src/harness/tools.js')
 
 type Emit = (part: Record<string, unknown>) => void
 
@@ -445,7 +446,7 @@ test(
       assert.equal(waiting.signal.aborted, false, 'not before Claude Code took the message')
       taken()
       await steered
-      assert.ok(waiting.signal.aborted && waiting.byMessage, 'a wait under way ends')
+      assert.ok(waiting.signal.aborted && waiting.cut === 'message', 'a wait under way ends')
       waiting.release()
       const early = t.thread.arrivals.watch()
       assert.ok(early.signal.aborted, 'one that starts before the turn read it ends at once')
@@ -460,10 +461,99 @@ test(
       t.played.emit({ type: 'tool-result', toolCallId: 'b1', toolName: 'Bash', result: 'ok' })
       for (let i = 0; i < 200 && !t.events.some((e) => e.type === 'tool.finished'); i++)
         await sleep(10)
-      assert.ok(t.events.some((e) => e.type === 'tool.finished'), 'the result went to the model')
+      assert.ok(
+        t.events.some((e) => e.type === 'tool.finished'),
+        'the result went to the model',
+      )
       const after = t.thread.arrivals.watch()
       assert.equal(after.signal.aborted, false, 'read with that result: the next wait waits')
       after.release()
+      assert.equal(t.thread.arrivals.listening, 0)
+    } finally {
+      stop.abort()
+      await t.outcome
+      await t.cleanup()
+    }
+  },
+)
+
+// Nov 6, "Montage énergétique façon YouTuber 2": an update came while run_on_machine waited on a
+// render. The harness lets go of a turn only once its host's calls are done, so it held on past
+// HAND_OVER_MS; the turn was stopped and started again, and the command's id went with the call.
+test(
+  'an update during a wait on the machine ends the wait with the command, and hands the turn over',
+  { timeout: 30_000 },
+  async () => {
+    const stop = new AbortController()
+    const t = await stuckTurn([waitingWord(true)], { signal: stop.signal })
+    try {
+      await sleep(50)
+      const live = t.live()
+      Object.assign(live.sandbox, { groups: () => [4343] })
+      // A render on the thread's machine, waited on as MachineRuns does.
+      const waitFor = (ms: number, signal?: AbortSignal) =>
+        new Promise<void>((done) => {
+          if (signal?.aborted) return done()
+          const timer = setTimeout(done, ms)
+          signal?.addEventListener('abort', () => (clearTimeout(timer), done()), { once: true })
+        })
+      const view = {
+        id: 'r9',
+        command: 'npx hyperframes render',
+        cwd: 'video',
+        status: 'running' as const,
+        startedAt: new Date().toISOString(),
+        seconds: 1,
+        notes: [],
+      }
+      const runs = {
+        run: async (_input: unknown, waitMs: number, signal?: AbortSignal) => {
+          await waitFor(waitMs, signal)
+          return view
+        },
+        get: async (_id: string, waitMs: number, _lines?: number, signal?: AbortSignal) => {
+          await waitFor(waitMs, signal)
+          return view
+        },
+        stop: async () => assert.fail('the command is not stopped'),
+        list: () => [],
+      }
+      const tools = machineTools(runs, { env: async () => ({ file: '' }) } as never, t.thread.arrivals)
+      const call = (name: string, input: object) =>
+        tools[name]!.execute!(input as never, { toolCallId: name, messages: [] }) as Promise<{
+          id: string
+          status: string
+          note: string
+        }>
+      const render = call('run_on_machine', { command: 'npx hyperframes render', cwd: 'video' })
+      // As Claude Code's bridge does: the turn is let go of once the host's calls are done.
+      Object.assign(live.session, {
+        detach: async () => {
+          await render
+          return {
+            type: 'resume-session',
+            harnessId: 'scripted',
+            specificationVersion: 'harness-v1',
+            data: {},
+          }
+        },
+      })
+      const started = Date.now()
+      const groups = await t.thread.handOver()
+      assert.ok(Date.now() - started < 5_000, `not HAND_OVER_MS: ${Date.now() - started} ms`)
+      assert.deepEqual(groups, [{ pgid: 4343 }])
+      assert.equal((t.thread as unknown as { handOverFailed: boolean }).handOverFailed, false)
+      assert.ok((t.saved() as { handedOver?: unknown }).handedOver, 'handed over, not stopped')
+      const result = await render
+      assert.equal(result.status, 'running')
+      assert.equal(result.id, 'r9')
+      assert.match(result.note, /Brigade's runner is updating/)
+      assert.match(result.note, /machine_run\(\{ id: "r9" \}\)/)
+      // A wait that starts while this runner leaves ends at once, as said.
+      const begun = Date.now()
+      const again = await call('machine_run', { id: 'r9', waitMinutes: 10 })
+      assert.ok(Date.now() - begun < 1_000)
+      assert.match(again.note, /Brigade's runner is updating/)
       assert.equal(t.thread.arrivals.listening, 0)
     } finally {
       stop.abort()

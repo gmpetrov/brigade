@@ -9,7 +9,10 @@ import { fileFields, linkFiles, withFiles } from '../src/file-links.js'
 const transcribe = {
   type: 'object',
   properties: {
-    audio_base64: { type: 'string', description: 'Base64-encoded audio bytes, for small clips only.' },
+    audio_base64: {
+      type: 'string',
+      description: 'Base64-encoded audio bytes, for small clips only.',
+    },
     audio_url: { type: 'string', description: 'HTTPS URL of the audio file to transcribe.' },
     format: { type: 'string' },
     model: { type: 'string' },
@@ -45,7 +48,10 @@ test("a tool that takes a file's address beside the file gets a path field for i
   const spec = withFiles(transcribe)
   assert.equal(spec.filesField, 'audio_path')
   assert.deepEqual(spec.filesFields, ['audio_path'])
-  const properties = spec.inputSchema.properties as Record<string, { type: string; description: string }>
+  const properties = spec.inputSchema.properties as Record<
+    string,
+    { type: string; description: string }
+  >
   assert.equal(properties.audio_path?.type, 'string')
   assert.match(properties.audio_path!.description, /audio_url/)
   assert.match(properties.audio_path!.description, /rather than typing a file into audio_base64/)
@@ -70,7 +76,12 @@ test('a list of addresses that takes data URLs gets a list of paths; a field nam
     },
   ])
   assert.deepEqual(fileFields(video), [
-    { path: 'first_frame_image_path', url: 'first_frame_image_url', many: false, inline: 'a data URL' },
+    {
+      path: 'first_frame_image_path',
+      url: 'first_frame_image_url',
+      many: false,
+      inline: 'a data URL',
+    },
     { path: 'last_frame_image_path', url: 'last_frame_image_url', many: false },
   ])
   const spec = withFiles(video)

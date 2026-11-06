@@ -24,9 +24,10 @@ export const FILE_LINK_SECONDS = 60 * 60
 type Schema = Record<string, unknown>
 
 const propertiesOf = (schema: Schema) =>
-  (schema.properties && typeof schema.properties === 'object'
-    ? schema.properties
-    : {}) as Record<string, Schema | undefined>
+  (schema.properties && typeof schema.properties === 'object' ? schema.properties : {}) as Record<
+    string,
+    Schema | undefined
+  >
 
 const isString = (schema: unknown) => (schema as Schema | undefined)?.type === 'string'
 
@@ -52,11 +53,7 @@ export function fileFields(schema: Schema): FileField[] {
     const base64 = `${stem}_base64`
     const description = typeof property.description === 'string' ? property.description : ''
     const inline =
-      base64 in properties
-        ? base64
-        : /\bdata urls?\b/i.test(description)
-          ? 'a data URL'
-          : undefined
+      base64 in properties ? base64 : /\bdata urls?\b/i.test(description) ? 'a data URL' : undefined
     if (!inline && !MEDIA.test(stem)) continue
     const path = many ? `${stem}_paths` : `${stem}_path`
     // A tool with a field of that name already keeps it as it is.

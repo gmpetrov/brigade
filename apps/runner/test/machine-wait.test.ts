@@ -69,7 +69,7 @@ function tools(runs: MachineRunTools, arrivals?: Arrivals) {
   }
 }
 
-test('a message that comes in ends the wait of run_on_machine; the command goes on', async () => {
+test('a message that comes in ends the wait of run_on_machine; the command goes on', { timeout: 10_000 }, async () => {
   const { runs, stopped } = machine()
   const arrivals = new Arrivals()
   const started = Date.now()
@@ -85,7 +85,10 @@ test('a message that comes in ends the wait of run_on_machine; the command goes 
   assert.equal(arrivals.listening, 0)
 })
 
-test('machine_run ends its wait for one too, and one that starts before the turn read it at once', async () => {
+test(
+  'machine_run ends its wait for one too, and one that starts before the turn read it at once',
+  { timeout: 10_000 },
+  async () => {
   const { runs } = machine()
   const arrivals = new Arrivals()
   const waiting = tools(runs, arrivals).wait({ id: 'r1' })
@@ -104,7 +107,7 @@ test('machine_run ends its wait for one too, and one that starts before the turn
   assert.equal(arrivals.listening, 0)
 })
 
-test('a command that ended as the message came says it is done, as ever', async () => {
+test('a command that ended as the message came says it is done, as ever', { timeout: 10_000 }, async () => {
   const { runs, end } = machine()
   const arrivals = new Arrivals()
   end()
@@ -114,7 +117,7 @@ test('a command that ended as the message came says it is done, as ever', async 
   assert.equal(result.note, 'Done.')
 })
 
-test('without a message the wait lasts as long as it is asked, and a stop does not wait', async () => {
+test('without a message the wait lasts as long as it is asked, and a stop does not wait', { timeout: 10_000 }, async () => {
   const { runs, stopped } = machine()
   const arrivals = new Arrivals()
   const started = Date.now()
@@ -124,4 +127,23 @@ test('without a message the wait lasts as long as it is asked, and a stop does n
   const stop = await tools(runs, arrivals).wait({ id: 'r1', stop: true })
   assert.equal(stop.status, 'stopped')
   assert.deepEqual(stopped, ['r1'])
+})
+
+test('a hand-over to the next runner ends the wait with its own note; one after it ends at once', { timeout: 10_000 }, async () => {
+  const { runs, stopped } = machine()
+  const arrivals = new Arrivals()
+  const waiting = tools(runs, arrivals).run({ command: 'npx hyperframes render', cwd: 'video' })
+  await sleep(50)
+  arrivals.handOver()
+  const ended = await waiting
+  assert.equal(ended.status, 'running')
+  assert.match(ended.note, /^Brigade's runner is updating, which ended this wait/)
+  assert.match(ended.note, /\(id r1\)/)
+  assert.match(ended.note, /machine_run\(\{ id: "r1" \}\)/)
+  const started = Date.now()
+  const next = await tools(runs, arrivals).wait({ id: 'r1', waitMinutes: 10 })
+  assert.ok(Date.now() - started < 1_000)
+  assert.match(next.note, /^Brigade's runner is updating/)
+  assert.deepEqual(stopped, [])
+  assert.equal(arrivals.listening, 0)
 })
