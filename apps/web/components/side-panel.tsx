@@ -315,6 +315,7 @@ export function SidePanel({
   rememberFull,
   hidden = false,
   besideSidebar = false,
+  onPageChange,
   style,
   ...props
 }: ComponentProps<'aside'> & {
@@ -340,9 +341,11 @@ export function SidePanel({
    * Laid over the page only, not the whole window: the sidebar still shows beside it. Going
    * to another page, from the sidebar or elsewhere, brings it back to the panel, so that page
    * shows. Between a phone and a wide screen it is always laid so, with no panel to go back
-   * to: going to another page closes it (onClose).
+   * to: going to another page calls onPageChange (the document panel minimizes), as on a phone.
    */
   besideSidebar?: boolean
+  /** With besideSidebar: another page shows while it covers the page (below wide screens). */
+  onPageChange?: () => void
 }) {
   const panel = useRef<HTMLElement>(null)
   const stack = usePanelStack(!expanded && !hidden, name, raiseKey)
@@ -359,20 +362,21 @@ export function SidePanel({
   )
   // Between a phone and a wide screen: no room beside the page, and a sheet hides most of it.
   const medium = useMediaQuery('(min-width: 768px) and (max-width: 1279.98px)', false)
+  const wide = useMediaQuery('(min-width: 1280px)')
   const overPage = besideSidebar && medium && !expanded
   const over = (full && !expanded) || overPage
   const back = useCallback(() => setFull(false), [setFull])
   const pageLeft = usePageLeft(over && besideSidebar)
   const pathname = usePathname()
   const shownAt = useRef(pathname)
-  const latest = useRef({ overPage, onClose })
-  latest.current = { overPage, onClose }
+  const latest = useRef({ covers: !wide && !hidden, onPageChange })
+  latest.current = { covers: !wide && !hidden, onPageChange }
   useEffect(() => {
     if (shownAt.current === pathname) return
     shownAt.current = pathname
     if (!besideSidebar) return
     setFull(false)
-    if (latest.current.overPage) latest.current.onClose?.()
+    if (latest.current.covers) latest.current.onPageChange?.()
   }, [pathname, besideSidebar, setFull])
   // Another panel brought in front: it goes back, so it does not hide that one.
   // Only once it was in front: as it opens, it is not yet.
