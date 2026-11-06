@@ -135,7 +135,8 @@ export async function runMade(handle: RunHandle, sandboxId: string) {
 /**
  * The provider answered a start. `result` says when it resumed the VM, or null when it was up
  * already; a provider that says nothing (undefined) started it now. A create opens its run as it
- * was written.
+ * was written. A resume boat did is counted once, even when the run it reused was settled
+ * meanwhile (a stop's webhook, the minute's check): it then gets a run of its own.
  */
 export async function runStarted(
   handle: RunHandle,
@@ -147,60 +148,99 @@ export async function runStarted(
   try {
     await runMade(handle, sandboxId)
     const resumedAt = result === undefined ? now : result.resumedAt
-    let row = await prisma.vmRun.findUnique({ where: { id: handle.id } })
-    if (row && row.sandboxId !== sandboxId) {
-      // A create made again under its key gave the VM an earlier attempt made: that one's run.
-      row = await liveOf(sandboxId)
-      if (row) handle = { id: row.id, reused: row.status as 'pending' | 'open' }
-    }
-    if (!row) return
-    if (row.status === 'pending') {
-      // Up already, and no earlier start of this run was cut short: it ran before Brigade saw it.
-      const found = row.start === 'resume' && resumedAt === null && handle.reused === null
-      await prisma.vmRun.updateMany({
-        where: { id: row.id, status: 'pending' },
-        data: {
-          status: 'open',
-          seenAt: now,
-          ...(found
-            ? { start: 'found', startedAt: now }
-            : resumedAt
-              ? { startedAt: resumedAt }
-              : {}),
-        },
-      })
-      return
-    }
-    if (row.status === 'open' && handle.reused === 'open' && resumedAt) {
-      // Its run was open, yet the provider had stopped it, unseen: that run ends when it was last
-      // seen running, and this start is a run of its own.
-      await prisma.$transaction(async (tx) => {
-        const end = new Date(Math.max(row.startedAt.getTime(), (row.seenAt ?? resumedAt).getTime()))
-        const { count } = await tx.vmRun.updateMany({
-          where: { id: row.id, status: 'open', updatedAt: row.updatedAt },
-          data: { status: 'closed', stoppedAt: end, stoppedBy: 'provider' },
-        })
-        if (count === 0) return
-        await tx.vmRun.create({
+    // Each write is conditional on the row as read: when another changed it, read it again.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      let row: VmRun | null = await prisma.vmRun.findUnique({ where: { id: handle.id } })
+      if (row && row.sandboxId !== sandboxId) {
+        // A create made again under its key gave the VM an earlier attempt made: that one's run.
+        row = await liveOf(sandboxId)
+        if (row) handle = { id: row.id, reused: row.status as 'pending' | 'open' }
+      }
+      if (!row) return
+      const mine = { id: row.id, status: row.status, updatedAt: row.updatedAt }
+      if (row.status === 'pending') {
+        // Up already, and no earlier start of this run was cut short: it ran before Brigade saw it.
+        const found = row.start === 'resume' && resumedAt === null && handle.reused === null
+        const { count } = await prisma.vmRun.updateMany({
+          where: mine,
           data: {
-            organizationId: row.organizationId,
-            workspaceId: row.workspaceId,
-            kind: row.kind,
-            computerId: row.computerId,
-            machineId: row.machineId,
-            sessionId: row.sessionId,
-            sandboxId,
-            size: row.size,
-            start: 'resume',
             status: 'open',
-            startedAt: resumedAt,
             seenAt: now,
+            ...(found
+              ? { start: 'found', startedAt: now }
+              : resumedAt
+                ? { startedAt: resumedAt }
+                : {}),
           },
         })
-      })
+        if (count) return
+        continue
+      }
+      // Up already: the run it has is the one.
+      if (!resumedAt) return
+      if (row.status === 'open') {
+        // Open when this start began, and the provider still resumed it: it had stopped, unseen.
+        // That run ends when it was last seen running, and this start is a run of its own.
+        if (handle.reused !== 'open') return
+        const end = new Date(Math.max(row.startedAt.getTime(), (row.seenAt ?? resumedAt).getTime()))
+        const closed = await prisma.$transaction(async (tx) => {
+          const { count } = await tx.vmRun.updateMany({
+            where: mine,
+            data: { status: 'closed', stoppedAt: end, stoppedBy: 'provider' },
+          })
+          if (count) await tx.vmRun.create({ data: resumeOf(row, sandboxId, resumedAt, now) })
+          return count > 0
+        })
+        if (closed) return
+        continue
+      }
+      // Settled while this start ran (closed by a stop's news, void from the provider's figures):
+      // boat resumed it all the same, so the resume is a run of its own.
+      await resumedRun(row, sandboxId, resumedAt, now)
+      return
     }
+    failed('a start', new Error(`run ${handle.id} kept changing`))
   } catch (error) {
     failed('a start', error)
+  }
+}
+
+/** A new open run for a resume, as `row`'s VM's. */
+function resumeOf(row: VmRun, sandboxId: string, resumedAt: Date, now: Date) {
+  return {
+    organizationId: row.organizationId,
+    workspaceId: row.workspaceId,
+    kind: row.kind,
+    computerId: row.computerId,
+    machineId: row.machineId,
+    sessionId: row.sessionId,
+    sandboxId,
+    size: row.size,
+    start: 'resume' as const,
+    status: 'open' as const,
+    startedAt: resumedAt,
+    seenAt: now,
+  }
+}
+
+/**
+ * A resume whose run was settled meanwhile: a run of its own. When the VM has a live run already
+ * (the minute's check found it running and gave it one, as no start), that one is this resume.
+ */
+async function resumedRun(row: VmRun, sandboxId: string, resumedAt: Date, now: Date) {
+  try {
+    await prisma.vmRun.create({ data: resumeOf(row, sandboxId, resumedAt, now) })
+  } catch (error) {
+    if (!unique(error)) throw error
+    const live = await liveOf(sandboxId)
+    if (live?.start === 'found')
+      await prisma.vmRun.updateMany({
+        where: { id: live.id, start: 'found' },
+        data: {
+          start: 'resume',
+          startedAt: live.startedAt < resumedAt ? live.startedAt : resumedAt,
+        },
+      })
   }
 }
 

@@ -443,6 +443,72 @@ describe('vm costs', { skip: !database && 'no database answers' }, () => {
     assert.equal(all[1]?.start, 'resume')
   })
 
+  test('a resume is counted once when its reused run is settled while boat resumes it', async () => {
+    const ledger = new FakeLedger()
+    // 1. Its open run, reused; boat's stop webhook closes it while the resume is under way.
+    const first = await beginRun(computer(), 'resume', 'vm-race1')
+    await runStarted(first, 'vm-race1', { resumedAt: new Date(Date.now() - 3600_000) })
+    const reused = await beginRun(computer(), 'resume', 'vm-race1')
+    assert.equal(reused?.reused, 'open')
+    const stoppedAt = new Date(Date.now() - 60_000)
+    assert.equal((await boatWebhook(signed(archived('vm-race1', stoppedAt)), SECRET)).status, 200)
+    const resumedAt = new Date(Date.now() - 30_000)
+    await runStarted(reused, 'vm-race1', { resumedAt })
+    let mine = (await runs()).filter((r) => r.sandboxId === 'vm-race1')
+    assert.deepEqual(
+      mine.map((r) => [r.status, r.start]),
+      [
+        ['closed', 'resume'],
+        ['open', 'resume'],
+      ],
+    )
+    assert.equal(mine[0]?.stoppedAt?.getTime(), stoppedAt.getTime())
+    assert.equal(mine[1]?.startedAt.getTime(), resumedAt.getTime())
+
+    // 2. The same, and the minute's check finds the VM up meanwhile and gives it a found run:
+    // that run is this resume, counted as one.
+    await prisma.computer.update({
+      where: { id: ids.cloud },
+      data: { providerRef: { provider: 'boat', id: 'vm-race2' } },
+    })
+    const old = await beginRun(computer(), 'resume', 'vm-race2')
+    await runStarted(old, 'vm-race2', { resumedAt: new Date(Date.now() - 3600_000) })
+    const again = await beginRun(computer(), 'resume', 'vm-race2')
+    await runStopped('vm-race2', new Date(Date.now() - 60_000), 'provider')
+    ledger.vms.set('vm-race2', 'running')
+    await reconcileVmRuns(new Date(), ledger)
+    assert.equal(
+      (await runs()).find((r) => r.sandboxId === 'vm-race2' && r.status === 'open')?.start,
+      'found',
+    )
+    const resumed2 = new Date(Date.now() - 30_000)
+    await runStarted(again, 'vm-race2', { resumedAt: resumed2 })
+    mine = (await runs()).filter((r) => r.sandboxId === 'vm-race2')
+    assert.equal(mine.length, 2)
+    assert.equal(mine[1]?.status, 'open')
+    assert.equal(mine[1]?.start, 'resume')
+    assert.equal(mine[1]?.startedAt.getTime(), resumed2.getTime())
+
+    // 3. A start cut short, retried: the minute's check voids its pending run (the VM stopped,
+    // boat says it never ran) while the retry has boat resume it. The resume is a run.
+    const cut = await beginRun(computer(), 'resume', 'vm-race3')
+    await age(cut!.id, PENDING_MS + 60_000)
+    const retry = await beginRun(computer(), 'resume', 'vm-race3')
+    assert.equal(retry?.reused, 'pending')
+    ledger.vms.set('vm-race3', 'stopped')
+    await reconcileVmRuns(new Date(), ledger)
+    assert.equal((await prisma.vmRun.findUnique({ where: { id: cut!.id } }))?.status, 'void')
+    await runStarted(retry, 'vm-race3', { resumedAt: new Date() })
+    mine = (await runs()).filter((r) => r.sandboxId === 'vm-race3')
+    assert.deepEqual(
+      mine.map((r) => [r.status, r.start]),
+      [
+        ['void', 'resume'],
+        ['open', 'resume'],
+      ],
+    )
+  })
+
   test('a month’s sums: split at its ends, starts, found and void runs, threads, boat', async () => {
     const at = (iso: string) => new Date(iso)
     const base = {
