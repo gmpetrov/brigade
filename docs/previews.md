@@ -650,6 +650,41 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     whole working directory). The copy stays between commands with what they
     installed, and the next command sends only what changed. At most 3 commands
     of a thread run at once.
+    - **The thread's attached files are there too** (`machine-files.ts`), at the
+      same place in the teammate's copy as in its folder
+      (`commands/<teammate>/attachments/…`), so a command names them as it would
+      here (`../attachments/clip.mov` from a checkout beside them), whatever
+      their size, and their bytes never go through the cloud computer, whose
+      memory every teammate shares. Before the command's folder goes, the
+      machine fetches each file it lacks itself, straight from the bucket, three
+      at a time, one command's files after another's. The runner asks the API as
+      for its own copy (`GET /runner/attachments/<id>`), reads the signed URL
+      from its redirect without following it, and gives the machine only that
+      URL, valid a few minutes, as curl's config on stdin (`curl -K -`), never
+      on a command line; the runner's token never goes there. Without a bucket
+      (on a laptop) the API sends the bytes, which go over the link as they
+      come, never held whole. The machine writes each to a temporary file,
+      checks its size and SHA-256, then moves it into place; one that does not
+      match, or does not come, is left out with a note, and the command runs
+      anyway. It remembers what it placed
+      (`.brigade/attachments/<teammate>.json`: path, SHA-256, size and time), so
+      the next command fetches only what it lacks, and says what it fetched
+      ("Fetched 1 attached file (512.0 MB) from storage"). A file of the right
+      size it did not place (the sync's) is checked by its SHA-256 instead of
+      fetched. It gets each file as given to the thread: a copy the teammate
+      edited or removed here does not change it there. The one exception is a
+      folder the sync sends as it is (a command run in `attachments`): there a
+      file is placed only when the teammate's copy is still the one given, as
+      its SHA-256 says (its size alone may be an edit's), and it gets that
+      copy's time and mode, so the sync finds it already there and does not send
+      it; any other copy there, edited or removed, is the sync's, like any file
+      of that folder, and nothing is placed for it. The copy is read as the
+      teammate by Node itself (`fs` and `crypto`, opened without following a
+      link, hashed as it streams), not by GNU's `stat` or `sha256sum`, which a
+      Mac lacks; one that cannot be read is not placed either, and the run says
+      so, never guessing from its size. Elsewhere a placed file keeps its own
+      time and mode. Previews do not get them: a preview's copy is its checkout
+      alone.
     - **Detached there, followed here.** The command runs in a session of its
       own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
       sourced, then deleted from the disk. Its output goes to a file the runner

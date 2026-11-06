@@ -3430,6 +3430,10 @@ export function machineTools(
         'The folder in `cwd` goes to the machine first: the whole checkout it is in, without .git, node_modules, ' +
         'what git ignores (.env files aside) and files over 2 GB, or the folder alone outside a checkout. Your ' +
         'copy there stays between commands, with what they installed: the next ones send only what changed. ' +
+        "The thread's attached files are there too, whatever their size, at the same path relative to your " +
+        'working directory as here (from a checkout in it, ../attachments/x.mov), as given to the thread: a ' +
+        'copy you edited or removed here does not change them, except in a command run in the attachments ' +
+        'folder, which goes as it is. ' +
         'It runs Ubuntu with Node.js, pnpm, Docker, Python, ffmpeg and Chrome, and sudo for anything else ' +
         "(apt-get), but none of this computer's environment, services or credentials: the command installs " +
         'what it needs (e.g. "pnpm install --frozen-lockfile && pnpm test"), with settings in `env` and vault ' +
