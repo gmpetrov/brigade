@@ -1186,6 +1186,18 @@
 .document-editor .bn-lines-selected *::selection {
   background: transparent;
 }
+/* Where a dragged line lands (components/document-block-drop.ts): a thin line, as in Notion;
+ * a toggle it drops into is tinted. */
+.prosemirror-dropcursor-block,
+.prosemirror-dropcursor-inline,
+.prosemirror-dropcursor-vertical {
+  border-radius: 2px;
+  background-color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+.document-editor .bn-block-outer[data-drop-target='true']::after {
+  background-color: color-mix(in oklab, var(--primary) 8%, transparent);
+  box-shadow: none;
+}
 /* The box a drag beside the lines draws to select them. */
 .block-select-box {
   position: fixed;
@@ -1205,34 +1217,98 @@
  * Where a line stands comes from its marker's chips (components/list-items.tsx). A line holds
  * its sub-lines in its own block, so one that does not stand so but has a sub-line that does
  * stays as their context, shrunk to a grey breadcrumb with no box or chips: hiding it would
- * hide them too. */
+ * hide them too. A toggle (BlockNote draws it in a frame: its chevron, then a slot holding its
+ * content and its sub-lines) shows its sub-lines that stand so even while it is closed, and
+ * no chevron, which would hide nothing. */
 .list-filter-open
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true'])),
+  .bn-block-outer:not(
     :has(
-      > .bn-block > .bn-block-group [data-content-type='checkListItem']:not([data-checked='true'])
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem']:not([data-checked='true']),
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']:not([data-checked='true']),
+      > .bn-block > .bn-block-group [data-content-type='checkListItem']:not([data-checked='true']),
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > .bn-block-group
+        [data-content-type='checkListItem']:not([data-checked='true'])
     )
   ),
 .list-filter-done
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'][data-checked='true']),
-    :has(> .bn-block > .bn-block-group [data-content-type='checkListItem'][data-checked='true'])
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'][data-checked='true'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem'][data-checked='true'],
+      > .bn-block > .bn-block-group [data-content-type='checkListItem'][data-checked='true'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > .bn-block-group
+        [data-content-type='checkListItem'][data-checked='true']
+    )
   ),
 .list-filter-needs_you
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you']),
+  .bn-block-outer:not(
     :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you'],
       > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='needs_you'],
+      > .bn-block
+        > .bn-block-group
+        [data-content-type='checkListItem']
+        [data-item-state='needs_you'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
         > .bn-block-group
         [data-content-type='checkListItem']
         [data-item-state='needs_you']
     )
   ),
 .list-filter-in_progress
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress']),
+  .bn-block-outer:not(
     :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress'],
       > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='in_progress'],
+      > .bn-block
+        > .bn-block-group
+        [data-content-type='checkListItem']
+        [data-item-state='in_progress'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
         > .bn-block-group
         [data-content-type='checkListItem']
         [data-item-state='in_progress']
@@ -1241,28 +1317,152 @@
   display: none;
 }
 .list-filter-open
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true']))
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem']:not([data-checked='true']),
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']:not([data-checked='true'])
+    )
+  )
+  > .bn-block
+  > .bn-block-content,
+.list-filter-open
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem']:not([data-checked='true']),
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']:not([data-checked='true'])
+    )
+  )
+  > .bn-block
+  > .bn-toggle-frame
+  > .bn-toggle-slot
+  > .bn-block-content,
+.list-filter-done
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'][data-checked='true'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem'][data-checked='true']
+    )
   )
   > .bn-block
   > .bn-block-content,
 .list-filter-done
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'][data-checked='true'])
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'][data-checked='true'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem'][data-checked='true']
+    )
+  )
+  > .bn-block
+  > .bn-toggle-frame
+  > .bn-toggle-slot
+  > .bn-block-content,
+.list-filter-needs_you
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='needs_you']
+    )
   )
   > .bn-block
   > .bn-block-content,
 .list-filter-needs_you
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you'])
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='needs_you']
+    )
+  )
+  > .bn-block
+  > .bn-toggle-frame
+  > .bn-toggle-slot
+  > .bn-block-content,
+.list-filter-in_progress
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='in_progress']
+    )
   )
   > .bn-block
   > .bn-block-content,
 .list-filter-in_progress
-  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
-    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress'])
+  .bn-block-outer:not(
+    :has(
+      > .bn-block > [data-content-type='heading'],
+      > .bn-block > .bn-toggle-frame > .bn-toggle-slot > [data-content-type='heading']
+    )
+  ):not(
+    :has(
+      > .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress'],
+      > .bn-block
+        > .bn-toggle-frame
+        > .bn-toggle-slot
+        > [data-content-type='checkListItem']
+        [data-item-state='in_progress']
+    )
   )
   > .bn-block
+  > .bn-toggle-frame
+  > .bn-toggle-slot
   > .bn-block-content {
   & > div:has(> input),
   & [data-list-item],
@@ -1280,6 +1480,23 @@
   }
   & .bn-inline-content::before {
     content: '↳ ';
+  }
+}
+.list-view:is(
+    .list-filter-open,
+    .list-filter-done,
+    .list-filter-needs_you,
+    .list-filter-in_progress
+  )
+  .bn-editor
+  .bn-toggle-frame {
+  display: block;
+  & > .bn-toggle-button,
+  & > .bn-toggle-add-block-button {
+    display: none;
+  }
+  & > .bn-toggle-slot > .bn-block-group {
+    display: block;
   }
 }
 
