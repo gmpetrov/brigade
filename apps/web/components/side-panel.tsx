@@ -8,7 +8,8 @@
 // share the right edge: the last one opened, or brought forward, is on top.
 // PanelExpandButton in its header lays it over the whole window and back; not
 // on a phone, where it already is. A document stops at the sidebar instead, so
-// the sidebar still shows (besideSidebar).
+// the sidebar still shows (besideSidebar); between a phone and a wide screen,
+// where a sheet from the bottom would leave little of either, it always lies so.
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import {
@@ -27,6 +28,7 @@ import {
 } from 'react'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 const WIDTH_KEY = 'brigade:panel-width'
@@ -336,7 +338,9 @@ export function SidePanel({
   hidden?: boolean
   /**
    * Laid over the page only, not the whole window: the sidebar still shows beside it. Going
-   * to another page, from the sidebar or elsewhere, brings it back to the panel, so that page shows.
+   * to another page, from the sidebar or elsewhere, brings it back to the panel, so that page
+   * shows. Between a phone and a wide screen it is always laid so, with no panel to go back
+   * to: going to another page closes it (onClose).
    */
   besideSidebar?: boolean
 }) {
@@ -353,15 +357,22 @@ export function SidePanel({
     (next: boolean) => (rememberFull ? writeFull(rememberFull, next) : setOwn(next)),
     [rememberFull],
   )
-  const over = full && !expanded
+  // Between a phone and a wide screen: no room beside the page, and a sheet hides most of it.
+  const medium = useMediaQuery('(min-width: 768px) and (max-width: 1279.98px)', false)
+  const overPage = besideSidebar && medium && !expanded
+  const over = (full && !expanded) || overPage
   const back = useCallback(() => setFull(false), [setFull])
   const pageLeft = usePageLeft(over && besideSidebar)
   const pathname = usePathname()
   const shownAt = useRef(pathname)
+  const latest = useRef({ overPage, onClose })
+  latest.current = { overPage, onClose }
   useEffect(() => {
     if (shownAt.current === pathname) return
     shownAt.current = pathname
-    if (besideSidebar) setFull(false)
+    if (!besideSidebar) return
+    setFull(false)
+    if (latest.current.overPage) latest.current.onClose?.()
   }, [pathname, besideSidebar, setFull])
   // Another panel brought in front: it goes back, so it does not hide that one.
   // Only once it was in front: as it opens, it is not yet.
@@ -371,9 +382,10 @@ export function SidePanel({
     wasFront.current = stack.front
   }, [stack.front, hidden, setFull])
   // Laid over the window, Escape brings it back to the panel first.
-  useEscapeToClose(panel, stack.front ? (over ? back : onClose) : undefined)
+  useEscapeToClose(panel, stack.front ? (over && !overPage ? back : onClose) : undefined)
   return (
-    <FullContext.Provider value={expanded ? null : { full, setFull }}>
+    // Laid over the page for good, it has no panel to go back to: no Expand.
+    <FullContext.Provider value={expanded || overPage ? null : { full, setFull }}>
       <aside
         ref={panel}
         // The page makes room for it only while it shows (globals.css).

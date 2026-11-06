@@ -33,7 +33,7 @@ import {
   SquareMousePointer,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CodeWorkspace } from '@/components/code-workspace'
 import { PanelExpandButton, SidePanel, usePanelFull } from '@/components/side-panel'
 
@@ -45,6 +45,7 @@ import { api } from '@/lib/api'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
 import { previewOrigin, typedPath, withPath } from '@/lib/preview-path'
 import { readPreviewPage, rememberPreviewPage } from '@/lib/thread-side'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 export type ThreadPreview = PreviewInfo & { teammateId?: string }
@@ -1125,19 +1126,6 @@ function CodeNotice({
         ))}
       </ul>
     </div>
-  )
-}
-
-/** Matches a media query, as the window changes. */
-function useMediaQuery(query: string) {
-  return useSyncExternalStore(
-    (change) => {
-      const list = window.matchMedia(query)
-      list.addEventListener('change', change)
-      return () => list.removeEventListener('change', change)
-    },
-    () => window.matchMedia(query).matches,
-    () => true,
   )
 }
 

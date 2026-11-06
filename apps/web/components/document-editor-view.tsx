@@ -301,16 +301,35 @@ function SavedDocument({
   })
   self.current = editor
   const [saved, setSaved] = useState(session.text)
+  // For onChange, which runs with the render it was made in.
+  const savedText = useRef(session.text)
+  savedText.current = saved
+  // While the stored text fills it, its changes are not the person's.
+  const filling = useRef(true)
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
 
   useEffect(() => {
+    // Only the last load fills the editor: an earlier one, still converting, would replace
+    // blocks that are gone by then.
+    let live = true
+    filling.current = true
     void (async () => {
-      editor.replaceBlocks(editor.document, (await markdownToBlocks(editor, session.text)) as never)
+      const blocks = await markdownToBlocks(editor, session.text)
+      if (!live) return
+      editor.replaceBlocks(editor.document, blocks as never)
       // What the editor writes back for the text as stored: unchanged until this differs.
-      setSaved(await blocksToMarkdown(editor, editor.document))
+      const text = await blocksToMarkdown(editor, editor.document)
+      if (!live) return
+      savedText.current = text
+      setSaved(text)
+      setDirty(false)
+      filling.current = false
     })()
+    return () => {
+      live = false
+    }
   }, [editor, session.text])
 
   async function save() {
@@ -337,9 +356,12 @@ function SavedDocument({
         ask={ask}
         list={target.kind === 'library'}
         readOnly={session.readOnly}
-        onChange={() =>
-          void blocksToMarkdown(editor, editor.document).then((text) => setDirty(text !== saved))
-        }
+        onChange={() => {
+          if (filling.current) return
+          void blocksToMarkdown(editor, editor.document).then((text) =>
+            setDirty(text !== savedText.current),
+          )
+        }}
       />
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {!session.readOnly && (
