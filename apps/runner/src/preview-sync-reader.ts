@@ -160,9 +160,10 @@ export class Reader {
   private readonly ignores: Ignores
   private readonly warned = new Set<string>()
   /**
-   * Files whose copy on the machine went cut short (padded with zeros) and not whole since: a
-   * mark names them, and the flush it ends fails rather than vouch for that copy. Each is checked
-   * again (now, or in a batch already scheduled), which notes it again only if cut short again.
+   * Files whose copy on the machine went cut short (padded with zeros): a mark names them, and
+   * the flush it ends fails rather than vouch for that copy. One stays named until a frame
+   * replaces or deletes that copy there (the file whole, a link, a deletion, of it or of a folder
+   * it is in), never merely because it was looked at again.
    */
   private readonly partial = new Set<string>()
 
@@ -313,8 +314,6 @@ export class Reader {
    * changed while it went.
    */
   private async check(path: string, send: boolean, resent = 0): Promise<void> {
-    // Whatever it is now, it goes as it is (cut short again, it is noted again below).
-    this.partial.delete(path)
     if (!path || skipped(path)) {
       if (!path) await this.rescan('')
       return
@@ -326,6 +325,8 @@ export class Reader {
       return this.gone(path)
     }
     if (stat.isDirectory()) {
+      // A folder where a file was, cut short on its way: that copy goes from the machine first.
+      if (this.partial.has(path)) await this.gone(path)
       if (!this.watchers.has(path)) {
         if (await this.ignores.ignored(path)) return
         // A new folder (or one moved here): all it holds is new too.
@@ -334,7 +335,7 @@ export class Reader {
       return
     }
     if (baseName(path) === '.gitignore') this.ignores.restart()
-    if (await this.ignores.ignored(path)) return
+    if (await this.ignores.ignored(path)) return this.drop(path)
     const before = this.index.get(path)
     if (stat.isSymbolicLink()) {
       const target = await readlink(join(this.root, path)).catch(() => null)
@@ -342,10 +343,12 @@ export class Reader {
       // Unchanged since sent, unless the receiver asked for it: it lacks it.
       if (before && 'link' in before && before.link === target && !this.needed) return
       this.index.set(path, { link: target })
-      if (send) await this.frame({ t: 'link', p: path, to: target })
-      return
+      if (!send) return
+      await this.frame({ t: 'link', p: path, to: target })
+      // It replaced there what was at its place: a copy cut short, or a folder holding some.
+      return this.repaired(path)
     }
-    if (!stat.isFile()) return
+    if (!stat.isFile()) return this.drop(path)
     if (stat.size > FILE_MAX) {
       if (!this.warned.has(path)) {
         this.warned.add(path)
@@ -365,11 +368,12 @@ export class Reader {
     if (same && !this.needed) return
     this.index.set(path, entry)
     if (!send) return
-    // A folder on its way that became a link to elsewhere: nothing there is read.
+    // A folder on its way that became a link to elsewhere: nothing there is read. A copy cut
+    // short stays named: the link that folder now is replaces it, once it goes.
     if (!(await this.inside(path))) return
     const sent = await this.send(path, stat)
     if (sent === 'gone') return this.gone(path)
-    if (sent === 'sent') return
+    if (sent === 'sent') return this.repaired(path)
     // What the machine has is not this file (cut short: padded with zeros), or it was not the
     // file seen: noted as no file can be, it goes again now, ahead of any mark already asked
     // for. Cut short that many times, it waits for a later batch, and the next mark names it.
@@ -490,7 +494,25 @@ export class Reader {
         watcher.close()
         this.watchers.delete(dir)
       }
-    if (known) await this.frame({ t: 'del', p: path })
+    if (known) {
+      await this.frame({ t: 'del', p: path })
+      this.repaired(path)
+    }
+  }
+
+  /** A frame replaced or deleted what the machine had at `path`: no copy there is cut short now. */
+  private repaired(path: string) {
+    const under = `${path}/`
+    for (const key of [...this.partial])
+      if (key === path || key.startsWith(under)) this.partial.delete(key)
+  }
+
+  /**
+   * No longer sent as it is (git ignores it now, or it is no regular file): a copy cut short of
+   * it goes from the machine, rather than stay there named in every mark.
+   */
+  private async drop(path: string) {
+    if (this.partial.has(path)) await this.gone(path)
   }
 
   /** Send these as they are now, changed or not: the receiver lacks them. */

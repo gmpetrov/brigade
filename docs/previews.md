@@ -500,7 +500,11 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       its line said, the rest as zeros, and goes again at once, up to three
       times, ahead of any mark asked for meanwhile; one still cut short then is
       named in the next mark, and that flush fails (no command starts on a copy
-      padded with zeros) until the file goes whole; one that grew
+      padded with zeros). Such a copy stays named until a frame replaces or
+      deletes it there (the file whole, a link, a deletion of it or of its
+      folder), never merely because its path was looked at again; one whose
+      file became a folder, a pipe, or a path git now ignores is deleted there
+      at once. One that grew
       goes as its line said, its watcher sending the rest; one that cannot be
       read is deleted there, as before. The receiver decides a path on its
       line: the bytes of one it refuses are read and dropped, and the next

@@ -427,13 +427,38 @@ test('a file cut short while it goes ends up there as it is here', async () => {
   }
 })
 
+/** What a path holds, as these tests compare it: a file's bytes read only up to 64 MB. */
+type Held = { kind: 'absent' | 'file' | 'link' | 'dir' | 'other'; size?: number; bytes?: Buffer }
+
+function held(file: string): Held {
+  let stat
+  try {
+    stat = lstatSync(file)
+  } catch {
+    return { kind: 'absent' }
+  }
+  if (stat.isSymbolicLink()) return { kind: 'link' }
+  if (stat.isDirectory()) return { kind: 'dir' }
+  if (!stat.isFile()) return { kind: 'other' }
+  const bytes = stat.size <= 64 * MB ? readFileSync(file) : undefined
+  return { kind: 'file', size: stat.size, ...(bytes ? { bytes } : {}) }
+}
+
 /**
  * The two halves, joined by a stream that cuts `path` short (`cut`, with the number of the frame
- * that sends it) as the first bytes of each of its frames go: the reader reads its next chunk
- * only once the receiver took the last. Each acknowledgement comes with the copy's bytes then.
+ * that sends it) as the first bytes of each of its frames go, and calls `ended` as the last go:
+ * the reader reads its next chunk only once the receiver took the last. Each acknowledgement
+ * comes with what the copy holds then, and whether it is honest: a copy there that is not the
+ * file here (cut short, padded with zeros) is named in it.
  */
-function cutting(root: string, copy: string, path: string, cut: (frame: number) => void) {
-  const acks: { id: number; partial?: string[]; bytes: Buffer; frames: number }[] = []
+function cutting(
+  root: string,
+  copy: string,
+  path: string,
+  cut: (frame: number) => void,
+  ended?: (frame: number) => void,
+) {
+  const acks: { id: number; partial?: string[]; at: Held; honest: boolean; frames: number }[] = []
   const errors: string[] = []
   const warnings: string[] = []
   let needed!: () => void
@@ -445,18 +470,27 @@ function cutting(root: string, copy: string, path: string, cut: (frame: number) 
     if (m.t === 'need') {
       void reader.answerNeed(m.paths!)
       needed()
-    } else if (m.t === 'ack')
+    } else if (m.t === 'ack') {
+      const at = held(join(copy, path))
+      const now = held(join(root, path))
+      const whole =
+        at.kind !== 'file' ||
+        (now.kind === 'file' &&
+          now.size === at.size &&
+          !!at.bytes?.equals(now.bytes ?? Buffer.of()))
       acks.push({
         id: m.id!,
         partial: m.partial,
-        bytes: readFileSync(join(copy, path)),
+        at,
+        honest: whole || !!m.partial?.includes(path),
         frames: before.get(m.id!)!,
       })
-    else if (m.t === 'error') errors.push(String((message as { message?: string }).message))
+    } else if (m.t === 'error') errors.push(String((message as { message?: string }).message))
   })
   let left = 0
   let frames = 0
   let cutting = false
+  let mine = false
   /** How many times it went before each mark. */
   const before = new Map<number, number>()
   const out = new Writable({
@@ -468,6 +502,7 @@ function cutting(root: string, copy: string, path: string, cut: (frame: number) 
           cutting = false
           cut(frames)
         }
+        if (mine && left === 0) ended?.(frames)
       } else {
         // A header line, written alone: a file's body follows it, its size said.
         const header = JSON.parse(data.toString('utf8')) as {
@@ -478,7 +513,8 @@ function cutting(root: string, copy: string, path: string, cut: (frame: number) 
         }
         if (header.t === 'file') {
           left = header.s!
-          if (header.p === path) cutting = ++frames > 0
+          mine = header.p === path
+          if (mine) cutting = ++frames > 0
         } else if (header.t === 'mark') before.set(header.id!, frames)
       }
       receiver.push(data).then(() => done(), done)
@@ -519,7 +555,11 @@ test('a file cut short twice while it goes is whole there at the first mark afte
     await sync.start()
     // Asked for while it first goes: what follows (the files sent again) must come before it.
     const ack = await sync.flush(1)
-    assert.ok(ack.bytes.equals(readFileSync(join(root, 'clip.mov'))), 'at the first mark, as here')
+    assert.ok(
+      ack.at.bytes?.equals(readFileSync(join(root, 'clip.mov'))),
+      'at the first mark, as here',
+    )
+    assert.ok(ack.honest)
     assert.equal(ack.partial, undefined)
     assert.equal(ack.frames, 3, 'sent three times before it: 12 MB cut short, 10 MB, then 1 KB')
     assert.deepEqual(sync.errors, [])
@@ -550,8 +590,172 @@ test('a file cut short each time it goes again is named in the mark, then goes w
     await eventually(() => sync.frames() === 5, 'sent once more')
     const second = await sync.flush(2)
     assert.equal(second.partial, undefined)
-    assert.ok(second.bytes.equals(readFileSync(join(root, 'clip.mov'))))
+    assert.ok(second.at.bytes?.equals(readFileSync(join(root, 'clip.mov'))))
+    assert.ok(first.honest && second.honest)
     assert.deepEqual(sync.errors, [])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+/**
+ * A file of 12 MB cut short to 1 KB as its first frame goes (through another name for it, out of
+ * the checkout), and `change` done to it meanwhile: the reader sends it again at once, and finds
+ * it no longer a file it sends. Started, and its first sync asked for.
+ */
+async function cutAway(
+  path: string,
+  change: (files: { root: string; source: string; outside: string }) => void,
+  options: { git?: boolean; ended?: (alias: string) => void } = {},
+) {
+  const root = options.git === false ? temp() : checkout()
+  const copy = temp()
+  const outside = temp()
+  const source = join(root, path)
+  randomFile(source, 12 * MB)
+  const alias = join(outside, 'alias.mov')
+  linkSync(source, alias)
+  const sync = cutting(
+    root,
+    copy,
+    path,
+    (frame) => {
+      if (frame !== 1) return
+      truncateSync(alias, 1024)
+      change({ root, source, outside })
+    },
+    (frame) => {
+      if (frame === 1) options.ended?.(alias)
+    },
+  )
+  await sync.start()
+  return { sync, root, copy, outside }
+}
+
+// A copy cut short stays named in each mark until a frame replaces or deletes it there: never
+// merely because the reader looked at its path again. Each way check() returns early is here.
+test('a copy cut short whose file was deleted meanwhile is deleted there before the mark', async () => {
+  const { sync } = await cutAway('clip.mov', ({ source }) => rmSync(source))
+  try {
+    const ack = await sync.flush(1)
+    assert.ok(ack.honest)
+    assert.equal(ack.at.kind, 'absent')
+    assert.equal(ack.partial, undefined)
+    assert.deepEqual(sync.errors, [])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose file became a folder is deleted there before the mark', async () => {
+  const { sync } = await cutAway('clip.mov', ({ source }) => {
+    rmSync(source)
+    mkdirSync(source)
+  })
+  try {
+    const ack = await sync.flush(1)
+    assert.ok(ack.honest, 'never a copy padded with zeros vouched for')
+    assert.equal(ack.at.kind, 'absent', 'deleted there (an empty folder is not made)')
+    assert.equal(ack.partial, undefined)
+    assert.deepEqual(sync.errors, [])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose file became a link is replaced by the link before the mark', async () => {
+  const { sync } = await cutAway('clip.mov', ({ source }) => {
+    rmSync(source)
+    symlinkSync('README.md', source)
+  })
+  try {
+    const ack = await sync.flush(1)
+    assert.ok(ack.honest)
+    assert.equal(ack.at.kind, 'link')
+    assert.equal(ack.partial, undefined)
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose file became a pipe is deleted there before the mark', async () => {
+  const { sync } = await cutAway('clip.mov', ({ source }) => {
+    rmSync(source)
+    execFileSync('mkfifo', [source])
+  })
+  try {
+    const ack = await sync.flush(1)
+    assert.ok(ack.honest)
+    assert.equal(ack.at.kind, 'absent')
+    assert.equal(ack.partial, undefined)
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose file grew past 2 GB is deleted there before the mark', async () => {
+  // Sparse: it takes no room here. Grown as the frame cut short ends, before it goes again.
+  const { sync } = await cutAway('clip.mov', () => undefined, {
+    ended: (alias) => truncateSync(alias, 2 * 1024 ** 3 + 1),
+  })
+  try {
+    const ack = await sync.flush(1)
+    assert.ok(ack.honest)
+    assert.equal(ack.at.kind, 'absent')
+    assert.equal(ack.partial, undefined)
+    assert.deepEqual(sync.warnings, [
+      "[preview] clip.mov is not sent to the thread's machine: over 2 GB",
+    ])
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose folder became a link out of the checkout stays named until the link goes', async () => {
+  // Outside a git work tree: git would refuse a path through the link (taken as ignored).
+  const { sync } = await cutAway(
+    'footage/clip.mov',
+    ({ root, outside }) => {
+      renameSync(join(root, 'footage'), join(outside, 'moved'))
+      symlinkSync(join(outside, 'moved'), join(root, 'footage'))
+    },
+    { git: false },
+  )
+  try {
+    // Its path, looked at again, is read through the link: nothing there is read, nor sent.
+    const first = await sync.flush(1)
+    assert.ok(first.honest)
+    assert.deepEqual(first.partial, ['footage/clip.mov'], 'still cut short there')
+    // The folder, now a link, goes: it replaces what the machine had there.
+    const second = await sync.flush(2)
+    assert.ok(second.honest)
+    assert.equal(second.partial, undefined)
+  } finally {
+    sync.reader.close()
+  }
+})
+
+test('a copy cut short whose file git ignores now is deleted there, not named for ever', async () => {
+  const root = checkout()
+  const copy = temp()
+  const outside = temp()
+  randomFile(join(root, 'clip.mov'), 12 * MB)
+  linkSync(join(root, 'clip.mov'), join(outside, 'clip.mov'))
+  const sync = cutting(root, copy, 'clip.mov', (frame) => {
+    if (frame === 1) appendFileSync(join(root, '.gitignore'), 'clip.mov\n')
+    if (frame <= 4) truncateSync(join(outside, 'clip.mov'), 12 * MB - frame * (MB / 2))
+  })
+  try {
+    await sync.start()
+    const first = await sync.flush(1)
+    assert.ok(first.honest)
+    assert.deepEqual(first.partial, ['clip.mov'])
+    // Looked at again once git ignores it: it is not sent any more, and its copy there goes.
+    await eventually(() => !there(copy, 'clip.mov'), 'deleted there')
+    const second = await sync.flush(2)
+    assert.ok(second.honest)
+    assert.equal(second.at.kind, 'absent')
+    assert.equal(second.partial, undefined)
   } finally {
     sync.reader.close()
   }
