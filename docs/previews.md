@@ -231,7 +231,7 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     disk comes back, while the file's size, every offset and what the app
     writes meanwhile stay (emptying it lost the lines written between the last
     read and the truncation, review of #762). On Linux with `fallocate
-    --punch-hole`, on macOS with `fcntl(F_PUNCHHOLE)` through the system's
+--punch-hole`, on macOS with `fcntl(F_PUNCHHOLE)` through the system's
     perl. Where neither works (another filesystem), the file is emptied once
     read to a line's end past 64 MB, and the log says a line written at that
     moment may be missing: the disk stays bounded. Each run has its own file
