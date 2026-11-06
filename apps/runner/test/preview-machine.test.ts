@@ -151,9 +151,9 @@ test('the app runs with its settings and credentials, its setup only when asked'
   const link = fakeLink(home)
   /** Started detached, its output read once it ended there. */
   const output = async () => {
-    await startApp(link)
+    await startApp(link, 'r1')
     await eventually(async () => (await appState(link))?.state === 'ended', 'it ends')
-    return read(readOutput(link, 0, false))
+    return read(readOutput(link, 'r1', 0, false))
   }
   const script = (setup?: string) =>
     remoteScript({
@@ -212,7 +212,7 @@ test('a signal reaches the app’s whole process group, what it started included
       appStarts: '[preview] Starting the app',
     }),
   )
-  await startApp(link)
+  await startApp(link, 'r1')
   const childPid = join(home, 'work/app/child.pid')
   await eventually(
     () => existsSync(childPid) && readFileSync(childPid, 'utf8').trim() !== '',
@@ -254,17 +254,17 @@ test('the app outlives the connection that started it; its output is read on fro
       appStarts: '[preview] Starting the app',
     }),
   )
-  await startApp(link)
+  await startApp(link, 'r1')
   assert.deepEqual(await appState(link), { state: 'running' }, 'running once started, detached')
   // Followed from the start until cut, as a runner handing over does.
-  const follow = readOutput(link, 0, true)
+  const follow = readOutput(link, 'r1', 0, true)
   let seen = ''
   follow.stdout!.on('data', (d: Buffer) => (seen += d.toString()))
   await eventually(() => seen === 'first\n', 'its first line')
   follow.kill()
   // The next one reads on from the byte reached: nothing again, nothing missed.
   writeFileSync(join(home, 'work/app/go'), '')
-  const rest = readOutput(link, Buffer.byteLength(seen), true)
+  const rest = readOutput(link, 'r1', Buffer.byteLength(seen), true)
   assert.equal(await read(rest), 'second\n')
   assert.deepEqual(await appState(link), { state: 'ended', code: 3 }, 'how it ended, noted')
 })
@@ -291,14 +291,26 @@ test('the app’s output gives back its disk once read, its size and offsets kep
   const home = temp()
   mkdirSync(join(home, '.brigade/run'), { recursive: true })
   const link = fakeLink(home)
-  const file = join(home, '.brigade/run/output.log')
+  const file = join(home, '.brigade/run/output-r1.log')
   writeFileSync(file, 'x'.repeat(64 * 1024) + 'after\n')
-  await freeOutput(link, 64 * 1024)
+  await freeOutput(link, 'r1', 64 * 1024)
   const blocks = Number(execFileSync('stat', ['-c', '%b', file]).toString())
   assert.ok(blocks * 512 <= 8 * 1024, `${blocks} blocks left`)
   assert.equal(
-    await read(readOutput(link, 64 * 1024, false)),
+    await read(readOutput(link, 'r1', 64 * 1024, false)),
     'after\n',
     'read on from the same byte',
   )
+})
+
+test('giving back the disk of a run’s output never touches the next run’s', async () => {
+  const home = temp()
+  mkdirSync(join(home, '.brigade/run'), { recursive: true })
+  const link = fakeLink(home)
+  // A release for run r1 that reaches the machine late, once r2 replaced it (a restart).
+  const next = join(home, '.brigade/run/output-r2.log')
+  writeFileSync(next, 'x'.repeat(8192) + 'the next run’s first lines\n')
+  await freeOutput(link, 'r1', 8192)
+  assert.match(readFileSync(next, 'utf8'), /^x{8192}the next run’s first lines\n$/)
+  assert.ok(!existsSync(join(home, '.brigade/run/output-r1.log')), 'and none is made for r1')
 })

@@ -350,6 +350,11 @@ type Remote = {
  * outlives the runner and an update hands it over (handOver), the next runner reading on (adopt).
  */
 type AppRun = {
+  /**
+   * Its own: its output file is named after it, so nothing meant for this run (giving back the
+   * disk its output held) reaches the next one's output.
+   */
+  id: string
   /** On this computer: the shell leading its process group, which notes how the app ended. */
   pid?: number
   /** When it started: that shell is known again by it (a pid is given out again once free). */
@@ -370,6 +375,8 @@ type AppRun = {
   freed: number
   freeing?: boolean
   release?: (length: number) => Promise<unknown>
+  /** Its disk could not be given back: its file is emptied instead (cut) past OUTPUT_MAX x 4. */
+  unfreeable?: boolean
 }
 
 /** A preview the runner before this one handed over (handOver), for this one to take up (adopt). */
@@ -399,7 +406,7 @@ type Handed = {
   lines: string[]
   written: number
   /** Its run: from `offset` on, its output is still to be read (the next whole line's start). */
-  run: { pid?: number; at: number; offset: number }
+  run: { id: string; pid?: number; at: number; offset: number }
   remote?: {
     access: PreviewMachineAccess
     dir: string
@@ -1048,6 +1055,9 @@ export class Previews {
   private handable(preview: Preview): Handed | null {
     const { run, remote } = preview
     if (preview.stopping || preview.restarting) return null
+    // What its log must hide is lost: the next runner could not hide it either, and a later
+    // hand-over would forget that it hides nothing (the API's values may be others by then).
+    if (preview.blind) return null
     if (preview.info.status !== 'running' && preview.info.status !== 'starting') return null
     // Asleep, nothing of it runs: the next request wakes it, as here.
     const asleep = remote?.asleep === true
@@ -1079,6 +1089,7 @@ export class Previews {
       written: preview.written,
       // From the start of the line it has not finished: read again, whole, by the next runner.
       run: {
+        id: run?.id ?? '',
         ...(run?.pid ? { pid: run.pid } : {}),
         at: run?.at ?? 0,
         offset: run?.lineOffset ?? 0,
@@ -1278,7 +1289,7 @@ export class Previews {
         '[preview] Its output after the update is not shown: the values it hides were lost\n',
       )
     if (!current()) return
-    const run = this.newRun(saved.run.pid, saved.run.offset)
+    const run = this.newRun(saved.run.pid, saved.run.offset, saved.run.id)
     run.at = saved.run.at
     if (preview.remote) {
       if (!preview.remote.asleep) {
@@ -1832,13 +1843,15 @@ export class Previews {
     const as = runAs ? asTeammate(runAs, preview.net ?? null) : { file: 'sh', args: [] }
     const argv = [...as.args, ...(runAs ? ['sh'] : []), '-c', script, preview.dir, command]
     // Its output in a file of the runner's, given to the app as is (not a pipe, which would end
-    // with the runner): emptied for each run, kept open for appending, so emptying it later when
-    // it grows too big is safe.
-    const files = this.runFiles(preview)
+    // with the runner), one per run, opened for appending. The runs before it are over: their
+    // output goes.
+    const id = randomUUID().slice(0, 8)
+    const files = this.runFiles(preview, id)
     mkdirSync(files.dir, { recursive: true, mode: 0o700 })
     rmSync(files.exit, { force: true })
+    for (const name of readdirSync(files.dir))
+      if (name.startsWith('output-')) rmSync(join(files.dir, name), { force: true })
     const out = openSync(files.output, 'a', 0o600)
-    ftruncateSync(out, 0)
     // WRAPPER leads the process group sudo keeps for the app, detached: the one to stop. Its pid
     // is the computer's whatever namespaces the app runs in (thread-net.ts).
     let child: ChildProcess
@@ -1852,7 +1865,7 @@ export class Previews {
     } finally {
       closeSync(out)
     }
-    const run = this.newRun(child.pid)
+    const run = this.newRun(child.pid, 0, id)
     preview.run = run
     preview.group = child.pid
     processGroups.add(child.pid, `the preview of ${preview.seat.sessionId}`)
@@ -1870,8 +1883,8 @@ export class Previews {
     this.followLocal(preview, run, closed)
   }
 
-  /** The files of a preview's runs on this computer: its output, and how it ended. */
-  private runFiles(preview: Preview) {
+  /** The files of a preview's runs on this computer: a run's output, and how it ended. */
+  private runFiles(preview: Preview, runId = '') {
     const dir = join(
       dirname(this.options.stateFile),
       'preview-runs',
@@ -1880,11 +1893,12 @@ export class Previews {
         '_',
       ),
     )
-    return { dir, output: join(dir, 'output.log'), exit: join(dir, 'exit') }
+    return { dir, output: join(dir, `output-${runId}.log`), exit: join(dir, 'exit') }
   }
 
-  private newRun(pid: number | undefined, offset = 0): AppRun {
+  private newRun(pid: number | undefined, offset = 0, id = randomUUID().slice(0, 8)): AppRun {
     return {
+      id,
       ...(pid ? { pid } : {}),
       at: Date.now(),
       offset,
@@ -1902,17 +1916,8 @@ export class Previews {
    * ended from the file its wrapper wrote. What it wrote last is read first.
    */
   private followLocal(preview: Preview, run: AppRun, closed?: Promise<number | null>) {
-    const files = this.runFiles(preview)
-    if (process.platform === 'linux')
-      run.release = (length) =>
-        execFileAsync('fallocate', [
-          '--punch-hole',
-          '--offset',
-          '0',
-          '--length',
-          String(length),
-          files.output,
-        ])
+    const files = this.runFiles(preview, run.id)
+    run.release = releaser(files.output)
     preview.exited = new Promise<number | null>((done) => {
       let over = false
       const finish = (code: number | null | undefined) => {
@@ -1961,6 +1966,22 @@ export class Previews {
         if (read <= 0) break
         this.took(preview, run, buffer.subarray(0, read))
       }
+      // Its disk cannot be given back here: emptied once read to a line's end, past four times
+      // OUTPUT_MAX, rather than filling the disk. What the app writes at that very moment may be
+      // lost, and the log says so.
+      if (
+        run.unfreeable &&
+        run.lineOffset === run.offset &&
+        run.offset > OUTPUT_MAX * 4 &&
+        cut(file, size)
+      ) {
+        this.append(
+          preview,
+          `[preview] Its log file was emptied at ${Math.round(run.offset / 1024 ** 2)} MB, as its disk ` +
+            'could not be given back here: a line written at that moment may be missing\n',
+        )
+        run.offset = run.lineOffset = run.freed = 0
+      }
     } catch (error) {
       console.warn(
         `could not read the output of ${preview.seat.sessionId}'s preview: ${String(error)}`,
@@ -1978,7 +1999,8 @@ export class Previews {
     if (!preview.blind) this.append(preview, run.decoder.write(chunk))
     // What was read, whole pages of it, given back to the disk.
     const read = Math.floor(run.lineOffset / 4096) * 4096
-    if (run.release && !run.freeing && read - run.freed > OUTPUT_MAX) {
+    if (!run.release) run.unfreeable = true
+    else if (!run.unfreeable && !run.freeing && read - run.freed > OUTPUT_MAX) {
       run.freeing = true
       void run.release(read).then(
         () => {
@@ -1986,11 +2008,11 @@ export class Previews {
           run.freeing = false
         },
         (error: unknown) => {
-          // Not given back (a filesystem without holes): tried again only that much later.
+          // Not given back (a filesystem without holes): emptied instead (readRun).
           console.warn(
-            `preview of ${preview.seat.sessionId}: its log kept its disk: ${String(error)}`,
+            `preview of ${preview.seat.sessionId}: its log could not give its disk back: ${String(error)}`,
           )
-          run.freed = read
+          run.unfreeable = true
           run.freeing = false
         },
       )
@@ -2191,8 +2213,9 @@ export class Previews {
       return
     }
     if (!current()) return
+    const run = this.newRun(undefined)
     try {
-      await startApp(remote.link)
+      await startApp(remote.link, run.id)
     } catch (error) {
       // The runner is handing over: the next one finds whether it started there.
       if (current())
@@ -2203,7 +2226,7 @@ export class Previews {
         )
       return
     }
-    this.followRemote(preview, remote, this.newRun(undefined))
+    this.followRemote(preview, remote, run)
   }
 
   /**
@@ -2212,7 +2235,7 @@ export class Previews {
    */
   private followRemote(preview: Preview, remote: Remote, run: AppRun) {
     preview.run = run
-    run.release = (length) => freeOutput(remote.link, length)
+    run.release = (length) => freeOutput(remote.link, run.id, length)
     preview.exited = new Promise<number | null>((done) => {
       run.stopFollowing = () => {
         run.following = false
@@ -2262,7 +2285,7 @@ export class Previews {
   /** Its output file there from the byte read so far, into its log. Resolves to ssh's exit code. */
   private readRemote(preview: Preview, run: AppRun, link: MachineLink, follow: boolean) {
     return new Promise<number | null>((done) => {
-      const child = readOutput(link, run.offset, follow)
+      const child = readOutput(link, run.id, run.offset, follow)
       run.follower = child
       child.stdout!.on('data', (data: Buffer) => {
         if (run.following) this.took(preview, run, data)
@@ -2905,6 +2928,49 @@ function alive(pid: number | undefined) {
     return true
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === 'EPERM'
+  }
+}
+
+/**
+ * How a run's output file gives back the disk its first bytes hold, once read: they become a
+ * hole, its size and every offset kept. On Linux, fallocate; on macOS (APFS), fcntl's
+ * F_PUNCHHOLE (99) through the system's perl; elsewhere none.
+ */
+function releaser(file: string): ((length: number) => Promise<unknown>) | undefined {
+  if (process.platform === 'linux')
+    return (length) =>
+      execFileAsync('fallocate', [
+        '--punch-hole',
+        '--offset',
+        '0',
+        '--length',
+        String(length),
+        file,
+      ])
+  if (process.platform === 'darwin')
+    return (length) =>
+      execFileAsync('/usr/bin/perl', [
+        '-e',
+        'open(my $f, "+<", $ARGV[0]) or die "$!\\n"; ' +
+          'fcntl($f, 99, pack("LLqq", 0, 0, 0, $ARGV[1])) or die "$!\\n"',
+        file,
+        String(length),
+      ])
+  return undefined
+}
+
+/** Empty a file once its size is still `size` (all of it read); whether it did. */
+function cut(file: string, size: number) {
+  let fd: number | undefined
+  try {
+    fd = openSync(file, 'r+')
+    if (fstatSync(fd).size !== size) return false
+    ftruncateSync(fd, 0)
+    return true
+  } catch {
+    return false
+  } finally {
+    if (fd !== undefined) closeSync(fd)
   }
 }
 

@@ -227,13 +227,18 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     it could wait for it. Its output goes to a file in the runner's state
     (`preview-runs/<thread>-<run>/output.log`), not a pipe that would end with
     the runner (a dev server writing to it then dies of `EPIPE`); the runner
-    reads it as it grows. Past 16 MB read, what was read becomes a hole
-    (`fallocate --punch-hole`): its disk comes back, while the file's size,
-    every offset and what the app writes meanwhile stay (emptying it lost the
-    lines written between the last read and the truncation, review of #762).
-    On a Mac there is no punching: the file grows until the preview ends. On a thread's machine the app runs
+    reads it as it grows. Past 16 MB read, what was read becomes a hole: its
+    disk comes back, while the file's size, every offset and what the app
+    writes meanwhile stay (emptying it lost the lines written between the last
+    read and the truncation, review of #762). On Linux with `fallocate
+    --punch-hole`, on macOS with `fcntl(F_PUNCHHOLE)` through the system's
+    perl. Where neither works (another filesystem), the file is emptied once
+    read to a line's end past 64 MB, and the log says a line written at that
+    moment may be missing: the disk stays bounded. Each run has its own file
+    (`output-<run>.log`), so a hole meant for one run never lands in the next
+    one's (a restart's). On a thread's machine the app runs
     in a session of its own there (`setsid nohup`, as its commands do), its
-    output in `.brigade/run/output.log`, how it ended and the machine's boot id
+    output in `.brigade/run/output-<run>.log`, how it ended and the machine's boot id
     beside it, followed with `tail -f --pid` from the byte reached: a cut
     connection is made again and read on, rather than ending the app. Its
     disk comes back the same way past 16 MB read.
@@ -249,7 +254,9 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     the runner's), read and removed as the next runner takes it up: the app
     still holds those, whatever the API holds by then (a secret changed since
     would otherwise show in its log, review of #762); a preview whose file
-    could not be written is not handed over. Its proxy closes,
+    could not be written is not handed over, nor one whose values were lost on
+    the way (its output hidden since): it stops and starts again, as with
+    what the API holds now. Its proxy closes,
     and on its machine its sync, log reader and connection end; the app, its
     cgroup, its containers and the machine are left as they are.
   - **The next runner takes them up** as it starts, before anything looks for

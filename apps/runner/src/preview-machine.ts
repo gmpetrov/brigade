@@ -429,7 +429,9 @@ export class MachineSync {
  */
 const RUN_DIR = `${REMOTE_DIR}/run`
 const PID_FILE = `${RUN_DIR}/app.pid`
-export const OUTPUT_FILE = `${RUN_DIR}/output.log`
+/** A run's output, named after it: what is meant for one run never reaches the next one's. */
+export const outputFile = (id: string) =>
+  `${RUN_DIR}/output-${id.replace(/[^A-Za-z0-9_-]/g, '')}.log`
 
 /** Whether the machine still runs what it ran when the app started (it was not stopped since). */
 const SAME_BOOT = `[ "$(cat ${RUN_DIR}/boot 2>/dev/null)" = "$(cat /proc/sys/kernel/random/boot_id)" ]`
@@ -509,9 +511,9 @@ export function clearRun(link: MachineLink) {
  * Start the app on the machine, detached: it outlives the connection that started it and the
  * runner. Resolves once it noted its process group.
  */
-export async function startApp(link: MachineLink) {
+export async function startApp(link: MachineLink, id: string) {
   await link.exec(
-    `(setsid nohup bash ${RUN_DIR}/app.sh > ${OUTPUT_FILE} 2>&1 < /dev/null &); i=0; ` +
+    `(setsid nohup bash ${RUN_DIR}/app.sh > ${outputFile(id)} 2>&1 < /dev/null &); i=0; ` +
       `while [ ! -s ${PID_FILE} ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done; [ -s ${PID_FILE} ]`,
   )
 }
@@ -520,13 +522,14 @@ export async function startApp(link: MachineLink) {
  * The app's output from byte `offset` (0 for the start): followed while anything of it runs
  * (`follow`), else read to its end. Its stdout carries the output.
  */
-export function readOutput(link: MachineLink, offset: number, follow: boolean) {
+export function readOutput(link: MachineLink, id: string, offset: number, follow: boolean) {
   const from = offset + 1
+  const file = outputFile(id)
   return link.spawn(
     follow
-      ? `if ${ALIVE}; then exec tail -c +${from} -f --pid="$(cat ${PID_FILE})" ${OUTPUT_FILE}; ` +
-          `else exec tail -c +${from} ${OUTPUT_FILE}; fi`
-      : `exec tail -c +${from} ${OUTPUT_FILE}`,
+      ? `if ${ALIVE}; then exec tail -c +${from} -f --pid="$(cat ${PID_FILE})" ${file}; ` +
+          `else exec tail -c +${from} ${file}; fi`
+      : `exec tail -c +${from} ${file}`,
     'ignore',
   )
 }
@@ -535,9 +538,11 @@ export function readOutput(link: MachineLink, offset: number, follow: boolean) {
  * Give back the disk the first `length` bytes of the app's output hold there, once read: they
  * become a hole, so the file's size and every offset stay, and what the app writes goes on.
  */
-export function freeOutput(link: MachineLink, length: number) {
+export function freeOutput(link: MachineLink, id: string, length: number) {
+  const file = outputFile(id)
+  // Only that run's file: another run's (a restart's) is never touched, and none is made.
   return link.exec(
-    `fallocate --punch-hole --offset 0 --length ${length} ${OUTPUT_FILE}`,
+    `[ ! -f ${file} ] || fallocate --punch-hole --offset 0 --length ${length} ${file}`,
     '',
     15_000,
   )

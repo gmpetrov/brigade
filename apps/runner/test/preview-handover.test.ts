@@ -4,6 +4,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -447,10 +448,9 @@ test('a long log gives its disk back as it is read, losing nothing the app write
     written: 0,
     hidden: [],
   }
-  const files = (previews.runFiles as (p: unknown) => { dir: string; output: string }).call(
-    previews,
-    preview,
-  )
+  const files = (
+    previews.runFiles as (p: unknown, id: string) => { dir: string; output: string }
+  ).call(previews, preview, 'r1')
   mkdirSync(files.dir, { recursive: true })
   const line = `${'x'.repeat(1023)}\n`
   writeFileSync(files.output, line.repeat(64))
@@ -464,10 +464,9 @@ test('a long log gives its disk back as it is read, losing nothing the app write
       appendFileSync(files.output, 'written meanwhile\n')
     }
   }
-  const run = (previews.newRun as (pid: number) => { stopFollowing(): void }).call(
-    previews,
-    process.pid,
-  )
+  const run = (
+    previews.newRun as (pid: number, offset: number, id: string) => { stopFollowing(): void }
+  ).call(previews, process.pid, 0, 'r1')
   ;(previews.followLocal as (p: unknown, r: unknown) => void).call(previews, preview, run)
   try {
     await until(() => preview.lines.includes('written meanwhile'), 'what it wrote meanwhile, read')
@@ -478,5 +477,90 @@ test('a long log gives its disk back as it is read, losing nothing the app write
     assert.ok(statSync(files.output).size > 64 * 1024, 'its size, and so its offsets, the same')
   } finally {
     run.stopFollowing()
+  }
+})
+
+test('where its disk cannot be given back (macOS without holes), a long log is emptied instead', async () => {
+  const stateFile = join(home, 'cut-state', 'previews.json')
+  mkdirSync(join(home, 'cut-state'), { recursive: true })
+  const previews = nextRunner({ sessionId: 'cut' }, stateFile)
+  const preview = {
+    seat: { sessionId: 'cut' },
+    info: { previewId: 'cut-run-1' },
+    lines: [] as string[],
+    partial: '',
+    written: 0,
+    hidden: [],
+  }
+  const files = (
+    previews.runFiles as (p: unknown, id: string) => { dir: string; output: string }
+  ).call(previews, preview, 'r1')
+  mkdirSync(files.dir, { recursive: true })
+  writeFileSync(files.output, `${'y'.repeat(1023)}\n`.repeat(100))
+  const run = (
+    previews.newRun as (
+      pid: number,
+      offset: number,
+      id: string,
+    ) => { stopFollowing(): void; release?: unknown }
+  ).call(previews, process.pid, 0, 'r1')
+  ;(previews.followLocal as (p: unknown, r: unknown) => void).call(previews, preview, run)
+  // As on a filesystem, or a system, that cannot make holes.
+  run.release = async () => {
+    throw new Error('Operation not supported')
+  }
+  try {
+    await until(() => statSync(files.output).size === 0, 'emptied once read')
+    assert.equal(preview.lines.filter((l) => l.startsWith('y')).length, 100, 'all of it read first')
+    assert.ok(
+      preview.lines.some((l) => /Its log file was emptied at/.test(l)),
+      'and said',
+    )
+    appendFileSync(files.output, 'after the cut\n')
+    await until(() => preview.lines.includes('after the cut'), 'read on from its start')
+  } finally {
+    run.stopFollowing()
+  }
+})
+
+test('a preview whose masks were lost is not handed over again with others', async () => {
+  const work = app('lost-masks')
+  const seat = { sessionId: 'lost-masks', teammateId: 't', workDir: work }
+  const stateFile = join(home, 'lost-masks-state', 'previews.json')
+  const port = await freePort()
+  const before = await runnerBefore(
+    seat,
+    stateFile,
+    port,
+    `await fetch('http://127.0.0.1:${port}/')`,
+    { env: { TOKEN: 'first-secret-value' }, secrets: ['TOKEN'] },
+  )
+  const first = Number(readFileSync(join(work, 'app.pid'), 'utf8'))
+  // What its log hides, lost between two runners.
+  for (const name of readdirSync(join(home, 'lost-masks-state', 'preview-runs')))
+    rmSync(join(home, 'lost-masks-state', 'preview-runs', name, 'hidden'), { force: true })
+  const changed = { env: { TOKEN: 'second-secret-value' }, secrets: ['TOKEN'] }
+  const middle = nextRunner(seat, stateFile, [], changed)
+  await middle.adopt()
+  await middle.startAgain()
+  assert.equal(await get(before.origins[port]!), `ok ${first}`, 'taken up, its output hidden')
+  await middle.handOver()
+  assert.ok(!running(first), 'stopped rather than handed over')
+
+  const last = nextRunner(seat, stateFile, [], changed)
+  try {
+    await last.adopt()
+    await last.startAgain()
+    await until(
+      async () => (await get(before.origins[port]!))?.startsWith('ok ') === true,
+      'started again',
+    )
+    await get(before.origins[port]!)
+    // Read for a while: whatever app answers prints its token on each request.
+    await new Promise((done) => setTimeout(done, 800))
+    assert.match(last.logs('lost-masks'), /token ••••••/)
+    assert.doesNotMatch(last.logs('lost-masks'), /first-secret-value/)
+  } finally {
+    await last.stop('lost-masks', 'done')
   }
 })
