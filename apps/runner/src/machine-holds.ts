@@ -164,7 +164,10 @@ export class MachineHolds {
     if (!this.settled) return Promise.resolve()
     const wait = held.keepUntil - Date.now()
     if (wait <= 0) return this.sleepIfIdle(sessionId, held)
-    held.timer = setTimeout(() => void this.sleepIfIdle(sessionId, held), wait)
+    // Judged again when it comes, not stopped then and there: Node's timers keep another clock
+    // than Date.now(), and come a millisecond early by it now and then. The stop would find its
+    // time not up yet, and the machine would be left up for the API's sweep.
+    held.timer = setTimeout(() => void this.arm(sessionId, held), wait)
     held.timer.unref()
     return Promise.resolve()
   }

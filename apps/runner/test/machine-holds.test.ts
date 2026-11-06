@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { after, test } from 'node:test'
+import { after, test, type TestContext } from 'node:test'
 import { MachineHolds } from '../src/machine-holds.js'
 
 // Who uses a thread's machine (machine-holds.ts): its preview and the commands run there.
@@ -17,7 +17,11 @@ import { MachineHolds } from '../src/machine-holds.js'
 //   due to, and at once one whose time was up;
 // - it never stops one that a preview it took up or a command it follows again holds, nor one a
 //   command came for within the wait; and it stops nothing before it took up all it was left,
-//   even when a preview it took up gives its machine back first.
+//   even when a preview it took up gives its machine back first;
+// - a stop whose timer comes a moment before its time by the wall clock (Node's timers and
+//   Date.now() disagree by a millisecond now and then) is made at its time, not dropped.
+// The tests of a wait run on clocks of their own (clocks()): nothing hangs on how fast this
+// computer is, nor on its two clocks.
 
 const machine = { id: 'm', host: 'h', port: 22, user: 'u', hostKey: 'k', size: 'test' }
 
@@ -42,6 +46,30 @@ function api(options: { slowSleep?: Promise<void>; none?: boolean; gone?: boolea
 
 const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
+/** What the calls under way started is done: the fake API answers without waiting. */
+const flush = () => new Promise((done) => setImmediate(done))
+
+/**
+ * The runner's two clocks in the test's hands: Node's timers (setTimeout, mocked) and the wall
+ * clock (Date.now), which MachineHolds keeps its keepUntil by.
+ */
+function clocks(t: TestContext) {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let wall = 1_000_000
+  t.mock.method(Date, 'now', () => wall)
+  return {
+    /**
+     * The timers' clock moves on by `ms`, running what is due by then, and the wall clock by
+     * `wallMs` (by as much, unless said); then what they started is done.
+     */
+    async pass(ms: number, wallMs = ms) {
+      wall += wallMs
+      t.mock.timers.tick(ms)
+      await flush()
+    },
+  }
+}
+
 const made: string[] = []
 after(() => {
   for (const dir of made) rmSync(dir, { recursive: true, force: true })
@@ -60,7 +88,8 @@ function settled(holds: MachineHolds) {
   return holds
 }
 
-test('the preview going to sleep leaves the machine up while a command runs there', async () => {
+test('the preview going to sleep leaves the machine up while a command runs there', async (t) => {
+  const clock = clocks(t)
   const calls = api()
   const holds = new MachineHolds(calls)
   await holds.up('t', 'preview', 'key')
@@ -73,19 +102,39 @@ test('the preview going to sleep leaves the machine up while a command runs ther
     ['up t', 'up t', 'touch t'],
     'kept a while for the next command, said to the API as that begins',
   )
-  await wait(120)
+  await clock.pass(49)
+  assert.deepEqual(calls.calls, ['up t', 'up t', 'touch t'], 'still kept')
+  await clock.pass(1)
   assert.deepEqual(calls.calls, ['up t', 'up t', 'touch t', 'sleep t started', 'sleep t'])
   assert.deepEqual(holds.holders('t'), [])
 })
 
-test('a command within the while after the last keeps the machine up', async () => {
+test('a stop whose timer comes a moment early by the wall clock is made at its time', async (t) => {
+  const clock = clocks(t)
+  const calls = api()
+  const holds = new MachineHolds(calls)
+  await holds.up('t', 'run:a', 'key')
+  await holds.release('t', 'run:a', 100)
+  // Due by the timers' clock while the wall clock is a millisecond short of it.
+  await clock.pass(100, 99)
+  assert.deepEqual(calls.calls, ['up t', 'touch t'], 'not stopped before its time')
+  await clock.pass(1)
+  assert.deepEqual(
+    calls.calls,
+    ['up t', 'touch t', 'sleep t started', 'sleep t'],
+    'stopped at its time, not left up',
+  )
+})
+
+test('a command within the while after the last keeps the machine up', async (t) => {
+  const clock = clocks(t)
   const calls = api()
   const holds = new MachineHolds(calls)
   await holds.up('t', 'run:a', 'key')
   await holds.release('t', 'run:a', 60)
-  await wait(20)
+  await clock.pass(20)
   await holds.up('t', 'run:b', 'key')
-  await wait(100)
+  await clock.pass(100)
   assert.ok(!calls.calls.some((c) => c.startsWith('sleep')), 'not stopped under the next command')
   await holds.release('t', 'run:b', 0)
   assert.ok(calls.calls.includes('sleep t'), 'stopped once that one is done too')
@@ -147,7 +196,8 @@ test('a release this runner knew nothing of still stops the machine', async () =
   assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'])
 })
 
-test('a runner started again stops a machine left waiting after a command, when it was due', async () => {
+test('a runner started again stops a machine left waiting after a command, when it was due', async (t) => {
+  const clock = clocks(t)
   const file = stateFile()
   // The runner before: a command ended, its machine kept a while; then it updated, its timers
   // and its connection gone with it.
@@ -157,9 +207,9 @@ test('a runner started again stops a machine left waiting after a command, when 
   const calls = api()
   const next = new MachineHolds(calls, { stateFile: file })
   next.rearm()
-  await wait(60)
+  await clock.pass(149)
   assert.deepEqual(calls.calls, [], 'still kept for the next command')
-  await wait(200)
+  await clock.pass(1)
   assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'], 'stopped once its while was over')
   assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), [], 'and forgotten')
 })
@@ -179,7 +229,8 @@ test('a runner started again stops at once a machine whose time was up', async (
   assert.deepEqual(calls.calls, ['sleep t started', 'sleep t'])
 })
 
-test('a runner started again never stops a machine a preview or a command it took up holds', async () => {
+test('a runner started again never stops a machine a preview or a command it took up holds', async (t) => {
+  const clock = clocks(t)
   const file = stateFile()
   const before = settled(new MachineHolds(api({ gone: true }), { stateFile: file }))
   await before.up('p', 'preview', 'key')
@@ -198,10 +249,10 @@ test('a runner started again never stops a machine a preview or a command it too
   // A new command comes for the machine whose time was up, before the runner settled.
   await next.up('w', 'run:d', 'key')
   next.rearm()
-  await wait(50)
+  await clock.pass(50)
   // A command comes for the machine still kept, within its while.
   await next.up('n', 'run:e', 'key')
-  await wait(400)
+  await clock.pass(400)
   assert.deepEqual(calls.calls, ['up p', 'up c', 'up w', 'up n'], 'none stopped under them')
   await next.release('c', 'run:a')
   assert.deepEqual(calls.calls.slice(4), ['sleep c started', 'sleep c'], 'once given back, it is')
