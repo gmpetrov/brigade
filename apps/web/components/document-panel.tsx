@@ -518,12 +518,13 @@ function MinimizeButton({ onMinimize }: { onMinimize: () => void }) {
 }
 
 /**
- * How far above the window's bottom the pill sits: over a composer at the bottom right (a
- * thread's), it rises above it, so the send button stays in reach.
+ * Where the pill sits, from the window's bottom right: over a composer at the bottom (a
+ * thread's), just above it and lined up with its right edge, so it reads as part of the page
+ * and the send button stays in reach.
  */
-function usePillBottom() {
+function usePillPlace() {
   const BASE = 16
-  const [bottom, setBottom] = useState(BASE)
+  const [place, setPlace] = useState({ bottom: BASE, right: BASE, lifted: false })
   useEffect(() => {
     let frame = 0
     const measure = () => {
@@ -531,15 +532,17 @@ function usePillBottom() {
       frame = requestAnimationFrame(() => {
         const height = window.innerHeight
         const width = window.innerWidth
-        let lift = BASE
+        let next = { bottom: BASE, right: BASE, lifted: false }
         for (const el of document.querySelectorAll('[data-composer-frame]')) {
           const box = el.getBoundingClientRect()
-          // Only one in view, low in the window, under where the pill goes.
+          // Only one in view, low in the window, wide enough to carry the pill above it.
           if (!box.height || box.top >= height || box.bottom < height - 240) continue
-          if (box.right < width - 280) continue
-          lift = Math.max(lift, height - box.top + 12)
+          if (box.width < 280) continue
+          const bottom = height - box.top + 8
+          if (bottom > next.bottom)
+            next = { bottom, right: Math.max(BASE, Math.round(width - box.right)), lifted: true }
         }
-        setBottom(lift)
+        setPlace((p) => (p.bottom === next.bottom && p.right === next.right ? p : next))
       })
     }
     measure()
@@ -557,7 +560,7 @@ function usePillBottom() {
       window.removeEventListener('scroll', measure, { capture: true })
     }
   }, [])
-  return bottom
+  return place
 }
 
 /** On a touch screen, whether its keyboard is likely up: something to type in has focus. */
@@ -584,7 +587,7 @@ function useTyping() {
 function MinimizedPill({ document, onRestore }: { document: OpenDocument; onRestore: () => void }) {
   const { tabs, changed, closeAll } = useDocumentPanel()
   const mac = useIsMac()
-  const bottom = usePillBottom()
+  const place = usePillPlace()
   const typing = useTyping()
   const Icon = document.target.kind === 'library' ? FileText : BookOpen
   const others = tabs.length - 1
@@ -594,8 +597,14 @@ function MinimizedPill({ document, onRestore }: { document: OpenDocument; onRest
     <div
       role="region"
       aria-label="Minimized document"
-      className="fixed right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-0.5 rounded-full border bg-card py-1 pr-1 pl-1 shadow-lg"
-      style={{ bottom: `calc(${bottom}px + env(safe-area-inset-bottom))` }}
+      className="fixed z-40 flex max-w-[calc(100vw-2rem)] items-center gap-0.5 rounded-full border bg-card py-1 pr-1 pl-1 shadow-lg"
+      style={{
+        right: place.right,
+        // Above a composer, which keeps clear of the phone's edge already.
+        bottom: place.lifted
+          ? place.bottom
+          : `calc(${place.bottom}px + env(safe-area-inset-bottom))`,
+      }}
     >
       <Hint label={`Open ${document.title} (${mac ? '⌘' : 'Ctrl+'}.)`}>
         <button
