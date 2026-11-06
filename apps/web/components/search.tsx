@@ -45,6 +45,8 @@ type Item = {
   href: string
   /** How well it matches (SCORE); none for recent rows. */
   score?: number
+  /** A file the document editor opens, beside the page (SearchResult). */
+  editor?: boolean
 }
 
 const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
@@ -243,6 +245,7 @@ export function SearchDialog({
         snippet: r.snippet,
         href: hrefOf(r),
         score: r.score,
+        ...(r.editor && { editor: true }),
       })),
     ]
     // A name that matches leads on its own; the rest keep their kind's group.

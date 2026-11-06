@@ -32,6 +32,11 @@ export const SearchResult = z.object({
   pull: z.object({ repository: z.string(), number: z.number() }).nullable(),
   /** How well it matches (SCORE), to rank results of every kind together. */
   score: z.number(),
+  /**
+   * A file the document editor opens (Markdown, small enough): it opens beside the page.
+   * Otherwise, or from an API without it, the file opens in the library.
+   */
+  editor: z.boolean().optional(),
 })
 export type SearchResult = z.infer<typeof SearchResult>
 
