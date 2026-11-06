@@ -330,6 +330,12 @@ async function start() {
         holds,
         home: paths.state,
         stateFile: join(paths.state, 'machine-runs.json'),
+        // The thread's attached files, at the same place in the teammate's copy there: the machine
+        // fetches each from the bucket, at the signed URL the API's redirect gives the runner.
+        files: {
+          of: (seat) => threads.attachmentsFor(seat.sessionId, seat.teammateId),
+          api: config,
+        },
       })
     : null
   // Apps teammates run for people to try. On a cloud computer the API has their ports hosted.

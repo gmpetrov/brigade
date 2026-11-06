@@ -798,7 +798,9 @@ const MACHINE =
   'Docker. Keep quick commands here: git, reading, searching and editing files, probes such as ffprobe, small ' +
   'scripts, a single test. Run each in the folder it needs (a checkout, or the project’s folder): that folder ' +
   'goes to the machine first, then only what changed, and what commands install there stays for the next ones; ' +
-  "the machine has none of this computer's environment. Name in `outputs` the files you need back here (a " +
+  "the machine has none of this computer's environment. The thread's attached files are there too, whatever " +
+  'their size, at the same path relative to your working directory as here (`attachments/…`): name them as ' +
+  'you would here. Name in `outputs` the files you need back here (a ' +
   "render, frames to look at, a report). A command longer than the call's wait goes on there: wait for it with " +
   '`machine_run`, or set a wake-up and end your turn.'
 
