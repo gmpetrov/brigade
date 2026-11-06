@@ -288,6 +288,14 @@ const ALWAYS_LOADED = [
   'search_workspace',
 ]
 
+/**
+ * In a thread with a machine of its own, run_on_machine is always in view, its description with
+ * it: found only through tool search, a skill's steps run on the shared computer won (a video
+ * render, Nov 6, the tool never searched for).
+ */
+export const machineToolsInView = (spec: Pick<ThreadSpec, 'machine'>, machine: unknown) =>
+  spec.machine && machine ? ['run_on_machine'] : []
+
 /** The teammate's model for the harness; none leaves Claude Code on the account's own. */
 function withModel(teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>) {
   const model = runModel(teammate.harness, teammate.model)
@@ -335,6 +343,7 @@ function createAgent(
         toolHints: Object.fromEntries(
           [
             ...ALWAYS_LOADED,
+            ...machineToolsInView(spec, machine),
             ...(chief ? [PROPOSE_TEAM_TOOL] : []),
             // A pass's ways out, loaded with no tool search before them.
             ...(spec.pass && chief ? ['chief_answer', 'chief_retry', 'chief_report'] : []),

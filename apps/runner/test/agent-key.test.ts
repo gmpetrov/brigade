@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ThreadSpec } from '@brigade/contracts'
-import { agentKey } from '../src/harness/index.js'
+import { agentKey, machineToolsInView } from '../src/harness/index.js'
 
 // A live session is made anew when its agent's key changes (HarnessThread.run parks it): its
 // tools, and its instructions, written only as a session starts. Whether an account can be used
@@ -42,4 +42,11 @@ test('a machine of its own for the thread makes the session anew; none keeps the
   // Its tools (run_on_machine, machine_run) and its instructions come with it.
   assert.notEqual(spec(true), spec(false))
   assert.equal(spec(false), JSON.stringify([null, [], undefined]))
+})
+
+test('in a thread with a machine of its own, run_on_machine is always in view; elsewhere nothing changes', () => {
+  assert.deepEqual(machineToolsInView({ machine: true }, {}), ['run_on_machine'])
+  assert.deepEqual(machineToolsInView({ machine: false }, {}), [])
+  // No machine tools on this runner (a member's own machine): nothing to show.
+  assert.deepEqual(machineToolsInView({ machine: true }, undefined), [])
 })

@@ -514,9 +514,13 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     with a machine (`ThreadSpec.machine`, which the API sets as it would give
     one: the feature, the starter's switch, a cloud computer) gives its
     teammates `run_on_machine` and `machine_run`, and a "Heavy work" section in
-    their instructions: run there what takes much CPU or memory (a video render,
-    a build, a test suite, a big repository's typecheck), keep quick commands
-    here. Without one, neither the tools, the instructions nor the agent's key
+    their instructions: run there each command that takes much CPU, memory or
+    time (a render or encode, a transcription, an install, a build, a test
+    suite, a big repository's typecheck), even where a skill shows it run here,
+    and keep quick commands here. `run_on_machine` is always in view (Claude
+    Code's tool search leaves it out of the list otherwise): on November 6, a
+    video edit followed its skill's local steps and never searched for it.
+    Without a machine, neither the tools, the instructions nor the agent's key
     change. A command's folder goes first, by the same one-way sync, into the
     teammate's own copy (`commands/<teammate>/…` on the machine, apart from the
     preview's `work/`, so a build never writes under a running dev server): the
