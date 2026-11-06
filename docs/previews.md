@@ -514,8 +514,9 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     made or running): past that, a preview runs on the computer and says why.
     The sweep (each minute) destroys the machine of a deleted thread and one
     stopped 12 days (the provider keeps a stopped disk 14), stops one its
-    runner said nothing of for 45 minutes, and destroys what a making cut short
-    may have made. It reads only the rows with work due, so rows with none
+    runner said nothing of (no `up`, no `touch`) for 20 minutes (why 20: below,
+    where the preview and the commands share the machine), and destroys what a
+    making cut short may have made. It reads only the rows with work due, so rows with none
     never hold others back.
   - **One operation on a machine at a time.** Whoever makes, starts, stops or
     destroys a machine holds its row (`claimedUntil`, 10 minutes from when it
@@ -716,14 +717,43 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   - **The preview and the commands share the machine** (`machine-holds.ts`).
     The runner tells the API `sleep` only once neither uses it, and after a
     command only 10 minutes later, should another follow: each start counts at
-    the provider (200 a day included in the plan). A thread's ups and sleeps go
+    the provider (200 a day included in the plan); it touches the machine as
+    those 10 minutes begin, so the sweep counts from then. A thread's ups and sleeps go
     to the API one after the other: an up waits for a sleep under way, and a
     sleep not under way yet is not made once someone comes for the machine.
     While a command runs, the runner touches the machine every 5 minutes as
     busy: the sweep and the provider's own stop stay away, and the API marks the
     runner's computer in use too, as with a thread running. Its idle stop (30
     minutes without a running thread) would otherwise stop the runner under a
-    long command whose turn ended, and the machine, untouched, 45 minutes later.
+    long command whose turn ended, and the machine, untouched, 20 minutes later.
+    - **The stops outlive the runner.** Which threads' machines may be up, and
+      when each may stop (the end of its 10 minutes after a command), are kept
+      in `machine-holds.json`. An update (several a day while runner changes
+      merge) starts a new runner, which used to know nothing of a machine left
+      waiting there, or that nothing held any more: only the sweep stopped it,
+      45 minutes after its last use (November 6: a review thread's machine,
+      last used at 14:33, the runner updated at 14:36, still running at
+      15:17). The next runner stops no machine until it took up what the one
+      before left: once the previews handed over are taken up and the commands
+      followed again (each has asked for its machine again, which holds it),
+      each machine nobody holds stops when it was due to, at once if that
+      passed. A preview or a command that comes for it later cancels that stop,
+      as it would have before the update.
+    - **Why the sweep waits 20 minutes** (`UNUSED_STOP_MS`): it is the safety
+      net for a runner gone, so it waits past the longest a runner that keeps a
+      machine says nothing of it. A command's machine is touched every 5
+      minutes from when it is connected (90 seconds at most after its `up`),
+      its folder and attached files going there included: about 6.5 minutes.
+      After the last command, the machine is touched as it is kept 10 minutes,
+      then slept: 10 minutes, 15 should that touch be lost. A preview is touched
+      every 5 minutes (checked each minute) from its start, a long setup
+      included: 6 minutes; a preview waking is not touched until it answers,
+      which it must within 10 minutes or it stops: about 11. An update takes a
+      minute or two, after which the next runner asks again for the machine of
+      what it takes up. An `up` sets the time of last use as it ends, and holds
+      the row until then. 20 minutes leaves 9 past the longest of those, and 5
+      past a lost touch after a command; a forgotten machine costs 20 minutes
+      and the minute between sweeps, instead of 45.
     A preview's touch does not keep the computer up: a person viewing it does,
     from the dashboard. What the machine has (November 6, 2026): Ubuntu, Node.js
     24, pnpm, Docker, Python 3.12, ffmpeg, Chrome and passwordless sudo, 120 GB

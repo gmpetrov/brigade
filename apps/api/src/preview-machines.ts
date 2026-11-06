@@ -43,11 +43,25 @@ const POLL_MS = 2_000
 /** The provider's own stop is pushed back at most this often, while the runner says it is used. */
 export const KEEP_ALIVE_EVERY_MS = 10 * 60_000
 /**
- * A running machine the runner said nothing of for this long is stopped by the sweep: its
- * runner sleeps it after 30 minutes without use, so this one was forgotten (a runner gone), or
- * its stop failed (which leaves it running and due).
+ * A running machine the runner said nothing of (no `up`, no `touch`) for this long is stopped by
+ * the sweep: its runner forgot it (gone, its computer stopped), or its stop failed (which leaves
+ * it running and due). The longest a runner that still keeps a machine says nothing of it:
+ * - a command: touched every 5 minutes from when its machine is connected (90 seconds at most
+ *   after its `up`), while its folder and attached files go there too: about 6.5 minutes;
+ * - after the last command, kept 10 minutes for the next: touched as it is kept, then slept, so
+ *   10 minutes (15 should that touch be lost, the last periodic one up to 5 minutes before);
+ * - a preview: touched every 5 minutes (checked each minute) from its start, its setup included:
+ *   6 minutes; waking, not touched until it answers, which it must within 10 minutes
+ *   (the runner's SETUP_START_MS) or it stops: about 11 minutes;
+ * - across a runner's update (a minute or two): the next runner asks again (an `up`) for the
+ *   machine of what it takes up (a preview, a command still running), and stops one nobody holds
+ *   then when the runner before would have (its machine-holds.json).
+ *
+ * An `up` sets usedAt as it ends, and holds the row (claimedUntil) until then. 20 minutes is 9
+ * past the longest of those, and 5 past a lost touch after a command; a forgotten machine runs
+ * for that long, plus the minute between sweeps.
  */
-export const UNUSED_STOP_MS = 45 * 60_000
+export const UNUSED_STOP_MS = 20 * 60_000
 /** A machine stopped this long is destroyed: the provider keeps a stopped disk for 14 days. */
 export const STOPPED_DESTROY_MS = 12 * 24 * 3600_000
 /** A making left this long without a machine recorded (cut short) is undone. */

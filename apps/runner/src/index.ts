@@ -322,13 +322,17 @@ async function start() {
     }
   }
   // Threads' machines of their own (preview_machines), on a cloud computer: their previews and the
-  // commands teammates run there share each, which stops once neither uses it.
+  // commands teammates run there share each, which stops once neither uses it. Which may be up,
+  // and when each may stop, outlive the runner: the next one stops them then.
   const holds = CLOUD
-    ? new MachineHolds({
-        up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
-        sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
-        touch: (sessionId, busy) => connection.previewMachine(sessionId, 'touch', busy),
-      })
+    ? new MachineHolds(
+        {
+          up: (sessionId, publicKey) => connection.previewMachineUp(sessionId, publicKey),
+          sleep: (sessionId) => connection.previewMachine(sessionId, 'sleep'),
+          touch: (sessionId, busy) => connection.previewMachine(sessionId, 'touch', busy),
+        },
+        { stateFile: join(paths.state, 'machine-holds.json') },
+      )
     : null
   const machineRuns = holds
     ? new MachineRuns({
@@ -518,6 +522,8 @@ async function start() {
     spec.moved
       ? folders.arrive({ sessionId: spec.sessionId, teammateId: spec.teammate.id }, spec.moved)
       : Promise.resolve()
+  /** The first welcome's taking up of what the runner before this one left, then its stops. */
+  let settling: Promise<void> | undefined
   const onCommand = async (message: ApiToRunner) => {
     if ('thread' in message) arrive(message.thread)
     switch (message.type) {
@@ -543,9 +549,10 @@ async function start() {
           arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
         // The previews an update handed over or stopped (once, after it), and the commands it
-        // stopped following.
-        void previews.startAgain()
-        machineRuns?.resume()
+        // stopped following; once those hold their machines again, the machines nobody holds
+        // stop when the runner before this one would have stopped them (after the first welcome).
+        const tookUp = Promise.allSettled([previews.startAgain(), machineRuns?.resume()])
+        settling ??= tookUp.then(() => holds?.rearm())
         threads.requeueLost(message.requeue ?? [], unacknowledged)
         const requeued = new Set(
           (message.requeue ?? []).map((p) => `${p.thread.sessionId}:${p.messageId}`),
