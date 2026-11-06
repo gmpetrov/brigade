@@ -14,6 +14,7 @@ import { Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { refreshOpenPulls } from './pull-requests.js'
 import type { WorkspaceScope } from './scope.js'
+import { rootIdOf } from './thread-root.js'
 import { fireNow, MERGE_SOURCE } from './wakeups.js'
 
 type DoneOperation = Extract<ScheduleOperation, { name: 'complete_thread' }>
@@ -44,6 +45,8 @@ const NOTHING_OPEN = {
       OR: [
         { tickets: { some: { status: 'open' } } },
         { pullRequests: { some: { state: 'open' } } },
+        // The review under a child, asking a person.
+        { children: { some: { tickets: { some: { status: 'open' } } } } },
         // A child it waits for: started, not failed, and no report yet.
         {
           awaited: true,
@@ -81,9 +84,14 @@ export async function openWork(db: ScopedDb, sessionId: string): Promise<string[
     },
     orderBy: { createdAt: 'asc' },
   })
-  const ids = [sessionId, ...children.map((c) => c.id)]
+  // The reviews under its children, which may ask a person something.
+  const below = await db.session.findMany({
+    where: { parentId: { in: children.map((c) => c.id) } },
+    select: { id: true, title: true },
+  })
+  const ids = [sessionId, ...children.map((c) => c.id), ...below.map((c) => c.id)]
   const where = (id: string | null) => {
-    const child = children.find((c) => c.id === id)
+    const child = children.find((c) => c.id === id) ?? below.find((c) => c.id === id)
     return child ? ` in the child thread “${child.title}”` : ''
   }
   const [tickets, pulls, wakeups, queued, items] = await Promise.all([
@@ -360,19 +368,16 @@ export async function markReopened(
 }
 
 /**
- * A person or new work shows up in a thread, or in one of its children: its root is no longer
+ * A person or new work shows up in a thread, or in one of its sub-threads: its root is no longer
  * done. A member's message or mail in it, a ticket or a pull request opened in it. Whether it
  * was done.
  */
 export async function reopenThread(scope: Scope, sessionId: string) {
   const db = scoped(scope)
-  const session = await db.session.findFirst({
-    where: { id: sessionId },
-    select: { parentId: true },
-  })
-  if (!session) return false
+  const rootId = await rootIdOf(db, sessionId)
+  if (!rootId) return false
   const root = await db.session.findFirst({
-    where: { id: session.parentId ?? sessionId, doneAt: { not: null } },
+    where: { id: rootId, doneAt: { not: null } },
     select: { id: true, status: true, updatedAt: true },
   })
   if (!root) return false

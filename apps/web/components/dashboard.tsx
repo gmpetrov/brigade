@@ -383,12 +383,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // What the app icon badge counts: those threads, but a playbook's approvals once, whichever
   // of its runs (out of the sidebar) ask.
   const badge = new Set<string>()
-  // A child thread is out of the sidebar's list: its ticket marks its parent, which shows it.
+  // A child thread is out of the sidebar's list: its ticket marks the thread at the top, which
+  // shows it (a child's review: under that child).
   for (const t of tickets.data ?? [])
     if (t.session && waitsOn(t, data)) {
-      const thread = t.session.parentId ?? t.session.id
+      const thread = t.session.rootId ?? t.session.parentId ?? t.session.id
       needsYou[thread] ??= TICKET_ASKS[t.type] ?? 'needs you'
-      // And the child itself, under its parent once the member unfolds it there.
+      // And the sub-threads down to it, under the thread at the top once the member unfolds it.
+      if (t.session.parentId && t.session.parentId !== thread)
+        needsYou[t.session.parentId] ??= TICKET_ASKS[t.type] ?? 'needs you'
       if (thread !== t.session.id) needsYou[t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
       const item = waitingItemKey(t)
       badge.add(item.startsWith('playbook:') ? item : thread)

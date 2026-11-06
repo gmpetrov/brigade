@@ -5,6 +5,7 @@
 // a child's report), or a ticket or pull request opened in it or one of its children.
 import { onScopedWrite, prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
+import { rootIdOf } from './thread-root.js'
 
 /** The threads this member put away for later: id, and since when. */
 export async function latersOf(db: ScopedDb, memberId: string) {
@@ -49,20 +50,15 @@ export async function setLater(
   changed(scope, thread)
 }
 
-/** Something new in a thread, or in one of its children: back in everyone's list. */
+/** Something new in a thread, or in one of its sub-threads: back in everyone's list. */
 export async function bringBackFromLater(scope: Scope, sessionId: string) {
   const db = scoped(scope)
-  const session = await db.session.findFirst({
-    where: { id: sessionId },
-    select: { id: true, parentId: true, status: true },
+  const rootId = await rootIdOf(db, sessionId)
+  if (!rootId) return
+  const root = await db.session.findFirst({
+    where: { id: rootId },
+    select: { id: true, status: true },
   })
-  if (!session) return
-  const root = session.parentId
-    ? await db.session.findFirst({
-        where: { id: session.parentId },
-        select: { id: true, status: true },
-      })
-    : session
   if (!root) return
   const { count } = await db.threadLater.deleteMany({ where: { sessionId: root.id } })
   if (count) changed(scope, root)

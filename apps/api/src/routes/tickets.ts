@@ -7,6 +7,7 @@ import { latersOf } from '../later.js'
 import { waitingTickets } from '../playbook-approvals.js'
 import { projectWhere } from '../projects.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import { rootOf } from '../thread-root.js'
 
 /** Everything waiting on a person in this workspace. */
 export const tickets = new Hono<AppEnv>()
@@ -25,14 +26,14 @@ export const tickets = new Hono<AppEnv>()
       latersOf(c.var.db, c.var.scope.memberId),
     ])
     // Its thread put away for later by this member: it no longer waits on them (waitsOn),
-    // as when archived. A child's goes with its parent.
+    // as when archived. A sub-thread's goes with the thread at the top, which it marks there.
     return c.json(
       rows.map((t) => {
-        const thread = t.session && (t.session.parentId ?? t.session.id)
-        const laterAt = thread ? laters.get(thread) : undefined
-        return t.session
-          ? { ...t, session: { ...t.session, laterAt: laterAt?.toISOString() ?? null } }
-          : t
+        if (!t.session) return t
+        const { parent: _parent, ...session } = t.session
+        const rootId = rootOf(t.session)
+        const laterAt = laters.get(rootId)
+        return { ...t, session: { ...session, rootId, laterAt: laterAt?.toISOString() ?? null } }
       }),
     )
   })

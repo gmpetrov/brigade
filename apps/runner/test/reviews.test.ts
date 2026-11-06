@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ScheduleOperation, type ThreadSpec } from '@brigade/contracts'
-import { reviewTools, type ScheduleCaller } from '../src/harness/tools.js'
+import { childTools, reviewTools, type ScheduleCaller } from '../src/harness/tools.js'
 import { instructions } from '../src/instructions.js'
 
 // Reviews of a thread's pull requests (src/reviews.ts in the API), as its instructions and
-// tools put them: the project says who decides; a child thread and a playbook's run decide none.
+// tools put them: the project says who decides, in a child thread too, which handles its review
+// itself and reports once it is done; a playbook's run decides none.
 const project = (reviewPolicy: 'teammate' | 'manual') => ({
   id: 'p1',
   name: 'Web',
@@ -50,10 +51,43 @@ test('where reviews are manual, it asks for one only when the person does', () =
   assert.doesNotMatch(said, /the review came back/)
 })
 
-test('a child thread starts no review, and a playbook run hears nothing of them', () => {
-  const child = text(spec({ project: project('teammate'), parent: { id: 'p', title: 'Parent' } }))
-  assert.match(child, /A child thread starts no review/)
-  assert.doesNotMatch(child, /You decide whether a pull request/)
+test('a child thread decides as its project says, handles its review itself and reports once it is done', () => {
+  const parent = { id: 'p', title: 'Parent' }
+  const child = text(spec({ project: project('teammate'), parent }))
+  assert.match(child, /You decide whether a pull request you open gets a review/)
+  assert.match(child, /Brigade starts it in a child thread of this one/)
+  assert.match(child, /While its review runs, do not call `report`/)
+  assert.match(child, /Report once the review approves, or once you stopped it/)
+  assert.match(child, /Stop when it goes in circles .* and report where it stands/)
+  assert.match(child, /the one thread Brigade starts under this one/)
+  assert.doesNotMatch(child, /starts no review|A child thread of yours handles/)
+  // Where reviews are manual, it tells its parent there is none.
+  const manual = text(spec({ project: project('manual'), parent }))
+  assert.match(manual, /Say in your report that a pull request you opened has none/)
+  assert.doesNotMatch(manual, /You decide whether a pull request/)
+  // The thread that starts children leaves their reviews to them.
+  const top = text(spec({ project: project('teammate') }))
+  assert.match(top, /A child thread of yours handles the review of a pull request it opens/)
+  assert.doesNotMatch(top, /While its review runs, do not call `report`/)
+  // A child without a repository hears nothing of reviews.
+  assert.doesNotMatch(
+    text(spec({ parent, git: undefined })),
+    /request_review|the one thread Brigade starts under this one|While its review runs/,
+  )
+})
+
+test("a child thread's tools: its report, and the review under it to list and read", () => {
+  const nothing: ScheduleCaller = async () => ({})
+  assert.deepEqual(Object.keys(childTools(nothing, { child: true })).sort(), [
+    'list_children',
+    'read_child',
+    'report',
+  ])
+  const report = childTools(nothing, { child: true }).report as { description?: string }
+  assert.match(report.description ?? '', /Not while a review of a pull request you opened runs/)
+})
+
+test('a playbook run hears nothing of reviews', () => {
   const run = text(
     spec({
       project: project('teammate'),

@@ -33,6 +33,7 @@ import { actorNames } from './library-history.js'
 import { isAside, workspaceLists } from './lists.js'
 import { REVIEW_THREAD, pullWaitsOnPerson } from './review-state.js'
 import type { WorkspaceScope } from './scope.js'
+import { ROOT, rootOf } from './thread-root.js'
 
 const DAY = 24 * 60 * 60_000
 /** Threads looked at: those active lately, or done this week. */
@@ -165,6 +166,12 @@ async function threadRows(db: ScopedDb, now: Date) {
               { status: { in: ['starting', 'running', 'waiting', 'paused', 'failed'] } },
               { tickets: { some: { status: 'open' } } },
               { children: { some: { tickets: { some: { status: 'open' } } } } },
+              // A child's review asking a person.
+              {
+                children: {
+                  some: { children: { some: { tickets: { some: { status: 'open' } } } } },
+                },
+              },
               { pullRequests: { some: { state: 'open' } } },
               { wakeups: { some: { status: 'pending', kind: 'wakeup' } } },
               { doneAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } },
@@ -434,21 +441,25 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     await Promise.all([
       failedWaitingAmong(db, ids, now),
       choicesWaitingAmong(db, ids, now),
+      // Its sub-threads' tickets: a child's, and its review's.
       ids.length
         ? db.ticket.findMany({
-            where: { status: 'open', session: { parentId: { in: ids } } },
-            select: { session: { select: { parentId: true } } },
+            where: {
+              status: 'open',
+              session: { OR: [{ parentId: { in: ids } }, { parent: { parentId: { in: ids } } }] },
+            },
+            select: { session: { select: ROOT } },
           })
         : [],
+      // Its sub-threads it waits for, at work: a child, or the review a child waits for.
       ids.length
-        ? db.session.groupBy({
-            by: ['parentId'],
+        ? db.session.findMany({
             where: {
-              parentId: { in: ids },
+              OR: [{ parentId: { in: ids } }, { parent: { parentId: { in: ids }, awaited: true } }],
               awaited: true,
               status: { in: ['starting', 'running'] },
             },
-            _count: { _all: true },
+            select: ROOT,
           })
         : [],
       failingRoutines(db, {}, now),
@@ -459,8 +470,8 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
         ),
       ),
     ])
-  const ticketsOfChildren = new Set(childTickets.map((t) => t.session?.parentId))
-  const working = new Set(childrenWorking.map((c) => c.parentId))
+  const ticketsOfChildren = new Set(childTickets.map((t) => t.session && rootOf(t.session)))
+  const working = new Set(childrenWorking.map(rootOf))
   // ---- Threads on no list ----
   for (const t of offList) {
     const doneAt = t.doneAt

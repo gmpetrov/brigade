@@ -1093,6 +1093,11 @@ export type Ticket = {
     projectId: string | null
     /** A child thread's parent: out of the sidebar, its ticket marks the parent there. */
     parentId: string | null
+    /**
+     * The thread at the top it sits under: its parent, or a child's review's parent's parent.
+     * Unset from an older API: its parent stands for it.
+     */
+    rootId?: string
     /** Archived: its tickets no longer wait on anyone, until it comes back. */
     archivedAt: string | null
     /** Its thread (a child's: its parent) put away for later by this member: none waits on them. */

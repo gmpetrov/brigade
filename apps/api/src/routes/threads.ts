@@ -333,14 +333,18 @@ export const threads = new Hono<AppEnv>()
     // Some threads, as the list has it (?id=, repeated): the sidebar shows the one open, and
     // those waiting on the member, when they are not among those it loaded. Archived or quiet,
     // the one open is still the one open; a child thread is not listed, its parent is, which
-    // shows it among its children.
+    // shows it among its children (a child's review, among that child's).
     const ids = (c.req.queries('id') ?? []).filter(Boolean).slice(0, 100)
     const only = ids.length > 0
     const rows = await c.var.db.session.findMany({
       where: only
         ? {
             parentId: null,
-            OR: [{ id: { in: ids } }, { children: { some: { id: { in: ids } } } }],
+            OR: [
+              { id: { in: ids } },
+              { children: { some: { id: { in: ids } } } },
+              { children: { some: { children: { some: { id: { in: ids } } } } } },
+            ],
           }
         : {
             // A teammate's threads: those it started and those it joined.
@@ -421,47 +425,65 @@ export const threads = new Hono<AppEnv>()
           _count: { _all: true },
         })
       : []
-    // Children it waits for, at work: it shows as working, as for its own background work.
-    const working = rows.length
-      ? await c.var.db.session.groupBy({
-          by: ['parentId'],
-          where: {
-            parentId: { in: rows.map((r) => r.id) },
-            awaited: true,
-            status: { in: ['starting', 'running'] },
-          },
-          _count: { _all: true },
-        })
-      : []
+    // Children it waits for, at work: it shows as working, as for its own background work. A
+    // child's review too, while that child waits for it.
+    const [working, workingBelow] = rows.length
+      ? await Promise.all([
+          c.var.db.session.groupBy({
+            by: ['parentId'],
+            where: {
+              parentId: { in: rows.map((r) => r.id) },
+              awaited: true,
+              status: { in: ['starting', 'running'] },
+            },
+            _count: { _all: true },
+          }),
+          c.var.db.session.findMany({
+            where: {
+              parent: { parentId: { in: rows.map((r) => r.id) }, awaited: true },
+              awaited: true,
+              status: { in: ['starting', 'running'] },
+            },
+            select: { parent: { select: { parentId: true } } },
+          }),
+        ])
+      : [[], []]
+    const childrenWorking = (id: string) =>
+      (working.find((w) => w.parentId === id)?._count._all ?? 0) +
+      workingBelow.filter((w) => w.parent?.parentId === id).length
     // Its child threads, out of lists: the sidebar shows them under it, folded. Those a
     // teammate started (start_child), not a schedule's runs, which would fill it, nor Chief's
-    // decision threads of #724, which were never meant to show.
-    const children = rows.length
-      ? await c.var.db.session.findMany({
-          where: {
-            parentId: { in: rows.map((r) => r.id) },
-            origin: 'child',
-            archivedAt: null,
-            chiefDecisionId: null,
-          },
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            parentId: true,
-            updatedAt: true,
-            computerId: true,
-            computer: { select: { kind: true, name: true } },
-            // For its menu in the sidebar, as a thread's own row has it (thread-menu.tsx).
-            startedByMemberId: true,
-            othersMayPrompt: true,
-            doneAt: true,
-            // A pull request's review: the sidebar leaves it out (see `review` below).
-            _count: { select: { reviewsOf: true } },
-          },
-          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-        })
-      : []
+    // decision threads of #724, which were never meant to show. And under a child, the reviews
+    // of the pull requests it opened (src/reviews.ts), the one level below.
+    const subThreads = (parents: string[]) =>
+      parents.length
+        ? c.var.db.session.findMany({
+            where: {
+              parentId: { in: parents },
+              origin: 'child',
+              archivedAt: null,
+              chiefDecisionId: null,
+            },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              parentId: true,
+              updatedAt: true,
+              computerId: true,
+              computer: { select: { kind: true, name: true } },
+              // For its menu in the sidebar, as a thread's own row has it (thread-menu.tsx).
+              startedByMemberId: true,
+              othersMayPrompt: true,
+              doneAt: true,
+              // A pull request's review: the sidebar leaves it out (see `review` below).
+              _count: { select: { reviewsOf: true } },
+            },
+            orderBy: [{ updatedAt: 'desc' as const }, { id: 'desc' as const }],
+          })
+        : Promise.resolve([])
+    const firstLevel = await subThreads(rows.map((r) => r.id))
+    const children = [...firstLevel, ...(await subThreads(firstLevel.map((r) => r.id)))]
     // Which of them review a pull request: its latest review's thread, or an earlier one that
     // posted a review (a pull request keeps only its latest review's thread).
     const posted = children.length
@@ -530,6 +552,43 @@ export const threads = new Hono<AppEnv>()
           select: { sessionId: true, seenAt: true },
         })
       : []
+    /** A sub-thread as the sidebar shows it. */
+    const shape = ({
+      parentId,
+      computerId,
+      computer,
+      startedByMemberId,
+      othersMayPrompt,
+      _count,
+      ...child
+    }: (typeof children)[number]) => ({
+      ...child,
+      // A pull request's review: out of the sidebar unless it needs the person.
+      review: reviewIds.has(child.id),
+      // What its menu needs (thread-menu.tsx): who started it, who else may change it,
+      // and this member's pin and Later on it.
+      parent: { id: parentId! },
+      startedBy: { id: startedByMemberId },
+      othersMayPrompt: openToOthers({ othersMayPrompt, computer }),
+      pinnedAt: pins.find((p) => p.sessionId === child.id)?.pinnedAt.toISOString() ?? null,
+      laterAt: laters.get(child.id)?.toISOString() ?? null,
+      unread: unread(
+        childTurns.find((t) => t.sessionId === child.id)?._max.at,
+        childReads.find((r) => r.sessionId === child.id)?.seenAt,
+      ),
+      wakeAt: wakeAt(child.id),
+      previewRunning:
+        !!previews.get(child.id) && !previewOfflineIn(presence, { id: computerId, ...computer }),
+    })
+    type SidebarChild = ReturnType<typeof shape> & { children?: SidebarChild[] }
+    /** A thread's sub-threads, each with its own: a child's reviews. */
+    const childrenOf = (id: string): SidebarChild[] =>
+      children
+        .filter((child) => child.parentId === id)
+        .map((child) => {
+          const below = childrenOf(child.id)
+          return { ...shape(child), ...(below.length ? { children: below } : {}) }
+        })
     return c.json(
       rows.map((row) => {
         const of = (type: string) => counts.find((n) => n.sessionId === row.id && n.type === type)
@@ -545,40 +604,8 @@ export const threads = new Hono<AppEnv>()
           lastReplyAt: latest?.toISOString() ?? null,
           unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
-          childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
-          children: children
-            .filter((child) => child.parentId === row.id)
-            .map(
-              ({
-                parentId,
-                computerId,
-                computer,
-                startedByMemberId,
-                othersMayPrompt,
-                _count,
-                ...child
-              }) => ({
-                ...child,
-                // A pull request's review: out of the sidebar unless it needs the person.
-                review: reviewIds.has(child.id),
-                // What its menu needs (thread-menu.tsx): who started it, who else may change it,
-                // and this member's pin and Later on it.
-                parent: { id: parentId! },
-                startedBy: { id: startedByMemberId },
-                othersMayPrompt: openToOthers({ othersMayPrompt, computer }),
-                pinnedAt:
-                  pins.find((p) => p.sessionId === child.id)?.pinnedAt.toISOString() ?? null,
-                laterAt: laters.get(child.id)?.toISOString() ?? null,
-                unread: unread(
-                  childTurns.find((t) => t.sessionId === child.id)?._max.at,
-                  childReads.find((r) => r.sessionId === child.id)?.seenAt,
-                ),
-                wakeAt: wakeAt(child.id),
-                previewRunning:
-                  !!previews.get(child.id) &&
-                  !previewOfflineIn(presence, { id: computerId, ...computer }),
-              }),
-            ),
+          childrenWorking: childrenWorking(row.id),
+          children: childrenOf(row.id),
           list: lists.get(row.id) ?? null,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
@@ -704,18 +731,36 @@ export const threads = new Hono<AppEnv>()
     // This member's pin and later, for the thread's menu in its details.
     const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
     const hub = hubs.get(c.var.scope.workspaceId)
-    const [pin, later, presence, waitingSince, names, chiefDecisions] = await Promise.all([
-      c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
-      c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
-      hub.presence([thread.computer.id]),
-      hub.eventsWaitingSince([thread.id]),
-      // Who declared it done, by name.
-      thread.doneByType && thread.doneById
-        ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
-        : null,
-      // Chief's decisions on its questions (src/chief-answers.ts), each shown on its question.
-      threadDecisions(c.var.db, thread.id),
-    ])
+    const [pin, later, presence, waitingSince, names, chiefDecisions, ticketsBelow] =
+      await Promise.all([
+        c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
+        c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
+        hub.presence([thread.computer.id]),
+        hub.eventsWaitingSince([thread.id]),
+        // Who declared it done, by name.
+        thread.doneByType && thread.doneById
+          ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
+          : null,
+        // Chief's decisions on its questions (src/chief-answers.ts), each shown on its question.
+        threadDecisions(c.var.db, thread.id),
+        // The open tickets of its children's reviews: each shows on that child, whose page has it.
+        thread.children.length
+          ? c.var.db.ticket.findMany({
+              where: {
+                status: 'open',
+                session: { parentId: { in: thread.children.map((child) => child.id) } },
+              },
+              select: {
+                id: true,
+                type: true,
+                title: true,
+                createdAt: true,
+                session: { select: { parentId: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            })
+          : [],
+      ])
     return c.json({
       ...thread,
       // Whether it is there, for everyone in the thread: /computers lists only the member's own.
@@ -737,8 +782,12 @@ export const threads = new Hono<AppEnv>()
         ({ startedByMemberId, othersMayPrompt, computer, ...child }) => {
           // Its line shows the start of its report; the child keeps the whole of it.
           const report = reportOf(child.report)
+          const below = ticketsBelow
+            .filter((t) => t.session?.parentId === child.id)
+            .map(({ session: _session, ...t }) => t)
           return {
             ...child,
+            ...(below.length ? { tickets: [...child.tickets, ...below] } : {}),
             ...(report
               ? { report: { ...report, summary: clipReport(report.summary, REPORT_START) } }
               : {}),

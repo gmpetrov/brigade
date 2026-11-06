@@ -385,8 +385,9 @@ function createAgent(
           child: !!spec.parent,
           follow: !!spec.playbook && !spec.playbook.dryRun,
         }),
-        // Reviews of its pull requests, in a thread a person talks to: a child reports, a playbook decides.
-        ...(spec.git && !spec.parent && !spec.playbook ? reviewTools(callSchedule) : {}),
+        // Reviews of its pull requests, a child thread's too, which reports once its review is done; a
+        // playbook decides.
+        ...(spec.git && !spec.playbook ? reviewTools(callSchedule) : {}),
         // A playbook run's root thread ends the run; its children report to it instead.
         ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
         // Elsewhere, a teammate may install one from the chat.
