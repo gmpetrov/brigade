@@ -718,14 +718,21 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     The runner tells the API `sleep` only once neither uses it, and after a
     command only 10 minutes later, should another follow: each start counts at
     the provider (200 a day included in the plan); it touches the machine as
-    those 10 minutes begin, so the sweep counts from then. A thread's ups and sleeps go
-    to the API one after the other: an up waits for a sleep under way, and a
-    sleep not under way yet is not made once someone comes for the machine.
-    While a command runs, the runner touches the machine every 5 minutes as
-    busy: the sweep and the provider's own stop stay away, and the API marks the
-    runner's computer in use too, as with a thread running. Its idle stop (30
-    minutes without a running thread) would otherwise stop the runner under a
-    long command whose turn ended, and the machine, untouched, 20 minutes later.
+    those 10 minutes begin, so the sweep counts from then. A thread's ups and
+    sleeps go to the API one after the other: an up waits for a sleep under
+    way, and a sleep not under way yet is not made once someone comes for the
+    machine. While a command runs, the runner touches the machine every 5
+    minutes as busy: the sweep and the provider's own stop stay away, and the
+    API marks the runner's computer in use too, as with a thread running. Its
+    idle stop (30 minutes without a running thread) would otherwise stop the
+    runner under a long command whose turn ended, and the machine, untouched,
+    20 minutes later. A preview's touch does not keep the computer up: a
+    person viewing it does, from the dashboard. What the machine has (November
+    6, 2026): Ubuntu, Node.js 24, pnpm, Docker, Python 3.12, ffmpeg, Chrome and
+    passwordless sudo, 120 GB free. Measured that day, driven from a cloud
+    computer: Brigade's whole `pnpm install`, then the runner's typecheck, 40
+    seconds on a fresh copy; the same after an edit, 4 seconds (one file sent);
+    a 20-second 1080p render with ffmpeg, its file back here, in about 7.
     - **The stops outlive the runner.** Which threads' machines may be up, and
       when each may stop (the end of its 10 minutes after a command), are kept
       in `machine-holds.json`. An update (several a day while runner changes
@@ -754,13 +761,6 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       the row until then. 20 minutes leaves 9 past the longest of those, and 5
       past a lost touch after a command; a forgotten machine costs 20 minutes
       and the minute between sweeps, instead of 45.
-    A preview's touch does not keep the computer up: a person viewing it does,
-    from the dashboard. What the machine has (November 6, 2026): Ubuntu, Node.js
-    24, pnpm, Docker, Python 3.12, ffmpeg, Chrome and passwordless sudo, 120 GB
-    free. Measured that day, driven from a cloud computer: Brigade's whole
-    `pnpm install`, then the runner's typecheck, 40 seconds on a fresh copy; the
-    same after an edit, 4 seconds (one file sent); a 20-second 1080p render with
-    ffmpeg, its file back here, in about 7.
   - **Not done**: making a machine from a saved image per repository (a
     prebuild). The first preview of a thread installs everything on a fresh
     machine (about 90 seconds for Brigade, measured); later ones in the thread
