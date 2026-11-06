@@ -98,13 +98,14 @@ export class Receiver {
     return this.taking
   }
 
-  /** The reader is gone: a body it did not finish is dropped, never placed. */
+  /** The reader is gone: what came is applied, a body it did not finish dropped (never placed). */
   async end() {
     await this.taking
     const body = this.body
     this.body = undefined
     this.line = []
     if (body) await this.discard(body)
+    await this.idle()
   }
 
   private async take(data: Buffer) {
@@ -386,9 +387,9 @@ async function main() {
   } catch {
     // The link was cut: as at its end.
   }
+  // Then it ends by itself once nothing is left to do, its last save included. Not with
+  // process.exit(), which hung there now and then (about one end in ten after a large file).
   await receiver.end()
-  await receiver.idle()
-  process.exit(0)
 }
 
 if (process.argv[1] && /preview-sync-receiver\.[cm]?[jt]s$/.test(process.argv[1])) void main()

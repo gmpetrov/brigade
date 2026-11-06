@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import {
   appendFileSync,
@@ -27,6 +27,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { after, test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { Reader } from '../src/preview-sync-reader.js'
 import { Receiver, safePath } from '../src/preview-sync-receiver.js'
 
@@ -44,7 +45,8 @@ import { Receiver, safePath } from '../src/preview-sync-receiver.js'
 //   in it; one cut short on the way, or grown, still ends up there as it is here; one over 2 GB
 //   is left out, and goes from the machine;
 // - the receiver drops the bytes of a path it refuses, and applies the frame after them; what it
-//   stages (outside the copy) never stays there.
+//   stages (outside the copy) never stays there; once the link is gone, it saves what it wrote
+//   and ends by itself.
 
 const made: string[] = []
 after(() => {
@@ -581,4 +583,39 @@ test('staged on another filesystem than the copy, a file is copied in place whol
   assert.equal(Math.trunc(lstatSync(join(copy, 'deep/clip.mov')).mtimeMs), 1_700_000_000_000)
   assert.deepEqual(readdirSync(staging), [])
   assert.deepEqual(readdirSync(join(copy, 'deep')), ['clip.mov'], 'nothing else beside it')
+})
+
+test('once the link is gone, the receiver saves what it wrote, drops what was cut, and ends', async () => {
+  const copy = temp()
+  const state = join(temp(), 'state.json')
+  const receiver = spawn(
+    process.execPath,
+    [
+      '--import',
+      import.meta.resolve('tsx'),
+      join(dirname(fileURLToPath(import.meta.url)), '../src/preview-sync-receiver.ts'),
+      copy,
+      state,
+    ],
+    { stdio: ['pipe', 'ignore', 'inherit'] },
+  )
+  const ended = new Promise<number | null>((done) => receiver.on('close', done))
+  const clip = randomBytes(9 * MB)
+  // A whole file, with no mark after it (its record is not saved yet), then one cut short.
+  receiver.stdin.write(frame({ t: 'file', p: 'clip.mov', s: clip.length, m: 0o644, mt: 0 }, clip))
+  receiver.stdin.end(
+    frame({ t: 'file', p: 'cut.mov', s: 4 * MB, m: 0o644, mt: 0 }, clip.subarray(0, MB)),
+  )
+  let timer: NodeJS.Timeout | undefined
+  const code = await Promise.race([
+    ended,
+    new Promise((done) => (timer = setTimeout(() => done('still running after 10 s'), 10_000))),
+  ])
+  clearTimeout(timer)
+  receiver.kill('SIGKILL')
+  assert.equal(code, 0, 'it ended by itself')
+  assert.ok(readFileSync(join(copy, 'clip.mov')).equals(clip))
+  assert.ok(!there(copy, 'cut.mov'))
+  assert.deepEqual(JSON.parse(readFileSync(state, 'utf8')), ['clip.mov'], 'what it wrote, saved')
+  assert.deepEqual(readdirSync(join(dirname(state), 'state.staging')), [])
 })
