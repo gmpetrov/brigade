@@ -636,10 +636,17 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     with a machine (`ThreadSpec.machine`, which the API sets as it would give
     one: the feature, the starter's switch, a cloud computer) gives its
     teammates `run_on_machine` and `machine_run`, and a "Heavy work" section in
-    their instructions: run there each command that takes much CPU, memory or
-    time (a render or encode, a transcription, an install, a build, a test
-    suite, a big repository's typecheck), even where a skill shows it run here,
-    and keep quick commands here. `run_on_machine` is always in view (Claude
+    their instructions: run there the work the cloud computer cannot take
+    without slowing every teammate (a render or encode of video or audio, a
+    transcription, a model run on video or images, Docker), even where a skill
+    shows it run here, and keep code work and quick commands here. Code work
+    means installs, builds, a typecheck, lint and the tests of a change: they
+    are lighter than starting the machine, sending the checkout and installing
+    there; a whole test suite is left to the repository's checks, which run on
+    each pull request (or run here one package at a time when it has none).
+    The member chose this scope on November 6, 2026, after machines started for
+    a typecheck or a review's tests; it widens only when a real case needs it.
+    `run_on_machine` is always in view (Claude
     Code's tool search leaves it out of the list otherwise): on November 6, a
     video edit followed its skill's local steps and never searched for it.
     Without a machine, neither the tools, the instructions nor the agent's key

@@ -846,16 +846,22 @@ const PREVIEWS =
   'could not check, rather than debugging the setup. ' +
   'Before you start, set up, check or save one, read the `brigade-previews` skill.'
 
-/** Heavy work: a thread with a machine of its own runs it there (machine-runs.ts). */
+/**
+ * Heavy work: a thread with a machine of its own runs there what the shared computer cannot take
+ * (video and audio, Docker), and keeps code work here (machine-runs.ts, docs/previews.md).
+ */
 const MACHINE =
   '## Heavy work\n\n' +
   'This thread has a machine of its own (8 vCPU, 16 GB), beside this computer, whose memory every teammate of ' +
-  'the workspace shares; its preview runs there. Run each command that takes much CPU, memory or time there, ' +
-  'with `run_on_machine`, not in your shell, even where a skill shows it run here: renders and encodes of video ' +
-  'or audio (`npx hyperframes render` and `snapshot`, ffmpeg on more than a few seconds of video), ' +
-  "transcriptions (Whisper), dependency installs, builds, test suites, a big repository's typecheck or lint, " +
-  'Docker. Keep quick commands here: git, reading, searching and editing files, probes such as ffprobe, small ' +
-  'scripts, a single test. Run each in the folder it needs (a checkout, or the project’s folder): that folder ' +
+  'the workspace shares; its preview runs there. Run there, with `run_on_machine` and not in your shell, the ' +
+  'work this computer cannot take without slowing everyone, even where a skill shows it run here: renders and ' +
+  'encodes of video or audio (`npx hyperframes render` and `snapshot`, ffmpeg on more than a few seconds of ' +
+  'video), transcriptions (Whisper), models run on video or images (such as SAM 2), and Docker, with what ' +
+  'needs it. Code work stays here, whatever the repository: dependency installs, builds, a typecheck, lint and ' +
+  'the tests of what you changed, since starting the machine and installing there takes longer than they do. ' +
+  "Leave a whole test suite to the repository's checks when its pull requests run them; without any, run it " +
+  'here one package at a time. Keep quick commands here too: git, reading, searching and editing files, ' +
+  'probes such as ffprobe, small scripts. Run each in the folder it needs (a checkout, or the project’s folder): that folder ' +
   'goes to the machine first, then only what changed, and what commands install there stays for the next ones; ' +
   "the machine has none of this computer's environment. The thread's attached files are there too, whatever " +
   'their size, at the same path relative to your working directory as here (`attachments/…`): name them as ' +
