@@ -153,6 +153,9 @@ export async function reviewVerdicts(
   return verdicts
 }
 
+/** How long a review's report that went to its child but never showed there still holds the child's. */
+const UNSHOWN_HOLD_MS = 30 * 60_000
+
 /**
  * Why a child thread does not report yet: a review of a pull request it opened is under way in a
  * child of its own (src/reviews.ts), or that review's report is still to wake it. It reports to
@@ -172,7 +175,7 @@ export async function reviewHold(
   if (running) return { number: running.number, reviewer: running.reviewSession!.teammate.name }
   // Its report is in, and wakes this thread when it can take it (queued behind the turn at work,
   // say): the turn that reads it reports, not one before. One that never showed a while after it
-  // went (a person took the thread over meanwhile) holds nothing more.
+  // went (a person took the thread over meanwhile) holds nothing more (UNSHOWN_HOLD_MS).
   const last = await db.wakeup.findFirst({
     where: { sessionId, kind: 'report', status: { in: ['pending', 'fired'] } },
     orderBy: { createdAt: 'desc' },
@@ -182,7 +185,7 @@ export async function reviewHold(
     last &&
     (last.status === 'pending' ||
       (!!last.firedAt &&
-        Date.now() - last.firedAt.getTime() < REPORT_AFTER_PERSON_MINUTES * 60_000 &&
+        Date.now() - last.firedAt.getTime() < UNSHOWN_HOLD_MS &&
         !(await db.sessionEvent.findFirst({
           where: {
             sessionId,
@@ -1150,8 +1153,8 @@ export async function handleChildCall(
       return {
         error:
           `#${held.number} is still in review by ${held.reviewer}: do not report yet. End your turn now; ` +
-          'you are woken here with its report. Report once it approves, or once you stop it because ' +
-          'it goes in circles, with its verdict.',
+          'you are woken here with its report. Report once it approves, or once you stop asking it ' +
+          'to look again because it goes in circles, with its verdict.',
       }
     // Its files are its parent's now: in each of its teammates' folders before its next turn.
     const files = op.files?.length
