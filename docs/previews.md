@@ -559,12 +559,16 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
       edited or removed here does not change it there. The one exception is a
       folder the sync sends as it is (a command run in `attachments`): there a
       file is placed only when the teammate's copy is still the one given, as
-      its SHA-256 says, read as the teammate (its size alone may be an edit's),
-      and it gets that copy's time and mode, so the sync finds it already there
-      and does not send it; any other copy there, edited or removed, is the
-      sync's, like any file of that folder, and nothing is placed for it.
-      Elsewhere a placed file keeps its own time and mode. Previews do not get
-      them: a preview's copy is its checkout alone.
+      its SHA-256 says (its size alone may be an edit's), and it gets that
+      copy's time and mode, so the sync finds it already there and does not send
+      it; any other copy there, edited or removed, is the sync's, like any file
+      of that folder, and nothing is placed for it. The copy is read as the
+      teammate by Node itself (`fs` and `crypto`, opened without following a
+      link, hashed as it streams), not by GNU's `stat` or `sha256sum`, which a
+      Mac lacks; one that cannot be read is not placed either, and the run says
+      so, never guessing from its size. Elsewhere a placed file keeps its own
+      time and mode. Previews do not get them: a preview's copy is its checkout
+      alone.
     - **Detached there, followed here.** The command runs in a session of its
       own (`.brigade/runs/<id>/`), with bash; its settings and credentials are
       sourced, then deleted from the disk. Its output goes to a file the runner

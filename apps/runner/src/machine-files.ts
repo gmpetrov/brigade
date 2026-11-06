@@ -10,8 +10,8 @@
 // then moves it into place, and remembers what it placed: the next command fetches only what it
 // lacks. What it gets is the file as given to the thread, whatever the teammate changed in its
 // copy here; except in a folder the sync sends as it is (a command run in the attachments folder),
-// where a file is placed only when the teammate's copy is still the one given (its SHA-256 says
-// so), and any other copy is the sync's, as any file of that folder.
+// where a file is placed only when the teammate's copy is still the one given (its SHA-256, read
+// by Node as the teammate, says so), and any other copy is the sync's, as any file of that folder.
 import { randomBytes } from 'node:crypto'
 import { join, posix, sep } from 'node:path'
 import { Readable } from 'node:stream'
@@ -29,10 +29,14 @@ export type FilesApi = {
   fetch?: typeof fetch
 }
 
-/** What was put on the machine now, and what could not be, with why. */
+/**
+ * What was put on the machine now, what could not be, with why, and what was not placed because
+ * the teammate's copy here could not be read to say whether it is still the file as given.
+ */
 export type Placement = {
   fetched: { path: string; size: number }[]
   failed: { path: string; why: string }[]
+  unchecked: { path: string; why: string }[]
 }
 
 /** Files fetched at once, at most. */
@@ -114,19 +118,99 @@ function parseIndex(text: string) {
   return index
 }
 
-/** The paths, stat'ed here as the teammate: what it can read, never what it cannot. */
-async function localStats(paths: string[], runAs: string | undefined) {
-  if (!paths.length) return []
-  const out = await runAsUser(['sh', '-c', STATS], runAs, `${paths.join('\n')}\n`).catch(() => '')
-  return parseStats(out.split('\n'), paths.length)
+/**
+ * A teammate's copy here, as it reads it: a file, with its SHA-256 when it has the size given;
+ * something else (gone, a link, a folder); or what kept it from being read.
+ */
+type Copy =
+  | { kind: 'file'; size: number; mode: number; mtime?: string; sha256?: string }
+  | { kind: 'other' }
+  | { kind: 'failed'; why: string }
+
+/**
+ * Run by Node as the teammate, with node: modules only (never GNU's stat or sha256sum, which a Mac
+ * lacks): for each `{ path, size }` on stdin, the copy opened without following a link, stat'ed,
+ * and hashed as it streams when of that size, all from the one open file. Prints a Copy for each.
+ */
+const COPY_CHECK = `
+const fs = require('node:fs')
+const crypto = require('node:crypto')
+const { O_RDONLY, O_NOFOLLOW, O_NONBLOCK } = fs.constants
+const said = (error) => String((error && error.message) || error).split(', ')[0]
+async function look({ path, size }) {
+  let fd
+  try {
+    fd = fs.openSync(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+  } catch (error) {
+    if (['ENOENT', 'ENOTDIR', 'ELOOP', 'EMLINK'].includes(error && error.code)) return { kind: 'other' }
+    return { kind: 'failed', why: said(error) }
+  }
+  try {
+    const st = fs.fstatSync(fd, { bigint: true })
+    if (!st.isFile()) return { kind: 'other' }
+    const copy = { kind: 'file', size: Number(st.size), mode: Number(st.mode & 0o777n) }
+    if (st.mtimeNs >= 0n)
+      copy.mtime = (st.mtimeNs / 1000000000n) + '.' + String(st.mtimeNs % 1000000000n).padStart(9, '0')
+    if (copy.size !== size) return copy
+    const hash = crypto.createHash('sha256')
+    await new Promise((done, fail) => {
+      fs.createReadStream(path, { fd, autoClose: false })
+        .on('data', (chunk) => hash.update(chunk))
+        .once('end', done)
+        .once('error', fail)
+    })
+    copy.sha256 = hash.digest('hex')
+    return copy
+  } catch (error) {
+    return { kind: 'failed', why: said(error) }
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+let input = ''
+process.stdin.setEncoding('utf8')
+process.stdin.on('data', (chunk) => (input += chunk))
+process.stdin.on('end', async () => {
+  const copies = []
+  for (const item of JSON.parse(input)) copies.push(await look(item))
+  process.stdout.write(JSON.stringify(copies))
+})
+`
+
+/** A Copy as COPY_CHECK printed it, or null when it is not one. */
+function copyOf(value: unknown): Copy | null {
+  const copy = (value ?? {}) as Record<string, unknown>
+  if (copy.kind === 'other') return { kind: 'other' }
+  if (copy.kind === 'failed') return { kind: 'failed', why: String(copy.why ?? 'it failed') }
+  if (copy.kind !== 'file' || typeof copy.size !== 'number' || typeof copy.mode !== 'number')
+    return null
+  return {
+    kind: 'file',
+    size: copy.size,
+    mode: copy.mode & 0o777,
+    ...(typeof copy.mtime === 'string' && MTIME.test(copy.mtime) ? { mtime: copy.mtime } : {}),
+    ...(typeof copy.sha256 === 'string' && SHA256.test(copy.sha256) ? { sha256: copy.sha256 } : {}),
+  }
 }
 
-/** The paths' SHA-256, read here as the teammate, in order: null for one it cannot read. */
-async function localSums(paths: string[], runAs: string | undefined) {
-  if (!paths.length) return []
-  const out = await runAsUser(['sh', '-c', SUMS], runAs, `${paths.join('\n')}\n`).catch(() => '')
-  const sums = out.split('\n')
-  return paths.map((_, i) => (SHA256.test(sums[i] ?? '') ? sums[i]! : null))
+/** The teammate's copies of these paths, read here as it: what it can read, never what it cannot. */
+async function localCopies(
+  items: { path: string; size: number }[],
+  runAs: string | undefined,
+): Promise<Copy[]> {
+  if (!items.length) return []
+  let copies: unknown
+  try {
+    const out = await runAsUser([process.execPath, '-e', COPY_CHECK], runAs, JSON.stringify(items))
+    copies = JSON.parse(out)
+  } catch (error) {
+    const failed: Copy = { kind: 'failed', why: why(error) }
+    return items.map(() => failed)
+  }
+  return items.map(
+    (_, i) =>
+      (Array.isArray(copies) && copyOf(copies[i])) || { kind: 'failed', why: 'nothing came back' },
+  )
 }
 
 const within = (root: string, path: string) => path === root || path.startsWith(`${root}${sep}`)
@@ -294,7 +378,7 @@ export async function placeAttachments(input: {
   syncRoots: string[]
 }): Promise<Placement> {
   const { link } = input
-  const placement: Placement = { fetched: [], failed: [] }
+  const placement: Placement = { fetched: [], failed: [], unchecked: [] }
   const refs: ThreadAttachmentRef[] = []
   for (const ref of input.refs) {
     if (ref.status !== 'ready') continue
@@ -352,28 +436,24 @@ export async function placeAttachments(input: {
     }
   }
   // In a folder a sync sends as it is (a command run in the attachments folder), a file is placed
-  // only when the teammate's copy there is still the one given: its SHA-256 says so, read as the
-  // teammate (its size alone may be an edit's). It then lends the placed file its time and mode,
-  // so the sync finds that file there already and leaves it. Any other copy there (edited,
-  // removed, a link) is the sync's, as any file of that folder: nothing placed, nothing lent.
+  // only when the teammate's copy there is still the one given: its SHA-256 says so, read here as
+  // the teammate (its size alone may be an edit's). It then lends the placed file its time and
+  // mode, so the sync finds that file there already and leaves it. Any other copy there (edited,
+  // removed, a link) is the sync's, as any file of that folder: nothing placed, nothing lent. One
+  // that could not be read is not placed either, and the run says so: never guessed from its size.
   const synced = lacking.filter((ref) => input.syncRoots.some((root) => within(root, here(ref))))
-  const locals = await localStats(synced.map(here), input.runAs)
-  const sized = synced.flatMap((ref, i) => {
-    const local = locals[i]
-    return local?.file && local.size === ref.size ? [{ ref, local }] : []
-  })
-  const sums = await localSums(
-    sized.map(({ ref }) => here(ref)),
+  const copies = await localCopies(
+    synced.map((ref) => ({ path: here(ref), size: ref.size })),
     input.runAs,
-  )
-  const asGiven = new Map(
-    sized.filter(({ ref }, i) => sums[i] === ref.sha256).map(({ ref, local }) => [ref, local]),
   )
   const fetching: { ref: ThreadAttachmentRef; mode: number; mtime?: string }[] = []
   for (const ref of lacking) {
-    const local = asGiven.get(ref)
-    if (local) fetching.push({ ref, mode: local.mode, mtime: local.mtime })
-    else if (!synced.includes(ref)) fetching.push({ ref, mode: FILE_MODE })
+    const at = synced.indexOf(ref)
+    const copy = copies[at]
+    if (at < 0 || !copy) fetching.push({ ref, mode: FILE_MODE })
+    else if (copy.kind === 'failed') placement.unchecked.push({ path: ref.path, why: copy.why })
+    else if (copy.kind === 'file' && copy.sha256 === ref.sha256)
+      fetching.push({ ref, mode: copy.mode, ...(copy.mtime ? { mtime: copy.mtime } : {}) })
   }
   await atMost(fetching, AT_ONCE, async ({ ref, mode, mtime }) => {
     let url: string | undefined
@@ -415,5 +495,6 @@ export async function placeAttachments(input: {
   const order = (path: string) => input.refs.findIndex((ref) => ref.path === path)
   placement.fetched.sort((a, b) => order(a.path) - order(b.path))
   placement.failed.sort((a, b) => order(a.path) - order(b.path))
+  placement.unchecked.sort((a, b) => order(a.path) - order(b.path))
   return placement
 }

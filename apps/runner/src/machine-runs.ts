@@ -667,7 +667,7 @@ export class MachineRuns {
     )
     thread.placing = placing.catch(() => undefined)
     try {
-      const { fetched, failed } = await placing
+      const { fetched, failed, unchecked } = await placing
       if (fetched.length) {
         const bytes = fetched.reduce((sum, file) => sum + file.size, 0)
         const names = fetched.map((file) => file.path)
@@ -681,6 +681,10 @@ export class MachineRuns {
         )
       }
       for (const file of failed) run.notes.push(`${file.path} is not on the machine: ${file.why}`)
+      for (const file of unchecked)
+        run.notes.push(
+          `${file.path} was not placed from storage: its copy here could not be checked (${file.why})`,
+        )
     } catch (error) {
       run.notes.push(
         `The thread's attached files could not be put on the machine: ${errorText(error)}`,

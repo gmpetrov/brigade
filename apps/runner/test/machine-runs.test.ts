@@ -49,13 +49,16 @@ import { shellQuote, type MachineLink } from '../src/preview-machine.js'
 //   again, nor two at once; one that does not match is left out with a note, and the runner's
 //   token never reaches the machine, nor the signed URL a command line there; without a bucket,
 //   the API's bytes go over the link;
-// - a command run in the attachments folder finds them there without its sync sending them; a
-//   copy the teammate changed there, even to the same size, is the sync's (nothing fetched stands
-//   in for it), and elsewhere the file is as given.
+// - a command run in the attachments folder finds them there without its sync sending them, even
+//   on a runner without GNU's stat and sha256sum (a Mac); a copy the teammate changed there, even
+//   to the same size, is the sync's (nothing fetched stands in for it), and elsewhere the file is
+//   as given; a copy that cannot be read there is not placed, and the run says so.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), '../src')
 /** tsx's loader by its path: the stand-in machine's commands run in a folder without it. */
 const tsx = import.meta.resolve('tsx')
+/** The machine's own tools: what a test puts in this computer's PATH never reaches them. */
+const MACHINE_PATH = process.env.PATH
 const made: string[] = []
 const servers: Server[] = []
 after(() => {
@@ -88,6 +91,7 @@ function folderLink(home: string) {
     spawn('sh', ['-c', command(line)], {
       cwd: home,
       detached: true,
+      env: { ...process.env, PATH: MACHINE_PATH },
       stdio: [stdio === 'pipe' ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     })
   const link = {
@@ -829,3 +833,72 @@ for (const { kind, edit } of edits)
     await inside()
     assert.equal(store.asked.length, 1)
   })
+
+test('on a runner without GNU’s stat or sha256sum, as on a Mac, a copy as given is still known and placed', async () => {
+  const clip = randomBytes(96 * 1024)
+  const ref = attached('clip1', 'clip.mov', clip)
+  const store = await bucket({ clip1: clip })
+  const { control, machine, workDir } = setup({
+    files: { of: () => [ref], api: api(store.url).files },
+  })
+  write(workDir, ref.path, clip)
+  chmodSync(join(workDir, ref.path), 0o600)
+  utimesSync(join(workDir, ref.path), new Date(1_700_000_000_123), new Date(1_700_000_000_123))
+  // This computer's stat refuses -c, as BSD's does, and it has no sha256sum. The machine keeps
+  // GNU's (MACHINE_PATH).
+  const tools = temp()
+  writeFileSync(join(tools, 'stat'), '#!/bin/sh\necho "stat: illegal option -- c" >&2\nexit 1\n', {
+    mode: 0o755,
+  })
+  writeFileSync(
+    join(tools, 'sha256sum'),
+    '#!/bin/sh\necho "sha256sum: not found" >&2\nexit 127\n',
+    {
+      mode: 0o755,
+    },
+  )
+  const path = process.env.PATH
+  process.env.PATH = `${tools}:${path}`
+  const result = await control
+    .run({ command: 'sha256sum clip.mov', cwd: 'attachments' }, 30_000)
+    .finally(() => (process.env.PATH = path))
+  assert.equal(result.status, 'succeeded', JSON.stringify(result))
+  assert.match(result.output ?? '', new RegExp(ref.sha256))
+  assert.ok(
+    result.notes.some((note) => note.startsWith('Fetched 1 attached file')),
+    JSON.stringify(result.notes),
+  )
+  assert.ok(!result.notes.some((note) => note.startsWith('Sent ')), JSON.stringify(result.notes))
+  assert.equal(store.asked.length, 1)
+  const placed = statSync(join(machine, 'commands/t1/attachments/clip.mov'))
+  assert.equal(placed.mode & 0o777, 0o600)
+  assert.equal(Math.trunc(placed.mtimeMs), 1_700_000_000_123)
+})
+
+test(
+  'a copy that cannot be read here is not placed for the folder the sync sends, and the run says so',
+  { skip: process.getuid?.() === 0 ? 'root reads any file' : false },
+  async () => {
+    const clip = randomBytes(32 * 1024)
+    const ref = attached('clip1', 'clip.mov', clip)
+    const store = await bucket({ clip1: clip })
+    const { control, workDir } = setup({ files: { of: () => [ref], api: api(store.url).files } })
+    write(workDir, ref.path, clip)
+    chmodSync(join(workDir, ref.path), 0o000)
+    try {
+      const result = await control.run({ command: 'echo ran', cwd: 'attachments' }, 30_000)
+      assert.equal(result.status, 'succeeded', JSON.stringify(result))
+      assert.ok(
+        result.notes.includes(
+          'attachments/clip.mov was not placed from storage: its copy here could not be checked ' +
+            '(EACCES: permission denied)',
+        ),
+        JSON.stringify(result.notes),
+      )
+      // Not guessed from its size: nothing fetched.
+      assert.equal(store.asked.length, 0)
+    } finally {
+      chmodSync(join(workDir, ref.path), 0o644)
+    }
+  },
+)
