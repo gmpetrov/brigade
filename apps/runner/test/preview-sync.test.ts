@@ -528,12 +528,15 @@ test('nothing stays staged: what an earlier receiver left, a file cut by the lin
   const first = new Receiver(copy, state, say)
   assert.equal(first.staging, staging, 'beside the state file')
   assert.deepEqual(readdirSync(staging), [], 'emptied as it starts')
-  // The link is cut a megabyte into a file of ten: its bytes were staged as they came, and go.
-  await first.push(frame({ t: 'file', p: 'cut.mov', s: 10 * MB, m: 0o644, mt: 0 }, randomBytes(MB)))
+  // The link is cut 32 MB into a file of 64: its bytes were staged as they came, and go.
+  await first.push(
+    frame({ t: 'file', p: 'cut.mov', s: 64 * MB, m: 0o644, mt: 0 }, randomBytes(32 * MB)),
+  )
   const parts = readdirSync(staging)
   assert.equal(parts.length, 1)
-  // Taken once written: what feeds it waits for the disk, rather than its memory filling up.
-  assert.equal(statSync(join(staging, parts[0]!)).size, MB, 'staged as they came')
+  // Taken once written (a write that size takes a while): what feeds it waits for the disk,
+  // rather than its memory filling up.
+  assert.equal(statSync(join(staging, parts[0]!)).size, 32 * MB, 'staged as they came')
   await first.end()
   await first.idle()
   assert.deepEqual(readdirSync(staging), [])
