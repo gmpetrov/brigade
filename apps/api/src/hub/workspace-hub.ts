@@ -208,7 +208,11 @@ export class WorkspaceHub {
   }
 
   /** What boat answered when asked to recover the computer for its runner (recoverAway). */
-  noteAwayRecover(computerId: string, answer: NonNullable<RunnerAway['recover']>, now = Date.now()) {
+  noteAwayRecover(
+    computerId: string,
+    answer: NonNullable<RunnerAway['recover']>,
+    now = Date.now(),
+  ) {
     const away = this.durable<RunnerAway>('runner-away')
     const found = away.get(computerId) ?? { since: now, restarts: 0 }
     away.set(computerId, { ...found, recover: answer, recoverAskedAt: now })

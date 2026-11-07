@@ -321,8 +321,10 @@ function recoveryDetail(away: RunnerAway | null) {
     return `boat reaches its machine but has not saved its disk lately (a full disk?): left as it is (${journal}).`
   if (away?.recover === 'recovering') return 'boat is power-cycling its machine.'
   return [
-    `Once its runner has been away ${RECOVER_AFTER_MS / MINUTE} min and boat has not saved its disk for ${UNSAVED_MS / MINUTE}, Brigade asks boat to recover it, then stops it with its last snapshot and starts it again`,
-    restarts ? ` (done ${restarts} time(s) so far).` : '. While boat saves it, its machine answers and its runner is the trouble.',
+    `Once its runner has been away ${RECOVER_AFTER_MS / MINUTE} min and boat has not saved its disk for ${UNSAVED_MS / MINUTE} min, Brigade asks boat to recover it, then stops it with its last snapshot and starts it again`,
+    restarts
+      ? ` (done ${restarts} time(s) so far).`
+      : '. While boat saves it, its machine answers and its runner is the trouble.',
   ].join('')
 }
 
@@ -344,13 +346,7 @@ async function checkComputers(now: number) {
     // Since when its runner is away, as its hub keeps it: past the Api object's restarts.
     const away = computer.status === 'running' ? await hub.runnerAway(computer.id) : null
     const online = computer.status === 'running' ? !away : await hub.isOnline(computer.id)
-    const problem = computerProblem(
-      computer,
-      online,
-      awayFor(away, computer, now),
-      now,
-      away,
-    )
+    const problem = computerProblem(computer, online, awayFor(away, computer, now), now, away)
     // Without a plan it is meant to be off (src/cloud.ts's enforcePlans): not a problem.
     if (problem && (!billingEnabled() || (await cloudEntitled(computer.workspaceId))))
       found.push(problem)
