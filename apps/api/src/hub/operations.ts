@@ -23,6 +23,7 @@ export const operations = {
   // Its computers' connections.
   isOnline: (hub: WorkspaceHub, computerId: string) => hub.isOnline(computerId),
   isRestarting: (hub: WorkspaceHub, computerId: string) => hub.isRestarting(computerId),
+  runnerAway: (hub: WorkspaceHub, computerId: string) => hub.runnerAway(computerId),
   runnerProtocol: (hub: WorkspaceHub, computerId: string) => hub.runnerProtocol(computerId),
   presence: (hub: WorkspaceHub, computerIds: string[]) => hub.presence(computerIds),
 

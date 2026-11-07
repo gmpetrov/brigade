@@ -81,6 +81,11 @@ export type RunnerAnswer = Extract<RunnerToApi, { requestId: string }>
 type Asking = { computerId: string; settle: (answer: RunnerAnswer | { error: string }) => void }
 
 type Restart = { until: number; protocolVersion: number }
+/**
+ * A cloud computer's runner away while its computer is marked running (runnerAway): since when,
+ * and how many times Brigade restarted the computer for it (src/cloud.ts's recoverAway).
+ */
+export type RunnerAway = { since: number; restarts: number; gaveUp?: boolean }
 type Queued = { message: ApiToRunner; at: number }
 
 /** A computer's connection as dashboards and other code see it (status, lists). */
@@ -174,6 +179,45 @@ export class WorkspaceHub {
 
   isOnline(computerId: string) {
     return this.runners.has(computerId) || this.isRestarting(computerId)
+  }
+
+  /**
+   * Since when a computer's runner has been away, kept with the hub: it outlives the hub's
+   * hibernation and the Api object's restarts. Kept in the Api object's memory before, it was
+   * forgotten at each restart, which ended the computer's alert and started its count again (on
+   * Nov 7, an alert open from 23:14 ended at 01:13 with the runner still away). Noted from the
+   * first time it is asked while away; forgotten once the runner is back (null then).
+   */
+  runnerAway(computerId: string, now = Date.now()): RunnerAway | null {
+    const away = this.durable<RunnerAway>('runner-away')
+    if (this.isOnline(computerId)) {
+      away.delete(computerId)
+      return null
+    }
+    const found = away.get(computerId)
+    if (found) return found
+    const noted = { since: now, restarts: 0 }
+    away.set(computerId, noted)
+    return noted
+  }
+
+  /** Brigade restarted the computer for its runner (src/cloud.ts's recoverAway). */
+  noteAwayRestart(computerId: string, now = Date.now()) {
+    const away = this.durable<RunnerAway>('runner-away')
+    const found = away.get(computerId) ?? { since: now, restarts: 0 }
+    away.set(computerId, { ...found, restarts: found.restarts + 1 })
+  }
+
+  /** Past its restarts (RECOVER_LIMIT): said once in the log. */
+  noteAwayGaveUp(computerId: string) {
+    const away = this.durable<RunnerAway>('runner-away')
+    const found = away.get(computerId)
+    if (found) away.set(computerId, { ...found, gaveUp: true })
+  }
+
+  /** The computer stopped for another reason (idle, its plan, a member): nothing to recover. */
+  forgetAway(computerId: string) {
+    this.durable<RunnerAway>('runner-away').delete(computerId)
   }
 
   /** The protocol version of a computer's connected runner; undefined while it is offline. */

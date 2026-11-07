@@ -10,6 +10,7 @@ import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
 import type { ThreadWaiting } from '../hub/host.js'
 import { localHubs } from '../hub/memory-host.js'
+import { awayFor, RECOVER_AFTER_MS, RECOVER_LIMIT } from '../runner-away.js'
 import { computersWaiting } from '../runner-commands.js'
 import { raise, resolve, seenAt, settle, type Alert } from './alerts.js'
 import { failuresOf, summary, type Failure } from './failures.js'
@@ -255,9 +256,6 @@ export const STUCK_MS = 20 * MINUTE
 /** A cloud computer marked running whose runner stays away this long is down. */
 export const OFFLINE_MS = 10 * MINUTE
 
-/** Since when each running cloud computer has had no runner connected. */
-const offlineSince = new Map<string, number>()
-
 type CloudComputer = {
   id: string
   name: string
@@ -272,6 +270,7 @@ export function computerProblem(
   online: boolean,
   offlineFor: number,
   now: number,
+  restarts = 0,
 ): Alert | null {
   const which = `${computer.name} (${computer.workspace.name}, ${computer.id})`
   if (computer.status === 'error')
@@ -298,7 +297,12 @@ export function computerProblem(
       key: `computer:${computer.id}`,
       severity: 'warning',
       title: `Cloud computer's runner not connected: ${which}`,
-      detail: `Marked running, with no runner connected for ${Math.round(offlineFor / MINUTE)} min.`,
+      detail: [
+        `Marked running, with no runner connected for ${Math.round(offlineFor / MINUTE)} min.`,
+        restarts >= RECOVER_LIMIT
+          ? `Brigade restarted it ${restarts} times for it, and no longer does: its runner does not start on a VM that runs (its journal says why, as root through boat).`
+          : `Brigade restarts it once it has been ${RECOVER_AFTER_MS / MINUTE} min without its runner${restarts ? ` (restarted ${restarts} time(s) so far)` : ''}.`,
+      ].join(' '),
     }
   return null
 }
@@ -316,23 +320,22 @@ async function checkComputers(now: number) {
     },
   })
   const found: Alert[] = []
-  const seen = new Set<string>()
   for (const computer of computers) {
-    seen.add(computer.id)
-    const online = await hubs.get(computer.workspaceId).isOnline(computer.id)
-    if (online || computer.status !== 'running') offlineSince.delete(computer.id)
-    else if (!offlineSince.has(computer.id)) offlineSince.set(computer.id, now)
+    const hub = hubs.get(computer.workspaceId)
+    // Since when its runner is away, as its hub keeps it: past the Api object's restarts.
+    const away = computer.status === 'running' ? await hub.runnerAway(computer.id) : null
+    const online = computer.status === 'running' ? !away : await hub.isOnline(computer.id)
     const problem = computerProblem(
       computer,
       online,
-      now - (offlineSince.get(computer.id) ?? now),
+      awayFor(away, computer, now),
       now,
+      away?.restarts ?? 0,
     )
     // Without a plan it is meant to be off (src/cloud.ts's enforcePlans): not a problem.
     if (problem && (!billingEnabled() || (await cloudEntitled(computer.workspaceId))))
       found.push(problem)
   }
-  for (const id of offlineSince.keys()) if (!seen.has(id)) offlineSince.delete(id)
   await settle('computer:', found, new Date(now))
 
   await settle('disk:', diskProblems(await fullDisks()), new Date(now))
