@@ -35,6 +35,7 @@ import {
 import { runnerBundle } from '../routes/runner-install.js'
 import { packCommand, takesParts, unpackCommand } from '../spec-parts.js'
 import type { BrowserConn, HubHost, RunnerConn } from './host.js'
+import type { RunnerAway } from '../runner-away.js'
 
 /** Longest an update's restart may take: past it, the computer is offline after all. */
 const RESTART_MS = 2 * 60_000
@@ -81,11 +82,6 @@ export type RunnerAnswer = Extract<RunnerToApi, { requestId: string }>
 type Asking = { computerId: string; settle: (answer: RunnerAnswer | { error: string }) => void }
 
 type Restart = { until: number; protocolVersion: number }
-/**
- * A cloud computer's runner away while its computer is marked running (runnerAway): since when,
- * and how many times Brigade restarted the computer for it (src/cloud.ts's recoverAway).
- */
-export type RunnerAway = { since: number; restarts: number; gaveUp?: boolean }
 type Queued = { message: ApiToRunner; at: number }
 
 /** A computer's connection as dashboards and other code see it (status, lists). */
@@ -201,11 +197,25 @@ export class WorkspaceHub {
     return noted
   }
 
-  /** Brigade restarted the computer for its runner (src/cloud.ts's recoverAway). */
+  /**
+   * Brigade stopped the computer with its last snapshot and started it again for its runner
+   * (src/cloud.ts's recoverAway): boat is asked to recover the new machine afresh, if need be.
+   */
   noteAwayRestart(computerId: string, now = Date.now()) {
     const away = this.durable<RunnerAway>('runner-away')
     const found = away.get(computerId) ?? { since: now, restarts: 0 }
-    away.set(computerId, { ...found, restarts: found.restarts + 1 })
+    away.set(computerId, { since: found.since, restarts: found.restarts + 1 })
+  }
+
+  /** What boat answered when asked to recover the computer for its runner (recoverAway). */
+  noteAwayRecover(
+    computerId: string,
+    answer: NonNullable<RunnerAway['recover']>,
+    now = Date.now(),
+  ) {
+    const away = this.durable<RunnerAway>('runner-away')
+    const found = away.get(computerId) ?? { since: now, restarts: 0 }
+    away.set(computerId, { ...found, recover: answer, recoverAskedAt: now })
   }
 
   /** Past its restarts (RECOVER_LIMIT): said once in the log. */

@@ -91,17 +91,37 @@ A failure-count problem ends once none came for a while (15 minutes to 3 hours, 
 Computers of a workspace without a plan are meant to be off and are not checked.
 
 A cloud computer `running` without its runner is mended before operators need to act
-(`src/cloud.ts`'s idle check, each minute): after 3 minutes, its runner's service is started
-through boat; after 15 (`RECOVER_AFTER_MS`, `src/runner-away.ts`), the computer is stopped and
-started again, which boots it from its last snapshot, at most 3 times in a row (`RECOVER_LIMIT`);
-past them, its alert says so and it is left to operators. Since when its runner is away is kept
-with its workspace's hub (`runnerAway`), so neither the hub's hibernation nor the Api object's
-restarts reset it: kept in the Api object's memory before, each restart ended the alert and
-started the count again. A start that finds boat still archiving the VM from a stop waits up to
-30 minutes for it (`BOAT_ARCHIVING_WAIT`), rather than failing after 4 and marking the computer
-`error`. On Nov 6–7, boat resumed the workspace computer into a VM whose agent never answered
-(no snapshot from 23:01 to 05:13, every command refused): it stayed marked running for five
-hours, then failed to start four times while boat took 15 minutes to archive it.
+(`src/cloud.ts`'s idle check, each minute, `recoverAway`; the rules are `recoveryStep` in
+`src/runner-away.ts`):
+
+- after 3 minutes, its runner's service is started through boat;
+- after 20 (`RECOVER_AFTER_MS`), boat is asked what it last saved of its disk (a snapshot, or a
+  check that found nothing new to save: about every 10 minutes on a machine that answers). Saved
+  in the last 15 minutes (`UNSAVED_MS`), the machine answers and its runner is the trouble: it is
+  left as it is, for operators. A resumed machine can also stall for a while and come back by
+  itself (Nov 7, 11:05, 12 minutes), and starting it again would only start its restore over;
+- not saved for 15 minutes, boat no longer reaches the machine: it is asked to `recover` it
+  (power-cycle the machine, its disk untouched). boat's baremetal machines cannot be power-cycled
+  (`recover_unsupported`, tried on a throwaway sandbox on Nov 7): the computer is then stopped
+  with its last snapshot (boat's forced stop, which still saves the disk first when it can) and
+  started again. The same once a power-cycle boat accepted has not brought the runner back within
+  5 minutes (`RECOVER_WAIT_MS`). When boat answers it reaches the machine, it is left as it is, and
+  asked again 10 minutes later;
+- never so without a snapshot to keep (a forced stop would lose the whole disk), nor while its
+  runner says its disk is full; at most 3 times in a row (`RECOVER_LIMIT`), after which its alert
+  says so and it is left to operators.
+
+A stop without force does not do: boat refuses to stop a machine it has not saved for 30 minutes,
+so as not to lose what it has not saved, and keeps it running (it mails the account "could not
+stop"). On Nov 6–7, two minutes after a resume, the workspace computer's disk restore failed (its
+processes got `Transport endpoint is not connected`, the runner a SIGBUS) and boat saved nothing
+more from 23:01: it refused every stop and kept the machine running, unreachable, until 05:13.
+
+Since when its runner is away is kept with its workspace's hub (`runnerAway`), so neither the
+hub's hibernation nor the Api object's restarts reset it: kept in the Api object's memory before,
+each restart ended the alert and started the count again. A runner's hello clears it. A start that
+finds boat still archiving the VM from a stop waits up to 30 minutes for it
+(`BOAT_ARCHIVING_WAIT`), rather than failing after 4 and marking the computer `error`.
 
 The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them,
 which only delays an alert. An open alert's end does not depend on them: its row keeps when

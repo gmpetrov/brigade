@@ -30,6 +30,26 @@ export type RestoreState = { done: false; running: boolean } | { done: true; at:
 
 export type ExecResult = { exitCode: number; stdout: string; stderr: string }
 
+/**
+ * What the provider knows of a computer's disk and machine (boat's): when it last saved the disk
+ * or confirmed it had nothing new to save (`savedAt`), its last completed snapshot (`snapshotAt`,
+ * what a forced stop keeps), and the machine's health as the provider sees it.
+ */
+export type SavedState = {
+  savedAt: Date | null
+  snapshotAt: Date | null
+  health: string | null
+  healthReason: string | null
+}
+
+/**
+ * What the provider answered when asked to recover a computer that stopped answering:
+ * `recovering`, it power-cycles its machine (or did, minutes ago); `reachable`, it reaches the
+ * machine, so there is nothing to recover; `impossible`, it cannot power-cycle this machine (or
+ * its power-cycle failed): what is left is a forced stop, then a start.
+ */
+export type RecoverAnswer = 'recovering' | 'reachable' | 'impossible'
+
 /** A port of the computer on a public HTTPS address. */
 export type HostedPort = {
   /** Where the port answers, with no secret in it: what the app is told it is served at. */
@@ -82,7 +102,12 @@ export interface MachineProvider {
 export interface ComputerProvider {
   create(spec: ComputerSpec): Promise<ComputerRef>
   start(ref: ComputerRef): Promise<StartResult | void> // resume with its disk
-  stop(ref: ComputerRef): Promise<void> // keep the disk, stop billing
+  /**
+   * Keep the disk, stop billing. `force`: stop even when the disk cannot be saved any more,
+   * keeping its last completed snapshot (what was written since is lost); without it, boat refuses
+   * to stop a computer it cannot save, and leaves it running.
+   */
+  stop(ref: ComputerRef, options?: { force?: boolean }): Promise<void>
   keepAlive(ref: ComputerRef): Promise<void> // push back the provider's own auto-stop while in use
   destroy(ref: ComputerRef): Promise<void>
   exec(ref: ComputerRef, command: string): Promise<ExecResult> // install and start the runner
@@ -96,6 +121,10 @@ export interface ComputerProvider {
    * computer stopped, so it will not be.
    */
   restore?(ref: ComputerRef): Promise<RestoreState>
+  /** When the provider last saved the computer's disk, and how its machine is (SavedState). */
+  saved?(ref: ComputerRef): Promise<SavedState>
+  /** Ask the provider to bring back a computer that stopped answering (RecoverAnswer). */
+  recover?(ref: ComputerRef): Promise<RecoverAnswer>
 }
 
 /** Where a VM is now, as the provider's list says: `running` bills, `stopped` does not. */
