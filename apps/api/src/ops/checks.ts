@@ -14,6 +14,7 @@ import {
   awayFor,
   RECOVER_AFTER_MS,
   RECOVER_LIMIT,
+  RECOVER_WAIT_MS,
   UNSAVED_MS,
   type RunnerAway,
 } from '../runner-away.js'
@@ -305,21 +306,24 @@ export function computerProblem(
       title: `Cloud computer's runner not connected: ${which}`,
       detail: [
         `Marked running, with no runner connected for ${Math.round(offlineFor / MINUTE)} min.`,
-        recoveryDetail(away),
+        recoveryDetail(away, now),
       ].join(' '),
     }
   return null
 }
 
 /** What Brigade does about a running computer's runner away (src/cloud.ts's recoverAway). */
-function recoveryDetail(away: RunnerAway | null) {
+function recoveryDetail(away: RunnerAway | null, now: number) {
   const restarts = away?.restarts ?? 0
   const journal = 'its journal says why, as root through boat'
   if (away?.gaveUp || restarts >= RECOVER_LIMIT)
     return `Brigade stopped it with its last snapshot and started it again ${restarts} times, and no longer does: its runner does not stay up (${journal}).`
   if (away?.recover === 'reachable')
     return `boat reaches its machine but has not saved its disk lately (a full disk?): left as it is (${journal}).`
-  if (away?.recover === 'recovering') return 'boat is power-cycling its machine.'
+  // Only while its runner is waited for: a power-cycle after which boat saves the machine again,
+  // its runner still away, is over (recoveryStep does nothing more then).
+  if (away?.recover === 'recovering' && now - (away.recoverAskedAt ?? 0) < RECOVER_WAIT_MS)
+    return 'boat is power-cycling its machine.'
   return [
     `Once its runner has been away ${RECOVER_AFTER_MS / MINUTE} min and boat has not saved its disk for ${UNSAVED_MS / MINUTE} min, Brigade asks boat to recover it, then stops it with its last snapshot and starts it again`,
     restarts

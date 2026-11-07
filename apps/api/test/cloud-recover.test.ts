@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
-import { after, before, test } from 'node:test'
+import { after, before, beforeEach, test } from 'node:test'
 import pg from 'pg'
 
 // A cloud computer marked running whose runner stays away, on a machine boat no longer saves, is
@@ -141,6 +141,12 @@ before(async () => {
   workspaceId = (await prisma.workspace.create({ data: { organizationId, name: 'recover' } })).id
 })
 
+// What boat answers is set by each test that needs another: never carried from one to the next.
+beforeEach(() => {
+  boat.recoverAnswer = 'recover_unsupported'
+  boat.answering = null
+})
+
 after(async () => {
   if (skip) return
   await prisma.organization.deleteMany({ where: { id: organizationId } })
@@ -255,7 +261,6 @@ test(
     // Nov 6 at 23:24: its runner away for 21 minutes, boat's last save 23 minutes ago.
     hub.runnerAway(computer.id, Date.now() - RECOVER_AFTER_MS - MIN)
     savedAgo(computer, 23)
-    boat.recoverAnswer = 'recover_unsupported'
 
     await inHub(() => cloud.checkIdle(computer))
     // Its service was started for it first: boat refused, as on Nov 7. Its disk was not asked
@@ -370,6 +375,28 @@ test(
     assert.equal(boat.recovers.filter((r) => r === sandboxOf(recovered)).length, 1)
     assert.equal(await until(recovered.id, 'running'), 'running')
 
+    // A power-cycle after which boat saves the machine again, its runner still away: nothing more
+    // is done, and its alert no longer says boat is power-cycling it once the wait is over.
+    const cycled = await runningComputer(30)
+    hub.runnerAway(cycled.id, Date.now() - RECOVER_AFTER_MS - MIN)
+    savedAgo(cycled, 25)
+    assert.equal(await inHub(() => cloud.recoverAway(cycled, now)), true)
+    const later = now + RECOVER_WAIT_MS + 30 * MIN
+    const savedAgain = new Date(later - MIN)
+    boat.saved.set(sandboxOf(cycled), { verified: savedAgain, snapshot: savedAgain })
+    assert.equal(await inHub(() => cloud.recoverAway(cycled, later)), false)
+    assert.deepEqual(stopsOf(cycled), [])
+    const detail = (at: number) =>
+      computerProblem(
+        { ...cycled, workspace: { name: 'recover' } },
+        false,
+        awayFor(hub.runnerAway(cycled.id), cycled, at),
+        at,
+        hub.runnerAway(cycled.id),
+      )?.detail ?? ''
+    assert.match(detail(now + MIN), /boat is power-cycling its machine/)
+    assert.doesNotMatch(detail(later), /power-cycling/)
+
     // boat reaches the machine though it does not save it: nothing stopped, asked again later.
     const reached = await runningComputer(30)
     hub.runnerAway(reached.id, Date.now() - RECOVER_AFTER_MS - MIN)
@@ -381,7 +408,6 @@ test(
     assert.equal(await inHub(() => cloud.recoverAway(reached, now + RECOVER_AGAIN_MS)), false)
     assert.equal(boat.recovers.filter((r) => r === sandboxOf(reached)).length, 2)
     assert.deepEqual(stopsOf(reached), [])
-    boat.recoverAnswer = 'recover_unsupported'
   },
 )
 
