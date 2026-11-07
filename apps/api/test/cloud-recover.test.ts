@@ -52,6 +52,8 @@ const boat = {
   commands: [] as string[],
   /** By sandbox: its state; ready unless said. */
   states: new Map<string, string>(),
+  /** Holds each command's answer until it resolves. */
+  answering: null as Promise<void> | null,
 }
 Object.assign(BoatApi.prototype, {
   get: async ({ sandboxId }: { sandboxId: string }) => ({
@@ -70,6 +72,7 @@ Object.assign(BoatApi.prototype, {
   },
   command: async ({ sandboxId }: { sandboxId: string }) => {
     boat.commands.push(sandboxId)
+    await boat.answering
     throw new Error('the sandbox agent is not reachable')
   },
 })
@@ -234,4 +237,49 @@ test('a runner away for less than RECOVER_AFTER_MS is left alone', { skip }, asy
   const row = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
   await inHub(() => cloud.stopComputer(row, { type: 'system', id: 'brigade' }))
   assert.equal(hub.runnerAway(computer.id)?.restarts, 0)
+})
+
+test(
+  'a runner back while its computer is about to be restarted is left running',
+  { skip },
+  async () => {
+    const computer = await runningComputer(30)
+    const hub = localHub(workspaceId)
+    const before = boat.stops.length
+    hub.runnerAway(computer.id, Date.now() - RECOVER_AFTER_MS - MIN)
+    // The stop's disk check waits on boat; the runner says hello meanwhile.
+    let answer!: () => void
+    boat.answering = new Promise((resolve) => (answer = resolve))
+    const recovering = inHub(() => cloud.recoverAway(computer))
+    for (let i = 0; i < 100 && !boat.commands.includes(sandboxOf(computer)); i++)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    const runner = await fakeRunner({ organizationId, workspaceId }, computer.id)
+    answer()
+    boat.answering = null
+    assert.equal(await recovering, false)
+    assert.equal(boat.stops.length, before)
+    assert.equal(
+      (await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })).status,
+      'running',
+    )
+    assert.ok(hub.runners.has(computer.id))
+    runner.close()
+  },
+)
+
+test('a hello gives a computer its restarts back', { skip }, async () => {
+  const computer = await runningComputer(30)
+  const hub = localHub(workspaceId)
+  hub.runnerAway(computer.id, Date.now() - 60 * MIN)
+  for (let i = 0; i < RECOVER_LIMIT; i++) hub.noteAwayRestart(computer.id)
+  assert.equal(hub.runnerAway(computer.id)?.restarts, RECOVER_LIMIT)
+  // Its runner connects and goes again before anything reads it online.
+  const runner = await fakeRunner({ organizationId, workspaceId }, computer.id)
+  const conn = hub.runners.get(computer.id)!
+  hub.runners.delete(computer.id)
+  hub.takeOver(conn)
+  runner.close()
+  const away = hub.runnerAway(computer.id)
+  assert.equal(away?.restarts, 0)
+  assert.ok(Date.now() - away!.since < MIN)
 })

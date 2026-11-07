@@ -540,6 +540,9 @@ export async function stopComputer(
     }
     if (!options.force) return room
   }
+  // Its runner came back while the disk was asked about (awaited above): it is working again.
+  if (options.recovering && currentHub(computer.workspaceId).isOnline(computer.id))
+    return { stopped: false, reason: 'its runner came back' }
   await provider.stop(ref)
   await runStopped(ref.id, new Date(), 'brigade')
   // Its runner went with it, without closing its connection.
@@ -945,7 +948,7 @@ export async function recoverAway(computer: Computer, now = Date.now()) {
   )
   state().keptAlive.delete(computer.id)
   const stop = await stopComputer(computer, { type: 'system', id: 'brigade' }, { recovering: true })
-  // Too full to stop (roomToStop): its runner answered that much, and the stop is not forced.
+  // Too full to stop (roomToStop), or its runner came back meanwhile: not restarted.
   if (!stop.stopped) return false
   hub.noteAwayRestart(computer.id, now)
   await ensureRunning(computer.id)

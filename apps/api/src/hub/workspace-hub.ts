@@ -215,7 +215,7 @@ export class WorkspaceHub {
     if (found) away.set(computerId, { ...found, gaveUp: true })
   }
 
-  /** The computer stopped for another reason (idle, its plan, a member): nothing to recover. */
+  /** Its runner said hello, or the computer was stopped on purpose (idle, its plan, a member). */
   forgetAway(computerId: string) {
     this.durable<RunnerAway>('runner-away').delete(computerId)
   }
@@ -825,6 +825,8 @@ export class WorkspaceHub {
     this.arriving.delete(conn)
     this.runners.set(conn.computerId, conn)
     this.restarted(conn.computerId)
+    // Its runner is back: a later absence starts its count and its restarts afresh (runnerAway).
+    this.forgetAway(conn.computerId)
     this.host.persist(conn)
     this.scheduleTick()
   }
