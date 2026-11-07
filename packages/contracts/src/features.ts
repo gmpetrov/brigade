@@ -22,6 +22,14 @@ export const FEATURES = {
       'commands (renders, builds, test suites). Being tried by the team first.',
     default: false,
   },
+  google_workspace_mcp: {
+    description:
+      'Connect Google Drive, Docs and Sheets through Google’s own MCP servers, ' +
+      'beside the Apps on Google’s REST APIs. The servers are in Google’s Workspace Developer ' +
+      'Preview Program, whose terms keep them to the team until Google makes them generally ' +
+      'available.',
+    default: false,
+  },
   chief_acts: {
     description:
       "Chief acts on a person's rules (docs/chief-answers.md): their daily pass answers in their " +
@@ -40,4 +48,7 @@ export const isFeature = (key: string): key is Feature => Object.hasOwn(FEATURES
 export const APP_FEATURES: Partial<Record<string, Feature>> = {
   gmail: 'gmail',
   google_drive: 'google_drive',
+  google_drive_mcp: 'google_workspace_mcp',
+  google_docs_mcp: 'google_workspace_mcp',
+  google_sheets_mcp: 'google_workspace_mcp',
 }

@@ -1413,6 +1413,10 @@ enum ConnectorKind {
   cloudflare
   /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
   google_cloud
+  /// Google Drive, Docs and Sheets through Google's own MCP servers, behind a feature until GA.
+  google_drive_mcp
+  google_docs_mcp
+  google_sheets_mcp
   /// Neon, through Neon's MCP server and its own OAuth.
   neon
   /// Supabase, through Supabase's MCP server and its own OAuth.

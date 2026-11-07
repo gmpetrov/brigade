@@ -137,7 +137,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         />
       </svg>
     )
-  if (kind === 'google_drive')
+  if (kind === 'google_drive' || kind === 'google_drive_mcp')
     return (
       <svg viewBox="0 0 87.3 78" {...common}>
         <path
@@ -166,7 +166,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         />
       </svg>
     )
-  if (kind === 'google_docs')
+  if (kind === 'google_docs' || kind === 'google_docs_mcp')
     return (
       <svg viewBox="0 0 47 65" {...common}>
         <path
@@ -180,7 +180,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         />
       </svg>
     )
-  if (kind === 'google_sheets')
+  if (kind === 'google_sheets' || kind === 'google_sheets_mcp')
     return (
       <svg viewBox="0 0 47 65" {...common}>
         <path

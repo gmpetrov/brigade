@@ -97,6 +97,9 @@ type OAuthState = {
     | 'github'
     | 'cloudflare'
     | 'google_cloud'
+    | 'google_drive_mcp'
+    | 'google_docs_mcp'
+    | 'google_sheets_mcp'
     | 'neon'
     | 'supabase'
     | 'atlassian'
@@ -272,6 +275,9 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   github: githubConfigured(),
   cloudflare: true,
   google_cloud: googleMcpConfigured(),
+  google_drive_mcp: googleMcpConfigured(),
+  google_docs_mcp: googleMcpConfigured(),
+  google_sheets_mcp: googleMcpConfigured(),
   neon: true,
   supabase: true,
   atlassian: true,
@@ -741,6 +747,10 @@ export const connections = new Hono<AppEnv>()
   /** Start an MCP App's sign-in, on its server's own OAuth. */
   .post('/mcp', async (c) => {
     const { kind, region, returnTo, reconnect } = await parseBody(c.req.raw, ConnectMcp)
+    if (!appOpen(kind, await featuresOfUser(c.var.userId, c.var.scope.workspaceId)))
+      throw new HTTPException(403, {
+        message: `${appCatalog[kind].name} is not open to your account yet`,
+      })
     let server: McpServer
     try {
       server = inRegion(connectors[kind]!.mcp!, { id: region })
@@ -1006,6 +1016,42 @@ async function mayRevokeGoogleAccount(connection: { id: string; externalAccount?
   return mayRevokeGoogle(connection.externalAccount, others)
 }
 
+/**
+ * The Apps that sign in to Google's MCP servers with Brigade's Google client for agents
+ * (GOOGLE_MCP_CLIENT_ID). Like the Apps on Brigade's other Google client, they share one grant
+ * per Google account: revoking one connection's token signs out every other one.
+ */
+const GOOGLE_MCP_KINDS: ConnectorKind[] = [
+  'google_cloud',
+  'google_drive_mcp',
+  'google_docs_mcp',
+  'google_sheets_mcp',
+]
+
+/**
+ * Whether no other active connection, in any workspace, signs in to this Google account with
+ * Brigade's Google client for agents. A server added by its URL on Google's sign-in uses that
+ * client too (mcp.ts): any other one on the same address counts, since which server it reaches
+ * is not checked here; at worst, a grant stays live while its token is gone from the vault.
+ */
+async function mayRevokeGoogleMcpAccount(connection: {
+  id: string
+  externalAccount?: string | null
+}) {
+  if (!connection.externalAccount) return true
+  const others = await prisma.connection.findMany({
+    where: {
+      id: { not: connection.id },
+      kind: { in: [...GOOGLE_MCP_KINDS, 'mcp'] },
+      status: { not: 'removed' },
+      externalAccount: { equals: connection.externalAccount, mode: 'insensitive' },
+    },
+    select: { externalAccount: true },
+    take: 1,
+  })
+  return mayRevokeGoogle(connection.externalAccount, others)
+}
+
 /** Revoke at the provider, delete the credential, drop grants and triggers, keep the call log. */
 export async function disconnect(
   scope: WorkspaceScope,
@@ -1055,7 +1101,20 @@ export async function disconnect(
           usedElsewhere: async () => !(await mayRevokeGoogleAccount(connection)),
           revoke: () => revokeGoogle(credential as GoogleCredential),
         })
-      if (credential && auth === 'mcp') await revokeMcp(credential as McpCredential)
+      // Brigade's Google client for agents: one grant per Google account, as above.
+      if (
+        credential &&
+        auth === 'mcp' &&
+        env.GOOGLE_MCP_CLIENT_ID &&
+        (credential as McpCredential).clientId === env.GOOGLE_MCP_CLIENT_ID
+      )
+        await removeAndRevokeGoogle({
+          markRemoved: () =>
+            db.connection.updateMany({ where: { id: connection.id }, data: { status: 'removed' } }),
+          usedElsewhere: async () => !(await mayRevokeGoogleMcpAccount(connection)),
+          revoke: () => revokeMcp(credential as McpCredential),
+        })
+      else if (credential && auth === 'mcp') await revokeMcp(credential as McpCredential)
     }
     forgetMcpTools(connection.id)
     await db.connection.updateMany({

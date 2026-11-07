@@ -64,6 +64,15 @@ test('Gmail and Drive are hidden by default; other Apps are not behind a feature
     assert.equal(appOpen(kind, new Set()), true, kind)
 })
 
+test("Google's Drive, Docs and Sheets MCP servers stay behind one feature, hidden by default", () => {
+  // Google's Developer Preview terms keep pre-GA features to the team.
+  assert.equal(FEATURES.google_workspace_mcp.default, false)
+  for (const kind of ['google_drive_mcp', 'google_docs_mcp', 'google_sheets_mcp']) {
+    assert.equal(appOpen(kind, new Set()), false, kind)
+    assert.equal(appOpen(kind, new Set(['google_workspace_mcp'])), true, kind)
+  }
+})
+
 describe(
   'Gmail for people with and without it',
   { skip: !database && 'no database answers' },
@@ -72,11 +81,18 @@ describe(
     const org = `org-features-${suffix}`
     const ids = {} as Record<'workspace' | 'ada' | 'bob', string>
     let saved: Awaited<ReturnType<typeof prisma.featureFlag.findUnique>> = null
+    let savedMcp: Awaited<ReturnType<typeof prisma.featureFlag.findUnique>> = null
     let app: Hono
     let restore: () => void
 
     before(async () => {
       saved = await prisma.featureFlag.findUnique({ where: { key: 'gmail' } })
+      savedMcp = await prisma.featureFlag.findUnique({ where: { key: 'google_workspace_mcp' } })
+      await prisma.featureFlag.upsert({
+        where: { key: 'google_workspace_mcp' },
+        create: { key: 'google_workspace_mcp', emails: [`ada-${suffix}@open.test`] },
+        update: { everyone: false, emails: [`ada-${suffix}@open.test`], workspaceIds: [] },
+      })
       // Ada's address as someone may have typed it: compared without case.
       await prisma.featureFlag.upsert({
         where: { key: 'gmail' },
@@ -122,6 +138,10 @@ describe(
         const { key: _key, updatedAt: _at, ...rest } = saved
         await prisma.featureFlag.update({ where: { key: 'gmail' }, data: rest })
       } else await prisma.featureFlag.deleteMany({ where: { key: 'gmail' } })
+      if (savedMcp) {
+        const { key: _key, updatedAt: _at, ...rest } = savedMcp
+        await prisma.featureFlag.update({ where: { key: 'google_workspace_mcp' }, data: rest })
+      } else await prisma.featureFlag.deleteMany({ where: { key: 'google_workspace_mcp' } })
       if (ids.workspace) await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
       await prisma.member.deleteMany({ where: { organizationId: org } })
       await prisma.organization.deleteMany({ where: { id: org } })
@@ -164,6 +184,21 @@ describe(
       assert.equal(bob.status, 403)
       assert.match(await bob.text(), /not open to your account/)
       assert.equal((await start('bob', 'google_docs')).status, 200)
+    })
+
+    test("POST /connections/mcp refuses Google's Drive MCP App to someone without its feature", async () => {
+      const bob = await app.request('/api/connections/mcp', {
+        method: 'POST',
+        headers: { 'x-test-user': ids.bob, 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'google_drive_mcp' }),
+      })
+      assert.equal(bob.status, 403)
+      assert.match(await bob.text(), /not open to your account/)
+      const ada = await (await get('ada', '/api/connections')).json()
+      const hidden = await (await get('bob', '/api/connections')).json()
+      assert.ok(!ada.hidden.includes('google_sheets_mcp'))
+      assert.ok(hidden.hidden.includes('google_sheets_mcp'))
+      assert.equal(hidden.available.google_sheets_mcp, false)
     })
   },
 )
