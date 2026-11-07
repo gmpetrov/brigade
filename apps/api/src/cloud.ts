@@ -29,6 +29,7 @@ import { forgetThread, throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { noteFailure } from './ops/failures.js'
+import { awayFor, RECOVER_AFTER_MS, RECOVER_LIMIT } from './runner-away.js'
 import { beginRun, computerSize, runMade, runStarted, runStopped } from './vm-costs.js'
 
 const provider = providerFromEnv(process.env)
@@ -371,6 +372,13 @@ async function bringUp(computerId: string) {
       ref.id,
     )
     await runStarted(run, ref.id, await cloud.start(ref))
+    // Up at its provider: running, so the idle check takes it from there (startRunnerService,
+    // recoverAway) should its runner never say hello, rather than "starting" for good.
+    const up = await prisma.computer.updateMany({
+      where: { id: computer.id, status: 'starting' },
+      data: { status: 'running' },
+    })
+    if (up.count) currentHub(computer.workspaceId).broadcastComputer(computer.id, 'running')
   })()
     .then(() =>
       audit({
@@ -515,10 +523,12 @@ async function roomToStop(
 export async function stopComputer(
   computer: { id: string; organizationId: string; workspaceId: string; providerRef: unknown },
   actor: { type: 'member' | 'system'; id: string },
-  options: { force?: boolean } = {},
+  options: { force?: boolean; recovering?: boolean } = {},
 ): Promise<StopResult> {
   const ref = refOf(computer)
   if (!provider || !ref) return { stopped: true }
+  // Stopped on purpose: its runner is not awaited any more (recoverAway).
+  if (!options.recovering) currentHub(computer.workspaceId).forgetAway(computer.id)
   const room = await roomToStop(computer.id, ref, options.force ?? false)
   if (!room.stopped) {
     const error = new Error(`${computer.id} not stopped: ${room.reason}`)
@@ -530,6 +540,9 @@ export async function stopComputer(
     }
     if (!options.force) return room
   }
+  // Its runner came back while the disk was asked about (awaited above): it is working again.
+  if (options.recovering && currentHub(computer.workspaceId).isOnline(computer.id))
+    return { stopped: false, reason: 'its runner came back' }
   await provider.stop(ref)
   await runStopped(ref.id, new Date(), 'brigade')
   // Its runner went with it, without closing its connection.
@@ -854,10 +867,14 @@ export async function checkIdle(computer: Computer) {
         )
       return
     }
-    if (status === 'running')
-      await startRunnerService(computer, ref).catch((error) =>
-        console.error(`starting the runner on ${computer.id} failed`, error),
+    if (status === 'running') {
+      await startRunnerService(computer, ref).catch(async (error) =>
+        console.error(
+          `starting the runner on ${computer.id} failed: ${await providerReason(error)}`,
+        ),
       )
+      if (await recoverAway(computer)) return
+    }
   }
   const busy = await prisma.session.count({
     where: { computerId: computer.id, status: 'running' },
@@ -900,6 +917,42 @@ async function startRunnerService(computer: Computer, ref: ComputerRef) {
     console.error(
       `starting the runner on ${computer.id} failed (${result.exitCode}): ${result.stderr.slice(-2000)}`,
     )
+}
+
+/**
+ * In the hub: a computer its provider says runs, whose runner has stayed away RECOVER_AFTER_MS
+ * though its service was started for it (startRunnerService), is stopped and started again. On
+ * Nov 6–7, boat resumed the workspace computer into a VM whose own agent never answered: no
+ * snapshot from 23:01 to 05:13, every command refused, the runner's connection gone two minutes
+ * after its hello. Marked running, it stayed so for five hours, its threads' messages waiting,
+ * until boat stopped it itself; the next resume came up the same, and the one after that worked.
+ * A resume is boat's remedy (it boots from the last snapshot). Not past RECOVER_LIMIT restarts in a
+ * row: a runner that cannot start on a sound VM is not helped by more. True when it restarted it.
+ */
+export async function recoverAway(computer: Computer, now = Date.now()) {
+  const hub = currentHub(computer.workspaceId)
+  const away = hub.runnerAway(computer.id, now)
+  if (!away || awayFor(away, computer, now) < RECOVER_AFTER_MS) return false
+  if (away.restarts >= RECOVER_LIMIT) {
+    if (!away.gaveUp) {
+      console.error(
+        `computer ${computer.id}: runner still away after ${RECOVER_LIMIT} restarts, not restarted again`,
+      )
+      hub.noteAwayGaveUp(computer.id)
+    }
+    return false
+  }
+  const minutes = Math.round(awayFor(away, computer, now) / 60_000)
+  console.warn(
+    `computer ${computer.id}: no runner for ${minutes} min while its VM runs: restarting it (${away.restarts + 1} of ${RECOVER_LIMIT})`,
+  )
+  state().keptAlive.delete(computer.id)
+  const stop = await stopComputer(computer, { type: 'system', id: 'brigade' }, { recovering: true })
+  // Too full to stop (roomToStop), or its runner came back meanwhile: not restarted.
+  if (!stop.stopped) return false
+  hub.noteAwayRestart(computer.id, now)
+  await ensureRunning(computer.id)
+  return true
 }
 
 /**

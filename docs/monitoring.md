@@ -90,6 +90,19 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
 
+A cloud computer `running` without its runner is mended before operators need to act
+(`src/cloud.ts`'s idle check, each minute): after 3 minutes, its runner's service is started
+through boat; after 15 (`RECOVER_AFTER_MS`, `src/runner-away.ts`), the computer is stopped and
+started again, which boots it from its last snapshot, at most 3 times in a row (`RECOVER_LIMIT`);
+past them, its alert says so and it is left to operators. Since when its runner is away is kept
+with its workspace's hub (`runnerAway`), so neither the hub's hibernation nor the Api object's
+restarts reset it: kept in the Api object's memory before, each restart ended the alert and
+started the count again. A start that finds boat still archiving the VM from a stop waits up to
+30 minutes for it (`BOAT_ARCHIVING_WAIT`), rather than failing after 4 and marking the computer
+`error`. On Nov 6–7, boat resumed the workspace computer into a VM whose agent never answered
+(no snapshot from 23:01 to 05:13, every command refused): it stayed marked running for five
+hours, then failed to start four times while boat took 15 minutes to archive it.
+
 The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them,
 which only delays an alert. An open alert's end does not depend on them: its row keeps when
 its last failure came (`lastAt`, the failure's own time, never the check's), and it ends once

@@ -201,6 +201,40 @@ test('a start says when boat resumed the VM, or that it was up already', async (
   })
 })
 
+// On Nov 7, boat took about 15 minutes to archive a VM whose agent no longer answered: a start
+// meanwhile waits for it, then resumes, rather than failing after 4 minutes.
+test('a start waits for a stop still archiving, then resumes', async () => {
+  const sandboxAfter = (archivingFor: number) => {
+    let asks = 0
+    const calls: string[] = []
+    const send = (async (url: string | URL | Request, init?: RequestInit) => {
+      const path = new URL(String(url)).pathname
+      calls.push(`${init?.method ?? 'GET'} ${path.replace('/api/v1', '')}`)
+      let state = ++asks <= archivingFor ? 'archiving' : 'archived'
+      if (calls.some((c) => c.endsWith('/resume'))) state = 'ready'
+      return new Response(JSON.stringify({ sandbox: { id: 'sb1', state } }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as typeof fetch
+    const provider = createBoatProvider({
+      apiKey: 'key',
+      basePath: 'https://boat.test/api/v1',
+      send,
+      archivingWait: { forMs: 50, everyMs: 5 },
+    })
+    return { provider, calls }
+  }
+  // Archiving for 5 asks (25 ms): waited for, then resumed.
+  const slow = sandboxAfter(5)
+  const started = await slow.provider.start({ provider: 'boat', id: 'sb1' })
+  assert.ok(started.resumedAt)
+  assert.ok(slow.calls.includes('POST /sandboxes/sb1/resume'))
+  // Archiving past the wait: a failure that says so, and no resume.
+  const stuck = sandboxAfter(1000)
+  await assert.rejects(stuck.provider.start({ provider: 'boat', id: 'sb1' }), /still archiving/)
+  assert.ok(!stuck.calls.includes('POST /sandboxes/sb1/resume'))
+})
+
 test('the ledger lists every sandbox page by page, and reads one’s usage unscaled', async () => {
   const asked: string[] = []
   const send = (async (url: string | URL | Request) => {

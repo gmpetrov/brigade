@@ -37,6 +37,14 @@ export const BOAT_COMMAND_GRACE_MS = 60_000
 export const BOAT_DESKTOP_WAIT = { forMs: 25_000, everyMs: 2_000 }
 
 /**
+ * How long a start waits for a stop's snapshot (`archiving`) to finish before it resumes the VM,
+ * asking every `everyMs`. It waited 4 minutes: on Nov 7, boat took about 15 to archive the
+ * workspace computer, a VM whose agent no longer answered, and each start in between failed
+ * ("Sandbox entered terminal state archiving"), marking the computer down four times in a row.
+ */
+export const BOAT_ARCHIVING_WAIT = { forMs: 30 * 60_000, everyMs: 5_000 }
+
+/**
  * How long a request to boat may take, or null for none. Without a limit, a request boat never
  * answers held its caller for 10 minutes, and with it the jobs' queue (src/jobs.ts in apps/api):
  * a cloud computer's keep-alive, on Oct 30 and 31. A command waits for as long as it may run; a
@@ -104,9 +112,11 @@ export function createBoatProvider(options: {
   /** Tests: the fetch to use, and a shorter desktop wait. */
   send?: typeof fetch
   desktopWait?: { forMs: number; everyMs: number }
+  archivingWait?: { forMs: number; everyMs: number }
 }): ComputerProvider {
   const boat = boatClient(options.apiKey, options.basePath, options.send)
   const desktopWait = options.desktopWait ?? BOAT_DESKTOP_WAIT
+  const archivingWait = options.archivingWait ?? BOAT_ARCHIVING_WAIT
 
   return {
     async create(spec) {
@@ -128,7 +138,8 @@ export function createBoatProvider(options: {
       // A stop snapshots the disk first; resume once that has finished. A
       // failed resume leaves the sandbox in 'error': resuming again is boat's remedy.
       let resumedAt: Date | null = null
-      for (let i = 0; i < 120; i++) {
+      const deadline = Date.now() + archivingWait.forMs
+      for (;;) {
         const { sandbox } = await boat.get({ sandboxId })
         if (sandbox.state === 'archived' || sandbox.state === 'error') {
           resumedAt = new Date()
@@ -136,7 +147,11 @@ export function createBoatProvider(options: {
           break
         }
         if (sandbox.state !== 'archiving') break
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        if (Date.now() + archivingWait.everyMs > deadline)
+          throw new Error(
+            `boat still archiving ${sandboxId} after ${Math.round(archivingWait.forMs / 60_000)} min`,
+          )
+        await new Promise((resolve) => setTimeout(resolve, archivingWait.everyMs))
       }
       await waitUntilReady(boat, sandboxId)
       return { resumedAt }

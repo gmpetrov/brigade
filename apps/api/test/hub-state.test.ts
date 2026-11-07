@@ -39,7 +39,6 @@ const ALLOWED: Record<string, string> = {
     "when each kind's last failure was last written, to write a burst once a minute: a limit per process",
   'src/ops/checks.ts:reported':
     "what hub objects last said of their threads' events: the checks' own memory, renewed each tick",
-  'src/ops/checks.ts:offlineSince': "the checks' own memory, in the process that runs them",
   'src/ops/watchdog.ts:downs': "the cron's own memory",
   'src/account-health.ts:failures':
     "by account, each a workspace's whose events go through its one hub: a count that a restart or a hibernation resets, then counts again",
