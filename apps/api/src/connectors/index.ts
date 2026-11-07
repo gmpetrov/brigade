@@ -8,6 +8,7 @@ import { googleCalendar } from './google-calendar.js'
 import { googleAnalytics } from './google-analytics.js'
 import { googleCloud } from './google-cloud.js'
 import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
+import { googleDocsMcp, googleDriveMcp, googleSheetsMcp } from './google-workspace-mcp.js'
 import { neon } from './neon.js'
 import { atlassian } from './atlassian.js'
 import { notion } from './notion.js'
@@ -37,6 +38,9 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  google_drive_mcp: googleDriveMcp,
+  google_docs_mcp: googleDocsMcp,
+  google_sheets_mcp: googleSheetsMcp,
   neon,
   supabase,
   atlassian,
@@ -91,6 +95,9 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'google_drive_mcp',
+        'google_docs_mcp',
+        'google_sheets_mcp',
         'neon',
         'supabase',
         'atlassian',
@@ -219,6 +226,28 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  // Behind the google_workspace_mcp feature until Google's servers are generally available.
+  google_drive_mcp: {
+    name: 'Google Drive (MCP)',
+    description: 'Search, read, create and copy files in Drive, with Google’s Drive MCP server.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_docs_mcp: {
+    name: 'Google Docs (MCP)',
+    description: 'Read and edit documents, with Google’s Docs MCP server.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_sheets_mcp: {
+    name: 'Google Sheets (MCP)',
+    description: 'Read and edit spreadsheets, with Google’s Sheets MCP server.',
+    developer: 'Google',
+    category: 'Productivity',
     personal: true,
   },
   neon: {

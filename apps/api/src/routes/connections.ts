@@ -97,6 +97,9 @@ type OAuthState = {
     | 'github'
     | 'cloudflare'
     | 'google_cloud'
+    | 'google_drive_mcp'
+    | 'google_docs_mcp'
+    | 'google_sheets_mcp'
     | 'neon'
     | 'supabase'
     | 'atlassian'
@@ -272,6 +275,9 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   github: githubConfigured(),
   cloudflare: true,
   google_cloud: googleMcpConfigured(),
+  google_drive_mcp: googleMcpConfigured(),
+  google_docs_mcp: googleMcpConfigured(),
+  google_sheets_mcp: googleMcpConfigured(),
   neon: true,
   supabase: true,
   atlassian: true,
@@ -741,6 +747,10 @@ export const connections = new Hono<AppEnv>()
   /** Start an MCP App's sign-in, on its server's own OAuth. */
   .post('/mcp', async (c) => {
     const { kind, region, returnTo, reconnect } = await parseBody(c.req.raw, ConnectMcp)
+    if (!appOpen(kind, await featuresOfUser(c.var.userId, c.var.scope.workspaceId)))
+      throw new HTTPException(403, {
+        message: `${appCatalog[kind].name} is not open to your account yet`,
+      })
     let server: McpServer
     try {
       server = inRegion(connectors[kind]!.mcp!, { id: region })

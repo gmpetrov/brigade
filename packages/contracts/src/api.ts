@@ -145,6 +145,9 @@ export const ConnectMcp = z.object({
   kind: z.enum([
     'cloudflare',
     'google_cloud',
+    'google_drive_mcp',
+    'google_docs_mcp',
+    'google_sheets_mcp',
     'neon',
     'supabase',
     'atlassian',
