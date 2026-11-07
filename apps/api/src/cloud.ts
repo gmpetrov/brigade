@@ -866,7 +866,9 @@ export async function checkIdle(computer: Computer) {
     }
     if (status === 'running') {
       await startRunnerService(computer, ref).catch(async (error) =>
-        console.error(`starting the runner on ${computer.id} failed: ${await providerReason(error)}`),
+        console.error(
+          `starting the runner on ${computer.id} failed: ${await providerReason(error)}`,
+        ),
       )
       if (await recoverAway(computer)) return
     }
