@@ -29,7 +29,7 @@ import { forgetThread, throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { noteFailure } from './ops/failures.js'
-import { awayFor, RECOVER_AFTER_MS, RECOVER_LIMIT } from './runner-away.js'
+import { awayFor, RECOVER_AFTER_MS, RECOVER_LIMIT, recoveryStep } from './runner-away.js'
 import { beginRun, computerSize, runMade, runStarted, runStopped } from './vm-costs.js'
 
 const provider = providerFromEnv(process.env)
@@ -518,18 +518,22 @@ async function roomToStop(
 /**
  * In the hub: stop the computer with its provider; its runner went with it. Not while its disk
  * is too full for boat to resume it (roomToStop), unless `force` (its workspace has no plan:
- * it cannot keep running, and says so in the log).
+ * it cannot keep running, and says so in the log). `withLastSnapshot`: a machine boat no longer
+ * reaches (recoverAway), stopped even though boat cannot save it, with its last snapshot; its disk
+ * is not asked about, as nothing reaches it.
  */
 export async function stopComputer(
   computer: { id: string; organizationId: string; workspaceId: string; providerRef: unknown },
   actor: { type: 'member' | 'system'; id: string },
-  options: { force?: boolean; recovering?: boolean } = {},
+  options: { force?: boolean; recovering?: boolean; withLastSnapshot?: boolean } = {},
 ): Promise<StopResult> {
   const ref = refOf(computer)
   if (!provider || !ref) return { stopped: true }
   // Stopped on purpose: its runner is not awaited any more (recoverAway).
   if (!options.recovering) currentHub(computer.workspaceId).forgetAway(computer.id)
-  const room = await roomToStop(computer.id, ref, options.force ?? false)
+  const room: StopResult = options.withLastSnapshot
+    ? { stopped: true }
+    : await roomToStop(computer.id, ref, options.force ?? false)
   if (!room.stopped) {
     const error = new Error(`${computer.id} not stopped: ${room.reason}`)
     console.error(error.message)
@@ -543,7 +547,8 @@ export async function stopComputer(
   // Its runner came back while the disk was asked about (awaited above): it is working again.
   if (options.recovering && currentHub(computer.workspaceId).isOnline(computer.id))
     return { stopped: false, reason: 'its runner came back' }
-  await provider.stop(ref)
+  if (options.withLastSnapshot) await provider.stop(ref, { force: true })
+  else await provider.stop(ref)
   await runStopped(ref.id, new Date(), 'brigade')
   // Its runner went with it, without closing its connection.
   currentHub(computer.workspaceId).dropRunner(computer.id)
@@ -921,34 +926,69 @@ async function startRunnerService(computer: Computer, ref: ComputerRef) {
 
 /**
  * In the hub: a computer its provider says runs, whose runner has stayed away RECOVER_AFTER_MS
- * though its service was started for it (startRunnerService), is stopped and started again. On
- * Nov 6–7, boat resumed the workspace computer into a VM whose own agent never answered: no
- * snapshot from 23:01 to 05:13, every command refused, the runner's connection gone two minutes
- * after its hello. Marked running, it stayed so for five hours, its threads' messages waiting,
- * until boat stopped it itself; the next resume came up the same, and the one after that worked.
- * A resume is boat's remedy (it boots from the last snapshot). Not past RECOVER_LIMIT restarts in a
- * row: a runner that cannot start on a sound VM is not helped by more. True when it restarted it.
+ * though its service was started for it (startRunnerService), and whose disk boat has not saved
+ * for UNSAVED_MS: boat no longer reaches its machine. boat is asked to recover it (power-cycle the
+ * machine, its disk untouched); when it cannot (its baremetal machines), or the runner is still
+ * away RECOVER_WAIT_MS after, the computer is stopped with its last snapshot and started again,
+ * at most RECOVER_LIMIT times in a row (recoveryStep, src/runner-away.ts). Forced, boat still saves
+ * the disk first when it can.
+ *
+ * On Nov 6–7, two minutes after a resume, the workspace computer's disk restore failed: its
+ * processes got "Transport endpoint is not connected", the runner a SIGBUS, and boat saved nothing
+ * more. boat refuses to stop a machine it cannot save, so it kept that one running, unreachable,
+ * for six hours; a stop without force (Brigade's before) changed nothing. True when it acted.
  */
 export async function recoverAway(computer: Computer, now = Date.now()) {
+  const cloud = provider
+  const ref = refOf(computer)
+  if (!cloud?.saved || !ref) return false
   const hub = currentHub(computer.workspaceId)
   const away = hub.runnerAway(computer.id, now)
-  if (!away || awayFor(away, computer, now) < RECOVER_AFTER_MS) return false
-  if (away.restarts >= RECOVER_LIMIT) {
-    if (!away.gaveUp) {
-      console.error(
-        `computer ${computer.id}: runner still away after ${RECOVER_LIMIT} restarts, not restarted again`,
-      )
-      hub.noteAwayGaveUp(computer.id)
-    }
-    return false
+  if (!away || away.gaveUp || awayFor(away, computer, now) < RECOVER_AFTER_MS) return false
+  const saved = await cloud.saved(ref)
+  // Asked again after each wait on boat: its runner may be back meanwhile (runnerAway is null).
+  const next = () => {
+    const current = hub.runnerAway(computer.id, now)
+    return current
+      ? recoveryStep(current, {
+          awayMs: awayFor(current, computer, now),
+          savedAt: saved.savedAt?.getTime() ?? null,
+          snapshotAt: saved.snapshotAt?.getTime() ?? null,
+          diskFull: computer.disk !== null,
+          now,
+        })
+      : 'none'
   }
   const minutes = Math.round(awayFor(away, computer, now) / 60_000)
+  const seen = `boat last saved its disk ${saved.savedAt?.toISOString() ?? 'never'}, health ${saved.health ?? 'unknown'}${saved.healthReason ? ` (${saved.healthReason})` : ''}`
+  let step = next()
+  if (step === 'recover') {
+    const answer = cloud.recover ? await cloud.recover(ref) : 'impossible'
+    hub.noteAwayRecover(computer.id, answer, now)
+    console.warn(
+      `computer ${computer.id}: no runner for ${minutes} min, ${seen}: asked boat to recover it: ${answer}`,
+    )
+    if (answer !== 'impossible') return answer === 'recovering'
+    step = next()
+  }
+  if (step === 'give-up') {
+    console.error(
+      `computer ${computer.id}: runner still away after ${RECOVER_LIMIT} restarts with its last snapshot, not restarted again (${seen})`,
+    )
+    hub.noteAwayGaveUp(computer.id)
+    return false
+  }
+  if (step !== 'replace') return false
   console.warn(
-    `computer ${computer.id}: no runner for ${minutes} min while its VM runs: restarting it (${away.restarts + 1} of ${RECOVER_LIMIT})`,
+    `computer ${computer.id}: no runner for ${minutes} min, ${seen}: stopping it with its last snapshot and starting it again (${away.restarts + 1} of ${RECOVER_LIMIT})`,
   )
   state().keptAlive.delete(computer.id)
-  const stop = await stopComputer(computer, { type: 'system', id: 'brigade' }, { recovering: true })
-  // Too full to stop (roomToStop), or its runner came back meanwhile: not restarted.
+  const stop = await stopComputer(
+    computer,
+    { type: 'system', id: 'brigade' },
+    { recovering: true, withLastSnapshot: true },
+  )
+  // Its runner came back meanwhile: not restarted.
   if (!stop.stopped) return false
   hub.noteAwayRestart(computer.id, now)
   await ensureRunning(computer.id)

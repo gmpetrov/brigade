@@ -10,7 +10,13 @@ import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
 import type { ThreadWaiting } from '../hub/host.js'
 import { localHubs } from '../hub/memory-host.js'
-import { awayFor, RECOVER_AFTER_MS, RECOVER_LIMIT } from '../runner-away.js'
+import {
+  awayFor,
+  RECOVER_AFTER_MS,
+  RECOVER_LIMIT,
+  UNSAVED_MS,
+  type RunnerAway,
+} from '../runner-away.js'
 import { computersWaiting } from '../runner-commands.js'
 import { raise, resolve, seenAt, settle, type Alert } from './alerts.js'
 import { failuresOf, summary, type Failure } from './failures.js'
@@ -270,7 +276,7 @@ export function computerProblem(
   online: boolean,
   offlineFor: number,
   now: number,
-  restarts = 0,
+  away: RunnerAway | null = null,
 ): Alert | null {
   const which = `${computer.name} (${computer.workspace.name}, ${computer.id})`
   if (computer.status === 'error')
@@ -299,12 +305,25 @@ export function computerProblem(
       title: `Cloud computer's runner not connected: ${which}`,
       detail: [
         `Marked running, with no runner connected for ${Math.round(offlineFor / MINUTE)} min.`,
-        restarts >= RECOVER_LIMIT
-          ? `Brigade restarted it ${restarts} times for it, and no longer does: its runner does not start on a VM that runs (its journal says why, as root through boat).`
-          : `Brigade restarts it once it has been ${RECOVER_AFTER_MS / MINUTE} min without its runner${restarts ? ` (restarted ${restarts} time(s) so far)` : ''}.`,
+        recoveryDetail(away),
       ].join(' '),
     }
   return null
+}
+
+/** What Brigade does about a running computer's runner away (src/cloud.ts's recoverAway). */
+function recoveryDetail(away: RunnerAway | null) {
+  const restarts = away?.restarts ?? 0
+  const journal = 'its journal says why, as root through boat'
+  if (away?.gaveUp || restarts >= RECOVER_LIMIT)
+    return `Brigade stopped it with its last snapshot and started it again ${restarts} times, and no longer does: its runner does not stay up (${journal}).`
+  if (away?.recover === 'reachable')
+    return `boat reaches its machine but has not saved its disk lately (a full disk?): left as it is (${journal}).`
+  if (away?.recover === 'recovering') return 'boat is power-cycling its machine.'
+  return [
+    `Once its runner has been away ${RECOVER_AFTER_MS / MINUTE} min and boat has not saved its disk for ${UNSAVED_MS / MINUTE}, Brigade asks boat to recover it, then stops it with its last snapshot and starts it again`,
+    restarts ? ` (done ${restarts} time(s) so far).` : '. While boat saves it, its machine answers and its runner is the trouble.',
+  ].join('')
 }
 
 async function checkComputers(now: number) {
@@ -330,7 +349,7 @@ async function checkComputers(now: number) {
       online,
       awayFor(away, computer, now),
       now,
-      away?.restarts ?? 0,
+      away,
     )
     // Without a plan it is meant to be off (src/cloud.ts's enforcePlans): not a problem.
     if (problem && (!billingEnabled() || (await cloudEntitled(computer.workspaceId))))

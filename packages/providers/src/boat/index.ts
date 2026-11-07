@@ -8,7 +8,9 @@ import {
   type ComputerStatus,
   type MachineProvider,
   type ProviderLedger,
+  type RecoverAnswer,
   type RestoreState,
+  type SavedState,
   type StartResult,
   type VmState,
 } from '../types.js'
@@ -95,6 +97,34 @@ export function boatClient(
   )
 }
 
+/**
+ * boat's refusals of a recover (409), as Brigade takes them. Its baremetal machines cannot be
+ * power-cycled at all: a running sandbox on one answers `recover_unsupported` whether it answers or
+ * not (tried on a throwaway sandbox on Nov 7), and its own advice is then a forced stop and a
+ * resume.
+ */
+const RECOVER_ANSWERS: Record<string, RecoverAnswer> = {
+  sandbox_is_reachable: 'reachable',
+  // A power-cycle started less than 10 minutes ago: still under way, as far as Brigade knows.
+  too_soon: 'recovering',
+  recover_unsupported: 'impossible',
+  no_machine: 'impossible',
+  reset_failed: 'impossible',
+}
+
+/** The code of boat's 409 answer (`{ ok: false, status: 409, code, message }`), or null. */
+async function conflictCode(error: unknown): Promise<string | null> {
+  const response = (error as { response?: unknown } | null)?.response
+  if (!(response instanceof Response) || response.status !== 409) return null
+  try {
+    const body = (await response.clone().json()) as { code?: unknown; error?: { code?: unknown } }
+    const code = body.code ?? body.error?.code
+    return typeof code === 'string' ? code : null
+  } catch {
+    return null
+  }
+}
+
 function idOf(ref: ComputerRef) {
   if (ref.provider !== PROVIDER) throw new Error(`Not a ${PROVIDER} computer: ${ref.provider}`)
   return ref.id
@@ -157,8 +187,38 @@ export function createBoatProvider(options: {
       return { resumedAt }
     },
 
-    async stop(ref) {
-      await boat.stop({ sandboxId: idOf(ref) })
+    async stop(ref, options) {
+      // Forced, boat still saves the disk first when it can; when it cannot, it stops anyway with
+      // the last completed snapshot. Not forced, it refuses to stop a sandbox it has not saved for
+      // 30 minutes and keeps it running (Nov 7: "could not stop … snapshot keeps failing").
+      await boat.stop({
+        sandboxId: idOf(ref),
+        ...(options?.force ? { stopRequest: { force: true } } : {}),
+      })
+    },
+
+    async saved(ref): Promise<SavedState> {
+      const { sandbox } = await boat.get({ sandboxId: idOf(ref) })
+      const snapshotAt = sandbox.snapshotCompletedAt ?? null
+      return {
+        // A check that found nothing new to save confirms the disk too.
+        savedAt: sandbox.snapshotVerifiedAt ?? snapshotAt,
+        snapshotAt,
+        health: sandbox.health ?? null,
+        healthReason: sandbox.healthReason ?? null,
+      }
+    },
+
+    async recover(ref): Promise<RecoverAnswer> {
+      try {
+        await boat.recover({ sandboxId: idOf(ref) })
+        return 'recovering'
+      } catch (error) {
+        const code = await conflictCode(error)
+        const answer = code === null ? undefined : RECOVER_ANSWERS[code]
+        if (!answer) throw error
+        return answer
+      }
     },
 
     async keepAlive(ref) {

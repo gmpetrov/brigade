@@ -235,6 +235,99 @@ test('a start waits for a stop still archiving, then resumes', async () => {
   assert.ok(!stuck.calls.includes('POST /sandboxes/sb1/resume'))
 })
 
+/** A boat that answers each request with `answer(method, path)`, recording what it was asked. */
+function boatReplying(answer: (method: string, path: string) => { status?: number; body: object }) {
+  const asked: { method: string; path: string; body: unknown }[] = []
+  const send = (async (url: string | URL | Request, init?: RequestInit) => {
+    const method = init?.method ?? 'GET'
+    const path = new URL(String(url)).pathname.replace('/api/v1', '')
+    const body = typeof init?.body === 'string' && init.body ? JSON.parse(init.body) : undefined
+    asked.push({ method, path, body })
+    const { status = 200, body: reply } = answer(method, path)
+    return new Response(JSON.stringify(reply), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+  return {
+    asked,
+    provider: createBoatProvider({ apiKey: 'key', basePath: 'https://boat.test/api/v1', send }),
+  }
+}
+
+// boat's 409 answers, as a throwaway sandbox gave them on Nov 7.
+const refusal = (code: string) => ({
+  status: 409,
+  body: { ok: false, type: 'sandbox.error', status: 409, code, message: code, error: { code } },
+})
+
+test('a recover says whether boat power-cycles the machine, reaches it, or cannot', async () => {
+  const ref = { provider: 'boat', id: 'sb1' }
+  const answers: [ReturnType<typeof refusal> | { body: object }, string][] = [
+    [{ body: { ok: true, type: 'sandbox.recovering', status: 'recovering' } }, 'recovering'],
+    [refusal('sandbox_is_reachable'), 'reachable'],
+    [refusal('too_soon'), 'recovering'],
+    [refusal('recover_unsupported'), 'impossible'],
+    [refusal('no_machine'), 'impossible'],
+    [refusal('reset_failed'), 'impossible'],
+  ]
+  for (const [reply, expected] of answers) {
+    const { provider, asked } = boatReplying(() => reply)
+    assert.equal(await provider.recover!(ref), expected)
+    assert.deepEqual(
+      asked.map((a) => `${a.method} ${a.path}`),
+      ['POST /sandboxes/sb1/recover'],
+    )
+  }
+  // A refusal Brigade does not know, or any other failure, is a failure.
+  await assert.rejects(boatReplying(() => refusal('something_new')).provider.recover!(ref))
+  await assert.rejects(
+    boatReplying(() => ({ status: 500, body: { ok: false } })).provider.recover!(ref),
+  )
+})
+
+test('a forced stop says so to boat; a stop does not', async () => {
+  const ref = { provider: 'boat', id: 'sb1' }
+  const { provider, asked } = boatReplying(() => ({
+    status: 202,
+    body: { ok: true, type: 'sandbox.stopping', id: 'sb1', status: 'archiving' },
+  }))
+  await provider.stop(ref)
+  await provider.stop(ref, { force: true })
+  assert.deepEqual(
+    asked.map((a) => [`${a.method} ${a.path}`, a.body]),
+    [
+      ['POST /sandboxes/sb1/stop', undefined],
+      ['POST /sandboxes/sb1/stop', { force: true }],
+    ],
+  )
+})
+
+test('what boat last saved: its last check of the disk, else its last snapshot', async () => {
+  const ref = { provider: 'boat', id: 'sb1' }
+  const sandbox = (fields: object) => () => ({
+    body: { ok: true, type: 'sandbox.info', sandbox: { id: 'sb1', state: 'idle', ...fields } },
+  })
+  const checked = await boatReplying(
+    sandbox({
+      snapshotCompletedAt: '2026-11-06T23:01:11.196Z',
+      snapshotVerifiedAt: '2026-11-06T23:05:00.000Z',
+      health: 'degraded',
+      healthReason: 'the tunnel does not answer',
+    }),
+  ).provider.saved!(ref)
+  assert.equal(checked.savedAt?.toISOString(), '2026-11-06T23:05:00.000Z')
+  assert.equal(checked.snapshotAt?.toISOString(), '2026-11-06T23:01:11.196Z')
+  assert.equal(checked.health, 'degraded')
+  assert.equal(checked.healthReason, 'the tunnel does not answer')
+  const snapshotOnly = await boatReplying(
+    sandbox({ snapshotCompletedAt: '2026-11-06T23:01:11.196Z', health: 'ok' }),
+  ).provider.saved!(ref)
+  assert.equal(snapshotOnly.savedAt?.toISOString(), '2026-11-06T23:01:11.196Z')
+  const never = await boatReplying(sandbox({})).provider.saved!(ref)
+  assert.deepEqual(never, { savedAt: null, snapshotAt: null, health: null, healthReason: null })
+})
+
 test('the ledger lists every sandbox page by page, and reads one’s usage unscaled', async () => {
   const asked: string[] = []
   const send = (async (url: string | URL | Request) => {
