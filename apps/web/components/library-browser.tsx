@@ -1101,7 +1101,8 @@ function LibraryFilePanel({
   const name = nameOf(file.path)
   const folder = parentOf(file.path)
   const Icon = fileIcon(file.contentType)
-  const { share, setShare } = useShare(file.id)
+  const link = useShare(file.id)
+  const share = link.share
   // Markdown edits in the editor; other text files here.
   const editable = file.editable && file.contentType !== 'text/markdown'
   return (
@@ -1122,13 +1123,7 @@ function LibraryFilePanel({
             {share && ` · ${PUBLIC_LINK}`}
           </span>
         </div>
-        <ShareButton
-          documentId={file.id}
-          name={name}
-          share={share}
-          setShare={setShare}
-          onChange={() => void onChanged()}
-        />
+        <ShareButton key={file.id} name={name} link={link} onChange={() => void onChanged()} />
         <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
           <a href={contentUrl(file.id, true)} aria-label="Download">
             <Download aria-hidden />

@@ -323,7 +323,8 @@ export function DocumentPanel() {
     [libraryId, path],
   )
   const discussion = useDocumentDiscussion(file)
-  const { share, setShare } = useShare(libraryId)
+  const link = useShare(libraryId)
+  const share = link.share
   const askName = discussion?.teammate?.name
   const discuss = discussion?.ask
   // Below xl the panel lies over the page (the whole screen on a phone): it steps
@@ -399,12 +400,7 @@ export function DocumentPanel() {
               </Button>
             )}
             {target.kind === 'library' && (
-              <ShareButton
-                documentId={target.id}
-                name={current.title}
-                share={share}
-                setShare={setShare}
-              />
+              <ShareButton key={target.id} name={current.title} link={link} />
             )}
             {target.kind === 'library' && (
               <Button

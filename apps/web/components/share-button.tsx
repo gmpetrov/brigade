@@ -6,62 +6,94 @@
 import type { LibraryShare } from '@brigade/contracts'
 import { Check, Copy, Globe, Share } from 'lucide-react'
 import { Popover } from 'radix-ui'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMaybeDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Hint } from '@/components/ui/tooltip'
 import { api, isViewer } from '@/lib/api'
 import { DEMO } from '@/lib/demo/flag'
+import { afterReply, shownShare, type ShareReply, type ShareState } from '@/lib/share-state'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
+/** Numbers each request about a link as it starts: a reply older than one applied is dropped. */
+let requests = 0
+
 /**
- * A file's public link as the API says it: undefined while it is asked, null when it has none.
- * Asked again when the library changes, as another member may have turned it on or off.
+ * The public link of the file a bar shows (`documentId`): undefined while it is asked, null when
+ * it has none, and `toggle` to turn it on or off. Asked again when the library changes, as
+ * another member may have turned it on or off. A reply about another file than the one shown now
+ * (the bar moved on to another tab meanwhile), or older than one applied, changes nothing
+ * (lib/share-state.ts).
  */
 export function useShare(documentId: string | null | undefined) {
-  const [share, setShare] = useState<LibraryShare | null | undefined>()
+  const [state, setState] = useState<ShareState>(null)
   const [asked, setAsked] = useState(0)
-  useEffect(() => setShare(undefined), [documentId])
+  const shown = useRef(documentId ?? null)
+  useEffect(() => {
+    shown.current = documentId ?? null
+  }, [documentId])
+  const apply = useCallback(
+    (reply: ShareReply) => setState((s) => afterReply(s, shown.current, reply)),
+    [],
+  )
   useEffect(() => {
     if (!documentId || DEMO) return
-    let current = true
+    const seq = ++requests
     api<{ share: LibraryShare | null }>(`/library/${encodeURIComponent(documentId)}/share`)
-      .then((r) => current && setShare(r.share))
-      .catch(() => current && setShare((s) => s ?? null))
-    return () => {
-      current = false
-    }
-  }, [documentId, asked])
+      .then((r) => apply({ documentId, share: r.share, seq }))
+      // Unreadable: shown as not shared, unless a reply already said otherwise.
+      .catch(() =>
+        setState((s) =>
+          s?.documentId === documentId
+            ? s
+            : afterReply(s, shown.current, { documentId, share: null, seq }),
+        ),
+      )
+  }, [documentId, asked, apply])
   useLive(
     (message) => message.type === 'library.updated' && setAsked((n) => n + 1),
     () => setAsked((n) => n + 1),
   )
-  return { share, setShare }
+  const toggle = useCallback(
+    async (on: boolean) => {
+      if (!documentId) return null
+      const seq = ++requests
+      const r = await api<{ share: LibraryShare | null }>(
+        `/library/${encodeURIComponent(documentId)}/share`,
+        { method: on ? 'POST' : 'DELETE', ...(on && { body: {} }) },
+      )
+      apply({ documentId, share: r.share, seq })
+      return r.share
+    },
+    [documentId, apply],
+  )
+  return { share: shownShare(state, documentId), toggle }
 }
+
+export type ShareLink = ReturnType<typeof useShare>
 
 /** What a bar says beside a file's folder while its link is on. */
 export const PUBLIC_LINK = 'Public link'
 
+/** The button and its panel. Keyed by the file's id where it shows, so a tab switch starts it afresh. */
 export function ShareButton({
-  documentId,
   name,
-  share,
-  setShare,
+  link,
   label,
   onChange,
 }: {
-  documentId: string
   /** The file's or design's name, for the panel's title. */
   name: string
-  share: LibraryShare | null | undefined
-  setShare: (share: LibraryShare | null) => void
+  /** The file's link, from useShare. */
+  link: ShareLink
   /** Shows "Share" beside the icon, in a bar whose other buttons say what they do. */
   label?: boolean
   /** After the link was turned on or off, for lists that show which files have one. */
   onChange?: (shared: boolean) => void
 }) {
+  const { share } = link
   const dashboard = useMaybeDashboard()
   const viewer = dashboard ? isViewer(dashboard.me) : false
   const [open, setOpen] = useState(false)
@@ -77,13 +109,7 @@ export function ShareButton({
     setBusy(true)
     setError(undefined)
     try {
-      const path = `/library/${encodeURIComponent(documentId)}/share`
-      const r = await api<{ share: LibraryShare | null }>(path, {
-        method: on ? 'POST' : 'DELETE',
-        ...(on && { body: {} }),
-      })
-      setShare(r.share)
-      onChange?.(Boolean(r.share))
+      onChange?.(Boolean(await link.toggle(on)))
     } catch (e) {
       setError((e as Error).message)
     }

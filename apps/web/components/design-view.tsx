@@ -255,7 +255,7 @@ function DesignFrame({
   const [srcs, setSrcs] = useState<Record<string, string>>({})
   const thumbnail = useRef<ReturnType<typeof setTimeout>>(undefined)
   const view = views[folder]
-  const { share, setShare } = useShare(view?.entryId)
+  const shareLink = useShare(view?.entryId)
 
   const edits = useRef<DesignEdits>(null)
   edits.current ??= new DesignEdits({
@@ -776,15 +776,7 @@ function DesignFrame({
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="flex-1" />
-        {view && (
-          <ShareButton
-            documentId={view.entryId}
-            name={title}
-            share={share}
-            setShare={setShare}
-            label={!compact}
-          />
-        )}
+        {view && <ShareButton key={view.entryId} name={title} link={shareLink} label={!compact} />}
         {!wide && (
           <>
             <Button

@@ -154,15 +154,20 @@ export const sharedAssetUrl = (token: string, id: string) =>
   `${env.API_URL}/api/shared/${encodeURIComponent(token)}/assets/${encodeURIComponent(id)}`
 
 /**
- * A document's Markdown as its link shows it: no hidden markers (list items' ids), mentions of the
- * workspace's files, threads and teammates as their names alone, and its uploaded files as
- * addresses under the link.
+ * What a document's link publishes of its text: no HTML comments (list items' markers, notes
+ * hidden in the editor), and mentions of the workspace's files, threads and teammates as their
+ * names alone. Everything served under the link is read from this, never from the stored text.
  */
-export function publicMarkdown(text: string, token: string) {
-  const named = parseMentions(text.replace(/<!--[\s\S]*?-->/g, ''))
+export function publishedText(text: string) {
+  // One left open hides the rest of the text, as Markdown viewers read it.
+  return parseMentions(text.replace(/<!--[\s\S]*?(?:-->|$)/g, ''))
     .map((part) => (typeof part === 'string' ? part : part.label))
     .join('')
-  return named.replace(/\basset:([A-Za-z0-9_-]{1,64})/g, (_, id: string) =>
+}
+
+/** A document's Markdown as its link shows it: its published text, its uploaded files as addresses under the link. */
+export function publicMarkdown(text: string, token: string) {
+  return publishedText(text).replace(/\basset:([A-Za-z0-9_-]{1,64})/g, (_, id: string) =>
     sharedAssetUrl(token, id),
   )
 }
@@ -205,7 +210,8 @@ export async function sharedView(
 
 /**
  * Whether a file uploaded into documents may be served under this link: only one the shared
- * document refers to now (its own, or a block copied in from another), never another's.
+ * document's published text refers to now (its own, or a block copied in from another), never
+ * another's, nor one named only where the link hides it (in a comment).
  */
 export async function sharesAsset(shared: SharedRow, assetId: string) {
   if (shareKind(shared.document).kind !== 'document') return false
@@ -215,5 +221,5 @@ export async function sharesAsset(shared: SharedRow, assetId: string) {
   })
   if (!asset) return false
   const text = new TextDecoder().decode(await readLibraryFile(shared.scope, shared.document))
-  return assetIds(text).includes(assetId)
+  return assetIds(publishedText(text)).includes(assetId)
 }

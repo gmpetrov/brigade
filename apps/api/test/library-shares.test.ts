@@ -78,6 +78,7 @@ describe('public links to library files', { skip: !database && 'no database answ
   const files = {} as Record<'doc' | 'other' | 'csv' | 'entry' | 'logo' | 'secret', string>
   let asset: string
   let otherAsset: string
+  let hiddenAsset: string
   const encode = (text: string) => new TextEncoder().encode(text)
 
   before(async () => {
@@ -114,6 +115,13 @@ describe('public links to library files', { skip: !database && 'no database answ
         memberId: member('ada'),
       })
     ).id
+    hiddenAsset = (
+      await storeAsset(db, scope, {
+        documentId: files.doc,
+        file: new File([encode('MARGINS')], 'margins.png', { type: 'image/png' }),
+        memberId: member('ada'),
+      })
+    ).id
     await library.saveLibraryFile(db, scope, actor, {
       path: 'Sales/proposal.md',
       bytes: encode(
@@ -125,6 +133,10 @@ describe('public links to library files', { skip: !database && 'no database answ
           `![chart.png](asset:${asset} "Q3")`,
           '',
           '* [ ] Sign it <!-- item:k3f9q2 -->',
+          '',
+          `<!-- Internal: margins in asset:${hiddenAsset} -->`,
+          '',
+          `Left open: <!-- the floor price asset:${hiddenAsset}`,
         ].join('\n'),
       ),
     })
@@ -200,7 +212,13 @@ describe('public links to library files', { skip: !database && 'no database answ
     assert.equal(await image.text(), 'PNGDATA')
     // Another document's file, though its id is known: not through this link.
     assert.equal((await call(`/api/shared/${token}/assets/${otherAsset}`)).status, 404)
-    // A document's link serves no bytes of a design and no preview.
+    // Its own file named only in what the link hides (comments, one left open): not either.
+    assert.doesNotMatch(view.markdown!, /Internal|floor price/)
+    assert.equal((await call(`/api/shared/${token}/assets/${hiddenAsset}`)).status, 404)
+    // Only the published text: never the stored one, with its comments and mentions' ids.
+    assert.equal((await call(`/api/shared/${token}/content`)).status, 404)
+    assert.equal((await call(`/api/shared/${token}/content?download`)).status, 404)
+    // A document's link serves no preview.
     assert.equal((await call(`/api/shared/${token}/preview`)).status, 404)
 
     const listed = await library.libraryFiles(

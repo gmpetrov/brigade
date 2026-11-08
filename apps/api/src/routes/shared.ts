@@ -28,10 +28,13 @@ export const shared = new Hono()
     return c.json(view)
   })
 
-  /** A shared file's bytes, to show or download (`?download`). A design's are on the sandbox origin. */
+  /**
+   * A shared file's bytes, to show or download (`?download`). Not a document's, whose link
+   * publishes only its prepared text (publishedText), nor a design's, on the sandbox origin.
+   */
   .get('/:token/content', async (c) => {
     const shared = await sharedOr404(c.req.param('token'))
-    if (shareKind(shared.document).kind === 'design')
+    if (shareKind(shared.document).kind !== 'file')
       throw new HTTPException(404, { message: NOT_FOUND })
     const row = shared.document
     const response = await fileResponse(
