@@ -113,6 +113,7 @@ export const ModelName = {
   LibraryObject: 'LibraryObject',
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
+  LibraryShare: 'LibraryShare',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   WorkspaceCleanup: 'WorkspaceCleanup',
@@ -1238,6 +1239,19 @@ export const LibraryFolderGrantScalarFieldEnum = {
 } as const
 
 export type LibraryFolderGrantScalarFieldEnum = (typeof LibraryFolderGrantScalarFieldEnum)[keyof typeof LibraryFolderGrantScalarFieldEnum]
+
+
+export const LibraryShareScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  token: 'token',
+  createdByMemberId: 'createdByMemberId',
+  createdAt: 'createdAt'
+} as const
+
+export type LibraryShareScalarFieldEnum = (typeof LibraryShareScalarFieldEnum)[keyof typeof LibraryShareScalarFieldEnum]
 
 
 export const DocumentAssetScalarFieldEnum = {

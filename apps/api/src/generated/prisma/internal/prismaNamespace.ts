@@ -459,6 +459,7 @@ export const ModelName = {
   LibraryObject: 'LibraryObject',
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
+  LibraryShare: 'LibraryShare',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   WorkspaceCleanup: 'WorkspaceCleanup',
@@ -517,7 +518,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5109,6 +5110,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    LibraryShare: {
+      payload: Prisma.$LibrarySharePayload<ExtArgs>
+      fields: Prisma.LibraryShareFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LibraryShareFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LibraryShareFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        findFirst: {
+          args: Prisma.LibraryShareFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LibraryShareFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        findMany: {
+          args: Prisma.LibraryShareFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>[]
+        }
+        create: {
+          args: Prisma.LibraryShareCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        createMany: {
+          args: Prisma.LibraryShareCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LibraryShareCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>[]
+        }
+        delete: {
+          args: Prisma.LibraryShareDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        update: {
+          args: Prisma.LibraryShareUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        deleteMany: {
+          args: Prisma.LibraryShareDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LibraryShareUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LibraryShareUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>[]
+        }
+        upsert: {
+          args: Prisma.LibraryShareUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibrarySharePayload>
+        }
+        aggregate: {
+          args: Prisma.LibraryShareAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLibraryShare>
+        }
+        groupBy: {
+          args: Prisma.LibraryShareGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryShareGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LibraryShareCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryShareCountAggregateOutputType> | number
+        }
+      }
+    }
     DocumentAsset: {
       payload: Prisma.$DocumentAssetPayload<ExtArgs>
       fields: Prisma.DocumentAssetFieldRefs
@@ -9396,6 +9471,19 @@ export const LibraryFolderGrantScalarFieldEnum = {
 export type LibraryFolderGrantScalarFieldEnum = (typeof LibraryFolderGrantScalarFieldEnum)[keyof typeof LibraryFolderGrantScalarFieldEnum]
 
 
+export const LibraryShareScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  token: 'token',
+  createdByMemberId: 'createdByMemberId',
+  createdAt: 'createdAt'
+} as const
+
+export type LibraryShareScalarFieldEnum = (typeof LibraryShareScalarFieldEnum)[keyof typeof LibraryShareScalarFieldEnum]
+
+
 export const DocumentAssetScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -11208,6 +11296,7 @@ export type GlobalOmitConfig = {
   libraryObject?: Prisma.LibraryObjectOmit
   libraryFolder?: Prisma.LibraryFolderOmit
   libraryFolderGrant?: Prisma.LibraryFolderGrantOmit
+  libraryShare?: Prisma.LibraryShareOmit
   documentAsset?: Prisma.DocumentAssetOmit
   bucketCleanup?: Prisma.BucketCleanupOmit
   workspaceCleanup?: Prisma.WorkspaceCleanupOmit

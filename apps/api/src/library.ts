@@ -159,13 +159,18 @@ type DocumentRow = Prisma.DocumentGetPayload<{ select: typeof LIBRARY_FILE_COLUM
 
 /** Library files as the dashboard lists them, with who made and changed each. */
 export async function libraryFiles(db: ScopedDb, rows: DocumentRow[]): Promise<LibraryFile[]> {
-  const who = await actorNames(
-    db,
-    rows.flatMap((r) => [
-      { type: r.createdByType ?? '', id: r.createdById ?? '' },
-      { type: r.updatedByType ?? '', id: r.updatedById ?? '' },
-    ]),
-  )
+  const [who, shares] = await Promise.all([
+    actorNames(
+      db,
+      rows.flatMap((r) => [
+        { type: r.createdByType ?? '', id: r.createdById ?? '' },
+        { type: r.updatedByType ?? '', id: r.updatedById ?? '' },
+      ]),
+    ),
+    // A workspace's public links are few: all of them, rather than a list of every file's id.
+    rows.length ? db.libraryShare.findMany({ select: { documentId: true } }) : [],
+  ])
+  const shared = new Set(shares.map((s) => s.documentId))
   return rows.map((row) => ({
     id: row.id,
     path: row.path,
@@ -177,6 +182,7 @@ export async function libraryFiles(db: ScopedDb, rows: DocumentRow[]): Promise<L
     createdAt: row.createdAt.toISOString(),
     createdBy: who(row.createdByType, row.createdById),
     updatedBy: who(row.updatedByType, row.updatedById, row.updatedInSessionId),
+    shared: shared.has(row.id),
   }))
 }
 

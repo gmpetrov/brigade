@@ -35,7 +35,7 @@ import {
   type ThreadDesignSystem,
 } from '@brigade/contracts'
 import { zipSync } from 'fflate'
-import { Hono, type MiddlewareHandler } from 'hono'
+import { Hono, type Context, type MiddlewareHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
@@ -48,6 +48,7 @@ import { annotate, applyEdits, EditError } from './design-source.js'
 import { actorNames, trashLibraryFile } from './library-history.js'
 import { fileKey } from './library-objects.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
+import { sharedRow, shareKind } from './library-shares.js'
 import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
 type Row = Awaited<ReturnType<ScopedDb['designSystem']['findFirstOrThrow']>>
@@ -412,7 +413,12 @@ if (!separateHost)
 
 /** On the sandbox host, only designs answer: nothing else of the API is reachable there. */
 export const sandboxHostOnlyDesigns: MiddlewareHandler = async (c, next) => {
-  if (separateHost && c.req.header('host') === designHost && !c.req.path.startsWith('/v/'))
+  if (
+    separateHost &&
+    c.req.header('host') === designHost &&
+    !c.req.path.startsWith('/v/') &&
+    !c.req.path.startsWith('/s/')
+  )
     return c.text('Not found', 404)
   await next()
 }
@@ -447,24 +453,32 @@ const DESIGN_CSP = [
   `frame-ancestors ${env.WEB_URL.join(' ')}`,
 ].join('; ')
 
-/** A design's files, under `/v/<token>/`: relative links resolve inside its folder. */
-export const designFiles = new Hono().get('/:token/*', async (c) => {
-  if (separateHost && c.req.header('host') !== designHost) return c.text('Not found', 404)
-  const claim = readViewToken(c.req.param('token'))
-  if (!claim) return c.text('This link has expired. Open the design again.', 410)
-  const prefix = `/v/${c.req.param('token')}/`
+/** The file a design's address asks for, under `prefix`: its parts in the folder, or null. */
+function askedFile(path: string, prefix: string) {
   let rest: string[]
   try {
-    rest = c.req.path.slice(prefix.length).split('/').map(decodeURIComponent)
+    rest = path.slice(prefix.length).split('/').map(decodeURIComponent)
   } catch {
-    return c.text('Not found', 404)
+    return null
   }
-  if (rest.some((part) => part === '..' || part === '.' || part.startsWith('.')))
-    return c.text('Not found', 404)
+  if (rest.some((part) => part === '..' || part === '.' || part.startsWith('.'))) return null
   if (rest.at(-1) === '') rest[rest.length - 1] = DESIGN_ENTRY
-  const scope: Scope = { organizationId: claim.o, workspaceId: claim.w }
+  return rest
+}
+
+/**
+ * A file of a design's folder on the sandbox origin, its pages with the knobs' values. On the
+ * canvas (`canvas`), its pages also carry the bridge and their elements' numbers.
+ */
+async function serveDesignFile(
+  c: Context,
+  scope: Scope,
+  folder: string,
+  rest: string[],
+  canvas: boolean,
+) {
   const db = scoped(scope)
-  const row = await libraryRow(db, [claim.p, ...rest].join('/'))
+  const row = await libraryRow(db, [folder, ...rest].join('/'))
   if (!row) return c.text('Not found', 404)
   const html = row.contentType === 'text/html'
   const headers = {
@@ -479,18 +493,54 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
     'access-control-allow-origin': '*',
     // A page is numbered from its bytes of now: a cached one would number another version.
     'cache-control': html ? 'no-store' : 'private, max-age=60',
+    ...(!canvas && { 'x-robots-tag': 'noindex, nofollow' }),
   }
   // Any other file as it streams, by ranges: a video beside the page can be hundreds of MB.
   if (!html) return serveObject(c, fileKey(scope, row), headers)
   const page = await withKnobs(
     scope,
     db,
-    claim.p,
+    folder,
     new TextDecoder().decode(await readLibraryFile(scope, row)),
-    { file: rest.join('/'), sha256: row.sha256 },
+    canvas ? { file: rest.join('/'), sha256: row.sha256 } : undefined,
   )
   return c.body(new TextEncoder().encode(page), 200, headers)
+}
+
+/** A design's files, under `/v/<token>/`: relative links resolve inside its folder. */
+export const designFiles = new Hono().get('/:token/*', async (c) => {
+  if (separateHost && c.req.header('host') !== designHost) return c.text('Not found', 404)
+  const claim = readViewToken(c.req.param('token'))
+  if (!claim) return c.text('This link has expired. Open the design again.', 410)
+  const rest = askedFile(c.req.path, `/v/${c.req.param('token')}/`)
+  if (!rest) return c.text('Not found', 404)
+  return serveDesignFile(c, { organizationId: claim.o, workspaceId: claim.w }, claim.p, rest, true)
 })
+
+/**
+ * A shared design's files, under `/s/<share token>/` (src/library-shares.ts): as people see it,
+ * without the canvas's bridge, for as long as its link is on. Framed by the page at <web>/s/<token>.
+ */
+export const sharedDesignFiles = new Hono().get('/:token/*', async (c) => {
+  if (separateHost && c.req.header('host') !== designHost) return c.text('Not found', 404)
+  const shared = await sharedRow(c.req.param('token'))
+  const design = shared && shareKind(shared.document)
+  if (!shared || design?.kind !== 'design')
+    return c.text('This link is off or no longer exists.', 404)
+  const rest = askedFile(c.req.path, `/s/${c.req.param('token')}/`)
+  if (!rest) return c.text('Not found', 404)
+  return serveDesignFile(c, shared.scope, design.folder, rest, false)
+})
+
+/** A design's title for people: its `design.json` title, else its folder's name. */
+export async function designTitle(scope: Scope, db: ScopedDb, folder: string) {
+  const manifest = await readJson(
+    scope,
+    await libraryRow(db, `${folder}/${DESIGN_MANIFEST}`),
+    DesignManifest,
+  )
+  return manifest?.title || designName(folder)
+}
 
 // ---------------------------------------------------------------------------
 // Editing a design on the canvas

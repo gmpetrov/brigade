@@ -73,8 +73,44 @@ export const LibraryFile = z.object({
   /** Unknown for files from before this was kept. */
   createdBy: LibraryActor.nullable(),
   updatedBy: LibraryActor.nullable(),
+  /** Whether anyone with its public link can read it (docs/public-links.md). A design's is its index.html's. */
+  shared: z.boolean().optional(),
 })
 export type LibraryFile = z.infer<typeof LibraryFile>
+
+/** A library file's public link, as members see it: GET, POST and DELETE /api/library/:id/share. */
+export const LibraryShare = z.object({
+  /** brigade.lol/s/<token>: anyone with it reads the file as it is now, without signing in. */
+  url: z.string(),
+  createdAt: z.string(),
+  /** The member who turned it on, by name; null once they left. */
+  createdBy: z.string().nullable(),
+})
+export type LibraryShare = z.infer<typeof LibraryShare>
+
+/** The library file a public link shows, as anyone with the link reads it: GET /api/shared/:token. */
+export type SharedFile = {
+  /** A Markdown document, a design (its whole folder) or any other file. */
+  kind: 'document' | 'design' | 'file'
+  /** The file's name, or the design's title. */
+  name: string
+  /** The workspace that shares it. */
+  workspace: string
+  contentType: string
+  size: number
+  updatedAt: string
+  /**
+   * A document's Markdown, ready to show: mentions of the workspace's files and threads are their
+   * names alone, hidden markers are gone, and its uploaded files (`asset:<id>`) are addresses
+   * under the link.
+   */
+  markdown?: string
+  /** A design's page, on the sandbox origin, to show in a frame. */
+  url?: string
+  /** A file's bytes under the link, and the API path (under /api) of its preview when it is a Word document, spreadsheet or deck. */
+  contentUrl?: string
+  previewPath?: string
+}
 
 /** Days a file stays in the trash before it is deleted for good. */
 export const TRASH_DAYS = 30

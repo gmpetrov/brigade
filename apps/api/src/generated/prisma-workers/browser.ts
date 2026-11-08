@@ -390,6 +390,14 @@ export type LibraryFolder = Prisma.LibraryFolderModel
  */
 export type LibraryFolderGrant = Prisma.LibraryFolderGrantModel
 /**
+ * Model LibraryShare
+ * A library file's public link (docs/public-links.md): anyone with its address reads the file
+ * as it is now, without signing in, at <web>/s/<token>. A design's link is its index.html's and
+ * shows the whole design. Turning the link off deletes the row: turned on again, the file gets
+ * a new address. A file in the trash keeps its link, which answers again once it is restored.
+ */
+export type LibraryShare = Prisma.LibraryShareModel
+/**
  * Model DocumentAsset
  * A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes
  * are in the bucket under <organization>/<workspace>/assets/<id>; the document refers to it as
