@@ -8,7 +8,7 @@ import type {
   ThreadAttachmentRef,
 } from '@brigade/contracts'
 import { usableIn } from './apps.js'
-import { keepConnectorFile, readAttachment } from './attachments.js'
+import { keepConnectorFile, sentAttachment } from './attachments.js'
 import { audit } from './audit.js'
 import { attachmentKey, directUploads, presignGet } from './bucket.js'
 import { FILE_LINK_SECONDS } from './file-links.js'
@@ -485,17 +485,13 @@ export async function handleConnectorCall(
           kept.push(ref)
           return ref
         },
-        readFile: async (id) => {
+        openFile: async (id) => {
           // Only what this thread's teammates uploaded to send.
           const row = await db.attachment.findFirst({
             where: { id, source: 'teammate', sessionId: session.id, status: 'ready' },
           })
           if (!row) throw new Error(`No file ${id} to send from this thread`)
-          return {
-            name: row.name,
-            contentType: row.contentType,
-            bytes: await readAttachment(scope, row.id),
-          }
+          return sentAttachment(scope, row)
         },
         // The same files, as a link the App fetches from the bucket: never read here.
         fileLink: async (id) => {
@@ -703,6 +699,9 @@ export async function authorisedFetch(
     let response = await send()
     if (response.status === 401) {
       await refresh()
+      // A body that streams (a file from the bucket) cannot be sent again: the caller sends it
+      // once more, opened anew (sendParts).
+      if (init.body instanceof ReadableStream) return response
       response = await send()
     }
     return response

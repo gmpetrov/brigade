@@ -10,7 +10,9 @@ import {
   op,
   type ConnectorContext,
   type ConnectorDefinition,
+  type SentFile,
 } from './types.js'
+import { sendParts } from '../stream-parts.js'
 
 const DRIVE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
@@ -180,25 +182,21 @@ async function upload(
   method: 'POST' | 'PATCH',
   url: string,
   metadata: Record<string, unknown>,
-  content: { type: string; bytes: Uint8Array },
+  content: { type: string } & ({ file: SentFile } | { text: string }),
 ) {
   const boundary = `brigade-${randomUUID()}`
-  const body = Buffer.concat([
-    Buffer.from(
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
-        `--${boundary}\r\nContent-Type: ${content.type}\r\n\r\n`,
-    ),
-    Buffer.from(content.bytes),
-    Buffer.from(`\r\n--${boundary}--`),
-  ])
+  // The file streams from the bucket as the request goes (src/stream-parts.ts), never held whole.
   return json<DriveFile>(
-    await ctx.fetch(
+    await sendParts(
+      ctx.fetch,
       `${url}${url.includes('?') ? '&' : '?'}uploadType=multipart&fields=${FIELDS}&${ALL_DRIVES}`,
-      {
-        method,
-        headers: { 'content-type': `multipart/related; boundary=${boundary}` },
-        body,
-      },
+      { method, headers: { 'content-type': `multipart/related; boundary=${boundary}` } },
+      [
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+          `--${boundary}\r\nContent-Type: ${content.type}\r\n\r\n`,
+        'text' in content ? content.text : { size: content.file.size, open: content.file.open },
+        `\r\n--${boundary}--`,
+      ],
     ),
   )
 }
@@ -422,7 +420,7 @@ export const googleDrive: ConnectorDefinition = {
           ? `replace the content of file ${i.fileId}`
           : `upload ${i.name ?? 'a file'}${i.folderId ? ` to folder ${i.folderId}` : ' to My Drive'}`,
       run: async (ctx, i) => {
-        const source = await ctx.readFile(i.file)
+        const source = await ctx.openFile(i.file)
         const type = source.contentType || 'application/octet-stream'
         const name = i.name ?? source.name
         const extension = name.split('.').pop()?.toLowerCase() ?? ''
@@ -446,7 +444,7 @@ export const googleDrive: ConnectorDefinition = {
               'PATCH',
               `${UPLOAD}/files/${encodeURIComponent(i.fileId)}`,
               i.name ? { name: i.name } : {},
-              { type: contentType, bytes: source.bytes },
+              { type: contentType, file: source },
             )
           : await upload(
               ctx,
@@ -457,7 +455,7 @@ export const googleDrive: ConnectorDefinition = {
                 ...(googleType ? { mimeType: googleType } : {}),
                 ...(i.folderId ? { parents: [i.folderId] } : {}),
               },
-              { type: contentType, bytes: source.bytes },
+              { type: contentType, file: source },
             )
         return file(written)
       },
@@ -640,7 +638,7 @@ export const googleDocs: ConnectorDefinition = {
             'POST',
             `${UPLOAD}/files`,
             { name: i.title, mimeType: DOC },
-            { type: 'text/markdown', bytes: new TextEncoder().encode(i.markdown ?? '') },
+            { type: 'text/markdown', text: i.markdown ?? '' },
           ),
         ),
     }),

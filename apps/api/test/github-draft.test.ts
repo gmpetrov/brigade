@@ -38,7 +38,7 @@ const marking = (pr: { draft: boolean; state?: string }, draft: boolean, errors?
     return Response.json({ message: 'Not Found' }, { status: 404 })
   }
   const run = github.operations.github_mark_ready_for_review!.run(
-    { fetch, callId: 'c1', keepFile: never, readFile: never } as never,
+    { fetch, callId: 'c1', keepFile: never, openFile: never } as never,
     { repository: 'acme/web', number: 7, draft },
   )
   return { run, calls }

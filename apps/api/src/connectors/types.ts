@@ -2,6 +2,14 @@ import type { PermissionPolicy, ThreadAttachmentRef } from '@brigade/contracts'
 import type { z } from 'zod'
 import type { Scope } from '../db.js'
 
+/** A file a call sends: its bytes stream from the bucket each time it is opened. */
+export type SentFile = {
+  name: string
+  contentType: string
+  size: number
+  open: () => Promise<ReadableStream<Uint8Array>>
+}
+
 /** One thing a connector can do. Each declares whether it reads or writes and what it touches. */
 export type Operation<I extends z.ZodType = z.ZodType> = {
   description: string
@@ -13,7 +21,7 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
   /**
    * The input field listing files to send with the call (an email's attachments):
    * the teammate gives paths on its computer, the runner uploads them, and the
-   * operation reads them with ctx.readFile by the ids it gets instead.
+   * operation opens them with ctx.openFile by the ids it gets instead.
    */
   files?: string
   /**
@@ -65,8 +73,12 @@ export type ConnectorContext = {
     /** Its bytes as they arrive: taken in by the stream, preferred to `bytes`. */
     open?: () => Promise<OpenedFile>
   }) => Promise<ThreadAttachmentRef>
-  /** A file the teammate sends with this call, by the id the runner gave its upload. */
-  readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
+  /**
+   * A file the teammate sends with this call, by the id the runner gave its upload: what it is,
+   * and its bytes as they arrive from the bucket when opened (again for another try), never
+   * held whole.
+   */
+  openFile: (id: string) => Promise<SentFile>
   /**
    * Such a file as a link the App fetches it from, signed for a while (file-links.ts): its bytes
    * stay in the bucket. Only for a call from a thread.
