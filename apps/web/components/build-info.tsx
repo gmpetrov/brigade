@@ -13,10 +13,15 @@ export function BuildInfo() {
     <button
       type="button"
       onClick={() => {
-        void navigator.clipboard.writeText(`Brigade v${VERSION} (${BUILD})`).then(() => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
-        })
+        // Without the clipboard (an insecure page, a refused permission) the line stays on
+        // screen to read: no error to report.
+        navigator.clipboard
+          ?.writeText(`Brigade v${VERSION} (${BUILD})`)
+          .then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+          })
+          .catch(() => {})
       }}
       aria-label={copied ? 'Copied' : `Copy Brigade v${VERSION}, build ${BUILD}`}
       className="text-muted-foreground hover:text-foreground self-start rounded font-mono text-xs transition-colors"
