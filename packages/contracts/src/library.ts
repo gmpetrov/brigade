@@ -441,12 +441,13 @@ export const DOCUMENT_FRAGMENT = 'document-store'
 
 /**
  * Opening a document to edit. With `live`, the editor syncs through the collab
- * server; without it (no collab server configured), it saves `text` back with
- * PUT /api/library/edit/:documentId.
+ * server, which sends it the text; without it (no collab server configured), it
+ * starts from `text` and saves it back with PUT /api/library/edit/:documentId.
  */
 export const EditSession = z.object({
   documentId: z.string(),
-  text: z.string(),
+  /** Without `live` only: the collab server sends a live document's. */
+  text: z.string().optional(),
   live: z
     .object({
       /** The collab server, e.g. https://collab.example.com. */

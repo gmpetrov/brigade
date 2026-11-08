@@ -300,9 +300,11 @@ function SavedDocument({
     ],
   })
   self.current = editor
-  const [saved, setSaved] = useState(session.text)
+  // Always there without `live`.
+  const stored = session.text ?? ''
+  const [saved, setSaved] = useState(stored)
   // For onChange, which runs with the render it was made in.
-  const savedText = useRef(session.text)
+  const savedText = useRef(stored)
   savedText.current = saved
   // While the stored text fills it, its changes are not the person's.
   const filling = useRef(true)
@@ -316,7 +318,7 @@ function SavedDocument({
     let live = true
     filling.current = true
     void (async () => {
-      const blocks = await markdownToBlocks(editor, session.text)
+      const blocks = await markdownToBlocks(editor, stored)
       if (!live) return
       editor.replaceBlocks(editor.document, blocks as never)
       // What the editor writes back for the text as stored: unchanged until this differs.
@@ -330,7 +332,7 @@ function SavedDocument({
     return () => {
       live = false
     }
-  }, [editor, session.text])
+  }, [editor, stored])
 
   async function save() {
     setBusy(true)

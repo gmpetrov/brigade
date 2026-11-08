@@ -193,6 +193,19 @@ export class DocRoom extends YServer<Env> {
     if (this.#deleted) return connection.close(4404, 'This document was deleted')
     const editor = JSON.parse(ctx.request.headers.get(EDITOR_HEADER) ?? '{}') as Editor
     connection.setState((previous) => ({ ...previous, member: editor.member, name: editor.name }))
+    // The room matched the stored text before, and the API tells it of each change since
+    // (onRequest): open on what it has, and check for a missed notice behind it. The editor
+    // waits for this call to return before it shows anything, so a check here would hold the
+    // document back on every open. A change it finds reaches the editor as a teammate's edit;
+    // a deleted document closes the connection.
+    if (this.#base) {
+      super.onConnect(connection, ctx)
+      void this.#serial(() => this.#reconcile()).catch((error) =>
+        console.error(`${this.name}: could not check the stored text`, error),
+      )
+      return
+    }
+    // Never matched it: there is nothing to show until the API sends it.
     try {
       await this.#serial(() => this.#reconcile())
     } catch (error) {
