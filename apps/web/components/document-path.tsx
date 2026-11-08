@@ -58,7 +58,7 @@ function FolderMenu({ folder, name, fileId }: { folder: string; name: string; fi
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
-        className="rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:bg-muted data-[state=open]:text-foreground"
+        className="rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
         aria-label={`Files in ${name}`}
       >
         {name}
