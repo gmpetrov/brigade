@@ -7,7 +7,7 @@ import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
-import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
+import { designFiles, sandboxHostOnlyDesigns, sharedDesignFiles } from './designs.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { hubIsElsewhere, moveHub, upgradeWebSocket } from './platform/node.js'
 import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER } from './hub/route.js'
@@ -54,6 +54,7 @@ import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
 import { playbooks } from './routes/playbooks.js'
 import { search } from './routes/search.js'
+import { shared } from './routes/shared.js'
 import { tickets } from './routes/tickets.js'
 import { customApps, events } from './routes/events.js'
 import { triggers } from './routes/triggers.js'
@@ -199,6 +200,8 @@ app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.use('/api/connections/oauth/*', signInFirst)
 // The bucket's stand-in for uploads without R2 (development): signed paths, no session.
 app.route('/api/bucket', localBucket)
+// Library files behind their public links (src/library-shares.ts): the token alone, no session.
+app.route('/api/shared', shared)
 app.route('/api/errors', errors)
 app.route('/api', workspaces)
 app.route('/api', members)
@@ -254,6 +257,8 @@ app.route('/github/webhook', githubWebhook)
 app.route('/desktop', desktopProxy)
 // Designs' pages, on the sandbox origin (DESIGN_URL). Their addresses are signed and short-lived.
 app.route('/v', designFiles)
+// Shared designs' pages, on the sandbox origin, for as long as their public link is on.
+app.route('/s', sharedDesignFiles)
 // The collab server's calls: documents people edit together. Verified by COLLAB_SECRET.
 app.route('/collab', collab)
 // Public: vendors deliver events here (Stripe, Gmail's Pub/Sub, Calendar channels), and

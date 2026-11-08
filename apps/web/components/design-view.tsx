@@ -69,6 +69,7 @@ import { DesignEdits, type DesignChange } from '@/components/design-edits'
 import { DesignProperties, hex } from '@/components/design-properties'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { SidePanel } from '@/components/side-panel'
+import { ShareButton, useShare } from '@/components/share-button'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import {
@@ -254,6 +255,7 @@ function DesignFrame({
   const [srcs, setSrcs] = useState<Record<string, string>>({})
   const thumbnail = useRef<ReturnType<typeof setTimeout>>(undefined)
   const view = views[folder]
+  const shareLink = useShare(view?.entryId)
 
   const edits = useRef<DesignEdits>(null)
   edits.current ??= new DesignEdits({
@@ -774,6 +776,7 @@ function DesignFrame({
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="flex-1" />
+        {view && <ShareButton key={view.entryId} name={title} link={shareLink} label={!compact} />}
         {!wide && (
           <>
             <Button

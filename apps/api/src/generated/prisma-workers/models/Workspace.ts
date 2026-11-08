@@ -267,6 +267,7 @@ export type WorkspaceWhereInput = {
   threadReads?: Prisma.ThreadReadListRelationFilter
   threadPins?: Prisma.ThreadPinListRelationFilter
   documentPins?: Prisma.DocumentPinListRelationFilter
+  libraryShares?: Prisma.LibraryShareListRelationFilter
   listPins?: Prisma.ListPinListRelationFilter
   sidebarOrders?: Prisma.SidebarOrderListRelationFilter
   threadLaters?: Prisma.ThreadLaterListRelationFilter
@@ -351,6 +352,7 @@ export type WorkspaceOrderByWithRelationInput = {
   threadReads?: Prisma.ThreadReadOrderByRelationAggregateInput
   threadPins?: Prisma.ThreadPinOrderByRelationAggregateInput
   documentPins?: Prisma.DocumentPinOrderByRelationAggregateInput
+  libraryShares?: Prisma.LibraryShareOrderByRelationAggregateInput
   listPins?: Prisma.ListPinOrderByRelationAggregateInput
   sidebarOrders?: Prisma.SidebarOrderOrderByRelationAggregateInput
   threadLaters?: Prisma.ThreadLaterOrderByRelationAggregateInput
@@ -438,6 +440,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   threadReads?: Prisma.ThreadReadListRelationFilter
   threadPins?: Prisma.ThreadPinListRelationFilter
   documentPins?: Prisma.DocumentPinListRelationFilter
+  libraryShares?: Prisma.LibraryShareListRelationFilter
   listPins?: Prisma.ListPinListRelationFilter
   sidebarOrders?: Prisma.SidebarOrderListRelationFilter
   threadLaters?: Prisma.ThreadLaterListRelationFilter
@@ -553,6 +556,7 @@ export type WorkspaceCreateInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -636,6 +640,7 @@ export type WorkspaceUncheckedCreateInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -719,6 +724,7 @@ export type WorkspaceUpdateInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -802,6 +808,7 @@ export type WorkspaceUncheckedUpdateInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1564,6 +1571,20 @@ export type WorkspaceUpdateOneRequiredWithoutLibraryFolderGrantsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUpdateWithoutLibraryFolderGrantsInput>, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutLibrarySharesInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedCreateWithoutLibrarySharesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibrarySharesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutLibrarySharesNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedCreateWithoutLibrarySharesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibrarySharesInput
+  upsert?: Prisma.WorkspaceUpsertWithoutLibrarySharesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutLibrarySharesInput, Prisma.WorkspaceUpdateWithoutLibrarySharesInput>, Prisma.WorkspaceUncheckedUpdateWithoutLibrarySharesInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutAuditEntriesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutAuditEntriesInput, Prisma.WorkspaceUncheckedCreateWithoutAuditEntriesInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutAuditEntriesInput
@@ -2017,6 +2038,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -2099,6 +2121,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2197,6 +2220,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -2279,6 +2303,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2360,6 +2385,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -2442,6 +2468,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2566,6 +2593,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -2648,6 +2676,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2746,6 +2775,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -2828,6 +2858,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2910,6 +2941,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -2992,6 +3024,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3090,6 +3123,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -3172,6 +3206,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3254,6 +3289,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -3336,6 +3372,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3434,6 +3471,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -3516,6 +3554,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3598,6 +3637,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -3680,6 +3720,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3778,6 +3819,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -3860,6 +3902,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3942,6 +3985,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -4024,6 +4068,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4122,6 +4167,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -4204,6 +4250,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4287,6 +4334,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
@@ -4369,6 +4417,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4467,6 +4516,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
@@ -4549,6 +4599,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4631,6 +4682,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
@@ -4713,6 +4765,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4811,6 +4864,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
@@ -4893,6 +4947,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4975,6 +5030,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -5057,6 +5113,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5155,6 +5212,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -5237,6 +5295,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5318,6 +5377,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -5400,6 +5460,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5498,6 +5559,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -5580,6 +5642,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5662,6 +5725,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -5744,6 +5808,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5842,6 +5907,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -5924,6 +5990,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6006,6 +6073,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -6088,6 +6156,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6186,6 +6255,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -6268,6 +6338,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6350,6 +6421,7 @@ export type WorkspaceCreateWithoutChiefDecisionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -6432,6 +6504,7 @@ export type WorkspaceUncheckedCreateWithoutChiefDecisionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6530,6 +6603,7 @@ export type WorkspaceUpdateWithoutChiefDecisionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -6612,6 +6686,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefDecisionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6694,6 +6769,7 @@ export type WorkspaceCreateWithoutChiefPassesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -6776,6 +6852,7 @@ export type WorkspaceUncheckedCreateWithoutChiefPassesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6874,6 +6951,7 @@ export type WorkspaceUpdateWithoutChiefPassesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -6956,6 +7034,7 @@ export type WorkspaceUncheckedUpdateWithoutChiefPassesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7038,6 +7117,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -7120,6 +7200,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7218,6 +7299,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -7300,6 +7382,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7382,6 +7465,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -7464,6 +7548,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7562,6 +7647,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -7644,6 +7730,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7726,6 +7813,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -7808,6 +7896,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7906,6 +7995,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -7988,6 +8078,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8070,6 +8161,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -8152,6 +8244,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8250,6 +8343,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -8332,6 +8426,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8414,6 +8509,7 @@ export type WorkspaceCreateWithoutEventDaysInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -8496,6 +8592,7 @@ export type WorkspaceUncheckedCreateWithoutEventDaysInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8594,6 +8691,7 @@ export type WorkspaceUpdateWithoutEventDaysInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -8676,6 +8774,7 @@ export type WorkspaceUncheckedUpdateWithoutEventDaysInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8758,6 +8857,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -8840,6 +8940,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8938,6 +9039,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -9020,6 +9122,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9102,6 +9205,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -9184,6 +9288,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9282,6 +9387,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -9364,6 +9470,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9446,6 +9553,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -9528,6 +9636,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9626,6 +9735,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -9708,6 +9818,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9790,6 +9901,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -9872,6 +9984,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9970,6 +10083,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -10052,6 +10166,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10134,6 +10249,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -10216,6 +10332,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10314,6 +10431,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -10396,6 +10514,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10478,6 +10597,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -10560,6 +10680,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10658,6 +10779,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -10740,6 +10862,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10822,6 +10945,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -10904,6 +11028,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11002,6 +11127,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -11084,6 +11210,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11166,6 +11293,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -11248,6 +11376,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11346,6 +11475,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -11428,6 +11558,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11510,6 +11641,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -11592,6 +11724,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11690,6 +11823,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -11772,6 +11906,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11854,6 +11989,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -11936,6 +12072,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12034,6 +12171,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -12116,6 +12254,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12198,6 +12337,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -12280,6 +12420,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12378,6 +12519,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -12460,6 +12602,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12542,6 +12685,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -12624,6 +12768,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12722,6 +12867,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -12804,6 +12950,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12886,6 +13033,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -12968,6 +13116,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13066,6 +13215,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -13148,6 +13298,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13230,6 +13381,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -13312,6 +13464,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13410,6 +13563,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -13492,6 +13646,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13574,6 +13729,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -13656,6 +13812,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13754,6 +13911,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -13836,6 +13994,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13918,6 +14077,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -14000,6 +14160,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14098,6 +14259,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -14180,6 +14342,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14263,6 +14426,7 @@ export type WorkspaceCreateWithoutListItemsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -14345,6 +14509,7 @@ export type WorkspaceUncheckedCreateWithoutListItemsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14443,6 +14608,7 @@ export type WorkspaceUpdateWithoutListItemsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -14525,6 +14691,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14607,6 +14774,7 @@ export type WorkspaceCreateWithoutListItemThreadsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -14689,6 +14857,7 @@ export type WorkspaceUncheckedCreateWithoutListItemThreadsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14787,6 +14956,7 @@ export type WorkspaceUpdateWithoutListItemThreadsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -14869,6 +15039,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemThreadsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14951,6 +15122,7 @@ export type WorkspaceCreateWithoutListItemPullsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -15033,6 +15205,7 @@ export type WorkspaceUncheckedCreateWithoutListItemPullsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15131,6 +15304,7 @@ export type WorkspaceUpdateWithoutListItemPullsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -15213,6 +15387,7 @@ export type WorkspaceUncheckedUpdateWithoutListItemPullsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15295,6 +15470,7 @@ export type WorkspaceCreateWithoutListPinsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
@@ -15377,6 +15553,7 @@ export type WorkspaceUncheckedCreateWithoutListPinsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15475,6 +15652,7 @@ export type WorkspaceUpdateWithoutListPinsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
@@ -15557,6 +15735,7 @@ export type WorkspaceUncheckedUpdateWithoutListPinsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15638,6 +15817,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -15720,6 +15900,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15818,6 +15999,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -15900,6 +16082,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15982,6 +16165,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -16064,6 +16248,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16162,6 +16347,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -16244,6 +16430,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16326,6 +16513,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -16408,6 +16596,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16506,6 +16695,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -16562,6 +16752,355 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutLibrarySharesInput = {
+  id?: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutLibrarySharesInput = {
+  id?: string
+  organizationId: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  builtinSkillsOff?: Prisma.WorkspaceCreatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutWorkspaceInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
+  eventDays?: Prisma.WorkspaceEventDayUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainUncheckedCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactUncheckedCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemThreads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutWorkspaceInput
+  listItemPulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  specPulls?: Prisma.SpecPullUncheckedCreateNestedManyWithoutWorkspaceInput
+  vmRuns?: Prisma.VmRunUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutLibrarySharesInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedCreateWithoutLibrarySharesInput>
+}
+
+export type WorkspaceUpsertWithoutLibrarySharesInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedUpdateWithoutLibrarySharesInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedCreateWithoutLibrarySharesInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutLibrarySharesInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibrarySharesInput, Prisma.WorkspaceUncheckedUpdateWithoutLibrarySharesInput>
+}
+
+export type WorkspaceUpdateWithoutLibrarySharesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutWorkspaceNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
+  eventDays?: Prisma.WorkspaceEventDayUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutWorkspaceNestedInput
+  listItemThreads?: Prisma.ListItemThreadUpdateManyWithoutWorkspaceNestedInput
+  listItemPulls?: Prisma.ListItemPullUpdateManyWithoutWorkspaceNestedInput
+  specPulls?: Prisma.SpecPullUpdateManyWithoutWorkspaceNestedInput
+  vmRuns?: Prisma.VmRunUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutLibrarySharesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  builtinSkillsOff?: Prisma.WorkspaceUpdatebuiltinSkillsOffInput | string[]
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16670,6 +17209,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -16752,6 +17292,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16850,6 +17391,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -16932,6 +17474,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17014,6 +17557,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -17096,6 +17640,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17194,6 +17739,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -17276,6 +17822,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17358,6 +17905,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -17440,6 +17988,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17538,6 +18087,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -17620,6 +18170,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17702,6 +18253,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -17784,6 +18336,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17882,6 +18435,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -17964,6 +18518,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18046,6 +18601,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -18128,6 +18684,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18226,6 +18783,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -18308,6 +18866,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18390,6 +18949,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -18472,6 +19032,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18570,6 +19131,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -18652,6 +19214,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18734,6 +19297,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -18816,6 +19380,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18914,6 +19479,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -18996,6 +19562,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19079,6 +19646,7 @@ export type WorkspaceCreateWithoutVmRunsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -19161,6 +19729,7 @@ export type WorkspaceUncheckedCreateWithoutVmRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19259,6 +19828,7 @@ export type WorkspaceUpdateWithoutVmRunsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -19341,6 +19911,7 @@ export type WorkspaceUncheckedUpdateWithoutVmRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19422,6 +19993,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -19504,6 +20076,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19602,6 +20175,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -19684,6 +20258,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19766,6 +20341,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -19848,6 +20424,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19946,6 +20523,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -20028,6 +20606,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20110,6 +20689,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -20192,6 +20772,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20290,6 +20871,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -20372,6 +20954,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20455,6 +21038,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -20537,6 +21121,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20635,6 +21220,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -20717,6 +21303,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20799,6 +21386,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -20881,6 +21469,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20979,6 +21568,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -21061,6 +21651,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21143,6 +21734,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -21225,6 +21817,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21323,6 +21916,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -21405,6 +21999,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21487,6 +22082,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -21569,6 +22165,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -21667,6 +22264,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -21749,6 +22347,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -21831,6 +22430,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -21913,6 +22513,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22011,6 +22612,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -22093,6 +22695,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22175,6 +22778,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -22257,6 +22861,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22355,6 +22960,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -22437,6 +23043,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22519,6 +23126,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -22601,6 +23209,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -22699,6 +23308,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -22781,6 +23391,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -22863,6 +23474,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -22945,6 +23557,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23043,6 +23656,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -23125,6 +23739,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23207,6 +23822,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -23289,6 +23905,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23387,6 +24004,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -23469,6 +24087,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23551,6 +24170,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -23633,6 +24253,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -23731,6 +24352,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -23813,6 +24435,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -23895,6 +24518,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -23977,6 +24601,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24075,6 +24700,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -24157,6 +24783,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24239,6 +24866,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -24321,6 +24949,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24419,6 +25048,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -24501,6 +25131,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24582,6 +25213,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -24664,6 +25296,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -24762,6 +25395,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -24844,6 +25478,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -24926,6 +25561,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -25008,6 +25644,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -25106,6 +25743,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -25188,6 +25826,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -25270,6 +25909,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -25352,6 +25992,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -25450,6 +26091,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -25532,6 +26174,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -25614,6 +26257,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -25696,6 +26340,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -25794,6 +26439,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -25876,6 +26522,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -25959,6 +26606,7 @@ export type WorkspaceCreateWithoutSpecPullsInput = {
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
@@ -26041,6 +26689,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPullsInput = {
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
   documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryShares?: Prisma.LibraryShareUncheckedCreateNestedManyWithoutWorkspaceInput
   listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutWorkspaceInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -26139,6 +26788,7 @@ export type WorkspaceUpdateWithoutSpecPullsInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -26221,6 +26871,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPullsInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -26314,6 +26965,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
@@ -26396,6 +27048,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryShares?: Prisma.LibraryShareUncheckedUpdateManyWithoutWorkspaceNestedInput
   listPins?: Prisma.ListPinUncheckedUpdateManyWithoutWorkspaceNestedInput
   sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -26486,6 +27139,7 @@ export type WorkspaceCountOutputType = {
   threadReads: number
   threadPins: number
   documentPins: number
+  libraryShares: number
   listPins: number
   sidebarOrders: number
   threadLaters: number
@@ -26559,6 +27213,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   threadReads?: boolean | WorkspaceCountOutputTypeCountThreadReadsArgs
   threadPins?: boolean | WorkspaceCountOutputTypeCountThreadPinsArgs
   documentPins?: boolean | WorkspaceCountOutputTypeCountDocumentPinsArgs
+  libraryShares?: boolean | WorkspaceCountOutputTypeCountLibrarySharesArgs
   listPins?: boolean | WorkspaceCountOutputTypeCountListPinsArgs
   sidebarOrders?: boolean | WorkspaceCountOutputTypeCountSidebarOrdersArgs
   threadLaters?: boolean | WorkspaceCountOutputTypeCountThreadLatersArgs
@@ -26932,6 +27587,13 @@ export type WorkspaceCountOutputTypeCountDocumentPinsArgs<ExtArgs extends runtim
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountLibrarySharesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LibraryShareWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountListPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ListPinWhereInput
 }
@@ -27144,6 +27806,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   threadReads?: boolean | Prisma.Workspace$threadReadsArgs<ExtArgs>
   threadPins?: boolean | Prisma.Workspace$threadPinsArgs<ExtArgs>
   documentPins?: boolean | Prisma.Workspace$documentPinsArgs<ExtArgs>
+  libraryShares?: boolean | Prisma.Workspace$librarySharesArgs<ExtArgs>
   listPins?: boolean | Prisma.Workspace$listPinsArgs<ExtArgs>
   sidebarOrders?: boolean | Prisma.Workspace$sidebarOrdersArgs<ExtArgs>
   threadLaters?: boolean | Prisma.Workspace$threadLatersArgs<ExtArgs>
@@ -27261,6 +27924,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   threadReads?: boolean | Prisma.Workspace$threadReadsArgs<ExtArgs>
   threadPins?: boolean | Prisma.Workspace$threadPinsArgs<ExtArgs>
   documentPins?: boolean | Prisma.Workspace$documentPinsArgs<ExtArgs>
+  libraryShares?: boolean | Prisma.Workspace$librarySharesArgs<ExtArgs>
   listPins?: boolean | Prisma.Workspace$listPinsArgs<ExtArgs>
   sidebarOrders?: boolean | Prisma.Workspace$sidebarOrdersArgs<ExtArgs>
   threadLaters?: boolean | Prisma.Workspace$threadLatersArgs<ExtArgs>
@@ -27344,6 +28008,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     threadReads: Prisma.$ThreadReadPayload<ExtArgs>[]
     threadPins: Prisma.$ThreadPinPayload<ExtArgs>[]
     documentPins: Prisma.$DocumentPinPayload<ExtArgs>[]
+    libraryShares: Prisma.$LibrarySharePayload<ExtArgs>[]
     listPins: Prisma.$ListPinPayload<ExtArgs>[]
     sidebarOrders: Prisma.$SidebarOrderPayload<ExtArgs>[]
     threadLaters: Prisma.$ThreadLaterPayload<ExtArgs>[]
@@ -27841,6 +28506,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   threadReads<T extends Prisma.Workspace$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadPins<T extends Prisma.Workspace$threadPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   documentPins<T extends Prisma.Workspace$documentPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$documentPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  libraryShares<T extends Prisma.Workspace$librarySharesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$librarySharesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LibrarySharePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listPins<T extends Prisma.Workspace$listPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$listPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sidebarOrders<T extends Prisma.Workspace$sidebarOrdersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$sidebarOrdersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SidebarOrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadLaters<T extends Prisma.Workspace$threadLatersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadLatersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadLaterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -29452,6 +30118,30 @@ export type Workspace$documentPinsArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.DocumentPinScalarFieldEnum | Prisma.DocumentPinScalarFieldEnum[]
+}
+
+/**
+ * Workspace.libraryShares
+ */
+export type Workspace$librarySharesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LibraryShare
+   */
+  select?: Prisma.LibraryShareSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LibraryShare
+   */
+  omit?: Prisma.LibraryShareOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LibraryShareInclude<ExtArgs> | null
+  where?: Prisma.LibraryShareWhereInput
+  orderBy?: Prisma.LibraryShareOrderByWithRelationInput | Prisma.LibraryShareOrderByWithRelationInput[]
+  cursor?: Prisma.LibraryShareWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LibraryShareScalarFieldEnum | Prisma.LibraryShareScalarFieldEnum[]
 }
 
 /**

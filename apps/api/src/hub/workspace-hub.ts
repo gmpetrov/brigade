@@ -101,6 +101,9 @@ export type ListType =
   | 'teammates.updated'
   | 'connections.updated'
   | 'lists.updated'
+  // Dashboards alone: what the library shows of its files changed, not their bytes (a public
+  // link turned on or off), so runners have nothing to sync.
+  | 'library.updated'
 
 export class WorkspaceHub {
   /** Runners that said hello, by computer: each computer's one connection. */

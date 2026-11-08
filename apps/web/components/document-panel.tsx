@@ -31,6 +31,7 @@ import { useDocumentDiscussion } from '@/components/document-discussion'
 import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
+import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
 import { editable, PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
@@ -322,6 +323,8 @@ export function DocumentPanel() {
     [libraryId, path],
   )
   const discussion = useDocumentDiscussion(file)
+  const link = useShare(libraryId)
+  const share = link.share
   const askName = discussion?.teammate?.name
   const discuss = discussion?.ask
   // Below xl the panel lies over the page (the whole screen on a phone): it steps
@@ -372,15 +375,15 @@ export function DocumentPanel() {
               {!(tabbed && current.subtitle) && (
                 <strong className="truncate text-sm font-semibold">{current.title}</strong>
               )}
-              {current.subtitle && (
-                <span
-                  className={cn(
-                    'truncate text-xs text-muted-foreground',
-                    current.target.kind === 'library' && 'font-mono',
+              {(current.subtitle || share) && (
+                <span className="truncate text-xs text-muted-foreground" title={current.subtitle}>
+                  {current.subtitle && (
+                    <span className={cn(current.target.kind === 'library' && 'font-mono')}>
+                      {current.subtitle}
+                    </span>
                   )}
-                  title={current.subtitle}
-                >
-                  {current.subtitle}
+                  {current.subtitle && share && ' · '}
+                  {share && PUBLIC_LINK}
                 </span>
               )}
             </div>
@@ -395,6 +398,9 @@ export function DocumentPanel() {
                 <MessageSquare aria-hidden />
                 Ask {discussion.teammate.name}
               </Button>
+            )}
+            {target.kind === 'library' && (
+              <ShareButton key={target.id} name={current.title} link={link} />
             )}
             {target.kind === 'library' && (
               <Button

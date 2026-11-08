@@ -338,6 +338,7 @@ model Workspace {
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
   documentPins          DocumentPin[]
+  libraryShares         LibraryShare[]
   listPins              ListPin[]
   sidebarOrders         SidebarOrder[]
   threadLaters          ThreadLater[]
@@ -1896,6 +1897,8 @@ model Document {
   memoryLines        MemoryLine[]
   /// The members who pinned it.
   pins               DocumentPin[]
+  /// Its public link, while it has one.
+  share              LibraryShare?
   /// The members who pinned it, as a list, in their sidebar.
   listPins           ListPin[]
 
@@ -2166,6 +2169,26 @@ model LibraryFolderGrant {
 
   @@unique([folderId, teammateId])
   @@index([teammateId])
+}
+
+/// A library file's public link (docs/public-links.md): anyone with its address reads the file
+/// as it is now, without signing in, at <web>/s/<token>. A design's link is its index.html's and
+/// shows the whole design. Turning the link off deletes the row: turned on again, the file gets
+/// a new address. A file in the trash keeps its link, which answers again once it is restored.
+model LibraryShare {
+  id                String    @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentId        String    @unique
+  document          Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  /// The address's secret: random, unguessable (src/library-shares.ts).
+  token             String    @unique
+  /// The member who turned it on. No relation: kept once they leave.
+  createdByMemberId String?
+  createdAt         DateTime  @default(now())
+
+  @@index([workspaceId])
 }
 
 /// A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes

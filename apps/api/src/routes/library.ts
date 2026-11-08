@@ -66,6 +66,7 @@ import {
 } from '../library.js'
 import { fileKey, versionBytesKey } from '../library-objects.js'
 import { inspectObject } from '../object-check.js'
+import { shareFile, shareOf, unshareFile } from '../library-shares.js'
 import { libraryPreview } from '../previews.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { serveObject } from '../serve-object.js'
@@ -82,7 +83,7 @@ const MEDIA = /^(audio|video)\//
  * A file's bytes, to show or download, as they stream. Never run as a page on this origin. Audio,
  * video and large files come from the bucket's short-lived URL, never through the API.
  */
-async function fileResponse(
+export async function fileResponse(
   c: Context,
   key: string,
   file: { path: string; contentType: string; size: number },
@@ -518,6 +519,21 @@ export const library = new Hono<AppEnv>()
     const { text } = await parseBody(c.req.raw, WriteLibraryText)
     await saveDocumentText(db, scope, { type: 'member', id: scope.memberId }, row, text)
     return c.json({ ok: true })
+  })
+
+  /**
+   * Its public link (docs/public-links.md), or null. POST turns it on (the one it has, or a new
+   * one), DELETE turns it off: its address stops working at once. A viewer may only look.
+   */
+  .get('/:id/share', async (c) => c.json({ share: await shareOf(c.var.db, c.req.param('id')) }))
+  .post('/:id/share', async (c) => {
+    const { scope, db } = c.var
+    return c.json({ share: await shareFile(db, scope, scope.memberId, c.req.param('id')) })
+  })
+  .delete('/:id/share', async (c) => {
+    const { scope, db } = c.var
+    await unshareFile(db, scope, scope.memberId, c.req.param('id'))
+    return c.json({ share: null })
   })
 
   /** The file's bytes. Shown inline only for types that cannot run script on this origin. */
