@@ -58,8 +58,11 @@ class FakeLedger implements ProviderLedger {
   readonly ran = new Map<string, number>()
   /** Called while the list is read: what happens just after boat answered it. */
   onList?: () => Promise<void>
+  /** What the list throws instead of answering, as boat's SDK would. */
+  listFails?: unknown
   usageAsked: string[] = []
   async states() {
+    if (this.listFails) throw this.listFails
     const states = new Map(this.vms)
     await this.onList?.()
     return states
@@ -377,6 +380,52 @@ describe('vm costs', { skip: !database && 'no database answers' }, () => {
     // The process that asked comes back late: nothing changes for a run settled already.
     await runStarted(never, 'vm-b', { resumedAt: new Date() })
     assert.equal((await prisma.vmRun.findUnique({ where: { id: never!.id } }))?.status, 'void')
+  })
+
+  test('a list boat fails for a while skips the minute’s check; any other failure is thrown', async () => {
+    const ledger = new FakeLedger()
+    const run = await beginRun(computer(), 'resume', 'vm-flaky')
+    await runStarted(run, 'vm-flaky', undefined)
+    await age(run!.id, 3600_000)
+    ledger.vms.set('vm-flaky', 'stopped')
+    ledger.ran.set('vm-flaky', 600)
+    // As boat's SDK throws them: an answer with an error code, or none before the deadline.
+    const answered = (status: number) =>
+      Object.assign(new Error('Response returned an error code'), {
+        name: 'ResponseError',
+        response: new Response(null, { status }),
+      })
+    const timedOut = Object.assign(
+      new Error('The request failed and the interceptors did not return an alternative response'),
+      { name: 'FetchError', cause: new DOMException('timed out', 'TimeoutError') },
+    )
+    const warned = mock.method(console, 'warn', () => {})
+    try {
+      for (const [error, said] of [
+        [answered(503), 'answered 503'],
+        [answered(429), 'answered 429'],
+        [timedOut, 'timed out'],
+      ] as const) {
+        ledger.listFails = error
+        await reconcileVmRuns(new Date(), ledger)
+        assert.match(String(warned.mock.calls.at(-1)?.arguments[0]), new RegExp(said))
+        // Nothing judged from a list it did not get: the run waits for the next minute.
+        assert.equal((await runs())[0]?.status, 'open')
+      }
+    } finally {
+      warned.mock.restore()
+    }
+    // A refusal is no outage: the job fails, reported with boat's status.
+    ledger.listFails = answered(401)
+    await assert.rejects(reconcileVmRuns(new Date(), ledger), /list of VMs answered 401/)
+    ledger.listFails = new Error('boat listed more than 5000 sandboxes')
+    await assert.rejects(reconcileVmRuns(new Date(), ledger), /more than 5000/)
+    assert.equal((await runs())[0]?.status, 'open')
+
+    // boat answers again: the next minute settles it.
+    ledger.listFails = undefined
+    await reconcileVmRuns(new Date(), ledger)
+    assert.equal((await runs())[0]?.status, 'closed')
   })
 
   test('a create that never said its VM is void; one made again under its key counts once', async () => {
