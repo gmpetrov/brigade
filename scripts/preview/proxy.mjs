@@ -1,6 +1,8 @@
 // The preview's one address: /api (requests and WebSockets) to the API, the
 // rest to Next. One origin means one preview token, and the dashboard's
-// session cookie is first-party to its API.
+// session cookie is first-party to its API. Designs' pages are the API's too: the
+// preview has no sandbox host of its own (DESIGN_URL is its address), so /v/<token>/…
+// and a shared design's /s/<token>/… go there, while /s/<token> is Next's page.
 import http from 'node:http'
 import net from 'node:net'
 
@@ -8,7 +10,9 @@ const PORT = Number(process.env.PORT ?? 3000)
 const API_PORT = Number(process.env.API_PORT ?? 3001)
 const WEB_PORT = Number(process.env.WEB_PORT ?? 3002)
 
-const target = (url = '/') => (url === '/api' || url.startsWith('/api/') ? API_PORT : WEB_PORT)
+const DESIGN_PAGE = /^\/(v\/[^/?#]+\/|s\/[^/?#]+\/)/
+const target = (url = '/') =>
+  url === '/api' || url.startsWith('/api/') || DESIGN_PAGE.test(url) ? API_PORT : WEB_PORT
 
 // A page opened without a working session is opened signed in as SIGN_IN (a dev
 // account), so a preview shows the sample workspace at once, also after its session
@@ -21,7 +25,8 @@ const MARKER = 'brigade_preview_signed_out'
 const SESSION = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/
 const MARKER_SET = new RegExp(`(?:^|;\\s*)${MARKER}=`)
 
-const isSignOut = (req) => req.method === 'POST' && (req.url ?? '').split('?')[0] === '/api/auth/sign-out'
+const isSignOut = (req) =>
+  req.method === 'POST' && (req.url ?? '').split('?')[0] === '/api/auth/sign-out'
 
 /** A page load to sign in for: no session the API still accepts, and no sign-out. */
 const needsSignIn = async (req) =>
@@ -38,7 +43,12 @@ function hasSession(cookie) {
   if (!SESSION.test(cookie)) return Promise.resolve(false)
   return new Promise((resolve) => {
     const request = http.get(
-      { host: '127.0.0.1', port: API_PORT, path: '/api/auth/get-session', headers: { cookie, origin: ORIGIN } },
+      {
+        host: '127.0.0.1',
+        port: API_PORT,
+        path: '/api/auth/get-session',
+        headers: { cookie, origin: ORIGIN },
+      },
       (response) => {
         let body = ''
         response.setEncoding('utf8')
