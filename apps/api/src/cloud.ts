@@ -624,6 +624,17 @@ export const DESKTOP_PREPARING_GAP_MS = 2 * 60_000
 
 export const DESKTOP_PREPARING = 'Preparing the desktop…'
 
+export const COMPUTER_STARTING = 'Starting the cloud computer…'
+
+/**
+ * The desktop routes' answer while their stopped computer starts (after ensureRunning): a 503
+ * the dashboard asks again for every few seconds until it is up. A normal start, not an error:
+ * marked so the API's error handler does not send each of those polls to PostHog. A start that
+ * fails is ensureRunning's own error, still sent.
+ */
+export const computerStarting = () =>
+  markTracked(new HTTPException(503, { message: COMPUTER_STARTING }))
+
 /**
  * The desktop's URL. One the provider is still setting up, or a provider that does not
  * answer, is a 503, which the dashboard asks again for until it opens.

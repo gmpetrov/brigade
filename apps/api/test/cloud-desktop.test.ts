@@ -35,8 +35,15 @@ Object.assign(BoatApi.prototype, {
 const { env } = await import('../src/config.js')
 const { app } = await import('../src/app.js')
 const { flushAnalytics } = await import('../src/analytics.js')
-const { desktopUrl, DESKTOP_PREPARING, DESKTOP_PREPARING_GAP_MS, DESKTOP_PREPARING_REPORT_MS } =
-  await import('../src/cloud.js')
+const {
+  desktopUrl,
+  computerStarting,
+  COMPUTER_STARTING,
+  DESKTOP_PREPARING,
+  DESKTOP_PREPARING_GAP_MS,
+  DESKTOP_PREPARING_REPORT_MS,
+} = await import('../src/cloud.js')
+const { HTTPException } = await import('hono/http-exception')
 
 const sent: Record<string, any>[] = []
 const realFetch = globalThis.fetch
@@ -72,6 +79,13 @@ function route() {
 }
 // Each test's own computer; routes are added before the first request.
 const computers = [route(), route(), route(), route()]
+// The desktop routes' answer while a stopped computer starts, and a real failure, side by side.
+app.post('/test-desktop-starting', () => {
+  throw computerStarting()
+})
+app.post('/test-desktop-failing', () => {
+  throw new HTTPException(503, { message: 'Something broke' })
+})
 
 test('a desktop still being set up is a 503 to ask again for, and opens once it is up', async () => {
   env.POSTHOG_KEY = 'phc_test_key'
@@ -147,4 +161,19 @@ test('a desktop asked for again after a long gap starts a new wait, not a stuck 
   mock.timers.tick(DESKTOP_PREPARING_GAP_MS)
   assert.equal((await open()).status, 503)
   assert.deepEqual(await exceptions(), [])
+})
+
+// On Nov 7, each poll of a normal start (one every ~4 s) was sent to PostHog as an error.
+test('a computer starting is a 503 to ask again for, not an error; a real 5xx still is', async () => {
+  env.POSTHOG_KEY = 'phc_test_key'
+  for (let i = 0; i < 5; i++) {
+    const starting = await app.request('/test-desktop-starting', { method: 'POST' })
+    assert.equal(starting.status, 503)
+    assert.deepEqual(await starting.json(), { error: COMPUTER_STARTING })
+  }
+  assert.deepEqual(await exceptions(), [], 'a computer starting is not an error')
+  assert.equal((await app.request('/test-desktop-failing', { method: 'POST' })).status, 503)
+  const sentNow = await exceptions()
+  assert.equal(sentNow.length, 1)
+  assert.match(sentNow[0]!.properties.$exception_list[0].value, /Something broke/)
 })

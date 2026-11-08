@@ -72,7 +72,7 @@ import {
   startPreview,
   touchPreview,
 } from '../app-previews.js'
-import { desktopClipboard, hostedPort } from '../cloud.js'
+import { computerStarting, desktopClipboard, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
 import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
@@ -1720,8 +1720,8 @@ export const threads = new Hono<AppEnv>()
     if (thread.computer.status !== 'running') {
       if (thread.controlledByMemberId === scope.memberId || c.req.query('wake') === '1') {
         await hubs.get(thread.workspaceId).ensureRunning(thread.computer.id)
-        // 503: the dashboard asks again until the computer is up.
-        throw new HTTPException(503, { message: 'Starting the cloud computer…' })
+        // 503: the dashboard asks again until the computer is up (not sent as an error).
+        throw computerStarting()
       }
       return c.json({ error: COMPUTER_ASLEEP, asleep: true }, 409)
     }

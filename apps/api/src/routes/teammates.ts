@@ -15,7 +15,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { requireAccountManager } from '../apps.js'
 import { audit } from '../audit.js'
-import { desktopClipboard } from '../cloud.js'
+import { computerStarting, desktopClipboard } from '../cloud.js'
 import type { ScopedDb } from '../db.js'
 import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
@@ -74,8 +74,8 @@ export const teammates = new Hono<AppEnv>()
       (recorder(computer.id) === scope.memberId || c.req.query('wake') === '1')
     ) {
       await hubs.get(computer.workspaceId).ensureRunning(computer.id)
-      // 503: the dashboard asks again until the computer is up.
-      throw new HTTPException(503, { message: 'Starting the cloud computer…' })
+      // 503: the dashboard asks again until the computer is up (not sent as an error).
+      throw computerStarting()
     }
     if (computer.status !== 'running') return c.json({ error: COMPUTER_ASLEEP, asleep: true }, 409)
     const view = await watchDesktop(computer)
