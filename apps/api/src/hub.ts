@@ -159,4 +159,5 @@ onScopedWrite((model, scope) => {
   else if (model === 'Connection' || model === 'Grant') notify('connections.updated')
   else if (model === 'ListItem' || model === 'ListItemThread' || model === 'ListItemPull')
     notify('lists.updated')
+  else if (model === 'LibraryShare') notify('library.updated')
 })

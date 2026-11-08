@@ -54,6 +54,7 @@ import { timeAgo } from '@/components/dashboard'
 import { DesignPanel } from '@/components/design-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { FilePreview } from '@/components/file-preview'
+import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
 import { ActorName, FileHistory, size } from '@/components/library-history'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Badge } from '@/components/ui/badge'
@@ -390,6 +391,9 @@ export function LibraryBrowser({
             <span className="text-xs text-muted-foreground">
               {flat && `${parentOf(f.path) || 'Library'} · `}
               {isDesign && 'Design · '}
+              {isDesign &&
+                tree.files.some((file) => file.shared && file.path === `${f.path}/index.html`) &&
+                `${PUBLIC_LINK} · `}
               {isSet
                 ? `${set.length} design option${set.length === 1 ? '' : 's'}`
                 : inside === 0
@@ -505,6 +509,7 @@ export function LibraryBrowser({
                 </>
               )}
               {!f.indexed && ' · not searchable'}
+              {f.shared && ` · ${PUBLIC_LINK}`}
             </span>
           </button>
           <RowMenu label={`Actions for ${nameOf(f.path)}`}>
@@ -1096,6 +1101,7 @@ function LibraryFilePanel({
   const name = nameOf(file.path)
   const folder = parentOf(file.path)
   const Icon = fileIcon(file.contentType)
+  const { share, setShare } = useShare(file.id)
   // Markdown edits in the editor; other text files here.
   const editable = file.editable && file.contentType !== 'text/markdown'
   return (
@@ -1113,8 +1119,16 @@ function LibraryFilePanel({
             ) : (
               `added ${timeAgo(file.createdAt)}`
             )}
+            {share && ` · ${PUBLIC_LINK}`}
           </span>
         </div>
+        <ShareButton
+          documentId={file.id}
+          name={name}
+          share={share}
+          setShare={setShare}
+          onChange={() => void onChanged()}
+        />
         <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
           <a href={contentUrl(file.id, true)} aria-label="Download">
             <Download aria-hidden />
