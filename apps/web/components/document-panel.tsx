@@ -51,7 +51,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { api, ApiError } from '@/lib/api'
 import { changedSince, type Stamps } from '@/lib/document-changes'
-import { downloadable, fileView, type FileView } from '@/lib/file-view'
+import {
+  downloadable,
+  fileView,
+  lookupAfter,
+  type FileLookup,
+  type FileView,
+} from '@/lib/file-view'
 import { contentUrl } from '@/lib/library-urls'
 import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
@@ -347,21 +353,22 @@ function WatchChanges({
 
 /**
  * A library file as the API has it now (GET /library/:id), again each time the library
- * changes: undefined until it answers, or when it could not; null once it says the file is
- * gone. A route the API does not have yet answers 404 without that message: not taken for gone.
+ * changes: undefined until it answers, or when it never could; null once it says the file is
+ * gone. A refresh that fails keeps what was read (lookupAfter). A route the API does not have
+ * yet answers 404 without that message: not taken for gone.
  */
 function useLibraryFile(id: string | null) {
-  const [state, setState] = useState<{ id: string; file?: LibraryFile | null; error?: string }>()
+  const [state, setState] = useState<FileLookup<LibraryFile>>()
   const asked = useRef(0)
   const load = useCallback(() => {
     if (!id) return
     const ask = ++asked.current
     api<LibraryFile>(`/library/${id}`).then(
-      (file) => ask === asked.current && setState({ id, file }),
+      (file) => ask === asked.current && setState((s) => lookupAfter(s, id, { file })),
       (e: Error) => {
         if (ask !== asked.current) return
         const gone = e instanceof ApiError && e.status === 404 && e.message === 'File not found'
-        setState(gone ? { id, file: null } : { id, error: e.message })
+        setState((s) => lookupAfter(s, id, gone ? { gone: true } : { error: e.message }))
       },
     )
   }, [id])

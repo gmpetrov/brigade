@@ -39,3 +39,23 @@ export function fileView(
 
 /** Whether a file shown so has a Download button: those not edited live as a document. */
 export const downloadable = (view: FileView) => view === 'text' || view === 'preview'
+
+/** What the panel knows of a file from the API: the file (null once gone), or why it could not ask. */
+export type FileLookup<F> = { id: string; file?: F | null; error?: string }
+
+/**
+ * After the API answered about file `id`: the file, gone, or an error. A failed refresh of a
+ * file read before keeps what was read: the file goes on showing as it was (a text file with
+ * unsaved edits stays open), and only a 404 says it is gone.
+ */
+export function lookupAfter<F>(
+  before: FileLookup<F> | undefined,
+  id: string,
+  outcome: { file: F } | { gone: true } | { error: string },
+): FileLookup<F> {
+  if ('file' in outcome) return { id, file: outcome.file }
+  if ('gone' in outcome) return { id, file: null }
+  if (before?.id === id && before.file !== undefined)
+    return { id, file: before.file, error: outcome.error }
+  return { id, error: outcome.error }
+}
