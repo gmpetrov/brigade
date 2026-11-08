@@ -5,6 +5,7 @@
 // the Workers' failed invocations as Cloudflare counts them.
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
+import { settleAbuse } from '../computer-abuse.js'
 import { diskDetail, fullDisks, type DiskState } from '../computer-disk.js'
 import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
@@ -358,6 +359,8 @@ async function checkComputers(now: number) {
   await settle('computer:', found, new Date(now))
 
   await settle('disk:', diskProblems(await fullDisks()), new Date(now))
+  // Raised as the runners report it (src/computer-abuse.ts); over once they stop.
+  await settleAbuse(new Date(now))
 }
 
 /** Kept on the computer while its runner says the disk stays full (src/computer-disk.ts). */

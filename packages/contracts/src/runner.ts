@@ -421,6 +421,42 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       .optional(),
   }),
   /**
+   * Abuse seen on a cloud computer (the runner's abuse.ts, docs/abuse.md), said when there is
+   * some, every 2 minutes at most: what the egress limits stopped since the last report, in
+   * packets; miners found among teammates' processes, and whether they were killed; teammates
+   * whose processes keep most of the CPU for long. For Brigade's operators (the abuse: alert).
+   */
+  z.object({
+    type: z.literal('abuse'),
+    blocked: z.object({
+      smtp: z.number().int().nonnegative(),
+      metadata: z.number().int().nonnegative(),
+      scan: z.number().int().nonnegative(),
+      mining: z.number().int().nonnegative(),
+    }),
+    miners: z
+      .array(
+        z.object({
+          user: z.string().max(64),
+          pid: z.number().int().nonnegative(),
+          command: z.string().max(300),
+          /** Its program's name, killed; or only an argument, told and left running. */
+          evidence: z.enum(['name', 'arguments']).optional(),
+          killed: z.boolean(),
+        }),
+      )
+      .max(50),
+    cpu: z
+      .array(
+        z.object({
+          user: z.string().max(64),
+          share: z.number().nonnegative(),
+          minutes: z.number().nonnegative(),
+        }),
+      )
+      .max(50),
+  }),
+  /**
    * The runner restarts into an update and hands its turns over to the next one (protocol 29):
    * until that one connects, the API holds the computer's commands, and it stays online.
    */

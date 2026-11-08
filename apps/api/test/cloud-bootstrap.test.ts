@@ -15,6 +15,7 @@ import { test } from 'node:test'
 import {
   bootstrapScript,
   DESKTOP_WALLPAPER,
+  EGRESS_SCRIPT,
   GIVE_HOMES_BACK,
   setupScript,
   TEAMMATE_HELPER,
@@ -34,6 +35,39 @@ test('the helpers and the setup the computer runs are valid shell', () => {
   parses(setupScript())
   parses(bootstrapScript({ apiUrl: 'https://api.example.com', code: 'abc' }))
   parses(GIVE_HOMES_BACK)
+  parses(EGRESS_SCRIPT)
+})
+
+test('the setup sets the egress limits at each boot, and goes on when they fail', () => {
+  const setup = setupScript()
+  assert.match(setup, /tee \/usr\/local\/sbin\/brigade-egress/)
+  assert.match(setup, /ExecStart=\/usr\/local\/sbin\/brigade-egress apply/)
+  assert.match(setup, /systemctl enable brigade-egress\.service/)
+  assert.match(setup, /restart brigade-egress\.service \|\| echo/)
+  // The template's escapes resolved: no JavaScript in the script.
+  assert.doesNotMatch(EGRESS_SCRIPT, /undefined/)
+  assert.match(EGRESS_SCRIPT, /case "\$\{1:-\}" in/)
+})
+
+test("brigade-egress's counts add up each rule's packets, IPv4 and IPv6", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'egress-'))
+  const listing = (n: number) =>
+    `Chain BRIGADE-EGRESS (2 references)\n    pkts      bytes target     prot opt in     out     source               destination\n       ${n}      120 DROP       6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:25 ctstate NEW /* smtp */\n       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate NEW limit: above 100/sec burst 1000 mode srcip /* scan */\n`
+  for (const [name, n] of [
+    ['iptables', 2],
+    ['ip6tables', 3],
+  ] as const)
+    writeFileSync(
+      join(dir, name),
+      `#!/bin/sh\ncase "$*" in *"-nvxL BRIGADE-EGRESS") printf '${listing(n).replaceAll('\n', '\\n')}' ;; *) exit 1 ;; esac\n`,
+      { mode: 0o755 },
+    )
+  const result = spawnSync('sh', ['-c', EGRESS_SCRIPT, 'brigade-egress', 'counts'], {
+    env: { PATH: `${dir}:/usr/bin:/bin` },
+    encoding: 'utf8',
+  })
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout, 'scan 0\nsmtp 5\n')
 })
 
 test('the thread helper reads its command from its first argument', () => {

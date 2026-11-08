@@ -532,6 +532,13 @@ export class Connection {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(message))
   }
 
+  /** Send now if connected and welcomed; false otherwise, for a caller that keeps it to try again. */
+  sendIfConnected(message: RunnerToApi) {
+    if (!this.ready || this.ws?.readyState !== WebSocket.OPEN) return false
+    this.ws.send(JSON.stringify(message))
+    return true
+  }
+
   close() {
     this.closed = true
     this.ws?.close()
