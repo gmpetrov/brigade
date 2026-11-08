@@ -500,7 +500,8 @@ export const library = new Hono<AppEnv>()
     }
     const session: EditSession = {
       documentId: row.id,
-      text: await documentText(scope, row),
+      // A live document's text comes from its room: reading the file here would only slow the open.
+      ...(!live && { text: await documentText(scope, row) }),
       live,
       ...(viewer && { readOnly: true }),
     }

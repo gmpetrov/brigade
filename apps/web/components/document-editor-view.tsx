@@ -66,6 +66,9 @@ function LiveDocument({
 }: DocumentEditorProps & { session: EditSession }) {
   const live = session.live!
   const [connection, setConnection] = useState<Connection>()
+  // Shown, not yet editable: the room opened on what it had (`early`) and still checks it
+  // against the stored text. A change it finds can replace a whole block, with what was typed in it.
+  const [held, setHeld] = useState(false)
 
   useEffect(() => {
     const doc = new Y.Doc()
@@ -78,11 +81,29 @@ function LiveDocument({
       params: async () => {
         const fresh = token ?? (await openDocument(target).catch(() => null))?.live?.token
         token = undefined
-        return { token: fresh ?? '' }
+        return { token: fresh ?? '', early: '1' }
       },
     })
+    // Listening from the start: the room says `checking` before anything else.
+    let checked = false
+    const onCheck = (message: string) => {
+      let notice: { type?: string }
+      try {
+        notice = JSON.parse(message) as typeof notice
+      } catch {
+        return
+      }
+      // Once only: after a reconnect, what was typed meanwhile is the person's, as before.
+      if (notice.type === 'checking' && !checked) setHeld(true)
+      if (notice.type === 'checked') {
+        checked = true
+        setHeld(false)
+      }
+    }
+    provider.on('custom-message', onCheck)
     setConnection({ doc, provider })
     return () => {
+      provider.off('custom-message', onCheck)
       provider.destroy()
       doc.destroy()
     }
@@ -96,6 +117,7 @@ function LiveDocument({
       user={live.user}
       documentId={session.documentId}
       list={target.kind === 'library'}
+      held={held}
       {...props}
     />
   )
@@ -109,11 +131,14 @@ function LiveEditor({
   className,
   ask,
   list,
+  held,
 }: Omit<DocumentEditorProps, 'target'> & {
   connection: Connection
   user: { name: string; color: string }
   documentId: string
   list: boolean
+  /** Read only until the room's check is done. */
+  held: boolean
 }) {
   const [status, setStatus] = useState<Status>('connecting')
   const [synced, setSynced] = useState(false)
@@ -209,6 +234,7 @@ function LiveEditor({
           label={label}
           ask={ask}
           list={list}
+          readOnly={held}
         />
       ) : (
         <Skeleton className="h-32 w-full" />
@@ -300,9 +326,11 @@ function SavedDocument({
     ],
   })
   self.current = editor
-  const [saved, setSaved] = useState(session.text)
+  // Always there without `live`.
+  const stored = session.text ?? ''
+  const [saved, setSaved] = useState(stored)
   // For onChange, which runs with the render it was made in.
-  const savedText = useRef(session.text)
+  const savedText = useRef(stored)
   savedText.current = saved
   // While the stored text fills it, its changes are not the person's.
   const filling = useRef(true)
@@ -316,7 +344,7 @@ function SavedDocument({
     let live = true
     filling.current = true
     void (async () => {
-      const blocks = await markdownToBlocks(editor, session.text)
+      const blocks = await markdownToBlocks(editor, stored)
       if (!live) return
       editor.replaceBlocks(editor.document, blocks as never)
       // What the editor writes back for the text as stored: unchanged until this differs.
@@ -330,7 +358,7 @@ function SavedDocument({
     return () => {
       live = false
     }
-  }, [editor, session.text])
+  }, [editor, stored])
 
   async function save() {
     setBusy(true)
