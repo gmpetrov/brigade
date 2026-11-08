@@ -504,9 +504,11 @@ export function DocumentPanel() {
                 size="sm"
                 onClick={() => void onAsk?.()}
                 tooltip={`Talk about this file with ${discussion.teammate.name}`}
+                aria-label={`Ask ${discussion.teammate.name}`}
               >
                 <MessageSquare aria-hidden />
-                Ask {discussion.teammate.name}
+                {/* On a phone, the icon alone: the file's path needs the room. */}
+                <span className="max-sm:hidden">Ask {discussion.teammate.name}</span>
               </Button>
             )}
             {target.kind === 'library' && <ShareButton key={target.id} name={name} link={link} />}
