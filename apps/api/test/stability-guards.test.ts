@@ -462,6 +462,63 @@ describe('against the database', { skip: !database && 'no database answers' }, (
     await prisma.account.update({ where: { id: ids.account }, data: { exhaustedUntil: null } })
   })
 
+  test("a switch names only the thread's workspace's accounts, never another's", async () => {
+    const { noteEvents } = await import('../src/hub/thread-events.js')
+    const { inWorkspaceHub } = await import('./in-hub.js')
+    // Another workspace of the organization, with its own account.
+    const elsewhere = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Elsewhere' } })
+    ).id
+    const other = scoped({ organizationId: ids.org, workspaceId: elsewhere })
+    const computer = await other.computer.create({
+      data: { kind: 'cloud', name: 'Cloud', status: 'stopped' },
+    } as never)
+    const theirs = await other.account.create({
+      data: {
+        memberId: ids.owner,
+        computerId: computer.id,
+        provider: 'claude_code',
+        label: 'Not yours',
+        status: 'ready',
+      },
+    } as never)
+    try {
+      const session = await thread()
+      const resetsAt = new Date(Date.now() + 60 * MIN).toISOString()
+      const switched = (seq: number, fromAccountId: string, toAccountId: string) =>
+        ({
+          sessionId: session.id,
+          seq,
+          event: { at, type: 'account.switched', fromAccountId, toAccountId, reason: 'usage_limit', resetsAt },
+        }) as unknown as SequencedEvent
+      // Out of usage on the other workspace's account, moved onto it: neither is noted.
+      assert.ok(
+        await inWorkspaceHub(ids.workspace, () =>
+          noteEvents(session as never, [switched(1, theirs.id, theirs.id)]),
+        ),
+      )
+      const after = await prisma.account.findUniqueOrThrow({ where: { id: theirs.id } })
+      assert.equal(after.exhaustedUntil, null, 'not marked out of usage')
+      const kept = await prisma.session.findUniqueOrThrow({ where: { id: session.id } })
+      assert.equal(kept.accountId, ids.account, 'the thread stays on its own account')
+      // Between its own workspace's accounts, as before.
+      const cloud = await prisma.account.findFirstOrThrow({
+        where: { workspaceId: ids.workspace, computerId: ids.cloud },
+      })
+      assert.ok(
+        await inWorkspaceHub(ids.workspace, () =>
+          noteEvents(session as never, [switched(2, ids.account, cloud.id)]),
+        ),
+      )
+      assert.equal((await account()).exhaustedUntil?.toISOString(), resetsAt)
+      const moved = await prisma.session.findUniqueOrThrow({ where: { id: session.id } })
+      assert.equal(moved.accountId, cloud.id)
+    } finally {
+      await prisma.account.update({ where: { id: ids.account }, data: { exhaustedUntil: null } })
+      await prisma.workspace.deleteMany({ where: { id: elsewhere } })
+    }
+  })
+
   test('a thread whose events wait 10 minutes, as its runner says, alerts', async () => {
     const { hubs, runnerSocket } = await import('../src/hub.js')
     const hub = hubs.get(scope.workspaceId)

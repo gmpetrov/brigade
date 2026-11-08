@@ -321,21 +321,31 @@ export async function refreshPlan(workspaceId: string) {
   return workspacePlan(workspaceId)
 }
 
-/** Brigade's settings for Stripe's customer portal (scripts/stripe-setup.mjs), else the account's default. */
-let portal: Promise<string | undefined> | undefined
+/**
+ * Brigade's settings for Stripe's customer portal (scripts/stripe-setup.mjs). The account's
+ * default portal is another product's (Papers): without Brigade's, none opens, rather than that
+ * one. Only a configuration found is kept: once it is set up again, the next call finds it.
+ */
+let portal: Promise<string> | undefined
 export function portalConfiguration() {
   portal ??= (async () => {
     const { data } = await stripeClient!.billingPortal.configurations.list({
       active: true,
       limit: 100,
     })
-    return data.find((configuration) => configuration.metadata?.brigade === 'portal')?.id
-  })().catch((error) => {
+    const id = data.find((configuration) => configuration.metadata?.brigade === 'portal')?.id
+    if (!id) throw new Error("Stripe has no active customer portal configuration for Brigade")
+    return id
+  })().catch((error: unknown) => {
     portal = undefined
-    console.error('reading the customer portal settings failed', error)
-    return undefined
+    throw error
   })
   return portal
+}
+
+/** Only for tests. */
+export const forgetPortalConfiguration = () => {
+  portal = undefined
 }
 
 /**
