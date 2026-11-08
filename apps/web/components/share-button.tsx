@@ -6,70 +6,50 @@
 import type { LibraryShare } from '@brigade/contracts'
 import { Check, Copy, Globe, Share } from 'lucide-react'
 import { Popover } from 'radix-ui'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useMaybeDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Hint } from '@/components/ui/tooltip'
 import { api, isViewer } from '@/lib/api'
 import { DEMO } from '@/lib/demo/flag'
-import { afterReply, shownShare, type ShareReply, type ShareState } from '@/lib/share-state'
+import { ShareLinks, turnLink } from '@/lib/share-state'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
-/** Numbers each request about a link as it starts: a reply older than one applied is dropped. */
-let requests = 0
-
 /**
  * The public link of the file a bar shows (`documentId`): undefined while it is asked, null when
- * it has none, and `toggle` to turn it on or off. Asked again when the library changes, as
- * another member may have turned it on or off. A reply about another file than the one shown now
- * (the bar moved on to another tab meanwhile), or older than one applied, changes nothing
- * (lib/share-state.ts).
+ * it has none, and `toggle` to turn it on or off. Read again when the library changes, as another
+ * member may have turned it on or off. Replies about another file than the one shown now, or that
+ * a newer one answered, change nothing (ShareLinks, lib/share-state.ts).
  */
 export function useShare(documentId: string | null | undefined) {
-  const [state, setState] = useState<ShareState>(null)
-  const [asked, setAsked] = useState(0)
-  const shown = useRef(documentId ?? null)
-  useEffect(() => {
-    shown.current = documentId ?? null
-  }, [documentId])
-  const apply = useCallback(
-    (reply: ShareReply) => setState((s) => afterReply(s, shown.current, reply)),
-    [],
+  const [links] = useState(
+    () =>
+      new ShareLinks((id, method) =>
+        api<{ share: LibraryShare | null }>(`/library/${encodeURIComponent(id)}/share`, {
+          method,
+          ...(method === 'POST' && { body: {} }),
+        }).then((r) => r.share),
+      ),
   )
   useEffect(() => {
-    if (!documentId || DEMO) return
-    const seq = ++requests
-    api<{ share: LibraryShare | null }>(`/library/${encodeURIComponent(documentId)}/share`)
-      .then((r) => apply({ documentId, share: r.share, seq }))
-      // Unreadable: shown as not shared, unless a reply already said otherwise.
-      .catch(() =>
-        setState((s) =>
-          s?.documentId === documentId
-            ? s
-            : afterReply(s, shown.current, { documentId, share: null, seq }),
-        ),
-      )
-  }, [documentId, asked, apply])
+    if (!DEMO) links.show(documentId ?? null)
+  }, [links, documentId])
+  const share = useSyncExternalStore(
+    links.subscribe,
+    () => links.shareOf(documentId ?? null),
+    () => undefined,
+  )
   useLive(
-    (message) => message.type === 'library.updated' && setAsked((n) => n + 1),
-    () => setAsked((n) => n + 1),
+    (message) => message.type === 'library.updated' && links.refresh(),
+    () => links.refresh(),
   )
   const toggle = useCallback(
-    async (on: boolean) => {
-      if (!documentId) return null
-      const seq = ++requests
-      const r = await api<{ share: LibraryShare | null }>(
-        `/library/${encodeURIComponent(documentId)}/share`,
-        { method: on ? 'POST' : 'DELETE', ...(on && { body: {} }) },
-      )
-      apply({ documentId, share: r.share, seq })
-      return r.share
-    },
-    [documentId, apply],
+    (on: boolean) => (documentId ? links.toggle(documentId, on) : Promise.resolve(null)),
+    [links, documentId],
   )
-  return { share: shownShare(state, documentId), toggle }
+  return { share, toggle }
 }
 
 export type ShareLink = ReturnType<typeof useShare>
@@ -109,7 +89,7 @@ export function ShareButton({
     setBusy(true)
     setError(undefined)
     try {
-      onChange?.(Boolean(await link.toggle(on)))
+      await turnLink(link.toggle, on, onChange)
     } catch (e) {
       setError((e as Error).message)
     }

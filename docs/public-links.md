@@ -68,9 +68,10 @@ Every answer is the file as it is now, never cached (`no-store`), and carries
   sandbox host's `/s/<token>/…` (`sharedDesignFiles`, `src/designs.ts`). Turning one on or off is
   in the audit log (`library.shared`, `library.unshared`) and tells dashboards (`library.updated`).
 - Dashboard: `components/share-button.tsx` (the button, its panel, `useShare`), the public page
-  `app/s/[token]/page.tsx`. A bar keeps the link of the file it shows only: a reply about another
-  file (a tab switched while a request was out) or older than one applied changes nothing
-  (`lib/share-state.ts`).
+  `app/s/[token]/page.tsx`. A bar keeps the link of the file it shows only (`ShareLinks`,
+  `lib/share-state.ts`): a reply about another file (a tab switched while a request was out), or
+  answered by a newer one, changes nothing. Turning a link on or off is numbered as its reply
+  lands, so a read that started before it never undoes it, and the file is read again after it.
 - Tests: `apps/api/test/library-shares.test.ts`, `apps/web/test/share-state.test.ts`.
 - In a preview, whose one address is the sandbox origin too, `scripts/preview/proxy.mjs` sends
   `/s/<token>/…` (and `/v/<token>/…`) to the API, and `/s/<token>` to the page.
