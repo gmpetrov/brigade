@@ -10,6 +10,7 @@ import {
   createBoatProvider,
 } from '../src/boat/index.js'
 import { VM_PRICES, vmCost } from '../src/boat/prices.js'
+import { failureStatus, transientFailure } from '../src/failures.js'
 import { DesktopNotReady } from '../src/types.js'
 
 // Each request to boat has a deadline (src/boat/index.ts): one boat never answered held the
@@ -398,4 +399,46 @@ test('the ledger lists every sandbox page by page, and reads one’s usage unsca
   // The same hour at Brigade's own constants.
   assert.equal(vmCost('8x16', 1), VM_PRICES.hourly['8x16'])
   assert.equal(vmCost('8x16', 1), usage.dollars)
+})
+
+test('a failed list of sandboxes is transient on a 5xx, a 429 or no answer, not on a 4xx', async () => {
+  // What the SDK throws for each, from boat's list (GET /sandboxes) as the minute's check reads it.
+  const failure = async (send: typeof fetch) => {
+    const ledger = createBoatLedger({ apiKey: 'key', basePath: 'https://boat.test/api/v1', send })
+    return ledger.states().then(
+      () => assert.fail('the list did not fail'),
+      (error: unknown) => error,
+    )
+  }
+  const answering = (status: number) =>
+    (async () =>
+      new Response(JSON.stringify({ ok: false, status, message: 'no' }), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch
+  for (const status of [500, 502, 503, 504, 429]) {
+    const error = await failure(answering(status))
+    assert.equal((error as Error).message, 'Response returned an error code')
+    assert.equal(failureStatus(error), status)
+    assert.equal(transientFailure(error), `answered ${status}`)
+  }
+  for (const status of [400, 401, 403, 404]) {
+    const error = await failure(answering(status))
+    assert.equal(failureStatus(error), status)
+    assert.equal(transientFailure(error), null)
+  }
+  // Given up on its deadline (the deadlines middleware's AbortSignal.timeout), or cut off.
+  const timedOut = await failure((async () => {
+    throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+  }) as typeof fetch)
+  assert.equal((timedOut as Error).name, 'FetchError')
+  assert.equal(failureStatus(timedOut), null)
+  assert.equal(transientFailure(timedOut), 'timed out')
+  const cut = await failure((async () => {
+    throw new TypeError('fetch failed')
+  }) as typeof fetch)
+  assert.equal(transientFailure(cut), 'did not answer')
+  // Not a provider's failure at all.
+  assert.equal(transientFailure(new Error('boat listed more than 5000 sandboxes')), null)
+  assert.equal(transientFailure('nope'), null)
 })

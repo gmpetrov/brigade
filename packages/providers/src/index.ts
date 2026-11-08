@@ -5,6 +5,7 @@ import type { ComputerProvider, MachineProvider, ProviderLedger } from './types.
 
 export { DesktopNotReady } from './types.js'
 export { VM_PRICES, vmCost } from './boat/prices.js'
+export { failureStatus, transientFailure } from './failures.js'
 
 export type {
   ComputerProvider,

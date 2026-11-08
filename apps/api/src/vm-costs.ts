@@ -23,8 +23,10 @@
 // provider's own figure for each VM over the same month to check against.
 import { randomUUID } from 'node:crypto'
 import {
+  failureStatus,
   ledgerFromEnv,
   MACHINE_COMPUTER_SIZE,
+  transientFailure,
   VM_PRICES,
   vmCost,
   type ComputerSize,
@@ -350,7 +352,8 @@ export async function reconcileVmRuns(
   // it (adoptRunning), however close in time its stop came.
   const live = await prisma.vmRun.findMany({ where: { status: { in: ['pending', 'open'] } } })
   const listedAt = new Date()
-  const states = await ledger.states()
+  const states = await listOf(ledger)
+  if (!states) return
   const old = (run: VmRun) => now.getTime() - run.createdAt.getTime() >= PENDING_MS
   const seen: string[] = []
   for (const run of live) {
@@ -399,6 +402,27 @@ export async function reconcileVmRuns(
       data: { seenAt: listedAt },
     })
   await adoptRunning(states, new Set(live.map((r) => r.sandboxId)), listedAt)
+}
+
+/**
+ * The provider's list of VMs, or null when it failed in a way only waiting mends (a 5xx, a 429, no
+ * answer in time): that minute's check is skipped with a warning, and the next one settles all
+ * (on Nov 6 and 7, boat's list failed four times so, each reported as a crash). Any other failure
+ * is thrown, with the status the provider answered: the SDK's own message says none.
+ */
+async function listOf(ledger: ProviderLedger) {
+  try {
+    return await ledger.states()
+  } catch (error) {
+    const transient = transientFailure(error)
+    if (transient) {
+      console.warn(`vm runs: the provider's list of VMs ${transient}: this minute's check skipped`)
+      return null
+    }
+    const status = failureStatus(error)
+    if (status === null) throw error
+    throw new Error(`the provider's list of VMs answered ${status}`, { cause: error })
+  }
 }
 
 /**
