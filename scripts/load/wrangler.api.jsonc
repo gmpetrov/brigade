@@ -1,0 +1,63 @@
+{
+  // A disposable copy of brigade-api for load tests (scripts/load/README.md): production's
+  // wrangler.jsonc with its own name, Hyperdrive, queues and no domain. Its database is a throwaway
+  // Neon project; delete everything after the test (README).
+  "name": "brigade-api-loadtest",
+  "main": "../../apps/api/src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // On workers.dev only for its first request (README): the Api object is made where that
+  // request runs, and this Worker runs next to the database (placement).
+  "workers_dev": true,
+  "preview_urls": false,
+  "placement": { "region": "aws:eu-central-1" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "API", "class_name": "Api" },
+      { "name": "HUBS", "class_name": "WorkspaceHubObject" },
+    ],
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Api"] },
+    { "tag": "v2", "new_sqlite_classes": ["WorkspaceHubObject"] },
+  ],
+  // Made for the test, to the throwaway database (README), cache off as production's.
+  "hyperdrive": [{ "binding": "DB_HYPERDRIVE", "id": "da27163380f24459802e3fb95d3fc1c1" }],
+  "alias": {
+    "./generated/prisma/client.js": "../../apps/api/src/generated/prisma-workers/client.ts",
+    "./platform/node.js": "../../apps/api/src/platform/workers.ts",
+    "../platform/node.js": "../../apps/api/src/platform/workers.ts",
+    "jsdom": "../../apps/api/src/platform/jsdom.workers.ts",
+  },
+  "assets": {
+    "directory": "../../apps/api/dist-worker/assets",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+  "triggers": { "crons": ["* * * * *"] },
+  "queues": {
+    "producers": [
+      { "binding": "JOBS", "queue": "brigade-jobs-loadtest" },
+      { "binding": "JOBS_DEAD", "queue": "brigade-jobs-loadtest-dlq" },
+    ],
+    "consumers": [
+      {
+        "queue": "brigade-jobs-loadtest",
+        "max_batch_size": 5,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "max_concurrency": 10,
+        "dead_letter_queue": "brigade-jobs-loadtest-dlq",
+      },
+    ],
+  },
+  "limits": { "cpu_ms": 60000 },
+  "vars": {
+    "NODE_ENV": "production",
+    "JOBS_ON_QUEUE": "1",
+    // Sign-ups by password, so a script can make accounts (production signs up by mailed code).
+    "PASSWORD_SIGN_IN": "true",
+  },
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "observability": { "enabled": true },
+}
