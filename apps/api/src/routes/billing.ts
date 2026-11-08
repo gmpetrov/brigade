@@ -72,9 +72,13 @@ export const billing = new Hono<AppEnv>()
     const customer = await workspaceCustomerId(c.var.scope.workspaceId)
     if (!stripeClient || !customer)
       throw new HTTPException(404, { message: 'This workspace has no subscription to manage' })
+    const configuration = await portalConfiguration().catch((error: unknown) => {
+      console.error('reading the customer portal settings failed', error)
+      throw new HTTPException(503, { message: 'Billing management is unavailable for now' })
+    })
     const session = await stripeClient.billingPortal.sessions.create({
       customer,
-      configuration: await portalConfiguration(),
+      configuration,
       return_url: billingPage(),
     })
     return c.json({ url: session.url })

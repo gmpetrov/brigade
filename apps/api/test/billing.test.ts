@@ -276,6 +276,31 @@ after(async () => {
 
 // --- Plans ---------------------------------------------------------------------------------
 
+test("without Brigade's portal settings, no portal opens, and the next call looks again", async () => {
+  const listed: Fake[][] = [
+    // Brigade's settings switched off: only the account's default (another product's) is active.
+    [{ id: 'bpc_default', is_default: true, metadata: {} }],
+    [
+      { id: 'bpc_default', is_default: true, metadata: {} },
+      { id: 'bpc_brigade', is_default: false, metadata: { brigade: 'portal' } },
+    ],
+  ]
+  let calls = 0
+  const list = stripe.billingPortal.configurations.list
+  stripe.billingPortal.configurations.list = (async () => ({ data: listed[calls++] })) as never
+  billing.forgetPortalConfiguration()
+  try {
+    await assert.rejects(billing.portalConfiguration(), /no active customer portal/)
+    // Set up again: found, then kept.
+    assert.equal(await billing.portalConfiguration(), 'bpc_brigade')
+    assert.equal(await billing.portalConfiguration(), 'bpc_brigade')
+    assert.equal(calls, 2)
+  } finally {
+    stripe.billingPortal.configurations.list = list
+    billing.forgetPortalConfiguration()
+  }
+})
+
 test('without a plan, no cloud computer', { skip }, async () => {
   assert.equal(await billing.cloudEntitled(ws.plans!), false)
   await assert.rejects(billing.requireCloudPlan(ws.plans!), (error: unknown) => {

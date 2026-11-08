@@ -168,6 +168,7 @@ export function statusAfter(current: SessionStatus, event: AgentEvent): SessionS
 /**
  * A thread moved to another of its starter's accounts, or paused because none
  * has usage left: remember when the old one resets, and open a ticket on pause.
+ * The ids come from the runner: only accounts of the thread's workspace are touched.
  */
 async function noteAccountSwitches(
   session: { id: string; organizationId: string; workspaceId: string },
@@ -179,11 +180,15 @@ async function noteAccountSwitches(
     if (event.reason === 'usage_limit') {
       const until = event.resetsAt ? new Date(event.resetsAt) : new Date(Date.now() + 60 * 60_000)
       await prisma.account.updateMany({
-        where: { id: event.fromAccountId },
+        where: { id: event.fromAccountId, workspaceId: session.workspaceId },
         data: { exhaustedUntil: until },
       })
     }
     if (event.toAccountId) {
+      const ours = await prisma.account.count({
+        where: { id: event.toAccountId, workspaceId: session.workspaceId },
+      })
+      if (!ours) continue
       await prisma.session.update({
         where: { id: session.id },
         data: { accountId: event.toAccountId },
