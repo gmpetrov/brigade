@@ -2,9 +2,9 @@
 // A library file's versions: who saved each (a person, or a teammate from a
 // thread), what changed in text files, and a way back to any of them.
 import { diffLines } from 'diff'
-import { Download, History, RotateCcw } from 'lucide-react'
+import { ChevronRight, Download, History, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { FilePreview } from '@/components/file-preview'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { api, useApi, type LibraryActor, type LibraryVersion } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
+import { groupVersions } from '@/lib/version-groups'
 
 const TEXT_TYPE = /^(text\/|application\/(json|yaml|xml))/
 /** Unchanged lines kept around each change. */
@@ -45,6 +46,12 @@ export function ActorName({ actor }: { actor: LibraryActor | null }) {
       )}
     </span>
   )
+}
+
+/** "57m ago" today; older saves keep their time, so a day of edits tells apart. */
+function savedAt(iso: string) {
+  if (Date.now() - new Date(iso).getTime() < 86_400_000) return timeAgo(iso)
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 async function textOf(url: string) {
@@ -132,6 +139,17 @@ function TextChanges({
   )
 }
 
+/** One line of the history: a single save, or a run of them folded together. */
+type Entry = {
+  key: string
+  /** The version the line stands for: the newest of its run. */
+  version: LibraryVersion
+  /** What its changes are measured from. */
+  previous?: LibraryVersion
+  /** Saves folded into the line, when more than one. */
+  count: number
+}
+
 export function FileHistory({
   file,
   onRestored,
@@ -145,20 +163,46 @@ export function FileHistory({
   useEffect(() => {
     void reload()
   }, [file.updatedAt, reload])
-  const [selected, setSelected] = useState<string>()
+  /** The line opened under itself: the first by default, none once closed. */
+  const [opened, setOpened] = useState<string | null>()
+  /** Runs of saves shown one by one. */
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  // Another file in the same panel starts from its own newest line.
+  const [shownFile, setShownFile] = useState(file.id)
+  if (shownFile !== file.id) {
+    setShownFile(file.id)
+    setOpened(undefined)
+    setUnfolded(new Set())
+    setError(undefined)
+  }
   const list = useMemo(() => versions.data ?? [], [versions.data])
-  const shown = list.find((v) => v.id === selected) ?? list[0]
-  const previous = shown ? list[list.indexOf(shown) + 1] : undefined
+  const groups = useMemo(() => groupVersions(list), [list])
   const name = file.path.slice(file.path.lastIndexOf('/') + 1)
+  const openKey = opened === undefined ? groups[0] && `g:${groups[0].versions[0].id}` : opened
+  const rows = useRef(new Map<string, HTMLElement>())
+  const clicked = useRef(false)
+  useLayoutEffect(() => {
+    // Lines above may have just closed: keep the one clicked in view.
+    if (!clicked.current || !openKey) return
+    clicked.current = false
+    rows.current.get(openKey)?.scrollIntoView({ block: 'nearest' })
+  }, [openKey])
+
+  function toggle(key: string) {
+    clicked.current = true
+    setError(undefined)
+    setOpened(openKey === key ? null : key)
+  }
 
   async function restore(version: LibraryVersion) {
     setBusy(true)
     setError(undefined)
     try {
       await api(`/library/${file.id}/versions/${version.id}/restore`, { body: {} })
-      setSelected(undefined)
+      setOpened(undefined)
+      setUnfolded(new Set())
       await versions.reload()
       await onRestored?.()
     } catch (e) {
@@ -173,71 +217,134 @@ export function FileHistory({
     return <p className="p-4 text-sm text-muted-foreground">Loading the history…</p>
   if (list.length === 0)
     return <p className="p-4 text-sm text-muted-foreground">No versions kept for this file.</p>
-  return (
-    <div className="flex flex-col">
-      <ol className="flex flex-col border-b" aria-label="Versions">
-        {list.map((v) => (
-          <li key={v.id}>
+
+  const line = (entry: Entry, nested: boolean, fold?: { open: boolean; toggle: () => void }) => {
+    const { key, version: v, previous, count } = entry
+    const open = key === openKey
+    return (
+      <li
+        key={key}
+        ref={(el) => {
+          if (el) rows.current.set(key, el)
+          else rows.current.delete(key)
+        }}
+        className={cn(open && 'bg-primary/5')}
+      >
+        <div className="flex items-start hover:bg-muted/60">
+          <button
+            type="button"
+            onClick={() => toggle(key)}
+            aria-expanded={open}
+            className={cn(
+              'flex min-w-0 flex-1 items-start gap-3 py-2.5 pr-2 text-left text-sm',
+              nested ? 'pl-11' : 'pl-4',
+            )}
+          >
+            <History aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-muted-foreground">
+                <ActorName actor={v.by} /> · {savedAt(v.updatedAt)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {size(v.size)}
+                {v.path !== file.path && ` · as ${v.path}`}
+              </span>
+            </span>
+            {v.current && <Badge variant="secondary">Current</Badge>}
+            {v.restoredFromId && <Badge variant="outline">Restored</Badge>}
+          </button>
+          {fold && (
             <button
               type="button"
-              onClick={() => setSelected(v.id)}
-              aria-current={v.id === shown?.id}
-              className={cn(
-                'flex w-full items-start gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/60',
-                v.id === shown?.id && 'bg-primary/5',
-              )}
+              onClick={fold.toggle}
+              aria-expanded={fold.open}
+              className="mt-2 mr-3 flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <History aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-muted-foreground">
-                  <ActorName actor={v.by} /> · {timeAgo(v.updatedAt)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {size(v.size)}
-                  {v.path !== file.path && ` · as ${v.path}`}
-                </span>
-              </span>
-              {v.current && <Badge variant="secondary">Current</Badge>}
-              {v.restoredFromId && <Badge variant="outline">Restored</Badge>}
+              {count} edits
+              <ChevronRight
+                aria-hidden
+                className={cn('size-3.5 transition-transform', fold.open && 'rotate-90')}
+              />
             </button>
-          </li>
-        ))}
-      </ol>
-      {shown && (
-        <div className="flex flex-col">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-            <span className="text-xs text-muted-foreground">
-              {previous ? 'Changes from the version before' : 'The first version kept'}
-            </span>
-            <div className="flex gap-2">
-              <Button asChild variant="outline" size="sm">
-                <a href={versionUrl(file.id, shown.id, true)}>
-                  <Download aria-hidden />
-                  Download
-                </a>
-              </Button>
-              {!shown.current && (
-                <Button size="sm" disabled={busy} onClick={() => void restore(shown)}>
-                  <RotateCcw aria-hidden />
-                  Restore this version
+          )}
+        </div>
+        {open && (
+          <div className="border-y bg-background">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+              <span className="text-xs text-muted-foreground">
+                {!previous
+                  ? count > 1
+                    ? `The first ${count} versions kept`
+                    : 'The first version kept'
+                  : count > 1
+                    ? `Changes in these ${count} edits`
+                    : 'Changes from the version before'}
+              </span>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <a href={versionUrl(file.id, v.id, true)}>
+                    <Download aria-hidden />
+                    Download
+                  </a>
                 </Button>
+                {!v.current && (
+                  <Button size="sm" disabled={busy} onClick={() => void restore(v)}>
+                    <RotateCcw aria-hidden />
+                    Restore this version
+                  </Button>
+                )}
+              </div>
+            </div>
+            {error && <p className="px-4 pt-2 text-sm text-destructive-text">{error}</p>}
+            <div className="max-h-[60vh] overflow-y-auto">
+              {TEXT_TYPE.test(v.contentType) ? (
+                <TextChanges fileId={file.id} version={v} previous={previous} />
+              ) : (
+                <FilePreview
+                  url={versionUrl(file.id, v.id)}
+                  previewUrl={`/library/${file.id}/preview?version=${v.id}`}
+                  name={name}
+                  contentType={v.contentType}
+                  download={versionUrl(file.id, v.id, true)}
+                />
               )}
             </div>
           </div>
-          {error && <p className="px-4 pt-2 text-sm text-destructive-text">{error}</p>}
-          {TEXT_TYPE.test(shown.contentType) ? (
-            <TextChanges fileId={file.id} version={shown} previous={previous} />
-          ) : (
-            <FilePreview
-              url={versionUrl(file.id, shown.id)}
-              previewUrl={`/library/${file.id}/preview?version=${shown.id}`}
-              name={name}
-              contentType={shown.contentType}
-              download={versionUrl(file.id, shown.id, true)}
-            />
-          )}
-        </div>
-      )}
-    </div>
+        )}
+      </li>
+    )
+  }
+
+  return (
+    <ol className="flex flex-col border-b" aria-label="Versions">
+      {groups.flatMap((group) => {
+        const head = group.versions[0]
+        const key = `g:${head.id}`
+        const count = group.versions.length
+        const folded = count > 1 && !unfolded.has(key)
+        const entry: Entry = { key, version: head, previous: group.before, count }
+        if (count === 1) return [line(entry, false)]
+        const fold = {
+          open: !folded,
+          toggle: () =>
+            setUnfolded((was) => {
+              const next = new Set(was)
+              if (next.has(key)) next.delete(key)
+              else next.add(key)
+              return next
+            }),
+        }
+        if (folded) return [line(entry, false, fold)]
+        return [
+          line(entry, false, fold),
+          ...group.versions.map((v, i) =>
+            line(
+              { key: v.id, version: v, previous: group.versions[i + 1] ?? group.before, count: 1 },
+              true,
+            ),
+          ),
+        ]
+      })}
+    </ol>
   )
 }
