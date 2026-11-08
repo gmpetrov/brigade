@@ -169,6 +169,14 @@ export function FileHistory({
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  // Another file in the same panel starts from its own newest line.
+  const [shownFile, setShownFile] = useState(file.id)
+  if (shownFile !== file.id) {
+    setShownFile(file.id)
+    setOpened(undefined)
+    setUnfolded(new Set())
+    setError(undefined)
+  }
   const list = useMemo(() => versions.data ?? [], [versions.data])
   const groups = useMemo(() => groupVersions(list), [list])
   const name = file.path.slice(file.path.lastIndexOf('/') + 1)
