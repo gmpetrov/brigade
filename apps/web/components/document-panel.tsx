@@ -30,6 +30,7 @@ import {
 import { useDocumentDiscussion } from '@/components/document-discussion'
 import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
+import { DocumentPath } from '@/components/document-path'
 import { FileHistory } from '@/components/library-history'
 import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
 import { editable, PanelExpandButton, SidePanel } from '@/components/side-panel'
@@ -66,6 +67,8 @@ type DocumentPanel = {
   changed: ReadonlySet<string>
   /** Shows it, in its tab: a new one after the tab in front. */
   open: (document: OpenDocument) => void
+  /** Shows it in place of the tab in front (or in its own tab, when it has one already). */
+  replace: (document: OpenDocument) => void
   /** Hides the panel; its tabs come back with the next document opened. */
   close: () => void
   /** Puts it away in a pill, what it shows kept; `restore` (or opening a document) brings it back. */
@@ -164,6 +167,20 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
     },
     [update, seen],
   )
+  const replace = useCallback(
+    (document: OpenDocument) => {
+      const key = keyOf(document.target)
+      seen(document.target)
+      update(({ tabs, active }) => {
+        const at = tabs.findIndex((t) => keyOf(t.target) === key)
+        if (at >= 0) return { tabs: tabs.with(at, document), active: key, minimized: false }
+        const front = tabs.findIndex((t) => keyOf(t.target) === active)
+        if (front < 0) return { tabs: [...tabs, document], active: key, minimized: false }
+        return { tabs: tabs.with(front, document), active: key, minimized: false }
+      })
+    },
+    [update, seen],
+  )
   const close = useCallback(
     () => update((s) => ({ ...s, active: null, minimized: false })),
     [update],
@@ -210,6 +227,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
       tabs: state.tabs,
       changed,
       open,
+      replace,
       close,
       minimize,
       restore,
@@ -224,6 +242,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
       state.tabs,
       changed,
       open,
+      replace,
       close,
       minimize,
       restore,
@@ -376,15 +395,22 @@ export function DocumentPanel() {
                 <strong className="truncate text-sm font-semibold">{current.title}</strong>
               )}
               {(current.subtitle || share) && (
-                <span className="truncate text-xs text-muted-foreground" title={current.subtitle}>
-                  {current.subtitle && (
-                    <span className={cn(current.target.kind === 'library' && 'font-mono')}>
-                      {current.subtitle}
+                <div className="flex min-w-0 items-center text-xs text-muted-foreground">
+                  {current.subtitle &&
+                    (target.kind === 'library' ? (
+                      <DocumentPath folder={current.subtitle} fileId={target.id} />
+                    ) : (
+                      <span className="truncate" title={current.subtitle}>
+                        {current.subtitle}
+                      </span>
+                    ))}
+                  {current.subtitle && share && (
+                    <span aria-hidden className="shrink-0 px-1">
+                      ·
                     </span>
                   )}
-                  {current.subtitle && share && ' · '}
-                  {share && PUBLIC_LINK}
-                </span>
+                  {share && <span className="shrink-0">{PUBLIC_LINK}</span>}
+                </div>
               )}
             </div>
             {discussion?.teammate && (
