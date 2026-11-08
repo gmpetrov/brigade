@@ -334,7 +334,7 @@ export function portalConfiguration() {
       limit: 100,
     })
     const id = data.find((configuration) => configuration.metadata?.brigade === 'portal')?.id
-    if (!id) throw new Error("Stripe has no active customer portal configuration for Brigade")
+    if (!id) throw new Error('Stripe has no active customer portal configuration for Brigade')
     return id
   })().catch((error: unknown) => {
     portal = undefined

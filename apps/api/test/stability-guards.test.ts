@@ -489,7 +489,14 @@ describe('against the database', { skip: !database && 'no database answers' }, (
         ({
           sessionId: session.id,
           seq,
-          event: { at, type: 'account.switched', fromAccountId, toAccountId, reason: 'usage_limit', resetsAt },
+          event: {
+            at,
+            type: 'account.switched',
+            fromAccountId,
+            toAccountId,
+            reason: 'usage_limit',
+            resetsAt,
+          },
         }) as unknown as SequencedEvent
       // Out of usage on the other workspace's account, moved onto it: neither is noted.
       assert.ok(
