@@ -120,6 +120,9 @@ Then, each step on its own, watching the alerts and the logs:
    the isolates, 200 requests/s on a 0.25 CU database and 400 on 4 CU. A read the isolates fail
    (5xx, or no answer) is answered by the Api object, as the runner bundle and Apps' catalogs
    always are.
+   Turned on with those six paths after that test (`wrangler.front.jsonc`), once the database
+   could scale past 0.25 CU: Hyperdrive keeps about 60 connections open to it, and at 0.25 CU
+   the test's database ran out of memory.
 
 What was checked: the API's tests on Node (592), with operations' arguments copied as between
 objects (`HUB_COPY=1`); and under `wrangler dev` (local workerd and PostgreSQL): a workspace
