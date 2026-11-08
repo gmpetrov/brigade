@@ -3,11 +3,12 @@
 // suggestions, auto-merge of their threads' pull requests (owners and admins, who may merge),
 // where their threads' previews and heavy commands run (members with the preview_machines
 // feature), their rules
-// and Chief's daily pass, and deleting their own account. Notifications have their own section;
+// and Chief's daily pass, and deleting their own account; at the foot, the version and build. Notifications have their own section;
 // the theme is picked in the member's menu, in the sidebar.
 import { Check } from 'lucide-react'
 import { CHIEF_RULES_MAX, type ChiefSettings, type SetChief } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
+import { BuildInfo } from '@/components/build-info'
 import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread, useThreadDraft } from '@/components/new-thread'
@@ -123,6 +124,8 @@ export default function PreferencesPage() {
       <ChiefSection />
 
       <DeleteAccount />
+
+      <BuildInfo />
     </div>
   )
 }

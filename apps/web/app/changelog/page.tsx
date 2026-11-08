@@ -31,7 +31,10 @@ export default function Changelog() {
               {RELEASES.map((r) => (
                 <li key={r.slug}>
                   <Link className={c('log-row')} href={`/changelog/${r.slug}`}>
-                    <time dateTime={r.slug}>{releaseDate(r.slug)}</time>
+                    <span className={c('log-when')}>
+                      <time dateTime={r.slug}>{releaseDate(r.slug)}</time>
+                      {r.version && <span className={c('log-ver')}>v{r.version}</span>}
+                    </span>
                     <span className={c('log-body')}>
                       <span className={c('log-title')}>{r.title}</span>
                       <span className={c('log-sum')}>{r.summary}</span>

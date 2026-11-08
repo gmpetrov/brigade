@@ -1,7 +1,10 @@
 // What shipped in Brigade, for /changelog and its RSS feed. Brigade deploys each merge to main,
 // so a release is a week of merged pull requests, named by the day it ends. Add a release at the
 // top of RELEASES; its slug is that day (YYYY-MM-DD) and the page's address (/changelog/<slug>).
-// Say only what the product does, as the landing page does, and link the pull requests.
+// From v0.4.0 each release carries the product's version, the root package.json's, whose minor
+// goes up in the same pull request (docs/versions.md); the four before it have none. Brigade.app
+// keeps its own version: a week it shipped, its section names it. Say only what the product does,
+// as the landing page does, never what is behind a feature flag, and link the pull requests.
 
 export type ChangelogItem = {
   title: string
@@ -11,18 +14,277 @@ export type ChangelogItem = {
 }
 
 export type ChangelogSection = {
-  heading: 'Highlights' | 'Improvements' | 'Security' | 'Fixes'
+  heading: 'Highlights' | 'Improvements' | 'Security' | 'Fixes' | 'Brigade.app'
   items: ChangelogItem[]
 }
 
 export type ChangelogRelease = {
   slug: string
+  /** The product's version, "0.4.0", from v0.4.0 on. */
+  version?: string
   title: string
   summary: string
   sections: ChangelogSection[]
 }
 
 export const RELEASES: ChangelogRelease[] = [
+  {
+    slug: '2026-11-08',
+    version: '0.4.0',
+    title: 'Asides, Today and a faster thread',
+    summary:
+      'Write to a teammate while it works and it answers on the side, without stopping. Home becomes Today, with your rules and a daily pass from Chief. Threads stream smoothly and show what you send at once, and library files can be shared with a link.',
+    sections: [
+      {
+        heading: 'Highlights',
+        items: [
+          {
+            title: 'Asides',
+            text: 'Write to a teammate while it works: it answers on the side without stopping its turn, and its answers sit together in one card above the Working line.',
+            prs: [646, 651, 661, 662, 678],
+          },
+          {
+            title: 'Today',
+            text: 'Home is now Today: a line that sums up the day, the routines that run today, and what needs you.',
+            prs: [621, 603],
+          },
+          {
+            title: 'Your rules and a daily pass',
+            text: 'Write your rules in Preferences, under Chief. Once a day, Chief goes through what waits on you and says on Today what it would do with each item. For now it only recommends.',
+            prs: [744, 768],
+          },
+          {
+            title: 'A faster thread',
+            text: 'Replies stream smoothly, a message shows the moment you send it, a new thread appears in the sidebar at once, and the Working line has a pebble whose eyes follow the step.',
+            prs: [698, 648, 717, 722, 701],
+          },
+          {
+            title: 'Share library files',
+            text: 'Share a document, a design or any library file with a public link.',
+            prs: [779],
+          },
+          {
+            title: 'Dictation',
+            text: 'Dictate a message in any message box, on Brigade Cloud.',
+            prs: [691],
+          },
+        ],
+      },
+      {
+        heading: 'Improvements',
+        items: [
+          {
+            title: 'Keyboard in the sidebar',
+            text: '⌥↑ and ⌥↓ walk the sidebar’s threads, and Enter folds or unfolds a row’s lists and sub-threads.',
+            prs: [715, 725, 728],
+          },
+          {
+            title: 'Mentions',
+            text: 'Type @ to mention any thread, and open a thread from its mention.',
+            prs: [730],
+          },
+          {
+            title: 'Routines and Playbooks',
+            text: 'Routines read as an agenda by next run, with each routine’s latest runs as dots. Playbooks have a page of their own.',
+            prs: [711, 614],
+          },
+          {
+            title: 'Board',
+            text: 'Filters as pills, each card’s next wake-up, and its project beside the teammate.',
+            prs: [612, 615, 669],
+          },
+          {
+            title: 'Inbox',
+            text: 'Filters move into the search box, mail reads as plain text with its HTML on demand, and a picker says who has a conversation.',
+            prs: [602, 630, 655],
+          },
+          {
+            title: 'New Apps',
+            text: 'Expo and RevenueCat are built in. RevenueCat connects by signing in.',
+            prs: [679, 667, 693],
+          },
+          {
+            title: 'Lists and the editor',
+            text: 'New workspaces start with a Getting started list, a file dropped on a line goes with it to its teammate, and the editor selects whole lines and drags them into toggles, as in Notion.',
+            prs: [689, 738, 638, 748],
+          },
+          {
+            title: 'Projects',
+            text: 'A project is one page with its lists and what runs on its own, and its settings have a setup checklist.',
+            prs: [600, 601],
+          },
+          {
+            title: 'Getting started',
+            text: 'Four quick questions during onboarding shape Chief’s first message.',
+            prs: [726],
+          },
+          {
+            title: 'Usage',
+            text: 'Share the period’s usage as an image.',
+            prs: [704],
+          },
+          {
+            title: 'Signed out',
+            text: 'When a turn fails because an AI account is signed out, sign in again from the thread.',
+            prs: [652, 656],
+          },
+          {
+            title: 'Tasks make way for lists',
+            text: 'The Tasks board is gone: lists and threads do its job. Child threads are called sub-threads, and teammates’ email addresses are part of Brigade Cloud.',
+            prs: [740, 644, 682],
+          },
+        ],
+      },
+      {
+        heading: 'Security',
+        items: [
+          {
+            title: 'Secrets and deletions',
+            text: 'Secrets are masked in a thread’s steps before they are stored, and deleting a workspace or an account asks for a code sent by email.',
+            prs: [685, 733],
+          },
+        ],
+      },
+      {
+        heading: 'Fixes',
+        items: [
+          {
+            title: 'Turns',
+            text: 'A turn tried again after its process stopped keeps its message, and a turn no longer stays open waiting on background work that isn’t running.',
+            prs: [599, 767],
+          },
+          {
+            title: 'Previews',
+            text: 'Previews keep running through runner updates, and one closed page no longer hangs a preview.',
+            prs: [762, 743],
+          },
+          {
+            title: 'Sessions',
+            text: 'The browser’s session is renewed with the session itself, so you stay signed in.',
+            prs: [710],
+          },
+        ],
+      },
+      {
+        heading: 'Brigade.app',
+        items: [
+          {
+            title: '0.3.4 to 0.3.11',
+            text: 'A New thread shortcut (⌘⇧1) and a menu with the actions on top, Esc closes the screenshot window, Check for updates says what it found, no Dock icon, and a Workspace submenu to switch the Mac between linked workspaces. Teammates can run a command on the Mac through Brigade Computer Use.',
+            prs: [623, 616, 607, 613, 695, 716, 636],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: '2026-11-01',
+    title: 'Members and roles, docs, and lists in the sidebar',
+    summary:
+      'Invite people from the dashboard and give each a role, Viewer included. Brigade’s docs are online. Lists fold their threads in the sidebar, and teammates’ pull requests can merge on their own once ready.',
+    sections: [
+      {
+        heading: 'Highlights',
+        items: [
+          {
+            title: 'Members and roles',
+            text: 'Invite people from Settings › Members, change a member’s role or remove them. A Viewer sees the workspace and changes nothing.',
+            prs: [553, 565, 564],
+          },
+          {
+            title: 'Docs',
+            text: 'Brigade’s documentation is online at brigade.lol/docs.',
+            prs: [501, 531],
+          },
+          {
+            title: 'Lists in the sidebar',
+            text: 'A list’s threads fold under one row, and a list can be pinned with its threads. Lists show one row each, grouped by project. What remains of an item becomes a line of its own, and a problem the work shows is added to the list.',
+            prs: [502, 505, 512, 519, 534],
+          },
+          {
+            title: 'Auto-merge',
+            text: 'Owners and admins can turn on Auto-merge in Preferences: a teammate’s pull request merges once it is ready. Off by default.',
+            prs: [541],
+          },
+          {
+            title: 'Board',
+            text: 'The Board shows what moves across lists, threads and routines.',
+            prs: [594],
+          },
+        ],
+      },
+      {
+        heading: 'Improvements',
+        items: [
+          {
+            title: 'Search',
+            text: 'Search finds names despite a typo and ranks every kind of result together.',
+            prs: [558],
+          },
+          {
+            title: 'Files and media',
+            text: 'Files up to 500 MB, audio attachments that play in the chat, library videos that play in the thread, and library images and designs shown under the message that mentions them.',
+            prs: [575, 507, 580],
+          },
+          {
+            title: 'Checklists',
+            text: 'Round boxes, done lines that fade, notes under their line, and dragged lines that land where the drop line shows.',
+            prs: [529, 546, 544, 560, 561],
+          },
+          {
+            title: 'Library',
+            text: 'A compact header with round New and Upload buttons, and a new file’s folder typed with suggestions.',
+            prs: [513, 514, 525],
+          },
+          {
+            title: 'Designs',
+            text: 'Drag and pinch the design canvas on touch screens, and keep a design’s other options after a pick. Comments on a design and picks in a preview are sent together in one message.',
+            prs: [510, 522, 589],
+          },
+          {
+            title: 'Inbox',
+            text: 'The Inbox shows what a teammate did with a conversation and how it ended.',
+            prs: [574, 582],
+          },
+          {
+            title: 'Apps',
+            text: 'Teammates see which Apps they could use, and ask for one.',
+            prs: [581],
+          },
+          {
+            title: 'Smaller touches',
+            text: 'Quicker tooltips, cut text that fades instead of ending in an ellipsis, and a Wake up button on a stopped computer.',
+            prs: [528, 572, 590],
+          },
+        ],
+      },
+      {
+        heading: 'Security',
+        items: [
+          {
+            title: 'Acting for the right person',
+            text: 'Teammates make and change only the schedules and triggers of the person their thread works for, and sub-agents can’t act for a thread.',
+            prs: [586, 585, 593],
+          },
+        ],
+      },
+      {
+        heading: 'Fixes',
+        items: [
+          {
+            title: 'Usage and search',
+            text: 'Usage counts each model response once, and searches made only of short words work again.',
+            prs: [567, 587],
+          },
+          {
+            title: 'Checkout',
+            text: 'Stripe Checkout shows Brigade’s name.',
+            prs: [550],
+          },
+        ],
+      },
+    ],
+  },
   {
     slug: '2026-10-29',
     title: 'Lists, cloud backups and a calmer sidebar',
@@ -400,6 +662,10 @@ export const RELEASES: ChangelogRelease[] = [
 ]
 
 export const findRelease = (slug: string) => RELEASES.find((r) => r.slug === slug)
+
+/** "v0.4.0: Asides, Today and a faster thread", or the title alone before v0.4.0. */
+export const releaseName = (r: ChangelogRelease) =>
+  r.version ? `v${r.version}: ${r.title}` : r.title
 
 /** "October 29, 2026", the same wherever the page is built. */
 export const releaseDate = (slug: string) =>

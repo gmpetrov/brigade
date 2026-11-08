@@ -1,6 +1,7 @@
 {
   "name": "brigade",
   "private": true,
+  "version": "0.4.0",
   "packageManager": "pnpm@10.34.6",
   "engines": {
     "node": ">=24"
