@@ -35,12 +35,16 @@ type Draft = {
   [T in AgentEvent['type']]: Omit<Extract<AgentEvent, { type: T }>, 'at'>
 }[AgentEvent['type']]
 
-export async function seedWorkspace(users: Users) {
+/** `sample`: another name for its organization (the load test seeds many: scripts/load). */
+export async function seedWorkspace(
+  users: Users,
+  sample: { name: string; slug: string } = { name: 'Acme', slug: SAMPLE_ORGANIZATION },
+) {
   // -------------------------------------------------------------------------
   // Organization, members and the workspace
   // -------------------------------------------------------------------------
   const organization = await prisma.organization.create({
-    data: { id: randomUUID(), name: 'Acme', slug: SAMPLE_ORGANIZATION, createdAt: days(30) },
+    data: { id: randomUUID(), name: sample.name, slug: sample.slug, createdAt: days(30) },
   })
   const organizationId = organization.id
   const member = async (userId: string, role: string) =>
@@ -52,7 +56,7 @@ export async function seedWorkspace(users: Users) {
   const carol = await member(users.carol.id, 'member')
 
   const workspace = await prisma.workspace.create({
-    data: { organizationId, name: 'Acme', createdAt: days(30) },
+    data: { organizationId, name: sample.name, createdAt: days(30) },
   })
   const workspaceId = workspace.id
   const scope = { organizationId, workspaceId }
@@ -65,7 +69,7 @@ export async function seedWorkspace(users: Users) {
     actor: asAda,
     action: 'workspace.created',
     target: { type: 'workspace', id: workspaceId },
-    data: { name: 'Acme' },
+    data: { name: sample.name },
   })
 
   // The workspace's cloud computer. No runner answers in a preview, so it shows stopped.

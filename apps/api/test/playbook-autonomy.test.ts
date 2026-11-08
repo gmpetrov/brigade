@@ -339,7 +339,7 @@ describe('a merge on its own goes only on the commit its checks passed on', () =
       fetch,
       callId: 'c1',
       keepFile: never,
-      readFile: never,
+      openFile: never,
       ...(opts.checkedSha ? { checkedSha: opts.checkedSha } : {}),
     }
     const run = connector.operations.github_merge_pull_request!.run(ctx as never, {

@@ -10,7 +10,7 @@
 import { randomUUID } from 'node:crypto'
 import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { readAttachment } from '../attachments.js'
+import { sentAttachment } from '../attachments.js'
 import { authorisedFetch } from '../connector-calls.js'
 import { sendComposed, type GmailCompose } from '../connectors/gmail.js'
 import type { ConnectorContext } from '../connectors/types.js'
@@ -304,16 +304,12 @@ async function sendOne(db: ScopedDb, scope: Scope, id: string) {
       fetch,
       callId: row.id,
       keepFile: () => Promise.reject(new Error('Sending keeps no file')),
-      readFile: async (fileId: string) => {
+      openFile: async (fileId: string) => {
         const file = await db.attachment.findFirst({
           where: { id: fileId, sessionId: row.sessionId, status: 'ready' },
         })
         if (!file) throw new Error(`a file it attaches (${fileId}) is gone`)
-        return {
-          name: file.name,
-          contentType: file.contentType,
-          bytes: await readAttachment(scope, file.id),
-        }
+        return sentAttachment(scope, file)
       },
     } as ConnectorContext
     const { firstResponseOf, ...asked } = held

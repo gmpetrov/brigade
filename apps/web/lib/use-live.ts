@@ -1,7 +1,7 @@
 'use client'
 import { ApiToBrowser, type BrowserToApi } from '@brigade/contracts'
 import { useEffect, useRef } from 'react'
-import { keepAlive, liveSocket } from './live-socket'
+import { keepAlive, liveSocket, reconnectDelay } from './live-socket'
 
 type Listener = (message: ApiToBrowser) => void
 
@@ -45,7 +45,7 @@ function open() {
     }
     socket.onclose = () => {
       dropped = true
-      if (!stopped) retry = setTimeout(connect, 2000)
+      if (!stopped) retry = setTimeout(connect, reconnectDelay(2000))
     }
   }
   connect()

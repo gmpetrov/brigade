@@ -16,7 +16,7 @@ function fake(routes: [string, (call: Call) => Response][]) {
           ? undefined
           : typeof init.body === 'string'
             ? init.body
-            : Buffer.from(init.body as Uint8Array).toString()
+            : await new Response(init.body).text()
       const call = {
         url,
         method: init?.method ?? 'GET',
@@ -37,10 +37,11 @@ function fake(routes: [string, (call: Call) => Response][]) {
         status: 'ready',
         path: `files/${f.name}`,
       }) as never,
-    readFile: async () => ({
+    openFile: async () => ({
       name: 'notes.md',
       contentType: 'text/plain',
-      bytes: new TextEncoder().encode('# Hello'),
+      size: 7,
+      open: async () => new Response('# Hello').body!,
     }),
   }
   return { ctx, calls }

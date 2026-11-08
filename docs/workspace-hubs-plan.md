@@ -114,6 +114,12 @@ Then, each step on its own, watching the alerts and the logs:
    `/api/threads,/api/inbox,/api/tasks,/api/projects`. Compare the `Server-Timing` of
    responses with `x-brigade-ran: isolate` with the Api object's, from far away (Los Angeles)
    and near, before adding more.
+   Measured on a copy of production on 2026-11-08 (`scripts/load/`): through the Api object,
+   dashboard reads hold about 50 requests/s whatever the database's size, then queue until they
+   time out; with `/api/threads,/api/inbox,/api/projects,/api/home,/api/me,/api/teammates` in
+   the isolates, 200 requests/s on a 0.25 CU database and 400 on 4 CU. A read the isolates fail
+   (5xx, or no answer) is answered by the Api object, as the runner bundle and Apps' catalogs
+   always are.
 
 What was checked: the API's tests on Node (592), with operations' arguments copied as between
 objects (`HUB_COPY=1`); and under `wrangler dev` (local workerd and PostgreSQL): a workspace

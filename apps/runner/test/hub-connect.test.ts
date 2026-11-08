@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws'
 const home = await mkdtemp(join(tmpdir(), 'brigade-hub-connect-'))
 process.env.BRIGADE_HOME = home
 const { Outbox } = await import('../src/outbox.js')
-const { Connection } = await import('../src/connection.js')
+const { Connection, RECONNECT_SPREAD_MS, reconnectDelay } = await import('../src/connection.js')
 
 test.after(() => rm(home, { recursive: true, force: true }))
 
@@ -54,6 +54,8 @@ test('the workspace the welcome names is kept, and named on the next connection'
     async () => ({}),
     () => false,
   )
+  // Back at once: how long it waits is the next test's.
+  connection.reconnectSpreadMs = 0
   connection.start()
   try {
     await until(() => taken.some((m) => m.type === 'welcome'), 'the welcome')
@@ -83,6 +85,23 @@ test('the workspace the welcome names is kept, and named on the next connection'
     for (const ws of sockets) ws.terminate()
     server.close()
   }
+})
+
+test('runners dropped together come back spread over seconds, not in the same one', () => {
+  // A deploy drops every runner at once: each waits its backoff and up to RECONNECT_SPREAD_MS more.
+  assert.equal(
+    reconnectDelay(1000, RECONNECT_SPREAD_MS, () => 0),
+    1000,
+  )
+  assert.equal(
+    reconnectDelay(1000, RECONNECT_SPREAD_MS, () => 0.999),
+    1000 + Math.round(0.999 * RECONNECT_SPREAD_MS),
+  )
+  const delays = Array.from({ length: 200 }, () => reconnectDelay(1000))
+  assert.ok(delays.every((d) => d >= 1000 && d <= 1000 + RECONNECT_SPREAD_MS))
+  // Spread: not one second for all of them.
+  const seconds = new Set(delays.map((d) => Math.floor(d / 1000)))
+  assert.ok(seconds.size >= 5, `came back over ${seconds.size} distinct seconds`)
 })
 
 test('a call the API refused, or that never went, says so; one cut by a lost connection does not', async () => {

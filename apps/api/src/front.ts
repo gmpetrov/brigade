@@ -56,9 +56,11 @@ const preflights = new Hono<{ Bindings: Env }>().options('/api/*', (c, next) =>
 /**
  * Reads that always run in brigade-api's own isolates, whatever STATELESS_ROUTES says: an App's
  * catalog can weigh megabytes (src/catalogs.ts), which the Api object, which runs the whole API,
- * must not hold.
+ * must not hold; the runner bundle, from the Worker's static assets, which every new computer
+ * and every runner updating after a deploy downloads, would hold the Api object's requests for
+ * as long as each download lasts.
  */
-const ALWAYS_STATELESS = '/runner/catalogs'
+const ALWAYS_STATELESS = '/runner/catalogs,/runner/bundle.tgz'
 
 /** Where each workspace's sockets went lately, in this isolate: so most go there at once. */
 const ROUTE_MS = 30_000
@@ -133,15 +135,19 @@ export default {
       return socket(request, { ...env, HUBS: env.HUBS })
     // Reads that need no socket run in brigade-api's own isolates, next to the database: not
     // through the one Api object (docs/workspace-hubs-plan.md, Phase 4).
-    const always = statelessRoute(request, ALWAYS_STATELESS)
-    if (env.API_WORKER && (always || statelessRoute(request, env.STATELESS_ROUTES))) {
+    if (
+      env.API_WORKER &&
+      (statelessRoute(request, ALWAYS_STATELESS) || statelessRoute(request, env.STATELESS_ROUTES))
+    ) {
       const forwarded = new Request(request)
       forwarded.headers.set(STATELESS_HEADER, '1')
-      if (!always) return env.API_WORKER.fetch(forwarded)
-      // Should the isolates fail it, the Api object answers: a runner without its Apps' tools
-      // is worse than the object holding a catalog for once.
+      // Should the isolates fail it, the Api object answers, as it did before these reads moved:
+      // a read is safe to run twice, and a runner without its Apps' tools, or a page that does
+      // not load, is worse than the object answering it for once.
       const answer = await env.API_WORKER.fetch(forwarded).catch(() => null)
-      return answer && answer.status < 500 ? answer : apiObject(env.API).fetch(request)
+      if (answer && answer.status < 500) return answer
+      await answer?.body?.cancel().catch(() => undefined)
+      return apiObject(env.API).fetch(request)
     }
     // Only the front says so.
     if (request.headers.has(STATELESS_HEADER)) {

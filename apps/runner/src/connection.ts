@@ -57,6 +57,18 @@ const HEARTBEAT_MS = 30_000
 /** An upgrade that has not answered in this long is given up and retried. */
 const HANDSHAKE_MS = 15_000
 /**
+ * Up to this much more is waited before connecting again, at random: a deploy of the API drops
+ * every runner's socket at once, and without it they would all come back in the same second.
+ */
+export const RECONNECT_SPREAD_MS = 9_000
+
+/** How long to wait before connecting again, after `backoff`: spread so runners do not come back together. */
+export const reconnectDelay = (
+  backoff: number,
+  spread = RECONNECT_SPREAD_MS,
+  random: () => number = Math.random,
+) => Math.round(backoff + random() * spread)
+/**
  * Events the API has not acknowledged in this long are sent again: one it failed to
  * store, or lost on the way, would otherwise wait for the next reconnect, and every
  * event of the thread after it with it.
@@ -115,6 +127,10 @@ export class Connection {
   private taking = new Set<string>()
   private ready = false
   private backoff = 1000
+  /** The most added at random to each wait before connecting again (tests make it 0). */
+  reconnectSpreadMs = RECONNECT_SPREAD_MS
+  /** The wait before connecting again, cleared when the connection is closed for good. */
+  private retry: ReturnType<typeof setTimeout> | undefined
   private closed = false
   /** When each thread's events were last sent. */
   private sentAt = new Map<string, number>()
@@ -279,10 +295,11 @@ export class Connection {
         )
         process.exit(1)
       }
+      const delay = reconnectDelay(this.backoff, this.reconnectSpreadMs)
       console.warn(
-        `disconnected (${code}${reason.length ? ` ${reason}` : ''}); retrying in ${this.backoff / 1000}s`,
+        `disconnected (${code}${reason.length ? ` ${reason}` : ''}); retrying in ${(delay / 1000).toFixed(1)}s`,
       )
-      setTimeout(() => this.start(), this.backoff)
+      this.retry = setTimeout(() => this.start(), delay)
       this.backoff = Math.min(this.backoff * 2, 10_000)
     })
     ws.on('error', (error) => console.warn(`connection error: ${error.message}`))
@@ -541,6 +558,7 @@ export class Connection {
 
   close() {
     this.closed = true
+    clearTimeout(this.retry)
     this.ws?.close()
   }
 }

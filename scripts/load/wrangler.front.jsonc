@@ -1,0 +1,22 @@
+{
+  // The load test copy's front (production's wrangler.front.jsonc), on workers.dev.
+  "name": "brigade-api-front-loadtest",
+  "main": "../../apps/api/src/front.ts",
+  "compatibility_date": "2026-10-01",
+  "durable_objects": {
+    "bindings": [
+      { "name": "API", "class_name": "Api", "script_name": "brigade-api-loadtest" },
+      { "name": "HUBS", "class_name": "WorkspaceHubObject", "script_name": "brigade-api-loadtest" },
+    ],
+  },
+  "services": [{ "binding": "API_WORKER", "service": "brigade-api-loadtest" }],
+  "vars": {
+    "WEB_URL": "https://loadtest.invalid",
+    // Set with `--var STATELESS_ROUTES:...` when deploying (scripts/load/deploy.sh).
+    "STATELESS_ROUTES": "",
+    "HUB_ROUTING": "hubs",
+  },
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+}

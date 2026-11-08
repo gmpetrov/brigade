@@ -7,7 +7,7 @@ import { test } from 'node:test'
 const { default: front } = await import('../src/front.js')
 const { STATELESS_HEADER } = await import('../src/hub/route.js')
 
-function env(isolates: (request: Request) => Promise<Response>) {
+function env(isolates: (request: Request) => Promise<Response>, routes = '') {
   const seen = { isolates: [] as Request[], object: [] as Request[] }
   const api = {
     idFromName: (name: string) => name,
@@ -26,7 +26,7 @@ function env(isolates: (request: Request) => Promise<Response>) {
   }
   return {
     seen,
-    env: { API: api, API_WORKER: worker, WEB_URL: 'https://app.test', STATELESS_ROUTES: '' },
+    env: { API: api, API_WORKER: worker, WEB_URL: 'https://app.test', STATELESS_ROUTES: routes },
   }
 }
 
@@ -55,6 +55,36 @@ test('the Api object answers when the isolates fail it', async () => {
   })
   const again = await call('https://api.test/runner/catalogs/c1?scope=read', throwing.env)
   assert.equal(await again.text(), 'object')
+})
+
+test('the runner bundle is served from the isolates, not the Api object', async () => {
+  const { seen, env: e } = env(async () => new Response('tgz'))
+  const res = await call('https://api.test/runner/bundle.tgz', e)
+  assert.equal(await res.text(), 'tgz')
+  assert.equal(seen.isolates.length, 1)
+  assert.equal(seen.object.length, 0)
+})
+
+test('a read of STATELESS_ROUTES the isolates fail is answered by the Api object', async () => {
+  const ok = env(async () => new Response('isolate'), '/api/threads,/api/inbox')
+  assert.equal(await (await call('https://api.test/api/threads?x=1', ok.env)).text(), 'isolate')
+  assert.equal(ok.seen.object.length, 0)
+  // Its own answer when it is the caller's mistake, not a failure.
+  const missing = env(async () => new Response('gone', { status: 404 }), '/api/threads')
+  const notFound = await call('https://api.test/api/threads/t1', missing.env)
+  assert.equal(notFound.status, 404)
+  assert.equal(missing.seen.object.length, 0)
+  const failing = env(async () => new Response('down', { status: 500 }), '/api/threads')
+  assert.equal(await (await call('https://api.test/api/threads', failing.env)).text(), 'object')
+  assert.equal(failing.seen.object.length, 1)
+  const throwing = env(async () => {
+    throw new Error('gone')
+  }, '/api/inbox')
+  assert.equal(await (await call('https://api.test/api/inbox', throwing.env)).text(), 'object')
+  // Writes never go to the isolates.
+  const writes = env(async () => new Response('isolate'), '/api/threads')
+  await call('https://api.test/api/threads', writes.env, { method: 'POST' })
+  assert.equal(writes.seen.isolates.length, 0)
 })
 
 test('other requests go where they went', async () => {

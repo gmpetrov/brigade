@@ -22,13 +22,14 @@ import {
   attachmentKey,
   deleteObject,
   directUploads,
-  getObject,
   objectSize,
   presignPut,
   putObject,
   putObjectStream,
+  streamObject,
   uploadTarget,
 } from './bucket.js'
+import type { SentFile } from './connectors/types.js'
 import type { ConnectorContext, ExternalFile, OpenedFile } from './connectors/types.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, extractText } from './library.js'
@@ -421,10 +422,24 @@ export async function sweepUploads() {
   if (rows.length > 0) console.log(`attachments: removed ${rows.length} unsent upload(s)`)
 }
 
-export async function readAttachment(scope: Scope, id: string) {
-  const bytes = await getObject(attachmentKey(scope, id))
-  if (!bytes) throw new HTTPException(404, { message: 'The file is missing from storage' })
-  return bytes
+/**
+ * A file sent with a call (an email's attachment, a Drive upload): its bytes stream from the
+ * bucket each time it is opened, never held whole by the API (src/stream-parts.ts).
+ */
+export function sentAttachment(
+  scope: Scope,
+  row: { id: string; name: string; contentType: string; size: number },
+): SentFile {
+  return {
+    name: row.name,
+    contentType: row.contentType,
+    size: row.size,
+    open: async () => {
+      const body = await streamObject(attachmentKey(scope, row.id))
+      if (!body) throw new HTTPException(404, { message: 'The file is missing from storage' })
+      return body
+    },
+  }
 }
 
 /** Delete a file and its bytes. Its threads lose it too. */

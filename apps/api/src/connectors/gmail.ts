@@ -12,6 +12,7 @@ import {
   type OpenedFile,
 } from './types.js'
 import { scoped } from '../db.js'
+import { sendParts, type BodyPart } from '../stream-parts.js'
 import { jsonBase64Field } from '../json-base64.js'
 import { checkGmail, holdGmail } from '../mail/gmail-outbound.js'
 import { UNDO_SECONDS, whenToReply } from '../mail/guidance.js'
@@ -252,12 +253,6 @@ const encodedWord = (text: string) =>
     ? text
     : `=?UTF-8?B?${Buffer.from(text).toString('base64')}?=`
 
-/** Base64 in lines of 76 characters, as MIME wants. */
-const wrapped = (bytes: Uint8Array) =>
-  Buffer.from(bytes)
-    .toString('base64')
-    .replace(/.{76}(?=.)/g, '$&\r\n')
-
 type SendAs = {
   sendAsEmail: string
   displayName?: string
@@ -333,42 +328,39 @@ async function compose(ctx: ConnectorContext, input: z.infer<typeof Compose>) {
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     'MIME-Version: 1.0',
   )
-  const files = await Promise.all((input.attachments ?? []).map((id) => ctx.readFile(id)))
-  const total = files.reduce((sum, f) => sum + f.bytes.byteLength, 0)
+  // What each file is, from its row: none is read before the total is known to be allowed.
+  const files = await Promise.all((input.attachments ?? []).map((id) => ctx.openFile(id)))
+  const total = files.reduce((sum, f) => sum + f.size, 0)
   if (total > ATTACHMENT_MAX) throw new ConnectorError('Attachments can be up to 25 MB in all')
   const text = ['Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: 8bit']
-  let message: string
-  if (files.length === 0) {
-    message = `${[...headers, ...text].join('\r\n')}\r\n\r\n${input.body}`
-  } else {
-    const boundary = `brigade-${randomUUID()}`
-    const parts = [
-      `${text.join('\r\n')}\r\n\r\n${input.body}`,
-      ...files.map((f) =>
+  if (files.length === 0)
+    return { message: [`${[...headers, ...text].join('\r\n')}\r\n\r\n${input.body}`], threadId }
+  // The message as parts: its text, and each file as base64 that streams from the bucket as
+  // the message goes (src/stream-parts.ts), never held whole.
+  const boundary = `brigade-${randomUUID()}`
+  const message: BodyPart[] = [
+    [...headers, `Content-Type: multipart/mixed; boundary="${boundary}"`, '', ''].join('\r\n'),
+    `--${boundary}\r\n${text.join('\r\n')}\r\n\r\n${input.body}`,
+  ]
+  for (const f of files)
+    message.push(
+      `\r\n--${boundary}\r\n` +
         [
           `Content-Type: ${f.contentType}; name="${encodedWord(f.name)}"`,
           `Content-Disposition: attachment; filename="${encodedWord(f.name)}"; filename*=UTF-8''${encodeURIComponent(f.name)}`,
           'Content-Transfer-Encoding: base64',
           '',
-          wrapped(f.bytes),
+          '',
         ].join('\r\n'),
-      ),
-    ]
-    message = [
-      ...headers,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      '',
-      ...parts.map((p) => `--${boundary}\r\n${p}`),
-      `--${boundary}--`,
-      '',
-    ].join('\r\n')
-  }
-  return { message, threadId, attachments: files.length }
+      { size: f.size, open: f.open, base64: true },
+    )
+  message.push(`\r\n--${boundary}--\r\n`)
+  return { message, threadId }
 }
 
 /**
  * Send or draft a composed message. Without attachments as JSON; with them
- * through the upload endpoint, as message/rfc822 beside its metadata.
+ * through the upload endpoint, as message/rfc822 beside its metadata, streamed.
  */
 async function deliver(
   ctx: ConnectorContext,
@@ -377,24 +369,23 @@ async function deliver(
 ) {
   const thread = composed.threadId ? { threadId: composed.threadId } : {}
   const draft = path === '/drafts'
-  if (composed.attachments === 0) {
-    const message = { raw: Buffer.from(composed.message).toString('base64url'), ...thread }
+  const [only] = composed.message
+  if (composed.message.length === 1 && typeof only === 'string') {
+    const message = { raw: Buffer.from(only).toString('base64url'), ...thread }
     return post(ctx, path, draft ? { message } : message)
   }
   const boundary = `brigade-${randomUUID()}`
-  const body = Buffer.concat([
-    Buffer.from(
+  return sendParts(
+    ctx.fetch,
+    `${UPLOAD}${path}?uploadType=multipart`,
+    { method: 'POST', headers: { 'content-type': `multipart/related; boundary=${boundary}` } },
+    [
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(draft ? { message: thread } : thread)}\r\n` +
         `--${boundary}\r\nContent-Type: message/rfc822\r\n\r\n`,
-    ),
-    Buffer.from(composed.message),
-    Buffer.from(`\r\n--${boundary}--`),
-  ])
-  return ctx.fetch(`${UPLOAD}${path}?uploadType=multipart`, {
-    method: 'POST',
-    headers: { 'content-type': `multipart/related; boundary=${boundary}` },
-    body,
-  })
+      ...composed.message,
+      `\r\n--${boundary}--`,
+    ],
+  )
 }
 
 const post = (ctx: ConnectorContext, path: string, body: unknown) =>
