@@ -44,9 +44,9 @@ for boat's own stops, `destroyed`).
     meanwhile).
     Every write is conditional on the row as it was read, and nothing begun after the list was
     read is judged from it.
-    When boat's list fails in a way only waiting mends (a 5xx, a 429, no answer before its
-    deadline), that minute's check is skipped with a warning and the next one settles everything;
-    any other failure of the list (a 4xx: a key refused) fails the job, reported with boat's status.
+  - when boat's list fails in a way only waiting mends (a 5xx, a 429, no answer before its
+    deadline): nothing, with a warning, and the next minute's check settles everything. Any other
+    failure of the list (a 4xx: a key refused) fails the job, reported with boat's status.
 - Recording never holds a VM back: a failed write is logged (`vm-runs:record`) and the minute's
   check settles the run.
 
