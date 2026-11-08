@@ -418,12 +418,25 @@ const AskContext = createContext<DocumentAsk | undefined>(undefined)
 function AskToolbar() {
   const ask = useContext(AskContext)
   return (
-    <FormattingToolbar>
-      {ask?.onHandOff && <HandOffButton key="hand-off" ask={ask} />}
-      {ask && <AskButton key="ask" ask={ask} />}
-      {getFormattingToolbarItems()}
-    </FormattingToolbar>
+    <div className="contents" onMouseDown={keepEditorFocus}>
+      <FormattingToolbar>
+        {ask?.onHandOff && <HandOffButton key="hand-off" ask={ask} />}
+        {ask && <AskButton key="ask" ask={ask} />}
+        {getFormattingToolbarItems()}
+      </FormattingToolbar>
+    </div>
   )
+}
+
+/**
+ * A press on the toolbar leaves the focus in the editor. Its blur would fold the checklist
+ * line the selection is in (document-checklist): the page moved under the pointer, the
+ * toolbar with it, and the click (Hand to, Ask, Bold…) landed beside its button. Fields in
+ * the toolbar's popovers (a link's address) still take the focus.
+ */
+function keepEditorFocus(event: React.MouseEvent) {
+  const target = event.target as HTMLElement
+  if (!target.closest('input, textarea, select, [contenteditable="true"]')) event.preventDefault()
 }
 
 /** First in the toolbar over selected text: the passage, quoted, to a teammate's reply box. */
