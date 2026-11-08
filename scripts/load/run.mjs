@@ -33,6 +33,8 @@ class Stats {
     this.ms = []
     this.status = {}
     this.errors = {}
+    // Where each answer ran: brigade-api's isolates (x-brigade-ran), or the Api object.
+    this.ran = {}
   }
   add(ms, status) {
     this.ms.push(ms)
@@ -58,6 +60,8 @@ class Stats {
       max: s.at(-1) ?? null,
       status: this.status,
       errors: this.errors,
+      ran: this.ran,
+      ...(this.samples ? { samples: this.samples } : {}),
       failedPct: total ? Math.round(((bad + total - s.length) / total) * 1000) / 10 : 0,
     }
   }
@@ -70,8 +74,15 @@ async function timed(stats, url, init) {
   const start = performance.now()
   try {
     const response = await fetch(url, { ...init, signal: AbortSignal.timeout(30_000) })
-    await response.arrayBuffer()
+    const body = await response.text()
     stats.add(performance.now() - start, response.status)
+    if (response.status >= 500) {
+      stats.samples ??= {}
+      const key = `${response.status} ${new URL(url).pathname.replace(/[a-z0-9-]{20,}/g, ':id')} ${body.slice(0, 160)}`
+      stats.samples[key] = (stats.samples[key] ?? 0) + 1
+    }
+    const ran = response.headers.get('x-brigade-ran') ?? 'object'
+    stats.ran[ran] = (stats.ran[ran] ?? 0) + 1
     return response
   } catch (error) {
     stats.fail(error)
@@ -115,6 +126,9 @@ async function openLoop(rps, seconds, stats, byPath) {
           s.ms.push(...one.ms)
           for (const [k, v] of Object.entries(one.status)) s.status[k] = (s.status[k] ?? 0) + v
           for (const [k, v] of Object.entries(one.errors)) s.errors[k] = (s.errors[k] ?? 0) + v
+          for (const [k, v] of Object.entries(one.ran)) s.ran[k] = (s.ran[k] ?? 0) + v
+          for (const [k, v] of Object.entries(one.samples ?? {}))
+            (s.samples ??= {})[k] = (s.samples[k] ?? 0) + v
         }
       })
       pending.add(p)
@@ -191,19 +205,30 @@ function dashboardSocket(member, thread, counters, onOpen) {
     handshakeTimeout: 15_000,
   })
   const started = performance.now()
+  let openedAt = Infinity
   ws.on('open', () => {
+    openedAt = Date.now()
     counters.dashboardConnect.add(performance.now() - started, 'open')
-    ws.send(
-      JSON.stringify({ type: 'subscribe', sessionId: thread.sessionId, afterSeq: thread.lastSeq }),
-    )
+    // From the last event this dashboard saw, as use-thread-events.ts asks again.
+    const afterSeq = member.seen ?? thread.lastSeq
+    ws.send(JSON.stringify({ type: 'subscribe', sessionId: thread.sessionId, afterSeq }))
+    // Back after a drop, its lists fetch again (use-live.ts reconnects): what a storm costs.
+    if (member.opened)
+      for (const path of ['/api/threads', '/api/inbox', '/api/home'])
+        void timed(counters.refetch, API + path, { headers: { cookie: member.cookie } })
+    member.opened = true
     onOpen?.(ws)
   })
   ws.on('message', (raw) => {
     const message = JSON.parse(String(raw))
     if (message.type !== 'events') return
     for (const e of message.events) {
+      member.seen = Math.max(member.seen ?? 0, e.seq)
       const sent = /^load:(\d+(?:\.\d+)?)$/.exec(e.event?.text ?? '')
-      if (sent) counters.delivery.add(Date.now() - Number(sent[1]), 'event')
+      if (!sent) continue
+      // Sent while this socket was down: caught up on, not live.
+      if (Number(sent[1]) < openedAt) counters.caughtUp++
+      else counters.delivery.add(Date.now() - Number(sent[1]), 'event')
     }
   })
   return ws
@@ -220,6 +245,8 @@ async function sockets() {
     dashboardConnect: new Stats(),
     delivery: new Stats(),
     acks: 0,
+    caughtUp: 0,
+    refetch: new Stats(),
     closes: {},
     errors: {},
     reconnects: 0,
@@ -297,8 +324,10 @@ async function sockets() {
         }),
       delay,
     )
-    for (const member of workspace.members.slice(0, dashboards))
-      keep(() => dashboardSocket({ ...member, workspace }, thread, counters), dashDelay)
+    for (const member of workspace.members.slice(0, dashboards)) {
+      const dashboard = { ...member, workspace }
+      keep(() => dashboardSocket(dashboard, thread, counters), dashDelay)
+    }
   }
   log(`sockets: ${every.length} open for ${seconds}s`)
   if (stormAt) {
@@ -323,6 +352,8 @@ async function sockets() {
     dashboardConnect: counters.dashboardConnect.summary(),
     delivery: counters.delivery.summary(),
     acks: counters.acks,
+    caughtUp: counters.caughtUp,
+    refetchAfterReconnect: counters.refetch.summary(),
     closes: counters.closes,
     errors: counters.errors,
     reconnects: counters.reconnects,
@@ -444,7 +475,7 @@ async function files() {
     const many = new Stats()
     await Promise.all(
       Array.from({ length: 20 }, () =>
-        download(pick(members), `/api/library/${mid.id}/content?download`, many),
+        download(member, `/api/library/${mid.id}/content?download`, many),
       ),
     )
     report.parallelDownloads = many.summary()
