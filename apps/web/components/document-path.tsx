@@ -11,6 +11,7 @@ import {
   File,
   FileText,
   Folder,
+  House,
   Palette,
   Search,
 } from 'lucide-react'
@@ -30,7 +31,10 @@ import { folderMatches, makeRoom, pathFolders, type FolderMenuEntry } from '@/li
 import { isMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
-/** `folder`: where the file is, e.g. "Projects/Brigade/decisions"; `fileId`: the file. */
+/**
+ * `folder`: where the file is, e.g. "Projects/Brigade/decisions", '' at the top of the library;
+ * `fileId`: the file. The top of the library leads, as a house, so a file there has a path too.
+ */
 export function DocumentPath({ folder, fileId }: { folder: string; fileId: string }) {
   const row = useRef<HTMLElement>(null)
   // A long path keeps its end in view: the folder the file is in.
@@ -44,9 +48,10 @@ export function DocumentPath({ folder, fileId }: { folder: string; fileId: strin
       aria-label="File location"
       className="-ml-1 flex min-w-0 items-center overflow-x-auto font-mono text-xs text-muted-foreground [scrollbar-width:none]"
     >
-      {folders.map((f, i) => (
+      <FolderMenu folder="" name="Library" fileId={fileId} />
+      {folders.map((f) => (
         <span key={f.path} className="flex shrink-0 items-center">
-          {i > 0 && <span aria-hidden>/</span>}
+          <span aria-hidden>/</span>
           <FolderMenu folder={f.path} name={f.name} fileId={fileId} />
         </span>
       ))}
@@ -59,10 +64,10 @@ function FolderMenu({ folder, name, fileId }: { folder: string; name: string; fi
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
-        className="rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
+        className="flex shrink-0 items-center rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
         aria-label={`Files in ${name}`}
       >
-        {name}
+        {folder ? name : <House aria-hidden className="size-3.5" />}
       </DropdownMenuTrigger>
       {open && <FolderMenuContent folder={folder} fileId={fileId} onDone={() => setOpen(false)} />}
     </DropdownMenu>
@@ -159,7 +164,7 @@ function FolderMenuContent({
     }
   }
 
-  const inside = at !== folder ? at.slice(folder.length + 1) : undefined
+  const inside = at === folder ? undefined : folder ? at.slice(folder.length + 1) : at
   const upTo = at.includes('/') ? at.slice(0, at.lastIndexOf('/')) : ''
   return (
     <DropdownMenuContent
@@ -174,7 +179,7 @@ function FolderMenuContent({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onInputKey}
-          placeholder={`Filter ${nameOf(inside ?? folder)}`}
+          placeholder={`Filter ${at ? nameOf(at) : 'Library'}`}
           aria-label="Filter files"
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
@@ -218,7 +223,7 @@ function FolderMenuContent({
       <DropdownMenuItem
         onSelect={() => {
           onDone()
-          toLibrary(`/app/library?folder=${encodeURIComponent(at)}`)
+          toLibrary(at ? `/app/library?folder=${encodeURIComponent(at)}` : '/app/library')
         }}
       >
         <ArrowUpRight aria-hidden />
