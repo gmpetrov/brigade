@@ -152,6 +152,29 @@ case "\${1:-}" in
       *) fail "bad clipboard command" ;;
     esac
     ;;
+  egress-counts) # what the egress limits stopped since they were last set (brigade-egress)
+    [ -x /usr/local/sbin/brigade-egress ] || exit 0
+    exec /usr/local/sbin/brigade-egress counts
+    ;;
+  stop-process) # <user> <pid>: a miner the runner found (abuse.ts), killed. Only a process of
+    # the teammate's own uid or of its subordinate ones (its rootless containers' users).
+    user_ok "$2"
+    echo "$3" | grep -Eq '^[0-9]{1,10}$' || fail "bad pid"
+    PU=$(awk '/^Uid:/ { print $2 }' "/proc/$3/status" 2>/dev/null) || fail "no such process"
+    [ -n "$PU" ] || fail "no such process"
+    OK=0
+    [ "$PU" = "$(id -u "$2")" ] && OK=1
+    if [ $OK = 0 ]; then
+      R=$(grep "^$2:" /etc/subuid | head -1 | cut -d: -f2,3)
+      if [ -n "$R" ]; then
+        S=\${R%%:*}
+        N=\${R#*:}
+        [ "$PU" -ge "$S" ] && [ "$PU" -lt $((S + N)) ] && OK=1
+      fi
+    fi
+    [ $OK = 1 ] || fail "not $2's"
+    kill -KILL "$3"
+    ;;
   prune-system-docker) # the computer's own Docker, beside the teammates' rootless ones: images,
     # stopped containers, networks and build cache nothing uses, when the disk fills. Never volumes.
     command -v docker >/dev/null && systemctl is-active --quiet docker || exit 0
@@ -585,6 +608,85 @@ esac
 `
 
 /**
+ * Root script for what teammates may send out of a cloud computer (docs/abuse.md): no mail
+ * straight to mail servers (port 25), no cloud metadata (169.254.0.0/16), no bursts of new
+ * connections (a scan), no mining pool's protocol (stratum, XMRig's login). It covers
+ * teammates' own processes on the host (their rootless Docker included: its network is a
+ * process of theirs) and their threads' namespaces (traffic out of a btn interface), never
+ * the runner's, root's or the provider's. In the mangle table, so the filter rules of the
+ * thread helper and Docker neither reorder nor flush it.
+ *
+ * `apply` at each boot (brigade-egress.service: iptables rules do not survive one) and with
+ * each setup; `counts` prints "<rule> <packets>" for each kind it stopped since then, which
+ * the runner reads through the teammate helper (egress-counts) and reports (abuse.ts).
+ */
+export const EGRESS_SCRIPT = `#!/bin/sh
+# Brigade's egress limits for teammates. Run as root.
+set -eu
+CHAIN=BRIGADE-EGRESS
+HEAD=BRIGADE-EGRESS-HEAD
+GROUP=brigade-teammates
+# New connections a source may open each second, once its burst is spent: a scan opens
+# thousands; an install, a build or a browser rarely tens. Each thread's namespace is a source
+# of its own; teammates' processes on the host share the host's address.
+RATE=100/sec
+BURST=1000
+# What a mining pool's client sends first, in the clear: stratum's methods, XMRig's login.
+MINING='mining.subscribe mining.authorize mining.submit "agent":"XMRig "rx/0"'
+
+# <iptables|ip6tables> <family>: the chains filled again, hooked once.
+rules() {
+  T=$1
+  $T -t mangle -N $CHAIN 2>/dev/null || $T -t mangle -F $CHAIN
+  $T -t mangle -N $HEAD 2>/dev/null || $T -t mangle -F $HEAD
+  $T -t mangle -A $CHAIN -p tcp --dport 25 -m conntrack --ctstate NEW -m comment --comment smtp -j DROP
+  if [ "$2" = 4 ]; then
+    $T -t mangle -A $CHAIN -d 169.254.0.0/16 -m comment --comment metadata -j DROP
+  fi
+  $T -t mangle -A $CHAIN -m conntrack --ctstate NEW -m hashlimit --hashlimit-name "brigade-new$2" \\
+    --hashlimit-mode srcip --hashlimit-above $RATE --hashlimit-burst $BURST \\
+    -m comment --comment scan -j DROP
+  # Only a connection's first bytes are read: its handshake, not what it downloads. Without
+  # connection accounting or string matching in the kernel, no mining rule.
+  if $T -t mangle -A $CHAIN -p tcp -m conntrack --ctstate ESTABLISHED -m connbytes \\
+    --connbytes 0:4096 --connbytes-dir original --connbytes-mode bytes -j $HEAD 2>/dev/null; then
+    for S in $MINING; do
+      $T -t mangle -A $HEAD -m string --algo bm --string "$S" -m comment --comment mining -j DROP ||
+        echo "brigade-egress: no mining rule for $S ($T)" >&2
+    done
+  else
+    echo "brigade-egress: no mining rules ($T)" >&2
+  fi
+  $T -t mangle -C OUTPUT ! -o lo -m owner --gid-owner $GROUP --suppl-groups -j $CHAIN 2>/dev/null ||
+    $T -t mangle -A OUTPUT ! -o lo -m owner --gid-owner $GROUP --suppl-groups -j $CHAIN
+  $T -t mangle -C FORWARD -i 'btn+' -j $CHAIN 2>/dev/null ||
+    $T -t mangle -A FORWARD -i 'btn+' -j $CHAIN
+}
+
+case "\${1:-}" in
+  apply)
+    getent group $GROUP >/dev/null || groupadd $GROUP
+    # connbytes counts bytes only with conntrack's accounting on.
+    modprobe nf_conntrack 2>/dev/null || true
+    sysctl -qw net.netfilter.nf_conntrack_acct=1 2>/dev/null || true
+    rules iptables 4
+    if command -v ip6tables >/dev/null && ip6tables -t mangle -nL >/dev/null 2>&1; then
+      rules ip6tables 6
+    fi
+    ;;
+  counts)
+    for T in iptables ip6tables; do
+      command -v $T >/dev/null || continue
+      $T -t mangle -nvxL $CHAIN 2>/dev/null || true
+      $T -t mangle -nvxL $HEAD 2>/dev/null || true
+    done | awk '{ for (i = 1; i < NF; i++) if ($i == "/*") { n[$(i + 1)] += $1 } }
+      END { for (k in n) print k, n[k] }' | sort
+    ;;
+  *) echo "usage: brigade-egress apply|counts" >&2; exit 2 ;;
+esac
+`
+
+/**
  * Brigade's wallpaper for the cloud computers' desktop, on the public media bucket (R2
  * brigade-media, media.brigade.lol), not in the repository. A new one goes at a new key, with
  * its SHA-256 here: the computers check it before using it.
@@ -841,6 +943,28 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl enable brigade-swap.service 2>/dev/null
 sudo systemctl restart brigade-swap.service
+# What teammates may send out (EGRESS_SCRIPT): set at each boot, before the runner starts their
+# commands. A kernel missing a match leaves that rule out; a failure leaves the setup going.
+sudo tee /usr/local/sbin/brigade-egress >/dev/null <<'EGRESS'
+${EGRESS_SCRIPT}EGRESS
+sudo chmod 755 /usr/local/sbin/brigade-egress
+sudo tee /etc/systemd/system/brigade-egress.service >/dev/null <<'UNIT'
+[Unit]
+Description=Brigade's limits on what teammates send out
+After=network-pre.target
+Before=brigade-runner.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/brigade-egress apply
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable brigade-egress.service 2>/dev/null
+sudo systemctl restart brigade-egress.service || echo "brigade-egress did not apply (journalctl -u brigade-egress)"
 ${DESKTOP_LOOK}`
 
 /** Identifies the current setup; the runner reports the one last applied. */

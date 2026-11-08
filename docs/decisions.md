@@ -75,6 +75,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   Sign-in requests are rate-limited per visitor (`cf-connecting-ip`, counted in the `RateLimit` table), and with
   `TURNSTILE_SECRET_KEY` (API) and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (dashboard) a code is mailed only after
   Cloudflare Turnstile's check.
+- **Teammates' traffic out of a cloud computer is limited, and abuse goes to operators, not members** (docs/abuse.md):
+  no port 25, no cloud metadata, no bursts of new connections, no mining pool's protocol, set in the kernel by
+  root at each boot; miners are killed on sight. Members are told nothing: an operator decides.
 - **The runner ships its own pinned pnpm** (10.x), because the Claude Code adapter installs its bridge with
   `pnpm install --frozen-lockfile` and older global pnpm versions reject its lockfile.
 - **Threads run the Claude Code and Codex each harness bridge installs**, not the `claude` or `codex` on the

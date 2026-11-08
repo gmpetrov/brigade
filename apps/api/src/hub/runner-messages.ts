@@ -23,6 +23,7 @@ import { handleConnectorCall } from '../connector-calls.js'
 import { handleCredentialRequest } from '../credentials.js'
 import { prisma, type Prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
+import { noteAbuse } from '../computer-abuse.js'
 import { noteDisk } from '../computer-disk.js'
 import { keepFilesApart } from '../event-files.js'
 import { countEvents } from '../event-volume.js'
@@ -141,6 +142,11 @@ async function handle(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
   if (message.type === 'computer.restored')
     return onRestored(runner, message).catch((error) =>
       console.error(`restore report from ${runner.computerId} failed`, error),
+    )
+
+  if (message.type === 'abuse')
+    return noteAbuse(runner, message).catch((error) =>
+      console.error(`abuse report from ${runner.computerId} failed`, error),
     )
 
   if (message.type === 'disk')
