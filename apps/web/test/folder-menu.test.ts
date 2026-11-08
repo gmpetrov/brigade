@@ -5,6 +5,7 @@ import {
   FOLDER_MENU_MATCHES,
   folderEntries,
   folderMatches,
+  makeRoom,
   opensInPanel,
   pathFolders,
 } from '../lib/folder-menu'
@@ -117,4 +118,13 @@ test("a path's folders, from the top", () => {
     { name: 'decisions', path: 'Projects/Brigade/decisions' },
   ])
   assert.deepEqual(pathFolders(''), [])
+})
+
+test('going to the library, the panel steps aside where it would cover the page', () => {
+  // Below wide screens it covers the page (a phone, a tablet): it waits in its pill.
+  assert.equal(makeRoom(false, false), 'minimize')
+  assert.equal(makeRoom(false, true), 'minimize')
+  // On a wide screen it sits beside the page, unless laid over the whole window.
+  assert.equal(makeRoom(true, true), 'unexpand')
+  assert.equal(makeRoom(true, false), 'none')
 })

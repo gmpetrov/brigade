@@ -24,8 +24,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useLeaveFull, usePanelFull } from '@/components/side-panel'
 import { api } from '@/lib/api'
-import { folderMatches, pathFolders, type FolderMenuEntry } from '@/lib/folder-menu'
+import { folderMatches, makeRoom, pathFolders, type FolderMenuEntry } from '@/lib/folder-menu'
 import { isMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
@@ -81,6 +82,8 @@ function FolderMenuContent({
 }) {
   const router = useRouter()
   const documents = useDocumentPanel()
+  const full = usePanelFull()
+  const leaveFull = useLeaveFull()
   const [files, setFiles] = useState<LibraryFile[]>()
   const [failed, setFailed] = useState(false)
   // The folder shown: this one, or one inside it gone into from the menu.
@@ -117,12 +120,20 @@ function FolderMenuContent({
     }
     onDone()
     if (entry.kind === 'design')
-      return router.push(`/app/library?design=${encodeURIComponent(entry.path)}`)
-    if (!entry.panel) return router.push(`/app/library?file=${entry.file.id}`)
+      return toLibrary(`/app/library?design=${encodeURIComponent(entry.path)}`)
+    if (!entry.panel) return toLibrary(`/app/library?file=${entry.file.id}`)
     if (entry.file.id === fileId) return
     const document = libraryDocument(entry.file)
     if (newTab) documents.open(document)
     else documents.replace(document)
+  }
+
+  // The library page shows: the panel steps aside where it would cover it.
+  function toLibrary(href: string) {
+    const room = makeRoom(window.matchMedia('(min-width: 1280px)').matches, full)
+    if (room === 'minimize') documents.minimize()
+    else if (room === 'unexpand') leaveFull()
+    router.push(href)
   }
 
   function onInputKey(e: KeyboardEvent<HTMLInputElement>) {
@@ -207,7 +218,7 @@ function FolderMenuContent({
       <DropdownMenuItem
         onSelect={() => {
           onDone()
-          router.push(`/app/library?folder=${encodeURIComponent(at)}`)
+          toLibrary(`/app/library?folder=${encodeURIComponent(at)}`)
         }}
       >
         <ArrowUpRight aria-hidden />

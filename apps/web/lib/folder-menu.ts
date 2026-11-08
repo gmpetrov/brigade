@@ -80,3 +80,15 @@ export function pathFolders(folder: string) {
   const parts = folder.split('/').filter(Boolean)
   return parts.map((name, i) => ({ name, path: parts.slice(0, i + 1).join('/') }))
 }
+
+/**
+ * What the document panel does when its path's menu goes to the library page, so that page
+ * shows: on a wide screen it stays beside it, or goes back there when laid over the window
+ * (`unexpand`); below that it covers the page, so it waits in its pill (`minimize`). Going
+ * to the library by its query alone keeps the page's path, which minimizes it on its own
+ * only when the path changes (SidePanel's onPageChange).
+ */
+export function makeRoom(wide: boolean, full: boolean): 'none' | 'unexpand' | 'minimize' {
+  if (!wide) return 'minimize'
+  return full ? 'unexpand' : 'none'
+}

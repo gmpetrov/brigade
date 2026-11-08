@@ -232,6 +232,12 @@ const FULL =
 /** Whether the panel around it is laid over the whole window (PanelExpandButton). */
 export const usePanelFull = () => useContext(FullContext)?.full ?? false
 
+/** Lays the panel around it back beside the page, when it is laid over the whole window. */
+export function useLeaveFull() {
+  const context = useContext(FullContext)
+  return useCallback(() => context?.setFull(false), [context])
+}
+
 /** For a panel's header: lays it over the whole window, and back. Escape brings it back too. */
 export function PanelExpandButton() {
   const context = useContext(FullContext)
