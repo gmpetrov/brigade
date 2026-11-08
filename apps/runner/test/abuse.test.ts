@@ -3,7 +3,9 @@ import { test } from 'node:test'
 import {
   blockedSince,
   CpuWatch,
-  isMiner,
+  mergeReports,
+  minerEvidence,
+  watchAbuse,
   lookForAbuse,
   ownerOf,
   parseCounts,
@@ -14,17 +16,29 @@ import {
 
 const cmd = (...args: string[]) => `${args.join('\0')}\0`
 
-test('miners are found by their name or a pool in their arguments, not other programs', () => {
-  assert.equal(isMiner('xmrig', cmd('./xmrig', '-o', 'pool:3333')), true)
-  // Renamed, but given a pool.
-  assert.equal(isMiner('node', cmd('/tmp/.x/node', '-o', 'stratum+tcp://pool.example:4444')), true)
-  assert.equal(isMiner('kworker', cmd('/tmp/kworker', '--donate-level', '1')), true)
-  assert.equal(isMiner('bash', cmd('/home/bt-a/bin/cpuminer-opt', '-a', 'yespower')), true)
-  assert.equal(isMiner('node', cmd('node', 'server.js')), false)
-  assert.equal(isMiner('pnpm', cmd('pnpm', 'install')), false)
-  // A word in a path or an argument is not a miner.
-  assert.equal(isMiner('vim', cmd('vim', 'docs/xmrig-notes.md')), false)
-  assert.equal(isMiner('grep', cmd('grep', '-r', 'stratum', '.')), false)
+test('miners are killed by their name; a pool as an argument of its own is only told', () => {
+  assert.equal(minerEvidence('xmrig', cmd('./xmrig', '-o', 'pool:3333')), 'name')
+  assert.equal(minerEvidence('bash', cmd('/home/bt-a/bin/cpuminer-opt', '-a', 'yespower')), 'name')
+  // Renamed, but given a pool or XMRig's option: told, left running.
+  assert.equal(
+    minerEvidence('node', cmd('/tmp/.x/node', '-o', 'stratum+tcp://pool.example:4444')),
+    'arguments',
+  )
+  assert.equal(minerEvidence('kw', cmd('/tmp/kw', '--url=stratum+ssl://pool:443')), 'arguments')
+  assert.equal(minerEvidence('kworker', cmd('/tmp/kworker', '--donate-level', '1')), 'arguments')
+  assert.equal(minerEvidence('node', cmd('node', 'server.js')), null)
+  assert.equal(minerEvidence('pnpm', cmd('pnpm', 'install')), null)
+})
+
+test('searching for or writing about miners is nothing', () => {
+  assert.equal(
+    minerEvidence('sh', cmd('sh', '-c', "rg --fixed-strings -- 'stratum+tcp://' .; sleep 180")),
+    null,
+  )
+  assert.equal(minerEvidence('grep', cmd('grep', '-r', 'stratum+tcp://', '.')), null)
+  assert.equal(minerEvidence('vim', cmd('vim', 'docs/xmrig-notes.md')), null)
+  assert.equal(minerEvidence('python3', cmd('python3', '-c', 'print("--donate-level")')), null)
+  assert.equal(minerEvidence('node', cmd('node', 'test.js', '--grep', 'xmrig')), null)
 })
 
 test("brigade-egress's counts are read; what came before the first read is not told", () => {
@@ -100,7 +114,9 @@ test('a look kills miners, says which, and reports nothing when all is quiet', a
   const state = { counts: null }
   const first = await lookForAbuse(deps, state)
   assert.deepEqual(stopped, ['bt-ada 10'])
-  assert.deepEqual(first?.miners, [{ user: 'bt-ada', pid: 10, command: './xmrig', killed: true }])
+  assert.deepEqual(first?.miners, [
+    { user: 'bt-ada', pid: 10, command: './xmrig', evidence: 'name', killed: true },
+  ])
   assert.deepEqual(first?.blocked, { smtp: 0, metadata: 0, scan: 0, mining: 0 })
 
   procs.splice(0, 1)
@@ -117,4 +133,81 @@ test('a look kills miners, says which, and reports nothing when all is quiet', a
     { counts: null },
   )
   assert.equal(older, null)
+})
+
+test('a search for a pool in a shell is never killed, nor reported', async () => {
+  const stopped: number[] = []
+  const found = await lookForAbuse(
+    {
+      counts: async () => '',
+      procs: async () => [
+        {
+          pid: 20,
+          uid: 1001,
+          comm: 'sh',
+          cmdline: cmd('sh', '-c', "rg --fixed-strings -- 'stratum+tcp://' .; sleep 180"),
+          ticks: 0,
+        },
+        { pid: 21, uid: 1001, comm: 'tool', cmdline: cmd('./tool', 'stratum+tcp://p:1'), ticks: 0 },
+      ],
+      owners: async () => parseOwners('bt-ada:x:1001:1001::/home/bt-ada:/bin/bash\n', ''),
+      stop: async (_user: string, pid: number) => void stopped.push(pid),
+    },
+    { counts: null },
+  )
+  assert.deepEqual(stopped, [])
+  assert.deepEqual(found?.miners, [
+    {
+      user: 'bt-ada',
+      pid: 21,
+      command: './tool stratum+tcp://p:1',
+      evidence: 'arguments',
+      killed: false,
+    },
+  ])
+})
+
+test('what is found while disconnected is kept, added up, and sent once connected', async () => {
+  let counts = 'smtp 0\n'
+  let miner = true
+  const deps = {
+    counts: async () => counts,
+    procs: async (): Promise<Proc[]> =>
+      miner ? [{ pid: 30, uid: 1001, comm: 'xmrig', cmdline: cmd('xmrig'), ticks: 0 }] : [],
+    owners: async () => parseOwners('bt-ada:x:1001:1001::/home/bt-ada:/bin/bash\n', ''),
+    stop: async () => {},
+  }
+  const sent: unknown[] = []
+  let connected = false
+  const watch = watchAbuse((report) => connected && (sent.push(report), true), deps)
+  watch.stop()
+  await watch.look() // the first look at startup, before the connection: a miner killed
+  miner = false
+  counts = 'smtp 3\n'
+  await watch.look()
+  counts = 'smtp 5\n'
+  await watch.look()
+  assert.deepEqual(sent, [])
+  assert.equal(watch.pending()?.blocked.smtp, 5)
+  connected = true
+  await watch.look() // nothing new: what waited goes
+  assert.equal(sent.length, 1)
+  assert.deepEqual(sent[0], {
+    type: 'abuse',
+    blocked: { smtp: 5, metadata: 0, scan: 0, mining: 0 },
+    miners: [{ user: 'bt-ada', pid: 30, command: 'xmrig', evidence: 'name', killed: true }],
+    cpu: [],
+  })
+  assert.equal(watch.pending(), null)
+  await watch.look()
+  assert.equal(sent.length, 1)
+})
+
+test('reports kept for later add up', () => {
+  const quiet = { smtp: 0, metadata: 0, scan: 0, mining: 0 }
+  const a = { type: 'abuse' as const, blocked: { ...quiet, scan: 2 }, miners: [], cpu: [] }
+  const b = { type: 'abuse' as const, blocked: { ...quiet, scan: 3, smtp: 1 }, miners: [], cpu: [] }
+  assert.deepEqual(mergeReports(a, b)?.blocked, { smtp: 1, metadata: 0, scan: 5, mining: 0 })
+  assert.equal(mergeReports(null, b), b)
+  assert.equal(mergeReports(a, null), a)
 })

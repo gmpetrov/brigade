@@ -28,19 +28,26 @@ const TICKS = 100
 export type AbuseReport = Extract<RunnerToApi, { type: 'abuse' }>
 type Blocked = AbuseReport['blocked']
 
-/**
- * Known miners by their program's name, and what only a miner passes: a pool's address
- * (stratum+tcp://, stratum+ssl://, stratum2+tcp://) or XMRig's donation option.
- */
+/** Known miners by their program's name. */
 const MINER_NAMES =
   /^(xmrig|xmr-stak(-rx)?|cpuminer(-\w+)?|minerd|ccminer|nbminer|t-rex|lolminer|phoenixminer|ethminer|nanominer|srbminer(-multi)?|teamredminer|gminer|cgminer|bfgminer|nheqminer|bminer)$/i
-const MINER_ARGS = /stratum\d?\+(tcp|ssl|tls):\/\/|--donate-level\b|--coin[= ](monero|xmr)\b/i
+/**
+ * An argument only a miner passes, as an argument of its own: a pool's address (stratum+tcp://,
+ * stratum+ssl://, stratum2+tcp://, alone or as --url=…) or XMRig's donation option. Never
+ * searched inside a longer argument: `sh -c "rg 'stratum+tcp://' ."` only names it.
+ */
+const MINER_ARG = /^(--?[a-z-]+=)?stratum\d?\+(tcp|ssl|tls):\/\/\S+$|^--donate-level(=\d+)?$/i
 
-/** Whether a process is a miner, by its name (comm) and its arguments (NUL-separated). */
-export function isMiner(comm: string, cmdline: string) {
+/**
+ * Why a process looks like a miner: its program's name (comm, or its first argument's file
+ * name), which is killed, or one of its arguments, which is only told: a program of another name
+ * may pass a pool's address for good reasons (a test, a tool that talks to pools).
+ */
+export function minerEvidence(comm: string, cmdline: string): 'name' | 'arguments' | null {
   const args = cmdline.split('\0').filter(Boolean)
   const program = (args[0] ?? '').split('/').pop() ?? ''
-  return MINER_NAMES.test(comm) || MINER_NAMES.test(program) || MINER_ARGS.test(args.join(' '))
+  if (MINER_NAMES.test(comm) || MINER_NAMES.test(program)) return 'name'
+  return args.slice(1).some((a) => MINER_ARG.test(a)) ? 'arguments' : null
 }
 
 /** brigade-egress's counts: "<rule> <packets>" lines. Unknown rules are left out. */
@@ -164,7 +171,7 @@ export class CpuWatch {
   }
 }
 
-type Deps = {
+export type Deps = {
   counts?: () => Promise<string>
   procs?: () => Promise<Proc[]>
   owners?: () => Promise<Owners>
@@ -208,16 +215,19 @@ export async function lookForAbuse(
   }
   const miners: AbuseReport['miners'] = []
   for (const p of theirs) {
-    if (!isMiner(p.comm, p.cmdline)) continue
+    const evidence = minerEvidence(p.comm, p.cmdline)
+    if (!evidence) continue
     const command = p.cmdline.split('\0').filter(Boolean).join(' ').slice(0, 300) || p.comm
-    const killed = await stop(p.user, p.pid).then(
-      () => true,
-      (error: unknown) => (
-        console.warn(`could not stop miner ${p.pid} of ${p.user}: ${String(error)}`),
-        false
-      ),
-    )
-    miners.push({ user: p.user, pid: p.pid, command, killed })
+    const killed =
+      evidence === 'name' &&
+      (await stop(p.user, p.pid).then(
+        () => true,
+        (error: unknown) => (
+          console.warn(`could not stop miner ${p.pid} of ${p.user}: ${String(error)}`),
+          false
+        ),
+      ))
+    miners.push({ user: p.user, pid: p.pid, command, evidence, killed })
   }
   const cpu = deps.cpu?.sample(theirs, now) ?? []
 
@@ -225,26 +235,49 @@ export async function lookForAbuse(
   return any ? { type: 'abuse', blocked, miners: miners.slice(0, 50), cpu: cpu.slice(0, 50) } : null
 }
 
-/** Looks every ABUSE_EVERY_MS, from now on, and reports what it finds. */
-export function watchAbuse(report: (report: AbuseReport) => void) {
+/**
+ * Two reports as one, for one that could not be sent yet: packets added up, miners of both
+ * (the newest 50), the latest CPU.
+ */
+export function mergeReports(a: AbuseReport | null, b: AbuseReport | null): AbuseReport | null {
+  if (!a || !b) return a ?? b
+  const blocked = { ...a.blocked }
+  for (const key of Object.keys(blocked) as (keyof Blocked)[]) blocked[key] += b.blocked[key]
+  return {
+    type: 'abuse',
+    blocked,
+    miners: [...a.miners, ...b.miners].slice(-50),
+    cpu: b.cpu.length ? b.cpu : a.cpu,
+  }
+}
+
+/**
+ * Looks every ABUSE_EVERY_MS, from now on, and reports what it finds. `send` says whether it
+ * went out: while the runner is not connected, what was found waits, added to what comes next,
+ * and goes with the next look that can send it, since the counters have moved on and the
+ * miners are gone by then.
+ */
+export function watchAbuse(
+  send: (report: AbuseReport) => boolean,
+  deps: Deps = { cpu: new CpuWatch() },
+) {
   const state = { counts: null as Blocked | null }
-  const deps: Deps = { cpu: new CpuWatch() }
-  let busy = false
-  const look = async () => {
-    if (busy) return
-    busy = true
+  let pending: AbuseReport | null = null
+  // One look at a time: one asked while another runs is that one.
+  let running: Promise<void> | null = null
+  const once = async () => {
     try {
       const found = await lookForAbuse(deps, state)
-      if (found) {
-        console.warn(`abuse on this computer: ${JSON.stringify(found)}`)
-        report(found)
-      }
+      if (found) console.warn(`abuse on this computer: ${JSON.stringify(found)}`)
+      pending = mergeReports(pending, found)
     } catch (error) {
       console.warn(`could not look for abuse: ${String(error)}`)
-    } finally {
-      busy = false
     }
+    if (pending && send(pending)) pending = null
   }
+  const look = () => (running ??= once().finally(() => (running = null)))
   void look()
-  setInterval(() => void look(), ABUSE_EVERY_MS).unref()
+  const timer = setInterval(() => void look(), ABUSE_EVERY_MS)
+  timer.unref()
+  return { look, stop: () => clearInterval(timer), pending: () => pending }
 }

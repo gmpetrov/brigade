@@ -35,16 +35,18 @@ teammates' processes on the host and their threads' namespaces (traffic in from 
 The runner (`apps/runner/src/abuse.ts`), every 2 minutes:
 
 - reads what each rule stopped (`brigade-teammate egress-counts`);
-- kills miners among teammates' processes, found by their program's name (`xmrig`,
-  `cpuminer`, `lolminer`…) or a pool's address in their arguments (`stratum+tcp://`,
-  `--donate-level`), their rootless containers' processes included
-  (`brigade-teammate stop-process`);
+- kills miners among teammates' processes found by their program's name (`xmrig`, `cpuminer`,
+  `lolminer`…), their rootless containers' processes included (`brigade-teammate stop-process`);
+  one that only passes a pool's address (`stratum+tcp://…`) or `--donate-level` as an argument
+  of its own is told and left running, since another program may (a search for that text is
+  neither);
 - notes a teammate whose processes keep 80% of all cores for 30 minutes: only told, since a
   long build does too.
 
-It reports what it found (`abuse`), and the API raises `abuse:<computerId>`
+It reports what it found (`abuse`); while the runner is not connected, the report waits, added
+to the next, and goes once it is. The API raises `abuse:<computerId>`
 (`apps/api/src/computer-abuse.ts`): critical for anything stopped or killed, a warning for
-CPU alone, over an hour after the last report.
+CPU alone or a pool only in arguments, over an hour after the last report.
 
 ### When the alert comes
 

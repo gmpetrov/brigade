@@ -480,7 +480,7 @@ async function start() {
   if (CLOUD) stopIdleBrowsers(controlled)
   // Teammates' abuse of the cloud computer (mail, scans, mining), for Brigade's operators.
   if (CLOUD && process.env.BRIGADE_ABUSE_WATCH !== '0')
-    watchAbuse((report) => connection.send(report))
+    watchAbuse((report) => connection.sendIfConnected(report))
   // On a cloud computer, the computer running out of memory as a whole: an idle browser, a preview
   // or a turn is stopped, with the reason, before it stops answering at all.
   if (memoryGuard) {

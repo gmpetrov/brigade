@@ -14,7 +14,15 @@ test('an abuse alert names the workspace and what was stopped, and is critical',
     {
       type: 'abuse',
       blocked: { ...quiet, smtp: 12 },
-      miners: [{ user: 'bt-ada', pid: 42, command: './xmrig -o pool:3333', killed: true }],
+      miners: [
+        {
+          user: 'bt-ada',
+          pid: 42,
+          command: './xmrig -o pool:3333',
+          evidence: 'name',
+          killed: true,
+        },
+      ],
       cpu: [],
     },
     'cmcomputer',
@@ -41,4 +49,27 @@ test('CPU kept for long alone is a warning', () => {
   )
   assert.equal(alert.severity, 'warning')
   assert.match(alert.detail, /bt-ada: 93% of all cores for 45 min/)
+})
+
+test("a pool only in a process's arguments is a warning, and says it was left running", () => {
+  const alert = abuseAlert(
+    {
+      type: 'abuse',
+      blocked: quiet,
+      miners: [
+        {
+          user: 'bt-ada',
+          pid: 7,
+          command: './tool stratum+tcp://p:1',
+          evidence: 'arguments',
+          killed: false,
+        },
+      ],
+      cpu: [],
+    },
+    'cmcomputer',
+    'Acme',
+  )
+  assert.equal(alert.severity, 'warning')
+  assert.match(alert.detail, /left running/)
 })

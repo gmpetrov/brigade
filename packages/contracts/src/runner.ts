@@ -440,6 +440,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
           user: z.string().max(64),
           pid: z.number().int().nonnegative(),
           command: z.string().max(300),
+          /** Its program's name, killed; or only an argument, told and left running. */
+          evidence: z.enum(['name', 'arguments']).optional(),
           killed: z.boolean(),
         }),
       )

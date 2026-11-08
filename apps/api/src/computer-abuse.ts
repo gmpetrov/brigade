@@ -19,7 +19,10 @@ const WHAT: Record<keyof Report['blocked'], string> = {
   mining: "a mining pool's protocol",
 }
 
-/** The alert a report raises: critical for a miner, mail or a scan; a warning for CPU alone. */
+/**
+ * The alert a report raises: critical for a miner killed, mail or a scan; a warning for CPU alone
+ * or a process with a pool in its arguments.
+ */
 export function abuseAlert(report: Report, computerId: string, workspace: string) {
   const blocked = (Object.keys(WHAT) as (keyof Report['blocked'])[]).filter(
     (k) => report.blocked[k] > 0,
@@ -36,7 +39,7 @@ export function abuseAlert(report: Report, computerId: string, workspace: string
       `Miners found:\n${report.miners
         .map(
           (m) =>
-            `- ${m.user} pid ${m.pid}${m.killed ? ' (killed)' : ' (NOT killed)'}: ${m.command}`,
+            `- ${m.user} pid ${m.pid}${m.killed ? ' (killed)' : m.evidence === 'arguments' ? ' (a pool in its arguments, left running: check it)' : ' (NOT killed)'}: ${m.command}`,
         )
         .join('\n')}`,
     )
@@ -47,7 +50,8 @@ export function abuseAlert(report: Report, computerId: string, workspace: string
         .join('\n')}`,
     )
   lines.push('What to do: docs/abuse.md.')
-  const serious = blocked.length > 0 || report.miners.length > 0
+  // A miner only by an argument may be something else: an operator looks.
+  const serious = blocked.length > 0 || report.miners.some((m) => m.evidence !== 'arguments')
   return {
     key: `abuse:${computerId}`,
     severity: serious ? ('critical' as const) : ('warning' as const),
