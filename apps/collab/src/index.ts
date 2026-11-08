@@ -194,18 +194,27 @@ export class DocRoom extends YServer<Env> {
     const editor = JSON.parse(ctx.request.headers.get(EDITOR_HEADER) ?? '{}') as Editor
     connection.setState((previous) => ({ ...previous, member: editor.member, name: editor.name }))
     // The room matched the stored text before, and the API tells it of each change since
-    // (onRequest): open on what it has, and check for a missed notice behind it. The editor
-    // waits for this call to return before it shows anything, so a check here would hold the
-    // document back on every open. A change it finds reaches the editor as a teammate's edit;
-    // a deleted document closes the connection.
-    if (this.#base) {
+    // (onRequest): an editor that holds its edits until the check is done (`?early=1`) opens
+    // on what the room has, and the check for a missed notice runs behind it. It shows
+    // nothing until this call returns, so a check here would hold the document back on every
+    // open. Its edits wait for `checked`: a change the check finds can replace a whole block,
+    // and what was typed in the block it replaced would be lost. Editors that do not ask,
+    // such as a dashboard loaded before this, wait for the check as before.
+    if (this.#base && new URL(ctx.request.url).searchParams.get('early') === '1') {
+      this.sendCustomMessage(connection, JSON.stringify({ type: 'checking' }))
       super.onConnect(connection, ctx)
-      void this.#serial(() => this.#reconcile()).catch((error) =>
-        console.error(`${this.name}: could not check the stored text`, error),
-      )
+      void this.#serial(() => this.#reconcile())
+        .catch((error) => console.error(`${this.name}: could not check the stored text`, error))
+        // After the change it found, if any: that went out first, on the same socket. Without
+        // the API, edits go ahead on what the room has, as they do when an editor waited.
+        .finally(() => {
+          if (!this.#deleted)
+            this.sendCustomMessage(connection, JSON.stringify({ type: 'checked' }))
+        })
       return
     }
-    // Never matched it: there is nothing to show until the API sends it.
+    // Otherwise the editor waits for the check: a room that never matched the stored text has
+    // nothing to show until the API sends it.
     try {
       await this.#serial(() => this.#reconcile())
     } catch (error) {
