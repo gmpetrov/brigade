@@ -28,6 +28,7 @@ Object.assign(globalThis, {
   document: { ...target, visibilityState: 'visible', hasFocus: () => true },
 })
 const { listen } = await import('../lib/use-live')
+const { RECONNECT_SPREAD_MS, reconnectDelay } = await import('../lib/live-socket')
 const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 test('listeners share one socket, and each hears every message', async () => {
@@ -58,6 +59,9 @@ test('a listener that comes back within a moment keeps the socket', async () => 
 })
 
 test('a socket back after dropping tells listeners to fetch again, not on its first open', async () => {
+  // At the shortest wait: how it spreads is the next test's.
+  const random = Math.random
+  Math.random = () => 0
   let reconnected = 0
   const stop = listen(
     () => {},
@@ -68,10 +72,26 @@ test('a socket back after dropping tells listeners to fetch again, not on its fi
   assert.equal(reconnected, 0)
   first.onclose?.()
   await settle(2100)
+  Math.random = random
   const second = FakeSocket.opened.at(-1)!
   assert.notEqual(second, first)
   second.onopen?.()
   assert.equal(reconnected, 1)
   stop()
   await settle(1100)
+})
+
+test('sockets dropped together come back spread over seconds, not in the same one', () => {
+  // A deploy drops every dashboard's sockets at once: each waits its delay and up to RECONNECT_SPREAD_MS more.
+  assert.equal(
+    reconnectDelay(2000, () => 0),
+    2000,
+  )
+  assert.equal(
+    reconnectDelay(2000, () => 0.5),
+    2000 + RECONNECT_SPREAD_MS / 2,
+  )
+  const delays = Array.from({ length: 200 }, () => reconnectDelay(2000))
+  assert.ok(delays.every((d) => d >= 2000 && d <= 2000 + RECONNECT_SPREAD_MS))
+  assert.ok(new Set(delays.map((d) => Math.floor(d / 1000))).size >= 3)
 })

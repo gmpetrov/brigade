@@ -12,6 +12,17 @@ export function setLiveWorkspace(id: string | null | undefined) {
   workspaceId = id ?? undefined
 }
 
+/**
+ * Up to this much more is waited before a dropped socket connects again, at random: a deploy of
+ * the API drops every dashboard's sockets at once, and without it they would all come back, and
+ * fetch their lists again, in the same second.
+ */
+export const RECONNECT_SPREAD_MS = 4_000
+
+/** How long a dropped socket waits before connecting again, after `base`: spread over a few seconds. */
+export const reconnectDelay = (base: number, random: () => number = Math.random) =>
+  Math.round(base + random() * RECONNECT_SPREAD_MS)
+
 /** A live socket to the API, for the dashboard's workspace. */
 export function liveSocket() {
   const query = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : ''

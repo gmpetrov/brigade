@@ -3,7 +3,7 @@ import { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, preload, preloaded } from './api'
 import { latestJump } from './latest-jump'
-import { keepAlive, liveSocket } from './live-socket'
+import { keepAlive, liveSocket, reconnectDelay } from './live-socket'
 
 /**
  * An event this dashboard does not know (a newer runner or API) becomes an
@@ -182,7 +182,7 @@ export function useThreadEvents(
       socket.onclose = () => {
         setConnected(false)
         if (stopped) return
-        retry = setTimeout(connect, delay)
+        retry = setTimeout(connect, reconnectDelay(delay))
         delay = Math.min(delay * 2, 10_000)
       }
     }
