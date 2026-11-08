@@ -6,7 +6,7 @@ import { designFolderOf, type LibraryFile } from '@brigade/contracts'
 export type FolderMenuEntry =
   | { kind: 'folder'; path: string; name: string }
   | { kind: 'design'; path: string; name: string }
-  | { kind: 'file'; file: LibraryFile; name: string; panel: boolean }
+  | { kind: 'file'; file: LibraryFile; name: string }
 
 /** At most this many files match a filter; the rest are left out. */
 export const FOLDER_MENU_MATCHES = 50
@@ -15,12 +15,8 @@ const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1)
 const byName = (a: { name: string }, b: { name: string }) =>
   a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
 
-/** Whether a file opens in the document panel, as the library opens it; else in the library. */
-export const opensInPanel = (file: LibraryFile) =>
-  file.contentType === 'text/markdown' && file.editable && !designFolderOf(file.path)
-
 function fileEntry(file: LibraryFile, name: string): FolderMenuEntry {
-  return { kind: 'file', file, name, panel: opensInPanel(file) }
+  return { kind: 'file', file, name }
 }
 
 /**

@@ -1,7 +1,8 @@
 'use client'
-// A file the thread mentions, beside it: from the library, the thread's
-// attachments, or the teammate's working folder on its computer. Takes the
-// desktop panel's place. Text shows as text, images and PDFs as themselves.
+// A file the thread mentions, beside it: the thread's attachments, or the
+// teammate's working folder on its computer. Takes the desktop panel's place.
+// Text shows as text, images and PDFs as themselves. A library file opens in the
+// file panel instead (components/document-panel.tsx), and a design as the design.
 // A text file of the working folder opens in the code editor (components/code-file.tsx),
 // to edit for whoever may write to the thread (Markdown once they ask to edit it).
 // While the thread's preview runs, it opens beside it too; when the preview runs
@@ -190,13 +191,21 @@ function ThreadFilePanel({
     api<ThreadFile>(`/threads/${threadId}/file?${query}`).then(
       (f) => {
         if (!live) return
-        // The library's own Markdown is a document: it opens in the document panel, to edit.
-        if (f.source === 'library' && f.documentId && f.contentType === 'text/markdown') {
-          documents.open(libraryDocument({ id: f.documentId, path: f.path }))
+        const folder = f.source === 'library' ? designFolderOf(f.path) : undefined
+        // A library file opens in the file panel (components/document-panel.tsx), as from the
+        // library: a document to edit, a text file, a preview. A design's own files show as the
+        // design, but its Markdown as a document, as before.
+        if (
+          f.source === 'library' &&
+          f.documentId &&
+          (!folder || f.contentType === 'text/markdown')
+        ) {
+          documents.open(
+            libraryDocument({ id: f.documentId, path: f.path, contentType: f.contentType }),
+          )
           onClose()
           return
         }
-        const folder = f.source === 'library' ? designFolderOf(f.path) : undefined
         if (folder) return setDesign(folder)
         setFile(f)
       },
