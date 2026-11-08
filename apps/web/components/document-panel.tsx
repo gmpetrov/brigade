@@ -391,20 +391,21 @@ export function DocumentPanel() {
             <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             <div className="flex min-w-0 flex-1 flex-col">
               {/* With tabs, the tab names it: only its folder here. */}
-              {!(tabbed && current.subtitle) && (
+              {!(tabbed && (current.subtitle || target.kind === 'library')) && (
                 <strong className="truncate text-sm font-semibold">{current.title}</strong>
               )}
-              {(current.subtitle || share) && (
+              {(current.subtitle || target.kind === 'library' || share) && (
                 <div className="flex min-w-0 items-center text-xs text-muted-foreground">
-                  {current.subtitle &&
-                    (target.kind === 'library' ? (
-                      <DocumentPath folder={current.subtitle} fileId={target.id} />
-                    ) : (
+                  {target.kind === 'library' ? (
+                    <DocumentPath folder={current.subtitle ?? ''} fileId={target.id} />
+                  ) : (
+                    current.subtitle && (
                       <span className="truncate" title={current.subtitle}>
                         {current.subtitle}
                       </span>
-                    ))}
-                  {current.subtitle && share && (
+                    )
+                  )}
+                  {(current.subtitle || target.kind === 'library') && share && (
                     <span aria-hidden className="shrink-0 px-1">
                       ·
                     </span>
