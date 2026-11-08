@@ -5,7 +5,7 @@ import { Footer } from '@/components/landing/closing'
 import { Header } from '@/components/landing/hero'
 import { c } from '@/components/landing/parts'
 import { REPO_URL } from '@/lib/github-proof'
-import { findRelease, RELEASES, releaseDate } from '@/lib/changelog'
+import { findRelease, releaseName, RELEASES, releaseDate } from '@/lib/changelog'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props) {
   if (!release) return {}
   return changelogMetadata(
     `/changelog/${release.slug}`,
-    `${release.title} · Brigade changelog`,
+    `${releaseName(release)} · Brigade changelog`,
     release.summary,
   )
 }
@@ -38,6 +38,7 @@ export default async function Release({ params }: Props) {
               ← All releases
             </Link>
             <p className={c('eyebrow')}>
+              {release.version && <>v{release.version} · </>}
               <time dateTime={release.slug}>{releaseDate(release.slug)}</time>
             </p>
             <h1 id="release-title">{release.title}</h1>

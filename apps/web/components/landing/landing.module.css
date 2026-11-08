@@ -4957,12 +4957,20 @@ svg.i {
   padding: 28px 0;
   border-bottom: 1px solid var(--border);
 }
-.log-row time {
+.log-when {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding-top: 4px;
   font-size: 14px;
   font-weight: 600;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+.log-ver {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
 }
 .log-body {
   display: flex;
@@ -5038,6 +5046,10 @@ svg.i {
   .log-row {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+  .log-when {
+    flex-direction: row;
+    gap: 10px;
   }
 }
 

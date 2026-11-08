@@ -1,7 +1,7 @@
 // The changelog as an RSS feed, one item per release, built with the site.
 import { FEED_PATH } from '@/components/landing/changelog'
 import { SITE_URL } from '@/lib/page-metadata'
-import { RELEASES } from '@/lib/changelog'
+import { releaseName, RELEASES } from '@/lib/changelog'
 
 export const dynamic = 'force-static'
 export const revalidate = false
@@ -15,7 +15,7 @@ export function GET() {
   const items = RELEASES.map((r) => {
     const url = `${SITE_URL}/changelog/${r.slug}`
     return `    <item>
-      <title>${escape(r.title)}</title>
+      <title>${escape(releaseName(r))}</title>
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
       <pubDate>${pubDate(r.slug)}</pubDate>

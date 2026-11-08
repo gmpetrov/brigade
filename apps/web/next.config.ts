@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants'
@@ -20,6 +21,12 @@ const buildId =
 // Next loads this file again in its build workers: they must agree on the time.
 process.env.BRIGADE_BUILD_ID = buildId
 
+// The product's version (docs/versions.md): the root package.json's, whose minor goes up with
+// each weekly release. Shown with the build at the foot of Preferences, and answered by /version.
+const version: string = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
+).version
+
 // The landing's GitHub numbers (lib/github-proof.ts), asked once per build (or dev server)
 // and inlined into the code, so the page never calls GitHub while serving. Kept in the
 // environment so the build workers that load this file again don't ask a second time.
@@ -40,6 +47,7 @@ const MINTLIFY = 'https://brigade.mintlify.site'
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
+    NEXT_PUBLIC_VERSION: version,
     // Always set, so the build sees through `process.env.NEXT_PUBLIC_DEMO === '1'` and leaves
     // the demo out of other builds (lib/config.ts).
     NEXT_PUBLIC_DEMO: DEMO ? '1' : '',
