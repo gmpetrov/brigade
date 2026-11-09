@@ -5,6 +5,7 @@
 // teammate's side is scripted in lib/demo/scripts.ts.
 // It acts through the page's own elements, with events no person made: the first one a person
 // makes (a click, a tap, a key; not a scroll) stops it, and the dashboard is theirs.
+import { demoEditor } from './editor-handle'
 
 export const TOUR_PARAM = 'tour'
 
@@ -153,17 +154,9 @@ export async function press(
   await sleep(350, stage.signal)
 }
 
-/**
- * Types into the message box as a person would, a letter at a time. `where: 'caret'` types where
- * the caret is already, in a document: a press on the editor would move it there.
- */
-export async function type(
-  stage: Stage,
-  editor: HTMLElement,
-  text: string,
-  where: 'press' | 'caret' = 'press',
-) {
-  if (where === 'press') await press(stage, editor)
+/** Types into the message box as a person would, a letter at a time. */
+export async function type(stage: Stage, editor: HTMLElement, text: string) {
+  await press(stage, editor)
   editor.focus()
   // A word at a time: the box drops letters typed faster than it renders them.
   for (const word of text.split(/(?<= )/)) {
@@ -191,51 +184,12 @@ export async function send(stage: Stage, editor: HTMLElement) {
 
 const EDITOR = '[contenteditable="true"]'
 
-/** A key pressed in the element, as a keyboard makes it: what editors listen for. */
-async function key(stage: Stage, el: HTMLElement, name: string, shift = false) {
-  for (const kind of ['keydown', 'keyup'] as const)
-    el.dispatchEvent(
-      new KeyboardEvent(kind, {
-        key: name,
-        code: name,
-        shiftKey: shift,
-        bubbles: true,
-        cancelable: true,
-      }),
-    )
-  await sleep(200, stage.signal)
-}
+/** The document's editor, as it registers itself in the demo (lib/demo/editor-handle.ts). */
+const docEditor = (signal: AbortSignal) => waitFor(demoEditor, signal)
 
-/** The text of a line of a document, which the editor's selection is set in. */
+/** The text of a line of a document, where the cursor points. */
 const lineText = (line: HTMLElement) =>
   line.querySelector<HTMLElement>('.bn-inline-content') ?? line
-
-/** The caret at the end of the line, as a click there puts it: the editor reads the page's selection. */
-async function caretAtEnd(stage: Stage, editor: HTMLElement, line: HTMLElement) {
-  await press(stage, lineText(line))
-  editor.focus()
-  const range = document.createRange()
-  range.selectNodeContents(lineText(line))
-  range.collapse(false)
-  document.getSelection()?.removeAllRanges()
-  document.getSelection()?.addRange(range)
-  await sleep(300, stage.signal)
-}
-
-/**
- * The line's text selected, as a drag over it does: its toolbar shows (Hand to…). The line and
- * the editor are found when used: a save can draw them again meanwhile.
- */
-async function selectLine(stage: Stage, find: () => HTMLElement | undefined) {
-  await moveTo(stage, lineText(await waitFor(find, stage.signal)))
-  const line = await waitFor(find, stage.signal)
-  line.closest<HTMLElement>(EDITOR)?.focus()
-  const range = document.createRange()
-  range.selectNodeContents(lineText(line))
-  document.getSelection()?.removeAllRanges()
-  document.getSelection()?.addRange(range)
-  await sleep(600, stage.signal)
-}
 
 /** A line of the list on the page, by its text. */
 const listLine = (text: string) =>
@@ -264,27 +218,29 @@ async function playList(stage: Stage, story: (typeof STORIES)['list']) {
   await press(stage, lists)
   await press(stage, await waitFor(() => listLink(story.list), signal))
 
-  // A line at its end.
-  const editor = await waitFor(() => last(`.list-view ${EDITOR}`), signal)
-  const end = await waitFor(() => {
-    const lines = [
-      ...editor.querySelectorAll<HTMLElement>(
-        '.bn-block-content[data-content-type="checkListItem"]',
-      ),
-    ]
-    return lines.at(-1)
-  }, signal)
+  // A line at its end, typed a word at a time. Through the editor itself: with the page's
+  // selection, Safari typed into the line above.
+  await waitFor(() => listLine('Open Graph'), signal)
   await sleep(600, signal)
-  await caretAtEnd(stage, editor, end)
-  await key(stage, editor, 'Enter')
-  await type(stage, editor, story.ask, 'caret')
+  const end = (await docEditor(signal)).caretAtLastLine()
+  if (end) await moveTo(stage, lineText(end))
+  stage.cursor.dataset.pressed = ''
+  await sleep(150, signal)
+  delete stage.cursor.dataset.pressed
+  ;(await docEditor(signal)).newLineAtEnd()
+  await sleep(400, signal)
+  for (const word of story.ask.split(/(?<= )/)) {
+    ;(await docEditor(signal)).insertText(word)
+    await sleep(70 + word.length * 14, signal)
+  }
   await waitFor(() => listLine(story.ask), signal)
+  await sleep(500, signal)
 
-  // Handed to Riley.
-  // Its toolbar shows once the editor has read the selection: selected again if it did not.
+  // Handed to Riley. Its toolbar shows once the editor has the selection: selected again if not.
   let handTo: HTMLElement | undefined
   for (let tries = 0; !handTo && tries < 3; tries++) {
-    await selectLine(stage, () => listLine(story.ask))
+    await moveTo(stage, lineText(await waitFor(() => listLine(story.ask), signal)))
+    ;(await docEditor(signal)).selectLine(story.ask)
     handTo = await waitFor(() => byText('button', /^Hand to /), signal, 3000).catch((e) => {
       if (signal.aborted) throw e
       return undefined
