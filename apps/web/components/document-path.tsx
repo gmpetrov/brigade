@@ -1,21 +1,21 @@
 'use client'
-// The folder of the library file in front of the document panel, one button per folder: each
-// opens a menu of what that folder holds, to go to a file beside this one without leaving the
-// page. A file opens in place of this one (in a tab of its own with ⌘ or Ctrl), a design in the
-// library, as there. The menu also copies the file's path.
+// Where the library file in front of the document panel is: its name, and below it one button
+// per folder. Each opens a menu of what that folder holds (the name, its own folder's), to go to
+// a file beside this one without leaving the page, or up to the top of the library. A file opens
+// in place of this one (in a tab of its own with ⌘ or Ctrl), a design in the library, as there.
+// The menu also copies the file's path.
 import type { LibraryFile } from '@brigade/contracts'
-import {
-  ArrowUpRight,
-  Check,
-  ChevronLeft,
-  Copy,
-  Folder,
-  House,
-  Palette,
-  Search,
-} from 'lucide-react'
+import { ArrowUpRight, Check, ChevronLeft, Copy, Folder, Palette, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { fileIcon } from '@/components/file-icon'
 import {
@@ -32,18 +32,48 @@ import { isMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 /**
+ * The file's name, as the button that opens its folder's menu: the files beside it, and up from
+ * there to the top of the library.
+ */
+export function FileNameMenu({
+  name,
+  fileId,
+  path,
+  className,
+}: {
+  name: string
+  fileId: string
+  path: string
+  className?: string
+}) {
+  return (
+    <FolderMenu
+      folder={parentOf(path)}
+      fileId={fileId}
+      path={path}
+      label={`Files beside ${name}`}
+      className={cn('-ml-1 min-w-0 justify-start', className)}
+    >
+      <span className="truncate">{name}</span>
+    </FolderMenu>
+  )
+}
+
+/**
  * `folder`: where the file is, e.g. "Projects/Brigade/decisions", '' at the top of the library;
- * `fileId` and `path`: the file. The top of the library leads, as a house, so a file there has a
- * path too.
+ * `fileId` and `path`: the file. One button per folder; nothing at the top of the library, unless
+ * `top` (the name is not shown, a tab names the file): then "Library", so its menu is there.
  */
 export function DocumentPath({
   folder,
   fileId,
   path,
+  top = false,
 }: {
   folder: string
   fileId: string
   path: string
+  top?: boolean
 }) {
   const row = useRef<HTMLElement>(null)
   // A long path keeps its end in view: the folder the file is in.
@@ -51,42 +81,57 @@ export function DocumentPath({
     if (row.current) row.current.scrollLeft = row.current.scrollWidth
   }, [folder])
   const folders = pathFolders(folder)
+  if (!folders.length && !top) return null
   return (
     <nav
       ref={row}
       aria-label="File location"
       className="-ml-1 flex min-w-0 items-center overflow-x-auto font-mono text-xs text-muted-foreground [scrollbar-width:none]"
     >
-      <FolderMenu folder="" name="Library" fileId={fileId} path={path} />
-      {folders.map((f) => (
-        <span key={f.path} className="flex shrink-0 items-center">
-          <span aria-hidden>/</span>
-          <FolderMenu folder={f.path} name={f.name} fileId={fileId} path={path} />
-        </span>
-      ))}
+      {folders.length ? (
+        folders.map((f, i) => (
+          <span key={f.path} className="flex shrink-0 items-center">
+            {i > 0 && <span aria-hidden>/</span>}
+            <FolderMenu folder={f.path} fileId={fileId} path={path} label={`Files in ${f.name}`}>
+              {f.name}
+            </FolderMenu>
+          </span>
+        ))
+      ) : (
+        <FolderMenu folder="" fileId={fileId} path={path} label="Files in Library">
+          Library
+        </FolderMenu>
+      )}
     </nav>
   )
 }
 
 function FolderMenu({
   folder,
-  name,
   fileId,
   path,
+  label,
+  className,
+  children,
 }: {
   folder: string
-  name: string
   fileId: string
   path: string
+  label: string
+  className?: string
+  children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
-        className="flex shrink-0 items-center rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
-        aria-label={`Files in ${name}`}
+        className={cn(
+          'flex shrink-0 items-center rounded px-1 py-px outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground',
+          className,
+        )}
+        aria-label={label}
       >
-        {folder ? name : <House aria-hidden className="size-3.5" />}
+        {children}
       </DropdownMenuTrigger>
       {open && (
         <FolderMenuContent
@@ -119,7 +164,7 @@ function FolderMenuContent({
   const leaveFull = useLeaveFull()
   const [files, setFiles] = useState<LibraryFile[]>()
   const [failed, setFailed] = useState(false)
-  // The folder shown: this one, or one inside it gone into from the menu.
+  // The folder shown: this one, or one gone into or up to from the menu.
   const [at, setAt] = useState(folder)
   const [query, setQuery] = useState('')
   const input = useRef<HTMLInputElement>(null)
@@ -191,8 +236,8 @@ function FolderMenuContent({
     }
   }
 
-  const inside = at === folder ? undefined : folder ? at.slice(folder.length + 1) : at
-  const upTo = at.includes('/') ? at.slice(0, at.lastIndexOf('/')) : ''
+  // Up one folder, from wherever it is, to the top of the library.
+  const upTo = parentOf(at)
   return (
     <DropdownMenuContent
       align="start"
@@ -211,7 +256,7 @@ function FolderMenuContent({
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
       </label>
-      {inside && (
+      {at && (
         <DropdownMenuItem
           onSelect={(e) => {
             e.preventDefault()
@@ -220,9 +265,10 @@ function FolderMenuContent({
             input.current?.focus()
           }}
           className="text-muted-foreground"
+          aria-label={`Up to ${upTo ? nameOf(upTo) : 'Library'}`}
         >
           <ChevronLeft aria-hidden />
-          <span className="truncate">{inside}</span>
+          <span className="truncate">{at}</span>
         </DropdownMenuItem>
       )}
       <div ref={list} className="max-h-80 overflow-y-auto">
@@ -301,3 +347,4 @@ function EntryItem({
 }
 
 const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1)
+const parentOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '')
