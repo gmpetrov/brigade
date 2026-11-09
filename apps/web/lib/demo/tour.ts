@@ -4,7 +4,7 @@
 // a job, then approves what waits for it (a merge, an email) until the job is done; the
 // teammate's side is scripted in lib/demo/scripts.ts.
 // It acts through the page's own elements, with events no person made: the first one a person
-// makes (a click, a key, the wheel) stops it, and the dashboard is theirs.
+// makes (a click, a tap, a key; not a scroll) stops it, and the dashboard is theirs.
 
 export const TOUR_PARAM = 'tour'
 
@@ -277,8 +277,17 @@ async function playList(stage: Stage, story: (typeof STORIES)['list']) {
   const added = await waitFor(() => listLine(story.ask), signal)
 
   // Handed to Riley.
-  await selectLine(stage, editor, added)
-  await press(stage, await waitFor(() => byText('button', /^Hand to /), signal))
+  // Its toolbar shows once the editor has read the selection: selected again if it did not.
+  let handTo: HTMLElement | undefined
+  for (let tries = 0; !handTo && tries < 3; tries++) {
+    await selectLine(stage, editor, added)
+    handTo = await waitFor(() => byText('button', /^Hand to /), signal, 3000).catch((e) => {
+      if (signal.aborted) throw e
+      return undefined
+    })
+  }
+  if (!handTo) throw new Stopped()
+  await press(stage, handTo)
   const picker = await waitFor(() => last('#hand-off-teammate'), signal)
   await sleep(500, signal)
   await press(stage, picker)

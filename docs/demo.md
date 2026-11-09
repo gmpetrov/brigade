@@ -147,8 +147,9 @@ visitor, signed in as Ada) asks a teammate from Today, the teammate's side plays
 
 Each takes 15 to 40 seconds.
 
-It drives the real dashboard with events no person made: the visitor's first click, key,
-scroll or touch in the frame stops it, and a violet "Your turn · click around" pill offers a replay (Today
+It drives the real dashboard with events no person made: the visitor's first click, tap or
+key in the frame stops it (not a scroll: scrolling the landing page with the pointer over the
+frame sends its wheel there, and stopped the walkthrough of a visitor who only scrolled past), and a violet "Your turn · click around" pill offers a replay (Today
 again, `/app?tour=<story>`, which starts the demo over). A thread the visitor started lives in memory:
 reloaded on its address, the demo opens Today instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
 "Merge #153", "Merge #154", "Allow", Lists, "Hand to", the hand-off dialog's teammate, a line's

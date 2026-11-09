@@ -18,7 +18,9 @@ export function DemoTour() {
     const story = storyOf(new URLSearchParams(location.search).get(TOUR_PARAM))
     setState('waiting')
     const abort = new AbortController()
-    const kinds = ['pointerdown', 'keydown', 'wheel', 'touchstart']
+    // A press, a tap or a key: never a scroll. Scrolling the landing page with the pointer over
+    // the frame sends its wheel (or a finger's touch) here, and the visitor only meant to scroll.
+    const kinds = ['pointerdown', 'click', 'keydown']
     let observer: IntersectionObserver | undefined
     let restore: (() => void) | undefined
     // However it ends (the visitor, the walkthrough done, the page left): nothing of it stays.
@@ -31,6 +33,8 @@ export function DemoTour() {
     // A person's own input ends it, also before it started: events the tour makes are not trusted.
     const takeOver = (e: Event) => {
       if (!e.isTrusted || abort.signal.aborted) return
+      // A finger down may start a scroll: only its tap (a click) takes over.
+      if (e.type === 'pointerdown' && (e as PointerEvent).pointerType === 'touch') return
       abort.abort()
       end()
       setState((was) => (was === 'waiting' ? 'off' : 'yours'))

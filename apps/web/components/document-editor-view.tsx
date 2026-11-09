@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { DocumentLoading, documentFadeIn } from '@/components/document-loading'
 import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { debouncedSave } from '@/lib/debounced-save'
 import { DEMO } from '@/lib/demo/flag'
 import { openDocument, useLiveSession, type LiveConnection } from '@/lib/live-documents'
 import { useLive } from '@/lib/use-live'
@@ -288,8 +289,10 @@ function SavedDocument({
   // For the live listener, which runs outside renders.
   const unsaved = useRef(false)
   unsaved.current = dirty || busy
-  const autosave = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => () => clearTimeout(autosave.current), [])
+  // The demo saves a moment after the last change; leaving the page saves what waits at once.
+  const saveNow = useRef<(text: string) => Promise<void>>(async () => {})
+  const [autosave] = useState(() => debouncedSave((text) => saveNow.current(text), DEMO_SAVE_MS))
+  useEffect(() => () => autosave.close(), [autosave])
 
   // Changed elsewhere: shown, unless edits here are not saved yet (saving would replace it).
   useLive((message) => {
@@ -326,10 +329,10 @@ function SavedDocument({
     }
   }, [editor, stored, source.n])
 
-  async function save() {
+  async function save(given?: string) {
     setBusy(true)
     setError(undefined)
-    const text = await blocksToMarkdown(editor, editor.document)
+    const text = given ?? (await blocksToMarkdown(editor, editor.document))
     try {
       await api(`/library/edit/${session.documentId}`, { method: 'PUT', body: { text } })
       savedText.current = text
@@ -341,6 +344,7 @@ function SavedDocument({
     }
     setBusy(false)
   }
+  saveNow.current = save
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -358,9 +362,7 @@ function SavedDocument({
               const changed = text !== savedText.current
               unsaved.current = changed || busy
               setDirty(changed)
-              if (!DEMO || !changed) return
-              clearTimeout(autosave.current)
-              autosave.current = setTimeout(() => void save(), DEMO_SAVE_MS)
+              if (DEMO && changed) autosave.schedule(text)
             })
           }}
         />
