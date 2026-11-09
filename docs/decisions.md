@@ -91,7 +91,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   taken away and the adapter installs in the home as before. An older shared copy goes a day after a newer one
   replaced it, once no teammate's folder points to it and no process runs from it: a bridge started through a link
   keeps the copy it started from when the link moves on, so the runner notes those processes beside the copy
-  (`.holders`, by pid and start time).
+  (`.holders`, by pid and start time). The runner's tidy (every 6 hours) also moves on the links of teammates idle since
+  an update, which a turn would otherwise move: each one kept its old copy (680 MB) for good.
 - **Teammates find the runner's Node first** (`asTeammate` in `apps/runner/src/thread-net.ts`). sudo gives what a
   teammate runs the computer's `secure_path`, whose `node` is the system's (v20 on Ubuntu 24.04), too old for the
   workspace's projects: each teammate, and the preview scripts, downloaded a Node of their own. Turns, previews,

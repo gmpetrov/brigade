@@ -21,6 +21,7 @@ const {
   LINK_SCRIPT,
   linkTeammate,
   removeSuperseded,
+  STALE_SCRIPT,
   staleCopies,
   UNLINK_SCRIPT,
   useSharedBridge,
@@ -123,6 +124,27 @@ test("without a shared bridge, a link is taken away and a teammate's own folder 
   await ownCopy(folder)
   assert.equal(unlink().status, 0)
   assert.ok(existsSync(join(folder, 'bridge.mjs')))
+})
+
+// The tidy's question, as the runner asks it as a teammate: is its folder to be pointed at the
+// current copy?
+const stale = (folder: string, shared: string) =>
+  spawnSync('sh', ['-c', STALE_SCRIPT, 'sh', folder, shared]).status === 0
+
+test("the tidy moves an idle teammate's link off an older copy, and its own folder", async (t) => {
+  const { root, folder, shared } = await setup(t)
+  // A harness it never ran: no link made, nor a copy installed for it.
+  assert.equal(stale(folder, shared), false)
+  await ownCopy(folder)
+  assert.equal(stale(folder, shared), true)
+  await rm(folder, { recursive: true })
+  // Its link still on the copy of its last turn, before an update: that copy would stay.
+  const older = join(root, 'bridges', 'claude-code-99999999', 'claude-code')
+  await mkdir(older, { recursive: true })
+  await symlink(older, folder)
+  assert.equal(stale(folder, shared), true)
+  assert.equal(link(folder, shared, false).status, 0)
+  assert.equal(stale(folder, shared), false)
 })
 
 test('shared copies no current recipe names are stale', () => {
