@@ -22,6 +22,7 @@ import {
   useContext,
   useState,
   type ComponentProps,
+  type ReactElement,
   type ReactNode,
 } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
@@ -595,6 +596,34 @@ const streamingPlugins = [...rehypePlugins, rehypeStreamWords] satisfies Compone
   typeof ReactMarkdown
 >['rehypePlugins']
 
+/**
+ * Each text's elements once parsed, the least recently used going first: a thread opened again
+ * shows its replies without parsing and highlighting them all again, most of what opening a
+ * long thread cost. Not while streaming, when each render's text is new.
+ */
+const parsed = new Map<string, ReactElement>()
+const PARSED_KEPT = 500
+
+function markdownTree(source: string, streaming: boolean) {
+  const render = () =>
+    ReactMarkdown({
+      children: source,
+      remarkPlugins,
+      rehypePlugins: streaming ? streamingPlugins : rehypePlugins,
+      components,
+      urlTransform,
+    })
+  if (streaming) return render()
+  let tree = parsed.get(source)
+  if (tree) parsed.delete(source)
+  else tree = render()
+  parsed.set(source, tree)
+  if (parsed.size > PARSED_KEPT) parsed.delete(parsed.keys().next().value!)
+  return tree
+}
+
+const remarkPlugins = [remarkGfm]
+
 /** Markdown text, styled with the theme. Memoised: streaming re-renders only the message that grows. */
 export const Markdown = memo(function Markdown({
   text,
@@ -608,14 +637,7 @@ export const Markdown = memo(function Markdown({
 }) {
   return (
     <div className={cn('min-w-0 leading-relaxed wrap-anywhere', className)}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={streaming ? streamingPlugins : rehypePlugins}
-        components={components}
-        urlTransform={urlTransform}
-      >
-        {text.replace(MENTION, '[$1]($2)')}
-      </ReactMarkdown>
+      {markdownTree(text.replace(MENTION, '[$1]($2)'), streaming)}
     </div>
   )
 })

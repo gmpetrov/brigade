@@ -11,7 +11,7 @@
 // ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
 import { ArrowLeft, ChevronRight, Laptop, LoaderCircle, Maximize2, X } from 'lucide-react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   createContext,
   useCallback,
@@ -71,7 +71,7 @@ import {
 import { isMac, isNarrow } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
-import { openInPlace } from '@/lib/thread-address'
+import { openInPlace, usePanelPathname } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
 type ThreadPanel = {
@@ -208,7 +208,8 @@ const BUSY = new Set(['starting', 'running'])
 
 export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const pathname = usePathname()
+  // A thread opened in place shows at once, not once Next's transition to its address ends.
+  const pathname = usePanelPathname()
   const routed = routeThread(pathname)
   const expanded = routed !== undefined
   // The panel's own addresses open in place, without a trip to the server (openInPlace).
