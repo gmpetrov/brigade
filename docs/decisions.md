@@ -614,7 +614,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   before it shows (`apps/web/lib/live-documents.ts`, `apps/web/lib/prepare-document.ts`): a search row picked a
   moment, a library row or panel tab under the pointer, or the panel opening it start its session and its room's
   socket at once, and it stays open 5 minutes once its panel closes (at most 6 unused, presence cleared
-  meanwhile), so the editor shows it with nothing to wait for. BlockNote is patched
+  meanwhile, none reused once someone else signs in or the workspace changes), so the editor shows it with
+  nothing to wait for. Shown again, it is read only until its room checks again on request (`check`). BlockNote is patched
   (`patches/@blocknote__react@0.56.0.patch`): its virtual-keyboard hook restyled the whole page 4 to 5 times
   each time an editor mounted. Media: files dropped, pasted or picked
   into a document go to the bucket under `<organization>/<workspace>/assets/<id>` (`DocumentAsset`; direct
