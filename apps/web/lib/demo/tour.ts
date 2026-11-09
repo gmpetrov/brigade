@@ -222,10 +222,14 @@ async function caretAtEnd(stage: Stage, editor: HTMLElement, line: HTMLElement) 
   await sleep(300, stage.signal)
 }
 
-/** The line's text selected, as a drag over it does: its toolbar shows (Hand to…). */
-async function selectLine(stage: Stage, editor: HTMLElement, line: HTMLElement) {
-  await moveTo(stage, lineText(line))
-  editor.focus()
+/**
+ * The line's text selected, as a drag over it does: its toolbar shows (Hand to…). The line and
+ * the editor are found when used: a save can draw them again meanwhile.
+ */
+async function selectLine(stage: Stage, find: () => HTMLElement | undefined) {
+  await moveTo(stage, lineText(await waitFor(find, stage.signal)))
+  const line = await waitFor(find, stage.signal)
+  line.closest<HTMLElement>(EDITOR)?.focus()
   const range = document.createRange()
   range.selectNodeContents(lineText(line))
   document.getSelection()?.removeAllRanges()
@@ -274,13 +278,13 @@ async function playList(stage: Stage, story: (typeof STORIES)['list']) {
   await caretAtEnd(stage, editor, end)
   await key(stage, editor, 'Enter')
   await type(stage, editor, story.ask, 'caret')
-  const added = await waitFor(() => listLine(story.ask), signal)
+  await waitFor(() => listLine(story.ask), signal)
 
   // Handed to Riley.
   // Its toolbar shows once the editor has read the selection: selected again if it did not.
   let handTo: HTMLElement | undefined
   for (let tries = 0; !handTo && tries < 3; tries++) {
-    await selectLine(stage, editor, added)
+    await selectLine(stage, () => listLine(story.ask))
     handTo = await waitFor(() => byText('button', /^Hand to /), signal, 3000).catch((e) => {
       if (signal.aborted) throw e
       return undefined

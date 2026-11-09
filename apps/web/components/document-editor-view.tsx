@@ -362,7 +362,10 @@ function SavedDocument({
               const changed = text !== savedText.current
               unsaved.current = changed || busy
               setDirty(changed)
-              if (DEMO && changed) autosave.schedule(text)
+              if (!DEMO) return
+              // Back to what was saved (ticked then unticked, an undo): nothing waits any more.
+              if (changed) autosave.schedule(text)
+              else autosave.cancel()
             })
           }}
         />

@@ -23,6 +23,12 @@ export function debouncedSave(save: (text: string) => unknown, ms: number) {
     },
     /** Saves now what waits, if anything. */
     flush,
+    /** Nothing to save after all (the text is back to what was saved): what waited is dropped. */
+    cancel() {
+      clearTimeout(timer)
+      timer = undefined
+      pending = null
+    },
     /** The editor goes: what waits is saved now, and anything later at once. */
     close() {
       closed = true

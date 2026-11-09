@@ -35,3 +35,13 @@ test('a change that arrives once closed is saved at once', () => {
   autosave.schedule('last word')
   assert.deepEqual(saved, ['last word'])
 })
+
+test('back to the saved text before the moment is up: nothing is saved', async () => {
+  const saved: string[] = []
+  const autosave = debouncedSave((t) => saved.push(t), 30)
+  autosave.schedule('ticked')
+  autosave.cancel()
+  await pause(60)
+  autosave.close()
+  assert.deepEqual(saved, [])
+})
