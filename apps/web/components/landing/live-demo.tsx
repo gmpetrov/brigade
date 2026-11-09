@@ -9,11 +9,13 @@ import { c, Icon } from './parts'
 const WIDE = '(min-width: 900px)'
 
 // The walkthroughs a visitor picks from, the window's tabs (lib/demo/tour.ts plays each one).
-const STORIES: { id: Story; label: string }[] = [
-  { id: 'bug', label: 'Fix a customer’s bug' },
-  { id: 'feature', label: 'Ship a requested feature' },
-  { id: 'call', label: 'Prep a sales call' },
-  { id: 'payment', label: 'Chase a failed payment' },
+// `short` where the window is too narrow for every label: the bar holds them all from 900px.
+const STORIES: { id: Story; label: string; short: string }[] = [
+  { id: 'bug', label: 'Fix a customer’s bug', short: 'Fix a bug' },
+  { id: 'feature', label: 'Ship a requested feature', short: 'Ship a feature' },
+  { id: 'call', label: 'Prep a sales call', short: 'Prep a call' },
+  { id: 'payment', label: 'Chase a failed payment', short: 'Chase a payment' },
+  { id: 'list', label: 'Work through a list', short: 'Work a list' },
 ]
 
 /**
@@ -57,7 +59,8 @@ export function LiveDemo() {
                       setStory(s.id)
                     }}
                   >
-                    {s.label}
+                    <span className={c('demo-tab-long')}>{s.label}</span>
+                    <span className={c('demo-tab-short')}>{s.short}</span>
                   </button>
                 ))}
               </div>

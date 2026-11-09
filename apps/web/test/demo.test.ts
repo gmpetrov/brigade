@@ -60,6 +60,7 @@ test('a message the demo knows plays its task; anything else offers what it know
       openPull: () => ({}) as never,
       addRoutine: () => undefined,
       openTickets: () => [],
+      items: () => [],
       playbook: () => undefined,
     },
   }

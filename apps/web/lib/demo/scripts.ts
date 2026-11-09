@@ -2,6 +2,7 @@
 // streams a real turn (lib/demo/server.ts), and a friendly reply with suggestions for
 // anything else. They only do what Brigade does: a write to an App waits for a person's
 // approval when the teammate's permissions ask for it, and a merge is a person's call.
+import { handOffParts, type DiffFile } from '@brigade/contracts'
 import type { DemoPull, NewPull } from './pulls'
 
 export type Step =
@@ -58,6 +59,8 @@ export type Context = {
       teammateId: string
     }) => void
     openTickets: () => { title: string; session?: { title: string } }[]
+    /** The list items the thread works on (docs/lists.md), with their list's title. */
+    items: (threadId: string) => { id: string; text: string; list: string }[]
     playbook: () =>
       { count: number; onItsOwn: number; approvedByYou: number; withPerson: number } | undefined
   }
@@ -90,6 +93,8 @@ const norm = (text: string) =>
 export function replyTo(text: string, ctx: Context): Run {
   const said = norm(text)
   const teammate = ctx.thread?.teammate ?? ctx.teammates[0] ?? { id: '', name: 'Riley' }
+  // Lines of a list handed over (Hand to, docs/lists.md): before anything a line's words may say.
+  if (handOffParts(text)) return workOnItems(ctx, teammate)
   if (/csv export|asked for csv/.test(said)) return shipFeature(ctx, teammate)
   if (/build it|open a pr|annual billing|billing toggle/.test(said))
     return buildToggle(ctx, teammate)
@@ -558,6 +563,270 @@ type Decision = {
   asked?: Record<string, unknown>
   pending?: { toolCallId: string; toolName: string; input: unknown }
   merge: (number: number) => boolean
+}
+
+// ---- Lines of a list ----
+
+/** What a teammate builds for a line it was handed, by what the line says. */
+type Recipe = {
+  /** What done means for it, as a teammate says when it takes an item on (docs/lists.md). */
+  doneWhen: string
+  branch: string
+  title: string
+  body: string
+  /** What the pull request does, in the reply that offers to merge it. */
+  does: string
+  /** What is live once merged. */
+  live: string
+  test: { command: string; output: string }
+  files: DiffFile[]
+}
+
+const RECIPES: { match: RegExp; recipe: Recipe }[] = [
+  {
+    match: /changelog/i,
+    recipe: {
+      doneWhen: '/changelog lists what shipped, newest first, and the footer links to it.',
+      branch: 'changelog-page',
+      title: 'Changelog page, linked from the footer',
+      body: 'A /changelog page that lists what shipped, newest first, from content/changelog.md, and a Changelog link in the footer. Covered by a test.',
+      does: 'adds a /changelog page, newest first, and a Changelog link in the footer',
+      live: 'acme.test/changelog is live, linked from the footer',
+      test: {
+        command: 'pnpm test changelog',
+        output:
+          '✓ changelog › lists entries newest first\n✓ footer › links to the changelog\nTests: 44 passed, 44 total',
+      },
+      files: [
+        {
+          path: 'app/changelog/page.tsx',
+          previousPath: null,
+          status: 'added',
+          additions: 12,
+          deletions: 0,
+          patch: `@@ -0,0 +1,12 @@
++import { entries } from '@/content/changelog'
++
++export const metadata = { title: 'Changelog · Acme' }
++
++/** What shipped, newest first. */
++export default function ChangelogPage() {
++  return (
++    <Page title="Changelog">
++      {entries.toSorted((a, b) => b.date.localeCompare(a.date)).map((e) => <Entry key={e.slug} {...e} />)}
++    </Page>
++  )
++}`,
+        },
+        {
+          path: 'components/site-footer.tsx',
+          previousPath: null,
+          status: 'modified',
+          additions: 1,
+          deletions: 0,
+          patch: `@@ -14,6 +14,7 @@ export function SiteFooter() {
+       <FooterLink href="/pricing">Pricing</FooterLink>
+       <FooterLink href="/docs">Docs</FooterLink>
++      <FooterLink href="/changelog">Changelog</FooterLink>
+       <FooterLink href="/security">Security</FooterLink>`,
+        },
+      ],
+    },
+  },
+  {
+    match: /status page/i,
+    recipe: {
+      doneWhen: 'every page’s footer links to status.acme.test.',
+      branch: 'footer-status',
+      title: 'Footer: link to the status page',
+      body: 'A Status link in the footer, to status.acme.test, with a dot that says whether everything is up. Covered by a test.',
+      does: 'adds a Status link to the footer, with a dot that says whether everything is up',
+      live: 'every page’s footer links to status.acme.test',
+      test: {
+        command: 'pnpm test footer',
+        output: '✓ footer › links to the status page\nTests: 43 passed, 43 total',
+      },
+      files: [
+        {
+          path: 'components/site-footer.tsx',
+          previousPath: null,
+          status: 'modified',
+          additions: 4,
+          deletions: 0,
+          patch: `@@ -14,6 +14,10 @@ export function SiteFooter() {
+       <FooterLink href="/pricing">Pricing</FooterLink>
+       <FooterLink href="/docs">Docs</FooterLink>
++      <FooterLink href="https://status.acme.test">
++        <StatusDot />
++        Status
++      </FooterLink>
+       <FooterLink href="/security">Security</FooterLink>`,
+        },
+      ],
+    },
+  },
+  {
+    match: /open graph|og image/i,
+    recipe: {
+      doneWhen: 'every page and blog post has its own Open Graph image, with its title.',
+      branch: 'og-images',
+      title: 'Open Graph images for every page and post',
+      body: 'Each page and blog post gets a 1200×630 Open Graph image with its title on the brand background, made at build time. Covered by a test.',
+      does: 'gives every page and blog post its own Open Graph image, with its title',
+      live: 'links to Acme now show a card with the page’s title',
+      test: {
+        command: 'pnpm test opengraph',
+        output: '✓ opengraph › a 1200×630 image per page and post\nTests: 43 passed, 43 total',
+      },
+      files: [
+        {
+          path: 'app/blog/[slug]/opengraph-image.tsx',
+          previousPath: null,
+          status: 'added',
+          additions: 9,
+          deletions: 0,
+          patch: `@@ -0,0 +1,9 @@
++import { ImageResponse } from 'next/og'
++import { post } from '@/content/blog'
++
++export const size = { width: 1200, height: 630 }
++
++export default async function Image({ params }: { params: { slug: string } }) {
++  const { title } = await post(params.slug)
++  return new ImageResponse(<Card title={title} />, size)
++}`,
+        },
+      ],
+    },
+  },
+]
+
+const slugOf = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32)
+    .replace(/-$/, '') || 'list-item'
+
+/** For a line the demo has no recipe for: a page of the site, named after it. */
+function anyRecipe(text: string): Recipe {
+  const slug = slugOf(text)
+  const short = text.replace(/\.$/, '')
+  return {
+    doneWhen: `${short.charAt(0).toLowerCase()}${short.slice(1)}, live on the site.`,
+    branch: slug,
+    title: short,
+    body: `${short}. Covered by a test.`,
+    does: 'does it, with a test',
+    live: 'it’s live on the site',
+    test: {
+      command: `pnpm test ${slug}`,
+      output: `✓ ${slug} › works as the line says\nTests: 43 passed, 43 total`,
+    },
+    files: [
+      {
+        path: `app/${slug}/page.tsx`,
+        previousPath: null,
+        status: 'added',
+        additions: 3,
+        deletions: 0,
+        patch: `@@ -0,0 +1,3 @@
++export default function Page() {
++  return <Section title=${JSON.stringify(short)} />
++}`,
+      },
+    ],
+  }
+}
+
+/** The demo's pull requests for lines start after the walkthroughs' (#152 to #154). */
+let nextItemPull = 155
+
+/**
+ * Lines of a list handed to a teammate (docs/lists.md): it says what done means, builds it, and
+ * opens a pull request that closes them. Merging it ticks them in their list, credited to it
+ * (lib/demo/lists.ts), and it says so.
+ */
+function workOnItems(ctx: Context, teammate: Ref): Run {
+  const items = ctx.actions.items(ctx.threadId)
+  const first = items[0]
+  if (!first)
+    return {
+      steps: [{ say: 'I can’t find those lines in the list any more. Hand them over again?' }],
+    }
+  const text = first.text
+  const recipe = RECIPES.find((r) => r.match.test(text))?.recipe ?? anyRecipe(text)
+  const number = nextItemPull++
+  const slug = teammate.name.toLowerCase()
+  const head = `brigade/${slug}-${recipe.branch}`
+  const url = `https://github.com/acme/web/pull/${number}`
+  const quoted = items.map((i) => `“${i.text}”`).join(' and ')
+  const merged: Run = {
+    teammateId: teammate.id,
+    steps: [
+      {
+        say: `Merged: ${recipe.live}. ${quoted} ${items.length > 1 ? 'are' : 'is'} ticked on ${first.list}.`,
+        ms: 600,
+      },
+    ],
+  }
+  return {
+    steps: [
+      { say: `On it. Done when: ${recipe.doneWhen}`, ms: 600 },
+      {
+        tool: tool('list_items'),
+        input: {},
+        output: items.map((i) => ({ id: i.id, text: i.text, list: i.list, state: 'in_progress' })),
+        takes: 500,
+      },
+      {
+        tool: tool('checkout_repository'),
+        input: { repository: 'acme/web' },
+        output: { directory: 'web', branch: head },
+        takes: 900,
+      },
+      ...recipe.files.map((f, i) => ({ file: `web/${f.path}`, ms: i ? 600 : 900 })),
+      bash(recipe.test.command, recipe.test.output, 1300),
+      bash(
+        `git commit -am "${recipe.title}" && git push -u origin HEAD`,
+        `To acme/web\n * [new branch]      ${head} -> ${head}`,
+        800,
+      ),
+      {
+        tool: tool('github_create_pull_request'),
+        input: {
+          repository: 'acme/web',
+          title: recipe.title,
+          head,
+          base: 'main',
+          items: { closes: items.map((i) => i.id) },
+          review: { wanted: false, reason: 'A small change, covered by a test' },
+        },
+        output: { number, url, state: 'open' },
+        takes: 900,
+        then: () =>
+          void ctx.actions.openPull(
+            ctx.threadId,
+            teammate,
+            {
+              number,
+              title: recipe.title,
+              head,
+              body: recipe.body,
+              files: recipe.files,
+              thread: ctx.thread?.title ?? text,
+              review: 'A small change, covered by a test',
+            },
+            merged,
+          ),
+      },
+      {
+        say: `Done: [acme/web#${number}](${url}) ${recipe.does}. Tests pass. Merging it ticks the line on ${first.list}.`,
+      },
+    ],
+    merge: `Merge #${number}`,
+  }
 }
 
 /** How a thread goes on once a person approved, declined or answered what it waited on. */
