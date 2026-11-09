@@ -154,7 +154,9 @@ again, `/app?tour=<story>`, which starts the demo over). A thread the visitor st
 reloaded on its address, the demo opens Today instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
 "Merge #153", "Merge #154", "Allow", Lists, "Hand to", the hand-off dialog's teammate, a line's
 chips, the Done filter): a change to those labels needs the same change in `lib/demo/tour.ts`.
-In a document, it sets the page's selection, which the editor reads, rather than click in the
-text: a press on the editor would move the caret.
+In a document, it puts the caret, adds the line, types and selects through the editor itself,
+which registers a handle while it shows a document in the demo (`lib/demo/editor-handle.ts`): with
+the page's selection, Safari kept the editor's own caret, typed into the line above the new one
+and never showed the toolbar.
 `pnpm test` plays every story against the demo's server; the clicks themselves are checked
 by running it in a browser.

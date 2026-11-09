@@ -4,6 +4,7 @@ import { DOCUMENT_FRAGMENT, type EditSession } from '@brigade/contracts'
 import { withCollaboration } from '@blocknote/core/yjs'
 import { blocksToMarkdown, markdownToBlocks } from '@brigade/editor'
 import { useCreateBlockNote } from '@blocknote/react'
+import { TextSelection } from '@tiptap/pm/state'
 import { useEffect, useRef, useState } from 'react'
 import {
   DocumentBlockNoteView,
@@ -23,6 +24,7 @@ import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { debouncedSave } from '@/lib/debounced-save'
 import { DEMO } from '@/lib/demo/flag'
+import { setDemoEditor, type DemoEditorHandle } from '@/lib/demo/editor-handle'
 import { openDocument, useLiveSession, type LiveConnection } from '@/lib/live-documents'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -274,6 +276,8 @@ function SavedDocument({
     ],
   })
   self.current = editor
+  // The demo's walkthrough types and selects through the editor (lib/demo/editor-handle.ts).
+  useEffect(() => (DEMO ? setDemoEditor(demoHandle(editor)) : undefined), [editor])
   // Always there without `live`; again from the API when someone else changed it.
   const [source, setSource] = useState(() => ({ text: session.text ?? '', n: 0 }))
   const stored = source.text
@@ -383,4 +387,45 @@ function SavedDocument({
       )}
     </div>
   )
+}
+
+/** The demo walkthrough's hold on a document's editor (lib/demo/editor-handle.ts). */
+function demoHandle(editor: DocumentBlockEditor): DemoEditorHandle {
+  const checks = () => editor.document.filter((b) => b.type === 'checkListItem')
+  const elementOf = (id: string) =>
+    editor.prosemirrorView.dom.querySelector<HTMLElement>(
+      `[data-id="${id}"] .bn-block-content[data-content-type="checkListItem"]`,
+    ) ?? undefined
+  const textOf = (block: { content?: unknown }) =>
+    Array.isArray(block.content)
+      ? block.content.map((c: { text?: string }) => c.text ?? '').join('')
+      : ''
+  return {
+    caretAtLastLine: () => {
+      const last = checks().at(-1)
+      if (!last) return undefined
+      editor.focus()
+      editor.setTextCursorPosition(last.id, 'end')
+      return elementOf(last.id)
+    },
+    newLineAtEnd: () => {
+      const last = checks().at(-1) ?? editor.document.at(-1)
+      if (!last) return
+      const [line] = editor.insertBlocks([{ type: 'checkListItem' }], last.id, 'after')
+      editor.focus()
+      if (line) editor.setTextCursorPosition(line.id, 'start')
+    },
+    insertText: (text) => editor.insertInlineContent(text),
+    selectLine: (text) => {
+      const block = checks().find((b) => textOf(b).includes(text))
+      const inline = block && elementOf(block.id)?.querySelector('.bn-inline-content')
+      if (!inline) return false
+      const view = editor.prosemirrorView
+      const from = view.posAtDOM(inline, 0)
+      const to = view.posAtDOM(inline, inline.childNodes.length)
+      editor.focus()
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, from, to)))
+      return true
+    },
+  }
 }
