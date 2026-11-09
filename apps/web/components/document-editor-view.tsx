@@ -1,12 +1,10 @@
 'use client'
 import '@blocknote/shadcn/style.css'
-import { DOCUMENT_FRAGMENT, type EditSession, type EditTarget } from '@brigade/contracts'
+import { DOCUMENT_FRAGMENT, type EditSession } from '@brigade/contracts'
 import { withCollaboration } from '@blocknote/core/yjs'
 import { blocksToMarkdown, markdownToBlocks } from '@brigade/editor'
 import { useCreateBlockNote } from '@blocknote/react'
 import { useEffect, useRef, useState } from 'react'
-import YProvider from 'y-partyserver/provider'
-import * as Y from 'yjs'
 import {
   DocumentBlockNoteView,
   editorFiles,
@@ -23,106 +21,36 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { useLiveSession, type LiveConnection } from '@/lib/live-documents'
 import { cn } from '@/lib/utils'
 
-const openDocument = (target: EditTarget) => api<EditSession>('/library/edit', { body: target })
-
 export function DocumentEditorView(props: DocumentEditorProps) {
-  const [session, setSession] = useState<EditSession>()
-  const [error, setError] = useState<string>()
-  const key = JSON.stringify(props.target)
-
-  useEffect(() => {
-    let current = true
-    setSession(undefined)
-    setError(undefined)
-    openDocument(props.target).then(
-      (s) => current && setSession(s),
-      (e: Error) => current && setError(e.message),
-    )
-    return () => {
-      current = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the target, by value
-  }, [key])
+  // Open already when it was prepared (lib/prepare-document.ts) or shown a moment ago: then
+  // the editor shows it at once.
+  const { session, error, connection, held, deleted } = useLiveSession(props.target)
 
   if (error) return <p className="text-sm text-destructive-text">{error}</p>
   if (!session) return <Skeleton className="h-32 w-full" />
-  return session.live ? (
-    <LiveDocument key={session.documentId} session={session} {...props} />
-  ) : (
-    <SavedDocument key={session.documentId} session={session} {...props} />
-  )
-}
-
-type Connection = { doc: Y.Doc; provider: YProvider }
-type Status = 'connecting' | 'live' | 'offline' | 'deleted'
-
-/** Synced through the collab server: no save button, edits land as people type. */
-function LiveDocument({
-  session,
-  target,
-  ...props
-}: DocumentEditorProps & { session: EditSession }) {
-  const live = session.live!
-  const [connection, setConnection] = useState<Connection>()
-  // Shown, not yet editable: the room opened on what it had (`early`) and still checks it
-  // against the stored text. A change it finds can replace a whole block, with what was typed in it.
-  const [held, setHeld] = useState(false)
-
-  useEffect(() => {
-    const doc = new Y.Doc()
-    const url = new URL(live.url)
-    // The first connection uses the token that came with the session; reconnects ask for a new one.
-    let token: string | undefined = live.token
-    const provider = new YProvider(url.host, live.room, doc, {
-      party: live.party,
-      protocol: url.protocol === 'https:' ? 'wss' : 'ws',
-      params: async () => {
-        const fresh = token ?? (await openDocument(target).catch(() => null))?.live?.token
-        token = undefined
-        return { token: fresh ?? '', early: '1' }
-      },
-    })
-    // Listening from the start: the room says `checking` before anything else.
-    let checked = false
-    const onCheck = (message: string) => {
-      let notice: { type?: string }
-      try {
-        notice = JSON.parse(message) as typeof notice
-      } catch {
-        return
-      }
-      // Once only: after a reconnect, what was typed meanwhile is the person's, as before.
-      if (notice.type === 'checking' && !checked) setHeld(true)
-      if (notice.type === 'checked') {
-        checked = true
-        setHeld(false)
-      }
-    }
-    provider.on('custom-message', onCheck)
-    setConnection({ doc, provider })
-    return () => {
-      provider.off('custom-message', onCheck)
-      provider.destroy()
-      doc.destroy()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one connection per room
-  }, [live.room])
-
+  if (!session.live) return <SavedDocument key={session.documentId} session={session} {...props} />
   if (!connection) return <Skeleton className="h-32 w-full" />
+  const { target, ...rest } = props
   return (
     <LiveEditor
+      key={connection.id}
       connection={connection}
-      user={live.user}
+      user={session.live.user}
       documentId={session.documentId}
       list={target.kind === 'library'}
       held={held}
-      {...props}
+      deleted={deleted}
+      {...rest}
     />
   )
 }
 
+type Status = 'connecting' | 'live' | 'offline' | 'deleted'
+
+/** Synced through the collab server: no save button, edits land as people type. */
 function LiveEditor({
   connection: { doc, provider },
   user,
@@ -132,16 +60,21 @@ function LiveEditor({
   ask,
   list,
   held,
+  deleted,
 }: Omit<DocumentEditorProps, 'target'> & {
-  connection: Connection
+  connection: LiveConnection
   user: { name: string; color: string }
   documentId: string
   list: boolean
   /** Read only until the room's check is done. */
   held: boolean
+  deleted?: boolean
 }) {
-  const [status, setStatus] = useState<Status>('connecting')
-  const [synced, setSynced] = useState(false)
+  // Opened before it was shown, it may be connected and synced already: no skeleton then.
+  const [status, setStatus] = useState<Status>(() =>
+    deleted ? 'deleted' : provider.wsconnected ? 'live' : 'connecting',
+  )
+  const [synced, setSynced] = useState(() => provider.synced)
   const [others, setOthers] = useState<{ name: string; color: string }[]>([])
   const [typing, setTyping] = useState<Writer | null>(null)
 
@@ -211,9 +144,10 @@ function LiveEditor({
     provider.on('connection-close', onClose)
     provider.on('custom-message', onMessage)
     provider.awareness.on('change', onAwareness)
-    // It may have connected and synced before this listened.
+    // It may have connected and synced before this listened, and others may be here already.
     if (provider.wsconnected) setStatus((s) => (s === 'deleted' ? s : 'live'))
     if (provider.synced) setSynced(true)
+    onAwareness()
     return () => {
       provider.off('status', onStatus)
       provider.off('sync', onSync)
