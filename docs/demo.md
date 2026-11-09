@@ -141,9 +141,9 @@ visitor, signed in as Ada) asks a teammate from Today, the teammate's side plays
   to pay with a new card.
 - `list`: in Lists, the cursor opens Acme's launch checklist, adds "Add a changelog page linked
   from the footer" at its end and hands it to Riley (Hand to, then Riley in the dialog). Riley's
-  thread opens; back in the list, the line shows the thread at work, then #155 waiting on a
-  person. The cursor opens the thread from the line's chip, merges #155, and back in the list the
-  line is ticked ("PR #155, <day>"), then shows under Done's Recently done.
+  thread opens, and the cursor stays there while Riley works: the list has nothing to show
+  meanwhile. It merges #155 there, then goes back to the list, where the line is ticked ("PR #155,
+  <day>"), and shows it under Done's Recently done.
 
 Each takes 15 to 40 seconds.
 
