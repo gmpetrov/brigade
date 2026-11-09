@@ -1236,11 +1236,7 @@ describe('a refused change undone', { skip }, () => {
       },
     })
     const read = () => prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
-    const save = (
-      label: string,
-      sync: () => Promise<unknown>,
-      times: { holdMs?: number; syncMs?: number } = {},
-    ) =>
+    const save = (label: string, sync: () => Promise<unknown>, times: { holdMs?: number } = {}) =>
       updateTrigger(
         db,
         a,
@@ -1297,11 +1293,6 @@ describe('a refused change undone', { skip }, () => {
       })
       assert.equal(await save('W', async () => undefined), 200)
       assert.equal((await read()).savingUntil, null)
-
-      // A vendor that never answers counts as refusing: undone while the save still holds it.
-      assert.equal(await save('V', () => new Promise(() => {}), { syncMs: 50 }), 502)
-      const timedOut = await read()
-      assert.deepEqual([timedOut.label, timedOut.savingUntil], ['W', null])
 
       // A save whose hold expired while its vendor thought: a project change took the rule, and
       // the save's late rollback leaves it.

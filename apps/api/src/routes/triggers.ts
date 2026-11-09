@@ -245,10 +245,12 @@ export async function createTrigger(
   }
 }
 
-/** How long a save holds its trigger, at most. */
-export const SAVE_MS = 2 * 60_000
-/** How long its vendor has to answer: well within the hold, so a refusal is undone while held. */
-export const SYNC_MS = 60_000
+/**
+ * How long a save holds its trigger, at most: far past any vendor's answer, so a refusal is undone
+ * while held. The vendor's call is never cut short: one still running could subscribe after the
+ * rollback's resync.
+ */
+export const SAVE_MS = 10 * 60_000
 
 /**
  * What a trigger does (its teammate, label, options, project, instructions), changed in place,
@@ -268,10 +270,9 @@ export async function updateTrigger(
   test: {
     sync?: (scope: Scope, connectionId: string) => Promise<unknown>
     holdMs?: number
-    syncMs?: number
   } = {},
 ) {
-  const { sync = syncConnection, holdMs = SAVE_MS, syncMs = SYNC_MS } = test
+  const { sync = syncConnection, holdMs = SAVE_MS } = test
   await notThePlaybooks(db, id)
   const now = new Date()
   const claim = new Date(now.getTime() + holdMs)
@@ -308,15 +309,8 @@ export async function updateTrigger(
     if (!wrote.count)
       throw new HTTPException(409, { message: 'This rule was changed meanwhile. Try again.' })
     // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
-    // A vendor that does not answer in time counts as refusing, so it is undone while held.
-    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      await Promise.race([
-        sync(scope, before.connectionId),
-        new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error('no answer in time')), syncMs)
-        }),
-      ])
+      await sync(scope, before.connectionId)
     } catch (error) {
       await db.trigger.updateMany({ where: held(), data: triggerFields(before) })
       await resync(scope, [before.connectionId])
@@ -324,8 +318,6 @@ export async function updateTrigger(
       throw new HTTPException(502, {
         message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
       })
-    } finally {
-      clearTimeout(timer)
     }
     await audit({
       ...scope,
