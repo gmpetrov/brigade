@@ -186,7 +186,7 @@ export async function takeFromBox(
     direction: 'in' as const,
     sessionId: null,
     doneAt: null,
-    route: { in: ['box', 'cap', 'loop'] },
+    route: { in: ['box', 'kept', 'cap', 'loop'] },
     receivedAt: { lte: m.receivedAt },
   }
   const rows = await db.mailMessage.findMany({

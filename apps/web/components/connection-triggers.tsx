@@ -180,7 +180,9 @@ export function ConnectionTriggers({
                 <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
                   <div className="text-sm">
                     <span className="font-semibold">{t.label}</span>{' '}
-                    <span className="text-muted-foreground">→ {t.teammate.name}</span>
+                    <span className="text-muted-foreground">
+                      → {t.teammate?.name ?? 'Inbox, unassigned'}
+                    </span>
                     {t.project && !editable && (
                       <span className="ml-2 inline-flex text-xs">
                         <ProjectTag project={t.project} />

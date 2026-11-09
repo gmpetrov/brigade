@@ -397,7 +397,7 @@ export const search = new Hono<AppEnv>()
           kind: 'trigger',
           id: t.id,
           title: t.label,
-          detail: t.teammate.name,
+          detail: t.teammate?.name ?? 'Kept in the Inbox',
           score: score(t.label),
         }),
       ),

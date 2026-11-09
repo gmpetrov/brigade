@@ -4480,7 +4480,8 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
     attachments: runtime.JsonValue
     /**
      * in: where it went. awaited (a thread waiting on it), conversation (its conversation's
-     * thread), member (a member's request), rule, box, duplicate, loop, cap, own_copy (a reply a
+     * thread), member (a member's request), rule, kept (a rule with no teammate kept it for a
+     * person), box, duplicate, loop, cap, own_copy (a reply a
      * person sent from Gmail), read (a thread read or answered it from the box), unknown_address.
      * Null until delivered.
      */

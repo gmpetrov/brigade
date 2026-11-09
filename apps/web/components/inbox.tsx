@@ -336,6 +336,8 @@ export function destination(item: InboxItem): string {
       return 'A member’s request'
     case 'rule':
       return item.rule ? `Rule "${item.rule.label}"` : 'A rule'
+    case 'kept':
+      return item.rule ? `Kept by rule "${item.rule.label}"` : 'Kept for a person'
     case 'handed':
       return 'Handed over'
     case 'read':

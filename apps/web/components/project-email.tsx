@@ -13,6 +13,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -100,15 +101,62 @@ export function ErrorLine({ error }: { error?: string }) {
   return error ? <p className="text-sm text-destructive-text">{error}</p> : null
 }
 
-/** "From @acme.com · Subject has "invoice" · Skips automatic mail · 50 threads a day max" */
-export function rulesSummary(options: Record<string, string>) {
+/**
+ * "From @acme.com · Subject has "invoice" · Skips automatic mail · 50 threads a day max". A rule
+ * with nobody starts no thread: no daily limit.
+ */
+export function rulesSummary(options: Record<string, string>, startsThreads = true) {
   const parts: string[] = []
   if (options.from?.trim()) parts.push(`From ${options.from.trim()}`)
   if (options.subject?.trim()) parts.push(`Subject has "${options.subject.trim()}"`)
   if (parts.length === 0) parts.push('Any mail')
   if (options.automated === 'skip') parts.push('Skips automatic mail')
-  parts.push(`${options.perDay?.trim() || '50'} threads a day max`)
+  if (startsThreads) parts.push(`${options.perDay?.trim() || '50'} threads a day max`)
   return parts.join(' · ')
+}
+
+/** The Teammate field's value for a rule with nobody: its mail waits in the Inbox for a person. */
+export const NOBODY = 'nobody'
+
+/** Where a rule sends its mail, in a few words: its teammate, or the Inbox. */
+export const ruleTarget = (rule: { teammate: { name: string } | null }) =>
+  rule.teammate?.name ?? 'Inbox, unassigned'
+
+/** A mailbox rule's Teammate field: who its threads start with, or nobody (kept in the Inbox). */
+export function RuleTeammate({
+  id,
+  value,
+  onChange,
+}: {
+  id: string
+  value: string | undefined
+  onChange: (value: string) => void
+}) {
+  const { teammates } = useDashboard()
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>Teammate</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} className="w-full bg-card">
+          <SelectValue placeholder="Pick a teammate" />
+        </SelectTrigger>
+        <SelectContent>
+          {teammates.map((t) => (
+            <SelectItem key={t.id} value={t.id}>
+              {t.name}
+            </SelectItem>
+          ))}
+          <SelectSeparator />
+          <SelectItem value={NOBODY}>Nobody: keep it in the Inbox</SelectItem>
+        </SelectContent>
+      </Select>
+      {value === NOBODY && (
+        <p className="text-xs text-muted-foreground">
+          No thread starts. Its mail waits in the Inbox until you hand it to a teammate.
+        </p>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -142,7 +190,7 @@ export function AddRule({
   }
   const [label, setLabel] = useState(rule?.label ?? 'Answer')
   const [teammateId, setTeammateId] = useState<string | undefined>(
-    rule?.teammate.id ?? initialTeammate ?? undefined,
+    rule ? (rule.teammate?.id ?? NOBODY) : (initialTeammate ?? undefined),
   )
   const [from, setFrom] = useState(rule?.options.from ?? '')
   const [subject, setSubject] = useState(rule?.options.subject ?? '')
@@ -156,6 +204,8 @@ export function AddRule({
   const add = useAction()
   const id = (field: string) => `rule-${rule?.id ?? connectionId}-${field}`
   const chosen = teammateId ?? teammates[0]?.id
+  // Nobody: the mail waits in the Inbox, so no thread, no daily limit and no instructions.
+  const nobody = chosen === NOBODY
 
   const options = () =>
     Object.fromEntries(
@@ -163,7 +213,7 @@ export function AddRule({
         from: from.trim(),
         subject: subject.trim(),
         automated: skipAutomated ? 'skip' : '',
-        perDay: perDay.trim(),
+        perDay: nobody ? '' : perDay.trim(),
       }).filter(([, value]) => value),
     )
 
@@ -187,23 +237,23 @@ export function AddRule({
         await api(`/triggers/${rule.id}`, {
           method: 'PUT',
           body: {
-            teammateId: chosen,
+            teammateId: nobody ? null : chosen,
             label: label.trim(),
             options: options(),
             projectId: rule.project?.id ?? null,
-            instructions: instructions.trim() || null,
+            instructions: (!nobody && instructions.trim()) || null,
           },
         })
       else
         await api<{ id: string }>('/triggers', {
           body: {
             connectionId,
-            teammateId: chosen,
+            teammateId: nobody ? null : chosen,
             event: 'email_received',
             label: label.trim(),
             options: options(),
             projectId,
-            ...(instructions.trim() && { instructions: instructions.trim() }),
+            ...(!nobody && instructions.trim() && { instructions: instructions.trim() }),
           },
         })
       return true
@@ -251,21 +301,7 @@ export function AddRule({
             className="bg-card"
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={id('teammate')}>Teammate</Label>
-          <Select value={chosen} onValueChange={setTeammateId}>
-            <SelectTrigger id={id('teammate')} className="w-full bg-card">
-              <SelectValue placeholder="Pick a teammate" />
-            </SelectTrigger>
-            <SelectContent>
-              {teammates.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <RuleTeammate id={id('teammate')} value={chosen} onChange={setTeammateId} />
         <div className="flex flex-col gap-2">
           <Label htmlFor={id('from')}>From (optional)</Label>
           <Input
@@ -286,19 +322,21 @@ export function AddRule({
             className="bg-card"
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={id('per-day')}>Threads a day</Label>
-          <Input
-            id={id('per-day')}
-            type="number"
-            min={1}
-            value={perDay}
-            onChange={(e) => setPerDay(e.target.value)}
-            placeholder="50"
-            className="bg-card"
-          />
-        </div>
-        <div className="flex items-center gap-2 sm:pt-7">
+        {!nobody && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={id('per-day')}>Threads a day</Label>
+            <Input
+              id={id('per-day')}
+              type="number"
+              min={1}
+              value={perDay}
+              onChange={(e) => setPerDay(e.target.value)}
+              placeholder="50"
+              className="bg-card"
+            />
+          </div>
+        )}
+        <div className={cn('flex items-center gap-2', !nobody && 'sm:pt-7')}>
           <Checkbox
             id={id('automated')}
             checked={skipAutomated}
@@ -309,18 +347,20 @@ export function AddRule({
           </Label>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={id('instructions')}>Instructions (optional)</Label>
-        <Textarea
-          id={id('instructions')}
-          value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
-          rows={3}
-          maxLength={4000}
-          placeholder="What the teammate does with each email"
-          className="bg-card"
-        />
-      </div>
+      {!nobody && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={id('instructions')}>Instructions (optional)</Label>
+          <Textarea
+            id={id('instructions')}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="What the teammate does with each email"
+            className="bg-card"
+          />
+        </div>
+      )}
       {preview &&
         (preview.length === 0 ? (
           <p className="text-sm text-muted-foreground">No mail yet.</p>

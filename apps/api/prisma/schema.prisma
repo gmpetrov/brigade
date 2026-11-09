@@ -1702,8 +1702,10 @@ model Trigger {
   workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   connectionId           String
   connection             Connection            @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  teammateId             String
-  teammate               Teammate              @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// Null: nobody. A mailbox's rule that keeps the mail it takes in the Inbox for a person, and
+  /// starts no thread (route kept). Only mailbox rules (an exclusive event) may have none.
+  teammateId             String?
+  teammate               Teammate?             @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   label                  String
   /// The catalog id, e.g. gmail.email_received.
   event                  String
@@ -3103,7 +3105,8 @@ model MailMessage {
   /// Resend's attachments: [{ id, filename, contentType, size, inline }].
   attachments        Json          @default("[]")
   /// in: where it went. awaited (a thread waiting on it), conversation (its conversation's
-  /// thread), member (a member's request), rule, box, duplicate, loop, cap, own_copy (a reply a
+  /// thread), member (a member's request), rule, kept (a rule with no teammate kept it for a
+  /// person), box, duplicate, loop, cap, own_copy (a reply a
   /// person sent from Gmail), read (a thread read or answered it from the box), unknown_address.
   /// Null until delivered.
   route              String?

@@ -91,7 +91,7 @@ function routines(
       key: `trigger:${t.id}`,
       status: 'active',
       name: t.label,
-      when: `on each event · ${t.teammate.name}`,
+      when: `on each event · ${t.teammate?.name ?? 'kept in the Inbox'}`,
       href: '/app/connections',
     })),
   ]

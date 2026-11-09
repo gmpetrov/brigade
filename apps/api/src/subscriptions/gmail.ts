@@ -222,12 +222,15 @@ export const readInbox = (subscriptionId: string) =>
               payload,
               delivered.threadId
                 ? { route: 'rule', sessionId: delivered.threadId, triggerId: delivered.triggerId! }
-                : delivered.capped
-                  ? {
-                      route: 'cap',
-                      ...(delivered.triggerId ? { triggerId: delivered.triggerId } : {}),
-                    }
-                  : { route: 'box' },
+                : delivered.kept
+                  ? // A rule with nobody: kept for a person, though Gmail's other mail is not.
+                    { route: 'kept', triggerId: delivered.triggerId! }
+                  : delivered.capped
+                    ? {
+                        route: 'cap',
+                        ...(delivered.triggerId ? { triggerId: delivered.triggerId } : {}),
+                      }
+                    : { route: 'box' },
               body,
             )
           }

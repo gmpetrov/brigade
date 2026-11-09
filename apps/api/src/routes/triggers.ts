@@ -81,7 +81,7 @@ async function notThePlaybooks(db: ScopedDb, id: string) {
 }
 
 type TriggerFields = {
-  teammateId: string
+  teammateId: string | null
   label: string
   options: unknown
   projectId: string | null
@@ -108,13 +108,14 @@ export async function resync(scope: Scope, connectionIds: Iterable<string>) {
  * What a trigger may be, checked against its account: its teammate, the catalog's options for its
  * event (without empty ones) and its project. Brigade's own addresses: an agent's rules are its
  * own, in the project of the variant they watch; an inbox's rules are its project's, and their
- * teammate gets the inbox to answer from.
+ * teammate gets the inbox to answer from. A mailbox's rule may have nobody (teammateId null): it
+ * keeps its mail in the Inbox for a person, and starts no thread.
  */
 async function checkedTrigger(
   db: ScopedDb,
   input: {
     connectionId: string
-    teammateId: string
+    teammateId: string | null
     event: string
     options: Record<string, string>
     projectId?: string | null
@@ -122,15 +123,20 @@ async function checkedTrigger(
 ) {
   const [connection, teammate] = await Promise.all([
     db.connection.findFirst({ where: { id: input.connectionId, status: { not: 'removed' } } }),
-    db.teammate.findFirst({ where: { id: input.teammateId, archivedAt: null } }),
+    input.teammateId
+      ? db.teammate.findFirst({ where: { id: input.teammateId, archivedAt: null } })
+      : null,
   ])
-  if (!connection || !teammate)
+  if (!connection || (input.teammateId && !teammate))
     throw new HTTPException(404, { message: 'Connection or teammate not found' })
   const definition = triggersOf(connection.kind)[input.event]
   if (!definition)
     throw new HTTPException(400, {
       message: `${connection.label} has no trigger "${input.event}"`,
     })
+  // Only a mailbox's rule keeps what it takes: any other event would go nowhere.
+  if (!teammate && !definition.exclusive)
+    throw new HTTPException(400, { message: 'Choose the teammate it starts threads with' })
   const reason = unavailable(connection.kind)
   if (reason) throw new HTTPException(409, { message: reason })
 
@@ -147,11 +153,12 @@ async function checkedTrigger(
     const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
     if (!address || address.releasedAt)
       throw new HTTPException(404, { message: 'This address is turned off' })
-    if (address.kind === 'agent' && address.teammateId !== teammate.id)
+    if (teammate && address.kind === 'agent' && address.teammateId !== teammate.id)
       throw new HTTPException(400, { message: `Only ${connection.label} answers its own address` })
     if (address.kind === 'inbox') {
       projectId = address.projectId
       if (
+        teammate &&
         !(await db.grant.count({ where: { teammateId: teammate.id, connectionId: connection.id } }))
       )
         await db.grant.create({
@@ -200,11 +207,12 @@ export async function createTrigger(
   const row = await db.trigger.create({
     data: {
       connectionId: connection.id,
-      teammateId: teammate.id,
+      teammateId: teammate?.id ?? null,
       label: input.label,
       event: input.event,
       options,
-      instructions: input.instructions || null,
+      // Nobody reads a kept mail's instructions.
+      instructions: (teammate && input.instructions) || null,
       pathToken,
       verification: custom ? input.verification : null,
       verificationSecretId: secret ? await sealSecret(db, scope, { secret }) : null,
@@ -231,7 +239,7 @@ export async function createTrigger(
     target: { type: 'trigger', id: row.id },
     data: {
       connectionId: connection.id,
-      teammateId: teammate.id,
+      teammateId: teammate?.id ?? null,
       event: input.event,
       options,
       ...(by.approvedByMemberId ? { approvedByMemberId: by.approvedByMemberId } : {}),
@@ -299,11 +307,11 @@ export async function updateTrigger(
     const wrote = await db.trigger.updateMany({
       where: held(),
       data: triggerFields({
-        teammateId: teammate.id,
+        teammateId: teammate?.id ?? null,
         label: input.label,
         options,
         projectId,
-        instructions: input.instructions || null,
+        instructions: (teammate && input.instructions) || null,
       }),
     })
     if (!wrote.count)
@@ -324,7 +332,7 @@ export async function updateTrigger(
       actor: { type: 'member', id: memberId },
       action: 'trigger.updated',
       target: { type: 'trigger', id },
-      data: { teammateId: teammate.id, label: input.label, options, projectId },
+      data: { teammateId: teammate?.id ?? null, label: input.label, options, projectId },
     })
   } finally {
     await db.trigger.updateMany({ where: { id, savingUntil: claim }, data: { savingUntil: null } })

@@ -31,7 +31,11 @@ export async function keepGmail(
     inbox: boolean
   },
   email: ReceivedEmail,
-  outcome: { route: 'awaited' | 'rule' | 'cap' | 'box'; sessionId?: string; triggerId?: string },
+  outcome: {
+    route: 'awaited' | 'rule' | 'kept' | 'cap' | 'box'
+    sessionId?: string
+    triggerId?: string
+  },
   /** Its HTML and inline parts' Content-IDs, for the Inbox alone (teammates read the text). */
   body: { html?: string | null; contentIds?: Record<string, string> } = {},
 ) {

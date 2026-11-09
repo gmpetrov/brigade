@@ -966,6 +966,63 @@ describe('a hand-over again, pages and the reader’s retries', { skip }, () => 
   })
 })
 
+describe('a Gmail rule with nobody', { skip }, () => {
+  test('it keeps what it takes for a person, even from an account not in the Inbox; no thread starts', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailBobs } })
+    const rule = await db.trigger.create({
+      data: {
+        connectionId: gmailBobs,
+        teammateId: null,
+        createdByMemberId: members[1]!,
+        label: 'Keep for Bob',
+        event: 'email_received',
+        // Before the account's other rules: the first that matches takes the mail.
+        position: -1,
+      } as never,
+    })
+    try {
+      const { dispatch } = await import('../src/triggers.js')
+      const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+      const payload = {
+        id: `kept-${id}`,
+        threadId: `kept-conv-${id}`,
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'Kept for Bob',
+        date: new Date().toUTCString(),
+        snippet: 'Help',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'Help',
+        attachments: [],
+        automatic: false,
+      }
+      const sessions = await prisma.session.count({ where: { ...scope } })
+      const delivered = await dispatch(connection, { id: payload.id, type: 'email', payload })
+      assert.deepEqual(delivered, { started: 0, failed: false, kept: true, triggerId: rule.id })
+      assert.equal(await prisma.session.count({ where: { ...scope } }), sessions)
+      // As the reader keeps it (src/subscriptions/gmail.ts): Bob's own account shows only what a
+      // rule took, and this one did.
+      await keepGmail(connection, payload, { route: 'kept', triggerId: rule.id })
+      const kept = await db.mailMessage.findFirstOrThrow({
+        where: { connectionId: gmailBobs, sourceId: payload.id },
+      })
+      assert.deepEqual([kept.route, kept.triggerId, kept.sessionId], ['kept', rule.id, null])
+      const item = (
+        await inbox.listInbox(db, as(1), { status: 'waiting', source: `gmail:${gmailBobs}` })
+      ).items.find((i) => i.id === `mail:${kept.id}`)
+      assert.equal(item?.status, 'waiting')
+      assert.equal(item?.rule?.label, 'Keep for Bob')
+      // Bob's own account: never another member's.
+      const others = await inbox.listInbox(db, as(0), { status: 'all' })
+      assert.ok(!others.items.some((i) => i.id === `mail:${kept.id}`))
+    } finally {
+      await db.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+})
+
 describe('hand-overs at once, and a thread deleted since', { skip }, () => {
   test('overlapping Gmail handovers retain one live recipient', async () => {
     const db = scoped(scope)

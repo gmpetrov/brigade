@@ -936,10 +936,12 @@ export type TeammateCreateNestedOneWithoutTriggersInput = {
   connect?: Prisma.TeammateWhereUniqueInput
 }
 
-export type TeammateUpdateOneRequiredWithoutTriggersNestedInput = {
+export type TeammateUpdateOneWithoutTriggersNestedInput = {
   create?: Prisma.XOR<Prisma.TeammateCreateWithoutTriggersInput, Prisma.TeammateUncheckedCreateWithoutTriggersInput>
   connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutTriggersInput
   upsert?: Prisma.TeammateUpsertWithoutTriggersInput
+  disconnect?: Prisma.TeammateWhereInput | boolean
+  delete?: Prisma.TeammateWhereInput | boolean
   connect?: Prisma.TeammateWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutTriggersInput, Prisma.TeammateUpdateWithoutTriggersInput>, Prisma.TeammateUncheckedUpdateWithoutTriggersInput>
 }

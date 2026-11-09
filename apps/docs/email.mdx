@@ -45,7 +45,9 @@ Each mail goes to one place, in this order:
    account (another address of yours counts as anyone's), and the mail server must prove it (DKIM or DMARC), since
    anyone can write a member's address in From. Automatic mail (newsletters, notifications) doesn't count.
 4. **The mailbox's rules**, in their order. The first that matches starts a thread with its teammate. A rule starts
-   up to 50 threads a day; past that, mail waits in the Inbox and you get a ticket.
+   up to 50 threads a day; past that, mail waits in the Inbox and you get a ticket. A rule whose teammate is
+   **Nobody: keep it in the Inbox** starts no thread: the mail it matches waits in the Inbox, unassigned, until you
+   hand it to a teammate. On a Gmail account, that is how Brigade keeps mail without starting work.
 5. **The Inbox**, unassigned, for 30 days.
 
 A mailbox's page, in **Mail settings › Mailboxes**, shows its settings in a few lines: **Arrives** (where its mail

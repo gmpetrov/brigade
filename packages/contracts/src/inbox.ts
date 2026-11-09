@@ -224,7 +224,8 @@ export type MailboxSummary = {
 export type MailboxRule = {
   id: string
   label: string
-  teammate: { id: string; name: string }
+  /** Null: nobody. It keeps the mail it takes in the Inbox for a person, and starts no thread. */
+  teammate: { id: string; name: string } | null
   options: Record<string, string>
   instructions: string | null
   position: number
