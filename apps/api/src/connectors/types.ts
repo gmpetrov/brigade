@@ -131,6 +131,7 @@ export type ConnectorKind =
   | 'ahrefs'
   | 'revenuecat'
   | 'expo'
+  | 'vercel'
   | 'email'
   | 'mcp'
 

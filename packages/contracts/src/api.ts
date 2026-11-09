@@ -161,6 +161,7 @@ export const ConnectMcp = z.object({
     'dataforseo',
     'ahrefs',
     'expo',
+    'vercel',
     'revenuecat',
     'stripe',
   ]),

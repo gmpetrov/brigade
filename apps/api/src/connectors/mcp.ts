@@ -227,23 +227,35 @@ const googleClient = (): McpOAuthClient | null =>
     ? { clientId: env.GOOGLE_MCP_CLIENT_ID, clientSecret: env.GOOGLE_MCP_CLIENT_SECRET }
     : null
 
+/** Whether the server reads Brigade's client ID metadata document (only served over HTTPS). */
+const canUseDocument = (authServer: AuthServer) =>
+  Boolean(authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://'))
+
 /** Whether Brigade can be a client of this authorization server with nothing from the member. */
 const registersItself = (authServer: AuthServer) =>
   Boolean(
     authServer.registration_endpoint ||
-    (authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://')) ||
+    canUseDocument(authServer) ||
     (isGoogle(authServer) && googleClient()),
   )
 
 /**
  * Brigade as a client of this authorization server: the member's own client when they
  * gave one; else Brigade's Google client for Google; else registered once (dynamic client
- * registration) and reused; else its client ID metadata document.
+ * registration) and reused; else, or when registering is refused, its client ID metadata
+ * document. `chosen`: the client ID the sign-in was authorized for, so its code is exchanged
+ * as that same client even if registering succeeds in between.
  */
-async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<McpOAuthClient> {
+async function client(
+  authServer: AuthServer,
+  own?: McpOAuthClient,
+  chosen?: string,
+): Promise<McpOAuthClient> {
   if (own) return own
   const google = isGoogle(authServer) ? googleClient() : null
   if (google) return google
+  if (chosen && chosen === mcpClientDocumentUrl() && canUseDocument(authServer))
+    return { clientId: chosen }
   const redirectUri = mcpRedirectUri()
   const known = await prisma.mcpClient.findUnique({
     where: { issuer_redirectUri: { issuer: authServer.issuer, redirectUri } },
@@ -273,10 +285,14 @@ async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<Mcp
     client_secret?: string
     error_description?: string
   }
-  if (!response.ok || !data.client_id)
+  if (!response.ok || !data.client_id) {
+    // Some servers register only the clients they approved (Vercel), yet read a metadata
+    // document: sign in with it, and register again next time in case that changes.
+    if (canUseDocument(authServer)) return { clientId: mcpClientDocumentUrl() }
     throw new Error(
       `Registering with ${authServer.issuer} failed: ${data.error_description ?? response.status}`,
     )
+  }
   return prisma.mcpClient.upsert({
     where: { issuer_redirectUri: { issuer: authServer.issuer, redirectUri } },
     create: {
@@ -293,7 +309,10 @@ async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<Mcp
 export const pkceVerifier = () => randomBytes(32).toString('base64url')
 const s256 = (verifier: string) => createHash('sha256').update(verifier).digest('base64url')
 
-/** The page where the person signs in to the server's provider and picks what Brigade may do. */
+/**
+ * The page where the person signs in to the server's provider and picks what Brigade may do,
+ * and the client ID it signs in for: kept with the sign-in's state, for exchangeMcpCode.
+ */
 export async function mcpAuthUrl(
   server: McpServer,
   state: string,
@@ -329,7 +348,7 @@ export async function mcpAuthUrl(
     // Google gives a refresh token only when asked this way, not for offline_access.
     ...(isGoogle(authServer) ? { access_type: 'offline', prompt: 'consent' } : {}),
   })
-  return `${authServer.authorization_endpoint}?${params}`
+  return { url: `${authServer.authorization_endpoint}?${params}`, clientId }
 }
 
 async function tokenRequest(
@@ -390,9 +409,11 @@ export async function exchangeMcpCode(
   code: string,
   verifier: string,
   own?: McpOAuthClient,
+  /** The client ID mcpAuthUrl signed in for. */
+  clientId?: string,
 ): Promise<{ credential: McpCredential; email: string | null }> {
   const { authServer, resource } = await discover(server)
-  const registered = await client(authServer, own)
+  const registered = await client(authServer, own, clientId)
   const { tokens, idToken } = await tokenRequest(authServer.token_endpoint, registered, {
     grant_type: 'authorization_code',
     code,

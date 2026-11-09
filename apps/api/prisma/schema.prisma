@@ -1446,6 +1446,8 @@ enum ConnectorKind {
   revenuecat
   /// Expo (EAS), through Expo's own MCP server and its OAuth.
   expo
+  /// Vercel, through Vercel's own MCP server and its OAuth.
+  vercel
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
   /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.

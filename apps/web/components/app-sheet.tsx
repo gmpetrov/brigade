@@ -138,6 +138,7 @@ export function AppSheet({
           kind === 'dataforseo' ||
           kind === 'ahrefs' ||
           kind === 'expo' ||
+          kind === 'vercel' ||
           kind === 'revenuecat'
         ? 'mcp'
         : kind === 'github'

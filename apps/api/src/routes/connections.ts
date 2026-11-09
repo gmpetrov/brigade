@@ -113,6 +113,7 @@ type OAuthState = {
     | 'dataforseo'
     | 'ahrefs'
     | 'expo'
+    | 'vercel'
     | 'revenuecat'
     | 'stripe'
     | 'mcp'
@@ -126,6 +127,8 @@ type OAuthState = {
   installationId?: number
   /** An MCP server's sign-in: the PKCE verifier for its code. */
   verifier?: string
+  /** An MCP server's sign-in: the client ID it was authorized for, to exchange its code as. */
+  mcpClientId?: string
   /** The dashboard page to send the person back to; default the Connections page. */
   returnTo?: string
 }
@@ -292,6 +295,7 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   ahrefs: true,
   revenuecat: true,
   expo: true,
+  vercel: true,
   email: !unavailable('email'),
   mcp: true,
   webhook: true,
@@ -363,6 +367,7 @@ export const connections = new Hono<AppEnv>()
         c.req.query('code')!,
         grant.verifier,
         own,
+        grant.mcpClientId,
       ))
     } catch (error) {
       console.error('mcp connection failed:', error instanceof Error ? error.message : error)
@@ -671,8 +676,14 @@ export const connections = new Hono<AppEnv>()
     const state = randomBytes(24).toString('base64url')
     const verifier = pkceVerifier()
     let url: string
+    let mcpClientId: string
     try {
-      url = await mcpAuthUrl(server, state, verifier, await ownClient(db, scope, config))
+      ;({ url, clientId: mcpClientId } = await mcpAuthUrl(
+        server,
+        state,
+        verifier,
+        await ownClient(db, scope, config),
+      ))
     } catch (error) {
       throw new HTTPException(502, {
         message: `${name} did not answer: ${error instanceof Error ? error.message : 'error'}`,
@@ -684,6 +695,7 @@ export const connections = new Hono<AppEnv>()
       appId: app.id,
       returnTo: input.returnTo,
       verifier,
+      mcpClientId,
     })
     return c.json({ url, appId: app.id })
   })
@@ -760,8 +772,9 @@ export const connections = new Hono<AppEnv>()
     const state = randomBytes(24).toString('base64url')
     const verifier = pkceVerifier()
     let url: string
+    let mcpClientId: string
     try {
-      url = await mcpAuthUrl(server, state, verifier)
+      ;({ url, clientId: mcpClientId } = await mcpAuthUrl(server, state, verifier))
     } catch (error) {
       throw new HTTPException(502, {
         message: `${appCatalog[kind].name} did not answer: ${error instanceof Error ? error.message : 'error'}`,
@@ -772,6 +785,7 @@ export const connections = new Hono<AppEnv>()
       kind,
       returnTo,
       verifier,
+      mcpClientId,
       ...(region ? { region } : {}),
       ...(reconnect ? { reconnect } : {}),
     })

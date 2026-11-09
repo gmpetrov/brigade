@@ -22,6 +22,7 @@ import { dataforseo } from './dataforseo.js'
 import { ahrefs } from './ahrefs.js'
 import { revenuecat } from './revenuecat.js'
 import { expo } from './expo.js'
+import { vercel } from './vercel.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -55,6 +56,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   ahrefs,
   revenuecat,
   expo,
+  vercel,
   email,
 }
 
@@ -112,6 +114,7 @@ export const triggerCatalog = () =>
         'ahrefs',
         'revenuecat',
         'expo',
+        'vercel',
         'email',
         'mcp',
         'webhook',
@@ -375,6 +378,15 @@ export const appCatalog: Record<
     // An Expo sign-in reaches its person's accounts and projects: kept to their threads until they share it.
     personal: true,
     skills: 'https://github.com/expo/skills/tree/main/plugins/expo',
+  },
+  vercel: {
+    name: 'Vercel',
+    description:
+      'Check Vercel projects and deployments, read their build and runtime logs, and search Vercel’s docs, with Vercel’s MCP server.',
+    developer: 'Vercel',
+    category: 'Developer tools',
+    // A Vercel sign-in reaches its person's teams and projects: kept to their threads until they share it.
+    personal: true,
   },
   mcp: {
     name: 'MCP server',
