@@ -25,6 +25,27 @@ const latestPage = (sessionId: string) => `/threads/${sessionId}/events`
 
 type LatestPage = { firstSeq: number; lastSeq: number; context: unknown[]; events: unknown[] }
 
+/**
+ * What each thread showed when it was left, in this tab: opened again (Back most of all), it
+ * shows that at once while its latest page is asked for, which then replaces it. On iPhone,
+ * Safari's Back keeps a picture of the page until it is drawn about as full as it was left, or
+ * for 3 seconds: a thread that opened on its skeleton every time froze that long.
+ */
+const shownLast = new Map<string, { firstSeq: number; lastSeq: number; events: SequencedEvent[] }>()
+const THREADS_KEPT = 10
+
+let shownScope: string | undefined
+
+/**
+ * Whose threads are kept (person and workspace), as lib/api.ts's setAnswersScope: another one,
+ * or none (signed out), forgets them all.
+ */
+export function setThreadsShownScope(scope: string | undefined) {
+  if (scope === shownScope) return
+  shownScope = scope
+  shownLast.clear()
+}
+
 /** Sends a thread's latest page ahead (lib/api.ts's `preload`), for it to open on. */
 export const preloadThreadEvents = (sessionId: string) => preload(latestPage(sessionId))
 
@@ -133,11 +154,19 @@ export function useThreadEvents(
         JSON.stringify({ type: 'subscribe', sessionId, afterSeq: contiguous(), tail: true }),
       )
     }
+    // Shown as it was left until its latest page is in, which replaces it.
+    const kept = shownLast.get(sessionId)
+    if (kept) openOn(kept.firstSeq, kept.lastSeq, kept.events)
     const path = latestPage(sessionId)
     void (preloaded<LatestPage>(path) ?? api<LatestPage>(path))
       .then((page) => {
         if (stopped) return
         const events = [...page.context, ...page.events].map((e) => known(e) as SequencedEvent)
+        if (kept) {
+          bySeq.current = new Map()
+          setEvents([])
+          holes([])
+        }
         openOn(page.firstSeq, page.lastSeq, events)
       })
       .catch(() => undefined)
@@ -205,6 +234,24 @@ export function useThreadEvents(
       clearTimeout(retry)
       alive?.()
       socket?.close()
+      // Kept for when it opens again: only all of it from its first event loaded, and only
+      // once its latest page was in (no gap, nothing missing before the end).
+      const events = [...bySeq.current.values()].sort((a, b) => a.seq - b.seq)
+      const end = pageEnd.current
+      if (
+        shownScope === undefined ||
+        end === undefined ||
+        gapsRef.current.length ||
+        (end >= first.current && !bySeq.current.has(end))
+      )
+        return
+      shownLast.delete(sessionId)
+      shownLast.set(sessionId, {
+        firstSeq: first.current,
+        lastSeq: Math.max(end, events.at(-1)?.seq ?? 0),
+        events,
+      })
+      if (shownLast.size > THREADS_KEPT) shownLast.delete(shownLast.keys().next().value!)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- jumps is the same object for the hook's life (useState)
   }, [sessionId, add])

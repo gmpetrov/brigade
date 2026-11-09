@@ -34,7 +34,7 @@ import type {
   UploadPurpose,
   UploadTicket,
 } from '@brigade/contracts'
-import { useCallback, useEffect, useState } from 'react'
+import { type SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 import { API_URL } from './config'
 import { listen } from './use-live'
 
@@ -276,17 +276,68 @@ export function preloaded<T>(path: string) {
 }
 
 /**
+ * What each path last answered, in this tab, for this person in this workspace: a page opened
+ * again (Back most of all) shows it at once while it asks again. On iPhone, Safari's Back shows a
+ * picture of the page until it is drawn about as full as it was left, or for 3 seconds: a page
+ * that opened on its skeleton every time kept that picture, frozen, for those 3 seconds.
+ */
+const answers = new Map<string, unknown>()
+/** Paths kept, the least recently used going first. */
+const ANSWERS_KEPT = 100
+let answersScope: string | undefined
+
+function keepAnswer(path: string, data: unknown) {
+  answers.delete(path)
+  answers.set(path, data)
+  if (answers.size > ANSWERS_KEPT) answers.delete(answers.keys().next().value!)
+}
+
+/** The answer kept for a path, if any. */
+export const keptAnswer = <T>(path: string) => answers.get(path) as T | undefined
+
+/**
+ * Whose answers are kept (person and workspace): another one, or none (signed out), forgets
+ * them all, so no one sees what was kept for someone else.
+ */
+export function setAnswersScope(scope: string | undefined) {
+  if (scope === answersScope) return
+  answersScope = scope
+  answers.clear()
+}
+
+/**
  * Fetch on mount (taking the request sent ahead, if any); `reload` refetches, and so does each
  * dashboard socket message of a type in `live`, and each time that socket is back after dropping.
+ * Opens on the path's last answer in this tab, when there is one, while it asks again.
  */
 export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['type'][]) {
-  const [data, setData] = useState<T | undefined>()
+  const [data, setState] = useState<T | undefined>(() => (path ? keptAnswer<T>(path) : undefined))
   const [error, setError] = useState<ApiError | undefined>()
+  // Another path: its kept answer shows at once, when there is one.
+  const [shown, setShown] = useState(path)
+  if (shown !== path) {
+    setShown(path)
+    const kept = path ? keptAnswer<T>(path) : undefined
+    if (kept !== undefined) setState(kept)
+  }
+  const pathRef = useRef(path)
+  pathRef.current = path
+  const setData = useCallback((next: SetStateAction<T | undefined>) => {
+    setState((current) => {
+      const value =
+        typeof next === 'function' ? (next as (c: T | undefined) => T | undefined)(current) : next
+      const at = pathRef.current
+      if (at && value !== undefined && answersScope !== undefined) keepAnswer(at, value)
+      return value
+    })
+  }, [])
   const load = useCallback(
     async (opening: boolean) => {
       if (!path) return
       try {
-        setData(await ((opening ? preloaded<T>(path) : undefined) ?? api<T>(path)))
+        const value = await ((opening ? preloaded<T>(path) : undefined) ?? api<T>(path))
+        if (answersScope !== undefined) keepAnswer(path, value)
+        if (pathRef.current === path) setState(value)
         setError(undefined)
       } catch (e) {
         setError(e instanceof ApiError ? e : new ApiError(String(e), 0))
