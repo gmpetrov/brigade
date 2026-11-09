@@ -995,6 +995,7 @@ export const TriggerScalarFieldEnum = {
   projectId: 'projectId',
   playbookInstallationId: 'playbookInstallationId',
   position: 'position',
+  savingUntil: 'savingUntil',
   createdAt: 'createdAt'
 } as const
 

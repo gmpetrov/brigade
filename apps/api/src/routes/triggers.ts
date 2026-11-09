@@ -96,31 +96,6 @@ const triggerFields = (row: TriggerFields) => ({
   instructions: row.instructions,
 })
 
-/**
- * A change the vendor refused, undone: back to what the trigger was, only while it still holds
- * what that change wrote. A save made meanwhile, which may have succeeded, is never overwritten.
- * Returns whether it was undone.
- */
-export async function rollBackTrigger(
-  db: ScopedDb,
-  id: string,
-  wrote: TriggerFields,
-  before: TriggerFields,
-) {
-  const { count } = await db.trigger.updateMany({
-    where: {
-      id,
-      teammateId: wrote.teammateId,
-      label: wrote.label,
-      options: { equals: wrote.options as never },
-      projectId: wrote.projectId,
-      instructions: wrote.instructions,
-    },
-    data: triggerFields(before),
-  })
-  return count > 0
-}
-
 /** Re-sync after triggers went away; a vendor error here only leaves a stale subscription. */
 export async function resync(scope: Scope, connectionIds: Iterable<string>) {
   for (const id of new Set(connectionIds))
@@ -270,6 +245,80 @@ export async function createTrigger(
   }
 }
 
+/** How long a save holds its trigger, at most: well past its vendor's answer. */
+export const SAVE_MS = 2 * 60_000
+
+/**
+ * What a trigger does (its teammate, label, options, project, instructions), changed in place,
+ * keeping its place in its account's order; its vendor follows at once, and a refusal puts it
+ * back as it was. Saves of one trigger run one at a time: each holds it (savingUntil) from its
+ * read to its rollback, so one never undoes another's (a second save meanwhile gets a 409).
+ * `sync` is the vendor's, given by tests.
+ */
+export async function updateTrigger(
+  db: ScopedDb,
+  scope: Scope,
+  id: string,
+  input: ReturnType<typeof UpdateTrigger.parse>,
+  /** The member saving it, for the audit log. */
+  memberId: string,
+  sync: (scope: Scope, connectionId: string) => Promise<unknown> = syncConnection,
+) {
+  await notThePlaybooks(db, id)
+  const now = new Date()
+  const claim = new Date(now.getTime() + SAVE_MS)
+  const { count } = await db.trigger.updateMany({
+    where: { id, OR: [{ savingUntil: null }, { savingUntil: { lt: now } }] },
+    data: { savingUntil: claim },
+  })
+  if (!count) {
+    if (!(await db.trigger.count({ where: { id } })))
+      throw new HTTPException(404, { message: 'Trigger not found' })
+    throw new HTTPException(409, { message: 'This rule is being saved. Try again in a moment.' })
+  }
+  const held = { id, savingUntil: claim }
+  try {
+    const before = await db.trigger.findFirst({ where: held })
+    if (!before) throw new HTTPException(404, { message: 'Trigger not found' })
+    const { teammate, options, projectId } = await checkedTrigger(db, {
+      ...input,
+      connectionId: before.connectionId,
+      event: before.event,
+    })
+    await db.trigger.updateMany({
+      where: held,
+      data: triggerFields({
+        teammateId: teammate.id,
+        label: input.label,
+        options,
+        projectId,
+        instructions: input.instructions || null,
+      }),
+    })
+    // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
+    try {
+      await sync(scope, before.connectionId)
+    } catch (error) {
+      // Only while still held: past SAVE_MS, a later save owns it and its own outcome stands.
+      await db.trigger.updateMany({ where: held, data: triggerFields(before) })
+      await resync(scope, [before.connectionId])
+      if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
+      throw new HTTPException(502, {
+        message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
+      })
+    }
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: memberId },
+      action: 'trigger.updated',
+      target: { type: 'trigger', id },
+      data: { teammateId: teammate.id, label: input.label, options, projectId },
+    })
+  } finally {
+    await db.trigger.updateMany({ where: held, data: { savingUntil: null } })
+  }
+}
+
 export const triggers = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
@@ -285,7 +334,7 @@ export const triggers = new Hono<AppEnv>()
       orderBy: { createdAt: 'asc' },
     })
     return c.json(
-      rows.map(({ verificationSecretId, pathToken, ...row }) => ({
+      rows.map(({ verificationSecretId, pathToken, savingUntil: _saving, ...row }) => ({
         ...row,
         url: pathToken ? urlOf(pathToken) : null,
         hasSecret: Boolean(verificationSecretId),
@@ -329,11 +378,22 @@ export const triggers = new Hono<AppEnv>()
     const { projectId } = await parseBody(c.req.raw, SetProject)
     const next = (await usableProject(db, projectId)) ?? null
     await notThePlaybooks(db, c.req.param('id'))
+    // Not while a save holds it: its rollback would put the old project back.
+    const now = new Date()
     const { count } = await db.trigger.updateMany({
-      where: { id: c.req.param('id') },
+      where: {
+        id: c.req.param('id'),
+        OR: [{ savingUntil: null }, { savingUntil: { lt: now } }],
+      },
       data: { projectId: next },
     })
-    if (!count) throw new HTTPException(404, { message: 'Trigger not found' })
+    if (!count) {
+      if (await db.trigger.count({ where: { id: c.req.param('id') } }))
+        throw new HTTPException(409, {
+          message: 'This rule is being saved. Try again in a moment.',
+        })
+      throw new HTTPException(404, { message: 'Trigger not found' })
+    }
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
@@ -352,40 +412,7 @@ export const triggers = new Hono<AppEnv>()
     const { scope, db } = c.var
     requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, UpdateTrigger)
-    await notThePlaybooks(db, c.req.param('id'))
-    const before = await db.trigger.findFirst({ where: { id: c.req.param('id') } })
-    if (!before) throw new HTTPException(404, { message: 'Trigger not found' })
-    const { teammate, options, projectId } = await checkedTrigger(db, {
-      ...input,
-      connectionId: before.connectionId,
-      event: before.event,
-    })
-    const wrote = {
-      teammateId: teammate.id,
-      label: input.label,
-      options,
-      projectId,
-      instructions: input.instructions || null,
-    }
-    await db.trigger.updateMany({ where: { id: before.id }, data: triggerFields(wrote) })
-    // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
-    try {
-      await syncConnection(scope, before.connectionId)
-    } catch (error) {
-      await rollBackTrigger(db, before.id, wrote, before)
-      await resync(scope, [before.connectionId])
-      if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
-      throw new HTTPException(502, {
-        message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
-      })
-    }
-    await audit({
-      ...scope,
-      actor: { type: 'member', id: scope.memberId },
-      action: 'trigger.updated',
-      target: { type: 'trigger', id: before.id },
-      data: { teammateId: teammate.id, label: input.label, options, projectId },
-    })
+    await updateTrigger(db, scope, c.req.param('id'), input, scope.memberId)
     return c.json({ ok: true })
   })
 
