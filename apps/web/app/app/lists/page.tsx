@@ -81,7 +81,10 @@ export default function ListsPage() {
           )}
         </div>
         {lists.data && lists.data.length > 0 && (
-          <div className="order-last flex w-full items-center gap-2 md:order-none md:w-auto">
+          <div
+            data-corner-clear
+            className="order-last flex w-full items-center gap-2 md:order-none md:w-auto"
+          >
             <div className="relative flex-1 md:w-64 md:flex-none">
               <Search
                 aria-hidden

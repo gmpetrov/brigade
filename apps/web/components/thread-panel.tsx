@@ -28,7 +28,7 @@ import { SidebarToggle, TeammateAvatar, useDashboard } from '@/components/dashbo
 import { ProjectIcon } from '@/components/projects'
 import { StatusDot } from '@/components/status-badge'
 import { useDesktopPreview } from '@/components/desktop-preview'
-import { useDocumentPanel } from '@/components/document-panel'
+import { DocumentsButton, useDocumentPanel } from '@/components/document-panel'
 import { useKeptPreviewShown } from '@/components/kept-previews'
 import {
   NewThread,
@@ -529,7 +529,8 @@ export function ThreadPanel() {
   const { expanded, threadId } = panel
   // Expanded: the sidebar's toggle, and a pill saying where and who, which opens the details.
   const top = expanded ? (
-    <PillBar>
+    // A thread's conversation has its own top right (Preview, and a document's button under it).
+    <PillBar documents={!threadId || Boolean(pending)}>
       {threadId
         ? shown && (
             <DetailsPill
@@ -702,12 +703,16 @@ export function ThreadPanel() {
   )
 }
 
-/** Floats over the top of an expanded thread: the sidebar's toggle, and the pill centered. */
-function PillBar({ children }: { children: ReactNode }) {
+/**
+ * Floats over the top of an expanded thread: the sidebar's toggle, and the pill centered. With
+ * `documents`, a minimized document's button across from the toggle.
+ */
+function PillBar({ children, documents }: { children: ReactNode; documents: boolean }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center px-12">
       <SidebarToggle className="pointer-events-auto absolute top-3 left-2 ml-0 max-md:top-2.5" />
       {children}
+      {documents && <DocumentsButton className="pointer-events-auto absolute top-2.5 right-2" />}
     </div>
   )
 }
