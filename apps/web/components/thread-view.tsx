@@ -4784,10 +4784,6 @@ export function ChoicesCard({
               onClick={() => choose(o)}
             >
               {body}
-              <ChevronRight
-                aria-hidden
-                className="size-4 flex-none text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
-              />
             </button>
           ) : (
             <div className={row}>{body}</div>
