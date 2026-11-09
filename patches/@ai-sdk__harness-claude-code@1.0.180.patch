@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 2aceefb..97fd7d6 100644
+index 656d15c..40c6aaf 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1,10 +1,19 @@
@@ -24,7 +24,7 @@ index 2aceefb..97fd7d6 100644
  import { isDeepStrictEqual } from "node:util";
  import { z } from "zod/v4";
  import path from "node:path";
-@@ -280,7 +289,11 @@ async function runBridge(options) {
+@@ -287,7 +296,11 @@ async function runBridge(options) {
  	};
  	const writeStartConfig = async (start) => {
  		try {
@@ -37,7 +37,7 @@ index 2aceefb..97fd7d6 100644
  			await writeFile(startConfigPath, serialized);
  			if (!existsSync(rerunStartConfigPath)) await writeFile(rerunStartConfigPath, serialized);
  		} catch {}
-@@ -1128,6 +1141,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -1156,6 +1169,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			id: block.id,
  			delta: event.delta.partial_json
  		});
@@ -46,7 +46,7 @@ index 2aceefb..97fd7d6 100644
  		return;
  	}
  	if (event.type === "content_block_stop") {
-@@ -1138,9 +1153,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+@@ -1166,9 +1181,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
  			type: "text-end",
  			id: block.id
  		});
@@ -60,10 +60,10 @@ index 2aceefb..97fd7d6 100644
  		});
  		else send({
  			type: "tool-input-end",
-@@ -1530,8 +1548,283 @@ await runBridge({
- 	bridgeType: "claude-code",
- 	bridgeStateDir,
- 	onStart: runTurn,
+@@ -1592,8 +1610,283 @@ await runBridge({
+ 			});
+ 		}
+ 	},
 -	onStop: () => lastClaudeSessionId == null ? {} : { claudeSessionId: lastClaudeSessionId }
 +	onStop: () => {
 +		disposeLiveQuery();
@@ -345,7 +345,7 @@ index 2aceefb..97fd7d6 100644
  function createPermissionOptions(input) {
  	const permissionMode = input.start.permissionMode ?? "allow-all";
  	const inactiveNativeTools = new Set(input.inactiveNativeTools);
-@@ -1656,6 +1949,21 @@ function createPermissionSettings(input) {
+@@ -1719,6 +2012,21 @@ function createPermissionSettings(input) {
  	};
  }
  /**
@@ -367,7 +367,7 @@ index 2aceefb..97fd7d6 100644
  * Claude Code picks a model's output limit, system prompt and default effort
  * from its own reading of the model id, and misreads AI Gateway ids with a
  * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
-@@ -1673,6 +1981,11 @@ async function needsHostApproval(input) {
+@@ -1752,6 +2060,11 @@ async function needsHostApproval(input) {
  		nativeName: input.toolName,
  		permissionMode: input.permissionMode
  	})) return true;
@@ -379,7 +379,7 @@ index 2aceefb..97fd7d6 100644
  	const args = input.toolInput != null && typeof input.toolInput === "object" ? input.toolInput : {};
  	let paths;
  	let access;
-@@ -1744,6 +2057,36 @@ function createApprovalPreToolUseHook(input) {
+@@ -1825,6 +2138,36 @@ function createApprovalPreToolUseHook(input) {
  		} };
  	};
  }
@@ -416,7 +416,7 @@ index 2aceefb..97fd7d6 100644
  function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-all") return false;
  	if (input.nativeName === "EnterWorktree" || input.nativeName === "ExitWorktree") return true;
-@@ -1752,6 +2095,160 @@ function nativeToolRequiresApproval(input) {
+@@ -1833,6 +2176,160 @@ function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-edits") return kind === "bash";
  	return kind === "edit" || kind === "bash";
  }
@@ -575,9 +575,9 @@ index 2aceefb..97fd7d6 100644
 +	return server;
 +}
  async function runTurn(start, turn) {
- 	const emit = (msg) => turn.emit(msg);
- 	const abortCtl = new AbortController();
-@@ -1765,85 +2262,112 @@ async function runTurn(start, turn) {
+ 	const emit = (msg) => {
+ 		if (!turn.abortSignal.aborted) turn.emit(msg);
+@@ -1848,85 +2345,112 @@ async function runTurn(start, turn) {
  	else turn.abortSignal.addEventListener("abort", onHostAbort, { once: true });
  	const streamEventState = createClaudeStreamEventState();
  	const mcpServers = { ...start.mcpServers };
@@ -765,7 +765,7 @@ index 2aceefb..97fd7d6 100644
  	}
  	const compaction = createCompactionLatch((event) => {
  		const hasOpenStep = streamEventState.stepOpen;
-@@ -1896,11 +2420,25 @@ async function runTurn(start, turn) {
+@@ -1984,11 +2508,25 @@ async function runTurn(start, turn) {
  		deferredToolUseIds,
  		nativeToolCallNames: streamEventState.nativeToolCallNames
  	});
@@ -793,7 +793,7 @@ index 2aceefb..97fd7d6 100644
  	const questionPreToolUseHook = createQuestionPreToolUseHook({
  		turn,
  		emit,
-@@ -1915,9 +2453,19 @@ async function runTurn(start, turn) {
+@@ -2003,9 +2541,19 @@ async function runTurn(start, turn) {
  			toolUseId
  		})
  	});
@@ -813,7 +813,7 @@ index 2aceefb..97fd7d6 100644
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
-@@ -1940,17 +2488,21 @@ async function runTurn(start, turn) {
+@@ -2026,28 +2574,92 @@ async function runTurn(start, turn) {
  			} } : {},
  			includePartialMessages: true,
  			hooks: {
@@ -841,7 +841,18 @@ index 2aceefb..97fd7d6 100644
  			...permissionOptions,
  			...Object.keys(settings).length > 0 ? { settings } : {},
  			mcpServers,
-@@ -1960,7 +2512,60 @@ async function runTurn(start, turn) {
+-			settingSources: ["user"],
++			// Brigade: every settings file, as before 1.0.180, which read only the user's. Brigade's
++			// instructions are the CLAUDE.md in the thread's folder, read only with the project's
++			// settings; so are a repository's own CLAUDE.md, settings and skills.
++			settingSources: [
++				"user",
++				"project",
++				"local"
++			],
+ 			cwd: workdir,
+ 			abortSignal: abortCtl.signal
+ 		}
  	};
  	let deferredToolUseId = start.deferredToolUseId;
  	let resumingDeferredCall = false;
@@ -903,7 +914,7 @@ index 2aceefb..97fd7d6 100644
  	const hostAborted = new Promise((resolve) => {
  		if (abortCtl.signal.aborted) resolve(void 0);
  		abortCtl.signal.addEventListener("abort", () => resolve(void 0), { once: true });
-@@ -2016,6 +2621,11 @@ async function runTurn(start, turn) {
+@@ -2103,6 +2715,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -915,7 +926,7 @@ index 2aceefb..97fd7d6 100644
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -2035,6 +2645,81 @@ async function runTurn(start, turn) {
+@@ -2122,6 +2739,81 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -997,7 +1008,7 @@ index 2aceefb..97fd7d6 100644
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -2075,6 +2760,19 @@ async function runTurn(start, turn) {
+@@ -2162,6 +2854,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -1017,7 +1028,7 @@ index 2aceefb..97fd7d6 100644
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -2086,8 +2784,46 @@ async function runTurn(start, turn) {
+@@ -2173,8 +2878,46 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -1064,7 +1075,7 @@ index 2aceefb..97fd7d6 100644
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2123,34 +2859,64 @@ async function runTurn(start, turn) {
+@@ -2210,34 +2953,64 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -1137,7 +1148,7 @@ index 2aceefb..97fd7d6 100644
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
-@@ -2159,9 +2925,10 @@ async function runTurn(start, turn) {
+@@ -2246,9 +3019,10 @@ async function runTurn(start, turn) {
  			raw: "stop"
  		},
  		totalUsage: turnUsage ?? streamEventState.stepUsage ?? defaultUsage(),
@@ -1151,7 +1162,7 @@ index 2aceefb..97fd7d6 100644
  	});
  }
 diff --git a/dist/bridge/package.json b/dist/bridge/package.json
-index c65fbaa..9de5e40 100644
+index c65fbaa..a8c4a90 100644
 --- a/dist/bridge/package.json
 +++ b/dist/bridge/package.json
 @@ -4,9 +4,9 @@
@@ -1161,14 +1172,14 @@ index c65fbaa..9de5e40 100644
 -    "@anthropic-ai/claude-agent-sdk": "0.3.290",
 -    "@anthropic-ai/claude-code": "2.1.290",
 -    "@modelcontextprotocol/sdk": "1.32.1",
-+    "@anthropic-ai/claude-agent-sdk": "0.3.318",
-+    "@anthropic-ai/claude-code": "2.1.318",
++    "@anthropic-ai/claude-agent-sdk": "0.3.319",
++    "@anthropic-ai/claude-code": "2.1.319",
 +    "@modelcontextprotocol/sdk": "1.32.2",
      "ws": "8.21.0",
      "zod": "4.4.3"
    }
 diff --git a/dist/bridge/pnpm-lockfile.yaml b/dist/bridge/pnpm-lockfile.yaml
-index 719cf20..d3846f0 100644
+index 719cf20..eb631e6 100644
 --- a/dist/bridge/pnpm-lockfile.yaml
 +++ b/dist/bridge/pnpm-lockfile.yaml
 @@ -9,14 +9,14 @@ importers:
@@ -1177,13 +1188,13 @@ index 719cf20..d3846f0 100644
        '@anthropic-ai/claude-agent-sdk':
 -        specifier: 0.3.290
 -        version: 0.3.290(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.1(zod@4.4.3))(zod@4.4.3)
-+        specifier: 0.3.318
-+        version: 0.3.318(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)
++        specifier: 0.3.319
++        version: 0.3.319(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)
        '@anthropic-ai/claude-code':
 -        specifier: 2.1.290
 -        version: 2.1.290
-+        specifier: 2.1.318
-+        version: 2.1.318
++        specifier: 2.1.319
++        version: 2.1.319
        '@modelcontextprotocol/sdk':
 -        specifier: 1.32.1
 -        version: 1.32.1(zod@4.4.3)
@@ -1198,69 +1209,69 @@ index 719cf20..d3846f0 100644
  
 -  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.290':
 -    resolution: {integrity: sha512-Xy1MPSSgCAzbCzT+3w+5+jHo9OIQf90QROyO8UcZNIOyaJ0qKQNRji0SztulGfo3uQsfj07t+qJcvXU+8gWcTw==}
-+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.318':
-+    resolution: {integrity: sha512-AWoXeDXzAMD3RaA21lWuHvCrKd8xmbTTmKjovninn4j07jheoVSMzFbCFjpp4kk5TdhT36JtWPkAxvjNMbcO8w==}
++  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.319':
++    resolution: {integrity: sha512-rNiAbMbRhgOM2CELsDTIq7q++sFVIZukTkgeswcncGbcX8STIgtf0XaZzKdRXtKK+v9ez+mQn8P4pb2Ka17wGA==}
      cpu: [arm64]
      os: [darwin]
  
 -  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.290':
 -    resolution: {integrity: sha512-ezuHy4rUdC0wmiXWROi2g+6mj2oVXFW0a5JwUNSrgjT5yglEOvoHXSkGXzk7n64vOxQJ/JnKOqUCfO85htchZA==}
-+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.318':
-+    resolution: {integrity: sha512-6CkZ5PCdebSY/LePp16sf/HYRtM6zVuxtn8qYICFS5KUZFsjccJJ9swVsOdHXNHi4SWZcSmIFTwoUbfFCzisRw==}
++  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.319':
++    resolution: {integrity: sha512-jM730Fl+cFotDnjF9cStIf+Xe57YdfDB3TXaSVVv8uVAXW4xoWFwIj2eDvmsciEEe5UMkKzjVqXu9kR21OrXng==}
      cpu: [x64]
      os: [darwin]
  
 -  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.290':
 -    resolution: {integrity: sha512-3sIYs6vhwBoJsiCQBb+3lXIcIeGq8aDOhiyYtSQwOhvMTwAjwuZN6mHjZGeSnGH3hn4CAXi3n3NEK49SSoFilg==}
-+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.318':
-+    resolution: {integrity: sha512-l4LSYFOrvlYCrUImGfxMTQ0wg+T3s9CBhrBvPF/0oJGKZg+QnxHHU8jUVm9e9/xYmDRTtqFIrr4id/5AfH4XGw==}
++  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.319':
++    resolution: {integrity: sha512-8KDZQJAS2CEb5aGAvuXkpyHMc9TOM/zYTw2iKmbbVi4im0atw93EtJPapYyp0g/lQI/Xk8jMYdWU6Zlv9EWjLw==}
      cpu: [arm64]
      os: [linux]
      libc: [musl]
  
 -  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.290':
 -    resolution: {integrity: sha512-HR3HuBSzYtyhh6AbILvWofuqrnn91bzgEovwDfS+pS99Dp4OpvaAopCEXpirc99dcSJ11Dj1OkEBq7r/4aR2xw==}
-+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.318':
-+    resolution: {integrity: sha512-mBm4su17aMitLBBCQj3bHdejyUDY6z/ormGih+HG24N689RSbdKECjGjkT87tDBIR/4jyoqmuSeHqM1DI8TJlg==}
++  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.319':
++    resolution: {integrity: sha512-g2tpMsHLMQahI4bk5CIcMHAB/RwzxoPGmL5Q5G5MDir5WTrl71vulWbtLQISUPm/yFPRG97tdzZnCa5Uq1v/dw==}
      cpu: [arm64]
      os: [linux]
      libc: [glibc]
  
 -  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.290':
 -    resolution: {integrity: sha512-JRmW03yRKHKZ41T+e4eYzY3lA0pbaJG4PF1GO1cG09Pu8MBPsuWhZZMtP/fsIJ+4vv5dFhdaPmdBPhWgHSMqyw==}
-+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.318':
-+    resolution: {integrity: sha512-SAF3lj/2OzTU84p+OOA13QEKA9+5fYAw0M9E7AJjdnRmVFGqQfbV7Do1i1f9Sj0mIubB3rLTRphGRw8O4HZjgA==}
++  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.319':
++    resolution: {integrity: sha512-XkKYj3c1jVFjLATrZr4YTsmS5AIb5s2iphF9X670EcVQqDCCGIKKTVNLLg9mg1e7D+2xX8FU0XNlOJatWfpBeA==}
      cpu: [x64]
      os: [linux]
      libc: [musl]
  
 -  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.290':
 -    resolution: {integrity: sha512-q9YflZoDtz/vK9vo28KvnUPvZWqPpXVD8j8RCHepi6zAiOxxJV/3s2URtA3ZQKYSo4zThJ48yrZJnGm8mkGWyA==}
-+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.318':
-+    resolution: {integrity: sha512-+mE+ueBD3oRFdaG16rd0h+LMjdeivGxL0pr/+FZK7JeLWVu+yPSw/f/X02b9oK36/DWykiFTu2G6HnJ9/+YO6w==}
++  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.319':
++    resolution: {integrity: sha512-uBAZA8x0hd5gVifyL5Lo73dVmi9xZeJ6jro2NO0al6yyWaw/6UL9xbsVh9lOhLFOmYIdSbQ2j4zAfnvG/t5F3Q==}
      cpu: [x64]
      os: [linux]
      libc: [glibc]
  
 -  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.290':
 -    resolution: {integrity: sha512-oLHI6y0uEkGK31KNEBqNyZGbXqbEFNyWopg/5iB1hW//aQ6OBtuawGiORzTnFAqYUxIU/oHgKx5w6ZMVgrKMnQ==}
-+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.318':
-+    resolution: {integrity: sha512-19iVSZ4379QbZU1XnGUtfFvhKS1WzS8H1sbU/DbrzqbJ5Kq1eB1drj+obB1fCxTh6m26tRPj0zMJmdeu/jk3Gw==}
++  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.319':
++    resolution: {integrity: sha512-YoP0lYHJCziENFCotHQq9qd/gaJrwUNkAcnZyVjXxg1OPmtKuyw31aG60s4cWXRDXXGm/m1siNSQaGGfAYBvrw==}
      cpu: [arm64]
      os: [win32]
  
 -  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.290':
 -    resolution: {integrity: sha512-mXgdB/OaZRAlt4E+cculWgEgmn5wAspzHO63ZfaSOVSuGJVDLBLBnwRDKkjI0cWCwAc17cetmu3TdNap/f0hxA==}
-+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.318':
-+    resolution: {integrity: sha512-ZdKVWpyVNVt0cXrOf8sUBaxcxLEAP+oGMdQDLBWr/BqOxTWLy7TBWOj1kzw+wVg/9WIkjkgQWeJzGXPWulR1sA==}
++  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.319':
++    resolution: {integrity: sha512-UC27x+8gfCS2OjNGJWrueP0gLOOKsLEsJ/kg0p6aa8GToZcJYjJ8KeAapHHRYMUAIB6Sarqe49Itm5P1wswCcQ==}
      cpu: [x64]
      os: [win32]
  
 -  '@anthropic-ai/claude-agent-sdk@0.3.290':
 -    resolution: {integrity: sha512-Rf2zz1kU3nyK9UCWhlZGYrCUi+0FuNmZFmzflZFKJKajuU+fsQrNht+jeUb2jyTszF/yMGobHhe3HfY4gB41Xg==}
 -    engines: {node: '>=18.0.0'}
-+  '@anthropic-ai/claude-agent-sdk@0.3.318':
-+    resolution: {integrity: sha512-z5WHCUeW52SKQ3rnvI3zt8X5h2QQ5o3Cgg5xarO5Rimfe67f3pOJt2aOh00S8t/nRzqfs+8nCb9o1EoXe+yccA==}
++  '@anthropic-ai/claude-agent-sdk@0.3.319':
++    resolution: {integrity: sha512-7X+sh4uZv/u4OL4I4cQvMr9N3NM6FDiuyk829hFylgbrnNwVyiGElWEDWGuO26zwMIxmgpKdPoDILoFIHh1uwA==}
 +    engines: {node: '>=18.14.0'}
      peerDependencies:
        '@anthropic-ai/sdk': '>=0.93.0'
@@ -1269,68 +1280,68 @@ index 719cf20..d3846f0 100644
  
 -  '@anthropic-ai/claude-code-darwin-arm64@2.1.290':
 -    resolution: {integrity: sha512-Gwf07acohw9mGTBIXeac1PTZKRMRsGoBFtm7OA3TMoLoF/3M2kPojkqdjxEzTVw15lJjA0N1lgZEa8jLWt4odQ==}
-+  '@anthropic-ai/claude-code-darwin-arm64@2.1.318':
-+    resolution: {integrity: sha512-EBKlipLmKY+ZEY+yNft2NegA6Uz34ZMjkzYxUaLF37qitojBJbIcF71F6JwFRlpIPXmiWchftLa9XONg3KBaxQ==}
++  '@anthropic-ai/claude-code-darwin-arm64@2.1.319':
++    resolution: {integrity: sha512-dyAOFnsXbeyGgFJMlo2n6zSgLli5r4fTZ3Tj48eELxjccqM4s/wUmQ6P0DyCbxU0EC44VV44T2qj5xEpen25aA==}
      cpu: [arm64]
      os: [darwin]
  
 -  '@anthropic-ai/claude-code-darwin-x64@2.1.290':
 -    resolution: {integrity: sha512-T7VTeuPrIfK7fjzn37izXxKfru9ZNYiiHSx+8jCZJK5TLCCDPaJAFPjQRhdLtk7adHOJe5PeAK8Rm0d8mcNRFg==}
-+  '@anthropic-ai/claude-code-darwin-x64@2.1.318':
-+    resolution: {integrity: sha512-fockeRy3+Yrr3PxRtGW2XRPWcShjRxIhUJDWi9Xi4svB8h+JUDn7JijHzy1vgUILOE5uIvgfMadN2siEFlt/Ug==}
++  '@anthropic-ai/claude-code-darwin-x64@2.1.319':
++    resolution: {integrity: sha512-XuzaFESZRKPupllcbbFCy0xdw9G9+VHLWbXaJhJhUD4gNTmt/ALkKMnECwr3umA7if1cAGDNb2tcgRCIpIy+nQ==}
      cpu: [x64]
      os: [darwin]
  
 -  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.290':
 -    resolution: {integrity: sha512-MxA+W79eTB9084PMbRHW1cApY2OXJVBLRZLg+os030mPvOSsO9x300bftgwAk1LqzoJP7zQo4aiDG1xXDfE8jw==}
-+  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.318':
-+    resolution: {integrity: sha512-bZRgaooI/08JmS9d0lLfv9s7N6aO8Ykd0u2U6dmRsBQ1Tq1VFY5ZOi6hfoJBOwS4+1OR3xaUGYRS10i7dZBn9g==}
++  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.319':
++    resolution: {integrity: sha512-969quP2nXj7GRHzLSe9kov9c/f2p+ZuZrXkrvaenbLOX6zZJtyqZKRUyhDUjaVmSEEGFSxgCr/BtUMOXV8jaOw==}
      cpu: [arm64]
      os: [linux]
      libc: [musl]
  
 -  '@anthropic-ai/claude-code-linux-arm64@2.1.290':
 -    resolution: {integrity: sha512-xUcpprHxzKHAfYQeOSWLBEX58FHIpueVWUUSRbYmQQkPSm2C+RzwPYfwvAbdleyV5Bncmor9FmRUCyiq1DwDww==}
-+  '@anthropic-ai/claude-code-linux-arm64@2.1.318':
-+    resolution: {integrity: sha512-FUVVH3aQbLEChjv5wQLdFbpBC7bclVIdVYO5hDzJthDyf2OQtdubIP5QqLPgEScQb3CVIAFg2IPJ5nihJa8Ndw==}
++  '@anthropic-ai/claude-code-linux-arm64@2.1.319':
++    resolution: {integrity: sha512-PlyxaZTAuU0VF3P/ERF4+deMRjT57cr90SHCrYms3HTebr3eItEWJozw6zq9cs88tc8XoF9ESAIghKXfq9HACg==}
      cpu: [arm64]
      os: [linux]
      libc: [glibc]
  
 -  '@anthropic-ai/claude-code-linux-x64-musl@2.1.290':
 -    resolution: {integrity: sha512-wUlWlEmpJ0QKBUBNA0139dhChhMg5HLPi/78sZ2dJEJ6ff89qJF5s4LEXP0tLIsUfX/CggX4J4/2prcgueUyYw==}
-+  '@anthropic-ai/claude-code-linux-x64-musl@2.1.318':
-+    resolution: {integrity: sha512-H1tn//6H1EOlkC87CYYs1iwz5rvMjGiyUpIR+8Pu0dRwA+DLAkQXgJGb0yRc+O8IWSZOhgWjarRIbPsS1cK2eg==}
++  '@anthropic-ai/claude-code-linux-x64-musl@2.1.319':
++    resolution: {integrity: sha512-LAj03VLWWZ+5T2c3dMxWZh5BhFzExwywIpT6y1oHnBj0Tx/ILIXYF1z6lcKSYsmiKChixPWzso35QnIfYLO8jg==}
      cpu: [x64]
      os: [linux]
      libc: [musl]
  
 -  '@anthropic-ai/claude-code-linux-x64@2.1.290':
 -    resolution: {integrity: sha512-1FQDIO4tXPFyw9wR1icEedIhEmLzOiQBAGR0NgETrXK8M2YbHEDXoE5Gg/LIuIee7giUuX5F2RzLw2N2i++ofQ==}
-+  '@anthropic-ai/claude-code-linux-x64@2.1.318':
-+    resolution: {integrity: sha512-GX+7CUng2R5f7SsA2w0LaXlH2f62fRCFD/Z2SUexoeH3B0KfulKQt5DtY9NeD2Yp3VEBz6/k/xWSbGPUi6NV2A==}
++  '@anthropic-ai/claude-code-linux-x64@2.1.319':
++    resolution: {integrity: sha512-FO4Sd23BO1VCQPiJe5vG3bNnmV5+YiTau7o1lqK3Fr5VlE4TLdKiyYpwQRwEXO91kE2l12Ep2i7J19T8Md2oOQ==}
      cpu: [x64]
      os: [linux]
      libc: [glibc]
  
 -  '@anthropic-ai/claude-code-win32-arm64@2.1.290':
 -    resolution: {integrity: sha512-QL2yNLFbj1Jx0nfNI+gKrta7RWNzYHD3OYKChieHmU1V2EJRyTUaYWeOZRHUkHc/tlK7Z/o9v43BQPEwHQmqkQ==}
-+  '@anthropic-ai/claude-code-win32-arm64@2.1.318':
-+    resolution: {integrity: sha512-+yn6RI0BeeiG+xbX8OkxSgRAiKIJZhO1foPNG8wUfjIPYaaxYsm8GL3TV7KyuBgGrjPYR1+pFzXaHY2bLsF37g==}
++  '@anthropic-ai/claude-code-win32-arm64@2.1.319':
++    resolution: {integrity: sha512-LJXWhy1rZGysmjwmC1/kapdaM55phYFPa3MGad033F01f76+q1lT4N8TCPC6wysHxrkLed/yucLGqMSTNY63cg==}
      cpu: [arm64]
      os: [win32]
  
 -  '@anthropic-ai/claude-code-win32-x64@2.1.290':
 -    resolution: {integrity: sha512-wkjNwUSqEJ0d7TLkxYAjBHGqpVRTKuars/60VzcrTMkaY5iTaMJvNRjagVYx8SKWP+Zd3f5Gh+jAyRPZAl0U+A==}
-+  '@anthropic-ai/claude-code-win32-x64@2.1.318':
-+    resolution: {integrity: sha512-g/fa2hqcU/+Qd3NMaY/8i+AoX6HQt3zBcj+V/Ot9icr5TN4PmOmuy6YhVNFLHb2IniLIrBA+gZFqonUe0aYLxg==}
++  '@anthropic-ai/claude-code-win32-x64@2.1.319':
++    resolution: {integrity: sha512-wncPKSYL/zvjs84k7wZEj+IGQx/LjqQNhgnQhzDEibP0yAVBguAs4p8nBfFAEDbDdUc4Z2co+OaKZV1t02xINA==}
      cpu: [x64]
      os: [win32]
  
 -  '@anthropic-ai/claude-code@2.1.290':
 -    resolution: {integrity: sha512-N1VOjg+2Bc0unJztexfNYMTi+XkghzLe1m7Z2vswj6geJAto7mib7FeRbhuSAYHz6lmtWz1XZhLqwT+ugUaxhQ==}
-+  '@anthropic-ai/claude-code@2.1.318':
-+    resolution: {integrity: sha512-OTJgLxcvWefv8IdTsq5n90Z2IxEhLwKqHUBhwZYE4odXzKA/Tb6p2Zb5Iy9Vq7JIVcNZzn9cPxW5sb42wLF95Q==}
++  '@anthropic-ai/claude-code@2.1.319':
++    resolution: {integrity: sha512-XoyAxGXBmNsb9ahz0xLAtyz/I6b1j+4lyLpucyTQIq4FcKUxrMDM2AzA2sHipHoN1DdMJINQQrLZxRZRq7FqBA==}
      engines: {node: '>=22.0.0'}
      hasBin: true
  
@@ -1362,39 +1373,39 @@ index 719cf20..d3846f0 100644
  snapshots:
  
 -  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.290':
-+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.318':
++  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.319':
      optional: true
  
 -  '@anthropic-ai/claude-agent-sdk@0.3.290(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.1(zod@4.4.3))(zod@4.4.3)':
-+  '@anthropic-ai/claude-agent-sdk@0.3.318(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)':
++  '@anthropic-ai/claude-agent-sdk@0.3.319(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)':
      dependencies:
        '@anthropic-ai/sdk': 0.97.1(zod@4.4.3)
 -      '@modelcontextprotocol/sdk': 1.32.1(zod@4.4.3)
@@ -1411,48 +1422,48 @@ index 719cf20..d3846f0 100644
 -      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.290
 -
 -  '@anthropic-ai/claude-code-darwin-arm64@2.1.290':
-+      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.318
-+      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.318
++      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.319
++      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.319
 +
-+  '@anthropic-ai/claude-code-darwin-arm64@2.1.318':
++  '@anthropic-ai/claude-code-darwin-arm64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-darwin-x64@2.1.290':
-+  '@anthropic-ai/claude-code-darwin-x64@2.1.318':
++  '@anthropic-ai/claude-code-darwin-x64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.290':
-+  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.318':
++  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-linux-arm64@2.1.290':
-+  '@anthropic-ai/claude-code-linux-arm64@2.1.318':
++  '@anthropic-ai/claude-code-linux-arm64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-linux-x64-musl@2.1.290':
-+  '@anthropic-ai/claude-code-linux-x64-musl@2.1.318':
++  '@anthropic-ai/claude-code-linux-x64-musl@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-linux-x64@2.1.290':
-+  '@anthropic-ai/claude-code-linux-x64@2.1.318':
++  '@anthropic-ai/claude-code-linux-x64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-win32-arm64@2.1.290':
-+  '@anthropic-ai/claude-code-win32-arm64@2.1.318':
++  '@anthropic-ai/claude-code-win32-arm64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code-win32-x64@2.1.290':
-+  '@anthropic-ai/claude-code-win32-x64@2.1.318':
++  '@anthropic-ai/claude-code-win32-x64@2.1.319':
      optional: true
  
 -  '@anthropic-ai/claude-code@2.1.290':
-+  '@anthropic-ai/claude-code@2.1.318':
++  '@anthropic-ai/claude-code@2.1.319':
      optionalDependencies:
 -      '@anthropic-ai/claude-code-darwin-arm64': 2.1.290
 -      '@anthropic-ai/claude-code-darwin-x64': 2.1.290
@@ -1462,14 +1473,14 @@ index 719cf20..d3846f0 100644
 -      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.290
 -      '@anthropic-ai/claude-code-win32-arm64': 2.1.290
 -      '@anthropic-ai/claude-code-win32-x64': 2.1.290
-+      '@anthropic-ai/claude-code-darwin-arm64': 2.1.318
-+      '@anthropic-ai/claude-code-darwin-x64': 2.1.318
-+      '@anthropic-ai/claude-code-linux-arm64': 2.1.318
-+      '@anthropic-ai/claude-code-linux-arm64-musl': 2.1.318
-+      '@anthropic-ai/claude-code-linux-x64': 2.1.318
-+      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.318
-+      '@anthropic-ai/claude-code-win32-arm64': 2.1.318
-+      '@anthropic-ai/claude-code-win32-x64': 2.1.318
++      '@anthropic-ai/claude-code-darwin-arm64': 2.1.319
++      '@anthropic-ai/claude-code-darwin-x64': 2.1.319
++      '@anthropic-ai/claude-code-linux-arm64': 2.1.319
++      '@anthropic-ai/claude-code-linux-arm64-musl': 2.1.319
++      '@anthropic-ai/claude-code-linux-x64': 2.1.319
++      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.319
++      '@anthropic-ai/claude-code-win32-arm64': 2.1.319
++      '@anthropic-ai/claude-code-win32-x64': 2.1.319
  
    '@anthropic-ai/sdk@0.97.1(zod@4.4.3)':
      dependencies:
@@ -1499,18 +1510,18 @@ index 719cf20..d3846f0 100644
  
    ajv@8.20.0:
 diff --git a/dist/index.js b/dist/index.js
-index 54a3f41..034b191 100644
+index 5c3cf58..100a9d4 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -5,6 +5,7 @@ import { isRecord, safeParseJSON, tool } from "@ai-sdk/provider-utils";
+@@ -5,6 +5,7 @@ import { generateId, isRecord, safeParseJSON, tool } from "@ai-sdk/provider-util
  import { WebSocket } from "ws";
  import { z } from "zod/v4";
- import { execFileSync } from "node:child_process";
+ import { execFileSync, execSync } from "node:child_process";
 +import { createHash } from "node:crypto";
  import { readFileSync } from "node:fs";
  import { homedir } from "node:os";
  import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
-@@ -294,6 +295,7 @@ const skillOverridesSchema = z.record(z.string(), z.enum([
+@@ -313,6 +314,7 @@ const skillOverridesSchema = z.record(z.string(), z.enum([
  const startMessageSchema = harnessV1BridgeStartBaseSchema.extend({
  	prompt: harnessPromptContentSchema,
  	readableSkillRoots: z.array(z.string()).optional(),
@@ -1518,7 +1529,7 @@ index 54a3f41..034b191 100644
  	instructions: z.string().optional(),
  	thinking: thinkingSchema,
  	effort: z.enum([
-@@ -329,6 +331,25 @@ const VERSION = "1.0.177";
+@@ -349,6 +351,25 @@ const VERSION = "1.0.180";
  //#endregion
  //#region src/claude-code-harness.ts
  /**
@@ -1544,7 +1555,7 @@ index 54a3f41..034b191 100644
  * Value to use in User-Agent and `x-client-app` headers.
  */
  const CLAUDE_CODE_CLIENT_APP = `ai-sdk-harness-claude-code/${VERSION}`;
-@@ -1076,9 +1097,13 @@ function createClaudeCode(settings = {}) {
+@@ -1099,9 +1120,13 @@ function createClaudeCode(settings = {}) {
  					token: coords.token
  				});
  				const attachChannel = new SandboxChannel({
@@ -1558,7 +1569,7 @@ index 54a3f41..034b191 100644
  						onHello
  					}),
  					outboundSchema: outboundMessageSchema,
-@@ -1269,6 +1294,22 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+@@ -1300,6 +1325,22 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
  	let stopPromise;
  	let pendingResumeFlag = continueOnFirstPrompt;
  	let lastClaudeSessionId = resumeSessionId;
@@ -1578,20 +1589,20 @@ index 54a3f41..034b191 100644
 +			toolsHash
 +		};
 +	};
+ 	let activeStartId = startId;
  	const wireTurn = (turnOpts) => {
- 		let pendingResolve;
- 		let pendingReject;
-@@ -1298,6 +1339,8 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 		activeStartId = turnOpts.startId;
+@@ -1347,6 +1388,8 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
  		const settleError = (err) => {
  			if (isSettled) return;
  			isSettled = true;
 +			// Brigade: the next turn sends the tools again, in case the bridge lost them.
 +			toolsKept = void 0;
+ 			clearPendingStart();
  			userMessageSubmitter?.close(err);
  			for (const u of unsubs) u();
- 			pendingReject(err);
-@@ -1325,6 +1368,8 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
- 		unsubs.push(channel.on("finish", (msg) => {
+@@ -1412,6 +1455,8 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
+ 			if (!belongsToTurn(msg)) return;
  			const metadata = msg.harnessMetadata?.["claude-code"]?.sessionId;
  			if (typeof metadata === "string" && metadata.length > 0) lastClaudeSessionId = metadata;
 +			const kept = msg.harnessMetadata?.["claude-code"]?.toolsKept;
@@ -1599,8 +1610,8 @@ index 54a3f41..034b191 100644
  			forward(msg);
  			settleSuccess();
  		}));
-@@ -1378,12 +1423,16 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
- 			done
+@@ -1488,12 +1533,16 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
+ 			}
  		};
  	};
 +	// Brigade: the skills the session last wrote. Writing them reads their manifest back first (on a
@@ -1617,7 +1628,7 @@ index 54a3f41..034b191 100644
  			sandbox,
  			homePath: sandboxHomeDir,
  			skillsDir: ".claude/skills",
-@@ -1392,7 +1441,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+@@ -1502,7 +1551,7 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
  			invalidSkillNameMessage: ({ name }) => `Invalid Claude Code skill name: ${name}`,
  			invalidSkillFilePathMessage: ({ skillName, filePath }) => `Invalid Claude Code skill file path for ${skillName}: ${filePath}`,
  			trailingNewline: true
@@ -1625,8 +1636,8 @@ index 54a3f41..034b191 100644
 +		}).then(() => writtenSkills = skillsKey);
  		return wireTurn({
  			emit: turnOpts.emit,
- 			abortSignal: turnOpts.abortSignal
-@@ -1407,11 +1456,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
+ 			abortSignal: turnOpts.abortSignal,
+@@ -1521,11 +1570,7 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
  			const startMessage = {
  				type: "start",
  				prompt: extractHarnessPromptContent({ prompt: promptOpts.prompt }),
@@ -1639,8 +1650,8 @@ index 54a3f41..034b191 100644
  				...promptOpts.responseFormat == null ? {} : { responseFormat: promptOpts.responseFormat },
  				...promptOpts.instructions ? { instructions: promptOpts.instructions } : {},
  				model: promptOpts.model,
-@@ -1450,11 +1495,7 @@ function createSession({ sessionId, channel, finishListenerAttachment, proc, max
- 				channel.send({
+@@ -1568,11 +1613,7 @@ function createSession({ sessionId, channel, startId, finishListenerAttachment,
+ 				sendStart({
  					type: "start",
  					prompt: "Continue.",
 -					tools: (continueOpts.tools ?? []).map((t) => ({
