@@ -11,7 +11,7 @@ import type {
   MailForwarding,
   MailProvider,
 } from '@brigade/contracts'
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -1065,6 +1065,7 @@ function MailboxRules({
   const [rules, setRules] = useState<MailboxRule[]>(m.rules)
   const order = useAction()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<string>()
   // A reload brings the server's order back.
   const shown = order.busy ? rules : m.rules
 
@@ -1081,8 +1082,12 @@ function MailboxRules({
 
   async function remove(rule: MailboxRule) {
     if (!confirm(`Delete the rule "${rule.label}"? Mail it took then goes to the next one.`)) return
-    const done = await order.run(() => api(`/triggers/${rule.id}`, { method: 'DELETE' }))
-    if (done !== undefined) await reload()
+    // The API answers 204, no body: run's result tells only whether it threw.
+    const done = await order.run(async () => {
+      await api(`/triggers/${rule.id}`, { method: 'DELETE' })
+      return true
+    })
+    if (done) await reload()
   }
 
   const rest =
@@ -1093,81 +1098,120 @@ function MailboxRules({
   return (
     <>
       <ol className="flex flex-col gap-3">
-        {shown.map((rule, index) => (
-          <li key={rule.id} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex size-5 flex-none items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground tabular-nums">
-              {index + 1}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span>
-                <span className="font-medium">
-                  {rule.playbook ? `Playbook ${rule.playbook.name}` : rule.label}
-                </span>{' '}
-                <span className="text-muted-foreground">→ {rule.teammate.name}</span>
-                {rule.playbook && rule.playbook.status !== 'active' && (
-                  <span className="ml-1.5 rounded bg-muted px-1.5 py-px text-xs text-muted-foreground">
-                    {rule.playbook.status}
-                  </span>
-                )}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {m.kind === 'gmail' ? rule.options.query || 'Any mail' : rulesSummary(rule.options)}
-                {rule.project && ` · ${rule.project.name}`}
-              </span>
-              {rule.playbook && (
-                <Link
-                  href={`/app/playbooks/${rule.playbook.id}`}
-                  className="w-fit text-xs font-medium text-primary hover:underline"
-                >
-                  Change it in the playbook
-                </Link>
+        {shown.map((rule, index) =>
+          editing === rule.id ? (
+            <li key={rule.id} className="flex flex-col gap-2">
+              {m.kind === 'gmail' ? (
+                <GmailRule
+                  mailbox={m}
+                  rule={rule}
+                  onDone={() => setEditing(undefined)}
+                  reload={reload}
+                />
+              ) : (
+                <AddRule
+                  connectionId={m.connectionId}
+                  projectId={m.project?.id ?? null}
+                  rule={rule}
+                  onClose={() => setEditing(undefined)}
+                  reload={reload}
+                />
               )}
-            </div>
-            {m.manages && (shown.length > 1 || !rule.playbook) && (
-              <div className="flex flex-none items-center gap-0.5">
-                {shown.length > 1 && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={order.busy || index === 0}
-                      onClick={() => void move(index, -1)}
-                      aria-label={`Move "${rule.label}" up`}
-                      tooltip="Move up"
-                    >
-                      <ArrowUp />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={order.busy || index === shown.length - 1}
-                      onClick={() => void move(index, 1)}
-                      aria-label={`Move "${rule.label}" down`}
-                      tooltip="Move down"
-                    >
-                      <ArrowDown />
-                    </Button>
-                  </>
-                )}
-                {!rule.playbook && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="icon-xs"
-                    disabled={order.busy}
-                    onClick={() => void remove(rule)}
-                    aria-label={`Delete "${rule.label}"`}
-                    tooltip="Delete"
+            </li>
+          ) : (
+            <li key={rule.id} className="flex items-start gap-2.5">
+              <span className="mt-0.5 flex size-5 flex-none items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground tabular-nums">
+                {index + 1}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span>
+                  <span className="font-medium">
+                    {rule.playbook ? `Playbook ${rule.playbook.name}` : rule.label}
+                  </span>{' '}
+                  <span className="text-muted-foreground">→ {rule.teammate.name}</span>
+                  {rule.playbook && rule.playbook.status !== 'active' && (
+                    <span className="ml-1.5 rounded bg-muted px-1.5 py-px text-xs text-muted-foreground">
+                      {rule.playbook.status}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {m.kind === 'gmail'
+                    ? rule.options.query || 'Any mail'
+                    : rulesSummary(rule.options)}
+                  {rule.project && ` · ${rule.project.name}`}
+                </span>
+                {rule.playbook && (
+                  <Link
+                    href={`/app/playbooks/${rule.playbook.id}`}
+                    className="w-fit text-xs font-medium text-primary hover:underline"
                   >
-                    <Trash2 />
-                  </Button>
+                    Change it in the playbook
+                  </Link>
                 )}
               </div>
-            )}
-          </li>
-        ))}
+              {m.manages && (shown.length > 1 || !rule.playbook) && (
+                <div className="flex flex-none items-center gap-0.5">
+                  {shown.length > 1 && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled={order.busy || index === 0}
+                        onClick={() => void move(index, -1)}
+                        aria-label={`Move "${rule.label}" up`}
+                        tooltip="Move up"
+                      >
+                        <ArrowUp />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled={order.busy || index === shown.length - 1}
+                        onClick={() => void move(index, 1)}
+                        aria-label={`Move "${rule.label}" down`}
+                        tooltip="Move down"
+                      >
+                        <ArrowDown />
+                      </Button>
+                    </>
+                  )}
+                  {!rule.playbook && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={order.busy}
+                      onClick={() => {
+                        setAdding(false)
+                        setEditing(rule.id)
+                      }}
+                      aria-label={`Edit "${rule.label}"`}
+                      tooltip="Edit"
+                    >
+                      <Pencil />
+                    </Button>
+                  )}
+                  {!rule.playbook && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="icon-xs"
+                      disabled={order.busy}
+                      onClick={() => void remove(rule)}
+                      aria-label={`Delete "${rule.label}"`}
+                      tooltip="Delete"
+                    >
+                      <Trash2 />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </li>
+          ),
+        )}
         <li className="flex items-start gap-2.5 text-muted-foreground">
           <span
             aria-hidden
@@ -1184,7 +1228,15 @@ function MailboxRules({
           adding ? (
             <GmailRule mailbox={m} onDone={() => setAdding(false)} reload={reload} />
           ) : (
-            <Button variant="outline" size="sm" className="w-fit" onClick={() => setAdding(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => {
+                setEditing(undefined)
+                setAdding(true)
+              }}
+            >
               <Plus />
               Add a rule
             </Button>
@@ -1201,42 +1253,61 @@ function MailboxRules({
   )
 }
 
-/** A rule on a Gmail account: mail matching a Gmail search starts a thread with a teammate. */
+/**
+ * A rule on a Gmail account: mail matching a Gmail search starts a thread with a teammate. Given a
+ * rule, it changes that one.
+ */
 function GmailRule({
   mailbox: m,
+  rule,
   onDone,
   reload,
 }: {
   mailbox: MailboxDetail
+  rule?: MailboxRule
   onDone: () => void
   reload: () => Promise<unknown>
 }) {
   const { teammates } = useDashboard()
-  const [label, setLabel] = useState('Answer')
-  const [query, setQuery] = useState('')
-  const [teammateId, setTeammateId] = useState(m.readers[0]?.id ?? '')
-  const [projectId, setProjectId] = useState('none')
+  const [label, setLabel] = useState(rule?.label ?? 'Answer')
+  const [query, setQuery] = useState(rule?.options.query ?? '')
+  const [teammateId, setTeammateId] = useState(rule?.teammate.id ?? m.readers[0]?.id ?? '')
+  const [projectId, setProjectId] = useState(rule?.project?.id ?? 'none')
   const action = useAction()
   const choices = teammates
 
   async function add(event: FormEvent) {
     event.preventDefault()
     if (!teammateId || !label.trim()) return
-    const made = await action.run(() =>
-      api('/triggers', {
-        body: {
-          connectionId: m.connectionId,
-          teammateId,
-          event: 'email_received',
-          label: label.trim(),
-          options: { ...(query.trim() && { query: query.trim() }), automated: 'skip' },
-          projectId: projectId === 'none' ? null : projectId,
-        },
-      }),
-    )
-    if (made === undefined) return
-    onDone()
+    const fields = {
+      teammateId,
+      label: label.trim(),
+      // A rule made before keeps how it treats automatic mail.
+      options: {
+        ...(query.trim() && { query: query.trim() }),
+        ...(rule
+          ? rule.options.automated
+            ? { automated: rule.options.automated }
+            : {}
+          : { automated: 'skip' }),
+      },
+      projectId: projectId === 'none' ? null : projectId,
+    }
+    const made = await action.run(async () => {
+      if (rule)
+        await api(`/triggers/${rule.id}`, {
+          method: 'PUT',
+          body: { ...fields, instructions: rule.instructions },
+        })
+      else
+        await api('/triggers', {
+          body: { ...fields, connectionId: m.connectionId, event: 'email_received' },
+        })
+      return true
+    })
+    if (!made) return
     await reload()
+    onDone()
   }
 
   return (
@@ -1291,7 +1362,7 @@ function GmailRule({
       </p>
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" disabled={action.busy || !teammateId || !label.trim()}>
-          Add rule
+          {rule ? 'Save' : 'Add rule'}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onDone}>
           Cancel

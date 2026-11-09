@@ -1727,6 +1727,8 @@ model Trigger {
   playbookInstallation   PlaybookInstallation? @relation(fields: [playbookInstallationId], references: [id], onDelete: Cascade)
   /// Its place among its mailbox's rules: an email goes to the first rule that matches it.
   position               Int                   @default(0)
+  /// Held while a save of it is checked with its vendor: saves of one trigger run one at a time.
+  savingUntil            DateTime?
   createdAt              DateTime              @default(now())
   sessions               Session[]
   deliveries             TriggerDelivery[]

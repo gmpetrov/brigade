@@ -1,6 +1,7 @@
 'use client'
 // A Brigade mailbox's pieces for its page (components/mailboxes.tsx): where a project's shared
 // mailbox gets its mail (forwarding, domain, a test), and a rule to add on a mailbox.
+import type { MailboxRule } from '@brigade/contracts'
 import { Check, Copy } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
@@ -110,11 +111,15 @@ export function rulesSummary(options: Record<string, string>) {
   return parts.join(' · ')
 }
 
-/** A rule on a Brigade mailbox: from its page, and from the Inbox for an unassigned mail. */
+/**
+ * A rule on a Brigade mailbox: from its page, and from the Inbox for an unassigned mail. Given a
+ * rule, it changes that one.
+ */
 export function AddRule({
   connectionId,
   projectId,
   teammateId: initialTeammate,
+  rule,
   reload,
   onClose,
 }: {
@@ -123,27 +128,33 @@ export function AddRule({
   projectId: string | null
   /** The teammate it starts threads with, first picked (an agent's address: that agent). */
   teammateId?: string | null
+  /** The rule it changes, open at once with its values. */
+  rule?: MailboxRule
   reload: () => Promise<unknown>
   /** Opened by its caller's own button: the form shows at once, and closing it calls this. */
   onClose?: () => void
 }) {
   const { teammates } = useDashboard()
-  const [open, setOpenState] = useState(!!onClose)
+  const [open, setOpenState] = useState(!!onClose || !!rule)
   const setOpen = (value: boolean) => {
     setOpenState(value)
     if (!value) onClose?.()
   }
-  const [label, setLabel] = useState('Answer')
-  const [teammateId, setTeammateId] = useState<string | undefined>(initialTeammate ?? undefined)
-  const [from, setFrom] = useState('')
-  const [subject, setSubject] = useState('')
-  const [skipAutomated, setSkipAutomated] = useState(true)
-  const [perDay, setPerDay] = useState('')
-  const [instructions, setInstructions] = useState('')
+  const [label, setLabel] = useState(rule?.label ?? 'Answer')
+  const [teammateId, setTeammateId] = useState<string | undefined>(
+    rule?.teammate.id ?? initialTeammate ?? undefined,
+  )
+  const [from, setFrom] = useState(rule?.options.from ?? '')
+  const [subject, setSubject] = useState(rule?.options.subject ?? '')
+  const [skipAutomated, setSkipAutomated] = useState(
+    rule ? rule.options.automated === 'skip' : true,
+  )
+  const [perDay, setPerDay] = useState(rule?.options.perDay ?? '')
+  const [instructions, setInstructions] = useState(rule?.instructions ?? '')
   const [preview, setPreview] = useState<PreviewResult[]>()
   const tryIt = useAction()
   const add = useAction()
-  const id = (field: string) => `rule-${connectionId}-${field}`
+  const id = (field: string) => `rule-${rule?.id ?? connectionId}-${field}`
   const chosen = teammateId ?? teammates[0]?.id
 
   const options = () =>
@@ -171,20 +182,38 @@ export function AddRule({
   async function create(event: FormEvent) {
     event.preventDefault()
     if (!chosen || !label.trim()) return
-    const made = await add.run(() =>
-      api<{ id: string }>('/triggers', {
-        body: {
-          connectionId,
-          teammateId: chosen,
-          event: 'email_received',
-          label: label.trim(),
-          options: options(),
-          projectId,
-          ...(instructions.trim() && { instructions: instructions.trim() }),
-        },
-      }),
-    )
+    const made = await add.run(async () => {
+      if (rule)
+        await api(`/triggers/${rule.id}`, {
+          method: 'PUT',
+          body: {
+            teammateId: chosen,
+            label: label.trim(),
+            options: options(),
+            projectId: rule.project?.id ?? null,
+            instructions: instructions.trim() || null,
+          },
+        })
+      else
+        await api<{ id: string }>('/triggers', {
+          body: {
+            connectionId,
+            teammateId: chosen,
+            event: 'email_received',
+            label: label.trim(),
+            options: options(),
+            projectId,
+            ...(instructions.trim() && { instructions: instructions.trim() }),
+          },
+        })
+      return true
+    })
     if (!made) return
+    if (rule) {
+      await reload()
+      setOpen(false)
+      return
+    }
     setOpen(false)
     setLabel('Answer')
     setFrom('')
@@ -319,7 +348,7 @@ export function AddRule({
       <ErrorLine error={tryIt.error ?? add.error} />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" disabled={add.busy || !chosen || !label.trim()}>
-          Add rule
+          {rule ? 'Save' : 'Add rule'}
         </Button>
         <Button
           type="button"

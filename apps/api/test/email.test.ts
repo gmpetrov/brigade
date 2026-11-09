@@ -1143,6 +1143,176 @@ describe('rules on any mailbox', { skip }, () => {
   })
 })
 
+describe('a rule changed in place', { skip }, () => {
+  test('an admin changes what a rule does, in its place; never to another workspace’s teammate', async () => {
+    const db = scoped(a)
+    const { auth } = await import('../src/auth.js')
+    const { triggers } = await import('../src/routes/triggers.js')
+    const realSession = auth.api.getSession
+    ;(auth.api as any).getSession = sessionStub(() => ({
+      user: { id: users[0]! },
+      session: {
+        id: 'test-session',
+        activeOrganizationId: a.organizationId,
+        activeWorkspaceId: a.workspaceId,
+      },
+    }))
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const rule = await prisma.trigger.create({
+      data: {
+        ...a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        label: 'Support',
+        event: 'email_received',
+        options: { from: '@old.test', perDay: '5' },
+        instructions: 'Old instructions',
+        position: 3,
+        createdByMemberId: members[0]!,
+      },
+    })
+    const put = (triggerId: string, body: unknown) =>
+      triggers.request(`/${triggerId}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    try {
+      const changed = await put(rule.id, {
+        teammateId: riley.id,
+        label: 'Billing',
+        options: { subject: 'invoice', automated: 'skip', unknown: 'dropped' },
+        instructions: 'Answer invoices',
+      })
+      assert.equal(changed.status, 200, await changed.text())
+      const after = await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
+      assert.equal(after.label, 'Billing')
+      // Its options whole: the old ones left out are gone, unknown ones never kept.
+      assert.deepEqual(after.options, { subject: 'invoice', automated: 'skip' })
+      assert.equal(after.instructions, 'Answer invoices')
+      assert.equal(after.position, 3)
+      assert.equal(after.connectionId, rule.connectionId)
+
+      // Instructions emptied: none.
+      assert.equal(
+        (await put(rule.id, { teammateId: riley.id, label: 'Billing', instructions: null })).status,
+        200,
+      )
+      assert.equal(
+        (await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })).instructions,
+        null,
+      )
+
+      // Another workspace's teammate is not found, and the rule stays as it was.
+      assert.equal((await put(rule.id, { teammateId: rileyB.id, label: 'Stolen' })).status, 404)
+      assert.equal(
+        (await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })).label,
+        'Billing',
+      )
+
+      assert.equal((await put(`missing-${id}`, { teammateId: riley.id, label: 'X' })).status, 404)
+    } finally {
+      ;(auth.api as any).getSession = realSession
+      await prisma.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+})
+
+describe('a refused change undone', { skip }, () => {
+  test('saves of one rule run one at a time: overlapping refused saves leave the last good rule', async () => {
+    const db = scoped(a)
+    const { updateTrigger, setTriggerProject, SAVE_MS } = await import('../src/routes/triggers.js')
+    const { SubscribeError } = await import('../src/subscriptions/index.js')
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const rule = await prisma.trigger.create({
+      data: {
+        ...a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        label: 'O',
+        event: 'email_received',
+        options: { from: '@o.test' },
+        createdByMemberId: members[0]!,
+      },
+    })
+    const read = () => prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
+    const save = (label: string, sync: () => Promise<unknown>, times: { holdMs?: number } = {}) =>
+      updateTrigger(
+        db,
+        a,
+        rule.id,
+        { teammateId: riley.id, label, options: { from: `@${label.toLowerCase()}.test` } },
+        members[0]!,
+        { sync, ...times },
+      ).then(
+        () => 200,
+        (error: { status?: number }) => error.status ?? 500,
+      )
+    // A vendor that answers when the test says so.
+    const gate = () => {
+      let answer!: (refused: boolean) => void
+      const answered = new Promise<boolean>((resolve) => (answer = resolve))
+      return {
+        answer,
+        sync: async () => {
+          if (await answered) throw new SubscribeError('That calendar is not reachable')
+        },
+      }
+    }
+    try {
+      // A writes X and waits for the vendor; B, meanwhile, is turned away and writes nothing.
+      const vendorA = gate()
+      const a1 = save('X', vendorA.sync)
+      for (let i = 0; i < 50 && (await read()).label !== 'X'; i++)
+        await new Promise((r) => setTimeout(r, 10))
+      assert.equal((await read()).label, 'X')
+      assert.equal(await save('Y', async () => assert.fail('B never reaches the vendor')), 409)
+      assert.equal((await read()).label, 'X')
+      // A is refused: back to O, never to a refused X or Y.
+      vendorA.answer(true)
+      assert.equal(await a1, 400)
+      const back = await read()
+      assert.deepEqual(
+        [back.label, back.options, back.savingUntil],
+        ['O', { from: '@o.test' }, null],
+      )
+
+      // Once A is done, the next save goes through.
+      assert.equal(await save('Z', async () => undefined), 200)
+      assert.equal((await read()).label, 'Z')
+
+      // A save that died holding the rule holds it only SAVE_MS.
+      await prisma.trigger.update({
+        where: { id: rule.id },
+        data: { savingUntil: new Date(Date.now() + SAVE_MS) },
+      })
+      assert.equal(await save('W', async () => undefined), 409)
+      await prisma.trigger.update({
+        where: { id: rule.id },
+        data: { savingUntil: new Date(Date.now() - 1) },
+      })
+      assert.equal(await save('W', async () => undefined), 200)
+      assert.equal((await read()).savingUntil, null)
+
+      // A save whose hold expired while its vendor thought: a project change took the rule, and
+      // the save's late rollback leaves it.
+      const project = await prisma.project.findFirstOrThrow({ where: { id: projectId } })
+      const late = gate()
+      const slow = save('S', late.sync, { holdMs: 100 })
+      for (let i = 0; i < 50 && (await read()).label !== 'S'; i++)
+        await new Promise((r) => setTimeout(r, 10))
+      await assert.rejects(setTriggerProject(db, rule.id, project.id), { status: 409 })
+      await new Promise((r) => setTimeout(r, 150))
+      await setTriggerProject(db, rule.id, project.id)
+      late.answer(true)
+      assert.equal(await slow, 400)
+      assert.equal((await read()).projectId, project.id)
+    } finally {
+      await prisma.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+})
+
 describe('races and boundaries', { skip }, () => {
   test('email_wait must return the email it consumes', async () => {
     const db = scoped(a)

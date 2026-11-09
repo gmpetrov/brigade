@@ -1,7 +1,7 @@
 // Triggers, as admins manage them: chosen from each connection's catalog, with
 // the vendor subscribed to the events they need (see subscriptions/).
 import { randomBytes } from 'node:crypto'
-import { CreateTrigger, SetProject } from '@brigade/contracts'
+import { CreateTrigger, SetProject, UpdateTrigger } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from '../audit.js'
@@ -80,6 +80,22 @@ async function notThePlaybooks(db: ScopedDb, id: string) {
     })
 }
 
+type TriggerFields = {
+  teammateId: string
+  label: string
+  options: unknown
+  projectId: string | null
+  instructions: string | null
+}
+
+const triggerFields = (row: TriggerFields) => ({
+  teammateId: row.teammateId,
+  label: row.label,
+  options: row.options as never,
+  projectId: row.projectId,
+  instructions: row.instructions,
+})
+
 /** Re-sync after triggers went away; a vendor error here only leaves a stale subscription. */
 export async function resync(scope: Scope, connectionIds: Iterable<string>) {
   for (const id of new Set(connectionIds))
@@ -89,20 +105,19 @@ export async function resync(scope: Scope, connectionIds: Iterable<string>) {
 }
 
 /**
- * Create a trigger and subscribe the vendor to its events now, so a refusal is seen by
- * whoever asked and the trigger is not kept. A custom app's hmac signing secret is only
- * ever returned here: the caller shows it once, or keeps it in the vault.
+ * What a trigger may be, checked against its account: its teammate, the catalog's options for its
+ * event (without empty ones) and its project. Brigade's own addresses: an agent's rules are its
+ * own, in the project of the variant they watch; an inbox's rules are its project's, and their
+ * teammate gets the inbox to answer from.
  */
-export async function createTrigger(
+async function checkedTrigger(
   db: ScopedDb,
-  scope: Scope,
-  input: ReturnType<typeof CreateTrigger.parse>,
-  by: {
-    /** Its threads run on this member's accounts. */
-    createdByMemberId: string
-    actor: Actor
-    /** Who approved it, when a teammate asked for it. */
-    approvedByMemberId?: string
+  input: {
+    connectionId: string
+    teammateId: string
+    event: string
+    options: Record<string, string>
+    projectId?: string | null
   },
 ) {
   const [connection, teammate] = await Promise.all([
@@ -119,7 +134,6 @@ export async function createTrigger(
   const reason = unavailable(connection.kind)
   if (reason) throw new HTTPException(409, { message: reason })
 
-  // Only the catalog's options, without empty ones.
   const options: Record<string, string> = {}
   for (const option of definition.options ?? []) {
     const value = input.options[option.name]?.trim()
@@ -128,8 +142,6 @@ export async function createTrigger(
       throw new HTTPException(400, { message: `${option.label} is required` })
   }
 
-  // Brigade's own addresses: an agent's rules are its own, in the project of the variant they
-  // watch; an inbox's rules are its project's, and their teammate gets the inbox to answer from.
   let projectId = (await usableProject(db, input.projectId)) ?? null
   if (connection.kind === 'email') {
     const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
@@ -151,6 +163,27 @@ export async function createTrigger(
         })
     }
   }
+  return { connection, teammate, options, projectId }
+}
+
+/**
+ * Create a trigger and subscribe the vendor to its events now, so a refusal is seen by
+ * whoever asked and the trigger is not kept. A custom app's hmac signing secret is only
+ * ever returned here: the caller shows it once, or keeps it in the vault.
+ */
+export async function createTrigger(
+  db: ScopedDb,
+  scope: Scope,
+  input: ReturnType<typeof CreateTrigger.parse>,
+  by: {
+    /** Its threads run on this member's accounts. */
+    createdByMemberId: string
+    actor: Actor
+    /** Who approved it, when a teammate asked for it. */
+    approvedByMemberId?: string
+  },
+) {
+  const { connection, teammate, options, projectId } = await checkedTrigger(db, input)
   // Last among the account's rules: the first that matches a mail takes it.
   const last = await db.trigger.findFirst({
     where: { connectionId: connection.id },
@@ -212,6 +245,108 @@ export async function createTrigger(
   }
 }
 
+/**
+ * How long a save holds its trigger, at most: far past any vendor's answer, so a refusal is undone
+ * while held. The vendor's call is never cut short: one still running could subscribe after the
+ * rollback's resync.
+ */
+export const SAVE_MS = 10 * 60_000
+
+/**
+ * What a trigger does (its teammate, label, options, project, instructions), changed in place,
+ * keeping its place in its account's order; its vendor follows at once, and a refusal puts it
+ * back as it was. Saves of one trigger run one at a time: each holds it (savingUntil) from its
+ * read to its rollback, so one never undoes another's (a second save meanwhile gets a 409).
+ * `sync` is the vendor's, given by tests.
+ */
+export async function updateTrigger(
+  db: ScopedDb,
+  scope: Scope,
+  id: string,
+  input: ReturnType<typeof UpdateTrigger.parse>,
+  /** The member saving it, for the audit log. */
+  memberId: string,
+  /** Tests': the vendor, and shorter times. */
+  test: {
+    sync?: (scope: Scope, connectionId: string) => Promise<unknown>
+    holdMs?: number
+  } = {},
+) {
+  const { sync = syncConnection, holdMs = SAVE_MS } = test
+  await notThePlaybooks(db, id)
+  const now = new Date()
+  const claim = new Date(now.getTime() + holdMs)
+  const { count } = await db.trigger.updateMany({
+    where: { id, OR: [{ savingUntil: null }, { savingUntil: { lt: now } }] },
+    data: { savingUntil: claim },
+  })
+  if (!count) {
+    if (!(await db.trigger.count({ where: { id } })))
+      throw new HTTPException(404, { message: 'Trigger not found' })
+    throw new HTTPException(409, { message: 'This rule is being saved. Try again in a moment.' })
+  }
+  // Every write is fenced by the hold, while it lasts: once it expired, another writer may have
+  // taken the trigger (a save, a project change), and what it wrote stands.
+  const held = () => ({ id, savingUntil: { equals: claim, gt: new Date() } })
+  try {
+    const before = await db.trigger.findFirst({ where: held() })
+    if (!before) throw new HTTPException(404, { message: 'Trigger not found' })
+    const { teammate, options, projectId } = await checkedTrigger(db, {
+      ...input,
+      connectionId: before.connectionId,
+      event: before.event,
+    })
+    const wrote = await db.trigger.updateMany({
+      where: held(),
+      data: triggerFields({
+        teammateId: teammate.id,
+        label: input.label,
+        options,
+        projectId,
+        instructions: input.instructions || null,
+      }),
+    })
+    if (!wrote.count)
+      throw new HTTPException(409, { message: 'This rule was changed meanwhile. Try again.' })
+    // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
+    try {
+      await sync(scope, before.connectionId)
+    } catch (error) {
+      await db.trigger.updateMany({ where: held(), data: triggerFields(before) })
+      await resync(scope, [before.connectionId])
+      if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
+      throw new HTTPException(502, {
+        message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
+      })
+    }
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: memberId },
+      action: 'trigger.updated',
+      target: { type: 'trigger', id },
+      data: { teammateId: teammate.id, label: input.label, options, projectId },
+    })
+  } finally {
+    await db.trigger.updateMany({ where: { id, savingUntil: claim }, data: { savingUntil: null } })
+  }
+}
+
+/**
+ * The project a trigger's threads start in. Not while a save holds it (409), as that save's
+ * rollback would put the old one back; an expired hold is cleared, so a late rollback never does.
+ */
+export async function setTriggerProject(db: ScopedDb, id: string, projectId: string | null) {
+  await notThePlaybooks(db, id)
+  const { count } = await db.trigger.updateMany({
+    where: { id, OR: [{ savingUntil: null }, { savingUntil: { lt: new Date() } }] },
+    data: { projectId, savingUntil: null },
+  })
+  if (count) return
+  if (await db.trigger.count({ where: { id } }))
+    throw new HTTPException(409, { message: 'This rule is being saved. Try again in a moment.' })
+  throw new HTTPException(404, { message: 'Trigger not found' })
+}
+
 export const triggers = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
@@ -227,7 +362,7 @@ export const triggers = new Hono<AppEnv>()
       orderBy: { createdAt: 'asc' },
     })
     return c.json(
-      rows.map(({ verificationSecretId, pathToken, ...row }) => ({
+      rows.map(({ verificationSecretId, pathToken, savingUntil: _saving, ...row }) => ({
         ...row,
         url: pathToken ? urlOf(pathToken) : null,
         hasSecret: Boolean(verificationSecretId),
@@ -270,12 +405,7 @@ export const triggers = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     const { projectId } = await parseBody(c.req.raw, SetProject)
     const next = (await usableProject(db, projectId)) ?? null
-    await notThePlaybooks(db, c.req.param('id'))
-    const { count } = await db.trigger.updateMany({
-      where: { id: c.req.param('id') },
-      data: { projectId: next },
-    })
-    if (!count) throw new HTTPException(404, { message: 'Trigger not found' })
+    await setTriggerProject(db, c.req.param('id'), next)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
@@ -283,6 +413,18 @@ export const triggers = new Hono<AppEnv>()
       target: { type: 'trigger', id: c.req.param('id') },
       data: { projectId: next },
     })
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Admins: what a trigger does (its teammate, label, options, project, instructions), changed in
+   * place, keeping its place in its account's order. A playbook's changes in the playbook.
+   */
+  .put('/:id', async (c) => {
+    const { scope, db } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const input = await parseBody(c.req.raw, UpdateTrigger)
+    await updateTrigger(db, scope, c.req.param('id'), input, scope.memberId)
     return c.json({ ok: true })
   })
 
