@@ -305,7 +305,6 @@ function ChoiceToMake({
       <From teammate={choice.teammate} thread={choice} note="pick one" />
       <ChoicesCard
         choices={choice.choices}
-        thread={`/app/threads/${choice.id}`}
         onChoose={async (text, pick) => {
           // With the design it makes, when the option is one in an options folder.
           await api(`/threads/${choice.id}/messages`, { body: { text, ...(pick ? { pick } : {}) } })

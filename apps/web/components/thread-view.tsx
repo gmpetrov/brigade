@@ -85,6 +85,7 @@ import {
   Monitor,
   Plus,
   Pencil,
+  ArrowUp,
   RefreshCw,
   Reply,
   RotateCcw,
@@ -156,6 +157,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
+import { ActivityIndicator } from '@/components/ui/activity-indicator'
 import { WidgetFrame } from '@/components/widget-frame'
 import {
   ChildrenWorking,
@@ -4566,14 +4568,17 @@ function AskView({
   )
 }
 
+/** What `sending` / `sent` hold while a person's own words go from the choices card. */
+const OWN_WORDS = '\u0000own'
+
 /**
- * Alternatives a teammate offers, as a list: a row each, its mark (the label's own number,
- * as the widget above shows it), name and description. With only words, a click on a row
- * picks it. When an option is a design, every row gets a Pick button and a click on a row
- * opens its design beside the thread instead, with its picture at the start of the row: one
- * gesture per card, so a row never picks when the same-looking one above it opens. Picking
- * sends the choice as a message; any message after it closes the offer. Home's Needs you
- * shows it too, out of its thread (`thread`: where to write instead).
+ * Alternatives a teammate offers, as a list: a soft tile each, its mark (the label's own number,
+ * as the widget above shows it), name and description. With only words, a click on a tile picks
+ * it. When an option is a design, every tile gets a Pick button and a click on a tile opens its
+ * design beside the thread instead, with its picture at the start: one gesture per card, so a
+ * tile never picks when the same-looking one above it opens. The last tile is a field for other
+ * words, sent as a message from here, in the thread as in Today's Needs you. Picking sends the
+ * choice as a message; any message after it closes the offer.
  */
 export function ChoicesCard({
   choices,
@@ -4581,7 +4586,6 @@ export function ChoicesCard({
   dismissed = false,
   onChoose,
   onDismiss,
-  thread,
 }: {
   choices: Choices
   /** The next message in the thread, if there is one. */
@@ -4591,26 +4595,31 @@ export function ChoicesCard({
   onChoose?: (text: string, pick?: string) => Promise<void>
   /** Closes it without picking: the thread stops, no turn starts. */
   onDismiss?: () => Promise<void>
-  /** Its thread's address, when shown outside it. */
-  thread?: string
 }) {
   const links = useFileLinks()
   const router = useRouter()
-  const card = useRef<HTMLDivElement>(null)
   // Beside its thread, a design opens in the panel; out of it (Today's Needs you), in the library.
   const openDesign = (path: string) =>
     links ? links.open({ path }) : router.push(`/app/library?design=${encodeURIComponent(path)}`)
   const designs = choices.options.some((o) => o.design)
   const library = useApi<LibraryFile[]>(designs ? '/library' : null)
+  // What is on its way (an option's id, or OWN_WORDS), then what went: the spinner lasts as
+  // long as the request, and the card shows what was sent until the thread has the message.
   const [sending, setSending] = useState<string>()
+  const [sent, setSent] = useState<string>()
+  const [words, setWords] = useState('')
   const [error, setError] = useState<string>()
   // Dismissed here, until the thread says so too.
   const [dismissing, setDismissing] = useState<'sending' | 'done'>()
   const closed = dismissed || dismissing === 'done'
-  const picked = reply === undefined ? undefined : pickedChoice(choices.options, reply)
-  const open = reply === undefined && !closed && !!onChoose && !sending && !dismissing
-  // Answered with other words, or closed: no option is the one.
-  const passed = (reply !== undefined && !picked) || closed
+  const picked =
+    reply !== undefined
+      ? pickedChoice(choices.options, reply)
+      : choices.options.find((o) => o.id === sent)
+  // Answered with other words (theirs, sent from here or the composer), or closed.
+  const replied = reply !== undefined ? !picked : sent === OWN_WORDS
+  const open = reply === undefined && !closed && !!onChoose && !sending && !sent && !dismissing
+  const passed = replied || closed
 
   async function dismiss() {
     if (!onDismiss) return
@@ -4625,32 +4634,38 @@ export function ChoicesCard({
     }
   }
 
-  async function choose(option: Choices['options'][number]) {
-    if (!onChoose) return
-    setSending(option.id)
+  async function send(id: string, message: () => Promise<void>) {
+    setSending(id)
     setError(undefined)
     try {
-      // A design from an options folder becomes the design: the message says where.
-      const design = option.design?.replace(/\/+$/, '')
-      const options = design && designOptionsOf(design)
-      if (options) await onChoose(choiceMessage(option, pickedDesignPath(options)), design)
-      else await onChoose(choiceMessage(option))
+      await message()
+      setSent(id)
     } catch (e) {
       setError((e as Error).message)
+    } finally {
       setSending(undefined)
     }
   }
 
-  // Their own words go in the composer of the thread around the card.
-  function writeInstead() {
-    let around = card.current?.parentElement
-    while (around) {
-      const field = around.querySelector<HTMLElement>(
-        '[data-composer-frame] [contenteditable="true"], [data-composer-frame] textarea',
-      )
-      if (field) return field.focus()
-      around = around.parentElement
-    }
+  function choose(option: Choices['options'][number]) {
+    if (!onChoose) return
+    void send(option.id, () => {
+      // A design from an options folder becomes the design: the message says where.
+      const design = option.design?.replace(/\/+$/, '')
+      const options = design && designOptionsOf(design)
+      return options
+        ? onChoose(choiceMessage(option, pickedDesignPath(options)), design)
+        : onChoose(choiceMessage(option))
+    })
+  }
+
+  function writeOwn() {
+    const text = words.trim()
+    if (!onChoose || !text) return
+    void send(OWN_WORDS, async () => {
+      await onChoose(text)
+      setWords('')
+    })
   }
 
   const mark = (text: React.ReactNode) => (
@@ -4658,15 +4673,20 @@ export function ChoicesCard({
       {text}
     </span>
   )
+  const spinner = (
+    <span className="flex size-5 flex-none items-center justify-center text-foreground">
+      <ActivityIndicator label="Sending" />
+    </span>
+  )
 
   return (
-    <Card ref={card} className="gap-3 border-primary/40 px-4 py-3.5">
-      <div className="flex items-start gap-2 px-1">
+    <Card className="gap-3 border-primary/40 px-3 py-3.5">
+      <div className="flex items-start gap-2 px-2">
         <LayoutTemplate aria-hidden className="mt-1 size-4 flex-none text-primary" />
         <div className="min-w-0 flex-1 font-semibold">
           <Markdown text={choices.question} className="[&>p]:inline" />
         </div>
-        {reply !== undefined ? (
+        {picked || replied ? (
           <StatusBadge
             status={picked ? 'answered' : 'replied'}
             tone={picked ? 'success' : 'neutral'}
@@ -4691,7 +4711,7 @@ export function ChoicesCard({
           )
         )}
       </div>
-      <ul className="@container divide-y overflow-hidden rounded-lg border">
+      <ul className="@container flex flex-col gap-1.5">
         {choices.options.map((o, i) => {
           const { mark: number, name } = choiceLabel(o.label, i)
           const offered = o.design?.replace(/\/+$/, '')
@@ -4708,7 +4728,7 @@ export function ChoicesCard({
             .find(Boolean)
           const trashed = !!options && !!picked && !!library.data && !has(offered) && !has(made)
           const picture = design && (
-            <span className="relative flex aspect-[16/10] w-24 flex-none items-center justify-center overflow-hidden rounded-md border bg-muted/50 @md:w-32">
+            <span className="relative flex aspect-[16/10] w-24 flex-none items-center justify-center overflow-hidden rounded-md border bg-card @md:w-32">
               {trashed ? (
                 <span className="text-xs text-muted-foreground">In the trash</span>
               ) : thumbnail ? (
@@ -4729,7 +4749,7 @@ export function ChoicesCard({
               )}
             </span>
           )
-          const words = (
+          const text = (
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="font-semibold">{name}</span>
               {o.description && (
@@ -4739,19 +4759,19 @@ export function ChoicesCard({
           )
           const body = (
             <>
-              {mark(number)}
+              {sending === o.id ? spinner : mark(number)}
               {picture}
-              {words}
+              {text}
             </>
           )
           const row = 'flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left'
-          // With designs, the row opens its design and Pick picks; with only words, the row picks.
+          // With designs, the tile opens its design and Pick picks; with only words, the tile picks.
           const opens = designs && !!design && !trashed
           const picks = !designs && open
           const content = opens ? (
             <button
               type="button"
-              className={cn(row, 'group cursor-pointer')}
+              className={cn(row, 'group cursor-pointer rounded-lg')}
               aria-label={`Open ${o.label}`}
               onClick={() => openDesign(design)}
             >
@@ -4760,8 +4780,8 @@ export function ChoicesCard({
           ) : picks ? (
             <button
               type="button"
-              className={cn(row, 'group cursor-pointer')}
-              onClick={() => void choose(o)}
+              className={cn(row, 'group cursor-pointer rounded-lg')}
+              onClick={() => choose(o)}
             >
               {body}
               <ChevronRight
@@ -4776,10 +4796,10 @@ export function ChoicesCard({
             <li
               key={o.id}
               className={cn(
-                'flex items-center',
+                'flex items-center rounded-lg bg-muted/55 transition-[background-color,opacity]',
                 (opens || picks) && 'hover:bg-muted',
-                chosen && 'bg-primary/10',
-                ((picked && !chosen) || passed) && 'opacity-60',
+                chosen && 'bg-primary/15 hover:bg-primary/15',
+                ((picked && !chosen) || (sending && !chosen) || passed) && 'opacity-50',
               )}
             >
               {content}
@@ -4788,13 +4808,10 @@ export function ChoicesCard({
                   size="sm"
                   variant="outline"
                   className="mr-3 h-7 flex-none rounded-full px-3 text-xs"
-                  onClick={() => void choose(o)}
+                  onClick={() => choose(o)}
                 >
                   Pick
                 </Button>
-              )}
-              {sending === o.id && !picked && (
-                <span className="mr-3 flex-none text-sm text-muted-foreground">Sending…</span>
               )}
               {picked?.id === o.id && (
                 <Check aria-label="Picked" className="mr-3 size-4 flex-none text-success" />
@@ -4802,31 +4819,44 @@ export function ChoicesCard({
             </li>
           )
         })}
-        {open && (
-          <li>
-            {thread ? (
-              <Link
-                href={thread}
-                className="group flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        {(open || sending === OWN_WORDS) && onChoose && (
+          <li className="flex items-start gap-3 rounded-lg border border-dashed px-3 py-2.5 focus-within:border-solid focus-within:border-primary/40">
+            <span className="mt-0.5">
+              {sending === OWN_WORDS ? spinner : mark(<Pencil aria-hidden className="size-3" />)}
+            </span>
+            <textarea
+              rows={1}
+              value={words}
+              disabled={!!sending}
+              placeholder="Something else…"
+              aria-label="Something else: your own words, sent as a message"
+              className="min-h-6 min-w-0 flex-1 resize-none bg-transparent leading-6 outline-none placeholder:text-muted-foreground disabled:opacity-60"
+              onChange={(e) => {
+                setWords(e.target.value)
+                // Grows with what is written, as the composer does.
+                e.target.style.height = 'auto'
+                e.target.style.height = `${e.target.scrollHeight}px`
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
+                e.preventDefault()
+                writeOwn()
+              }}
+            />
+            {words.trim() && !sending && (
+              <Button
+                size="icon"
+                className="-my-0.5 size-7 flex-none rounded-full"
+                aria-label="Send"
+                onClick={writeOwn}
               >
-                {mark(<Pencil aria-hidden className="size-3" />)}
-                <span className="flex-1">Something else… in the thread</span>
-                <ChevronRight aria-hidden className="size-4 flex-none" />
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-muted-foreground hover:bg-muted hover:text-foreground"
-                onClick={writeInstead}
-              >
-                {mark(<Pencil aria-hidden className="size-3" />)}
-                <span className="flex-1">Something else…</span>
-              </button>
+                <ArrowUp className="size-4" />
+              </Button>
             )}
           </li>
         )}
       </ul>
-      {error && <p className="px-1 text-sm text-destructive">{error}</p>}
+      {error && <p className="px-2 text-sm text-destructive">{error}</p>}
     </Card>
   )
 }
