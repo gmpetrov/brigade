@@ -294,6 +294,19 @@ function keepAnswer(path: string, data: unknown) {
   if (answers.size > ANSWERS_KEPT) answers.delete(answers.keys().next().value!)
 }
 
+/**
+ * Asked for now, for the person and workspace kept for now: `keep` keeps its answer, and says
+ * whether it is still theirs (false: another one since, or signed out, and it is dropped).
+ */
+export function askingNow() {
+  const generation = answersGeneration
+  return (path: string, value: unknown) => {
+    if (generation !== answersGeneration) return false
+    if (answersScope !== undefined) keepAnswer(path, value)
+    return true
+  }
+}
+
 /** The answer kept for a path, if any. */
 export const keptAnswer = <T>(path: string) => answers.get(path) as T | undefined
 
@@ -337,12 +350,11 @@ export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['typ
   const load = useCallback(
     async (opening: boolean) => {
       if (!path) return
-      // Asked for one person in one workspace: kept only if it is still theirs once it is in.
-      const generation = answersGeneration
+      // Asked for one person in one workspace: kept and shown only if still theirs once it is in.
+      const keep = askingNow()
       try {
         const value = await ((opening ? preloaded<T>(path) : undefined) ?? api<T>(path))
-        if (generation !== answersGeneration) return
-        if (answersScope !== undefined) keepAnswer(path, value)
+        if (!keep(path, value)) return
         if (pathRef.current === path) setState(value)
         setError(undefined)
       } catch (e) {
