@@ -15,7 +15,9 @@
 // adapter installs into the teammate's home, as before. Older shared copies go a day
 // after a newer one replaced them, once no teammate's link points to them and no bridge
 // runs from them: a bridge started through a link keeps the copy it started from when the
-// link moves on, so the runner keeps, beside that copy, which processes still hold it.
+// link moves on, so the runner keeps, beside that copy, which processes still hold it. A
+// teammate whose turns stopped keeps its link on the copy of its last turn: the runner's tidy
+// moves it on (tidyBridges), or that copy would stay for good.
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -271,10 +273,20 @@ export function useSharedBridge(
   })
 }
 
-/** Whether a teammate has a bootstrap folder of its own for this harness (not a link). */
-async function hasOwn(runAs: string, harness: BridgeHarness) {
+/**
+ * As the teammate: exit 0 when its bootstrap folder ($1) is to be pointed at the current copy
+ * ($2): a folder of its own, or a link to another copy. None at all is left so: a harness it
+ * never ran gets no link, nor its copy installed for it.
+ */
+export const STALE_SCRIPT = `
+L=$1; T=$2
+if [ -L "$L" ]; then [ "$(readlink -- "$L")" != "$T" ]; else [ -d "$L" ]; fi
+`
+
+/** Whether a teammate's bootstrap folder is its own or a link to a copy other than `current`. */
+async function isStale(runAs: string, harness: BridgeHarness, current: string) {
   const link = bridgeLink(teammateHome(runAs), harness)
-  return run('sh', ['-c', '[ -d "$1" ] && [ ! -L "$1" ]', 'sh', link], { runAs }).then(
+  return run('sh', ['-c', STALE_SCRIPT, 'sh', link, current], { runAs }).then(
     () => true,
     () => false,
   )
@@ -302,21 +314,27 @@ async function linkTargets(teammates: string[]) {
 }
 
 /**
- * Now and then on a cloud computer: the teammates' own copies replaced by links (those that
- * keep theirs for now are tried again next time), or, shared bridges off, their links taken
- * away; then the older shared copies removed (removeSuperseded).
+ * Now and then on a cloud computer: the teammates' own copies, and their links to older
+ * copies, pointed at the current copy (those that keep theirs for now are tried again next
+ * time), or, shared bridges off, their links taken away; then the older shared copies removed
+ * (removeSuperseded). A teammate idle since an update would otherwise keep its old copy.
  */
 export async function tidyBridges(teammates: string[], now = Date.now()) {
   if (!ON_CLOUD) return
-  for (const harness of BRIDGE_HARNESSES)
-    for (const runAs of teammates)
-      if (!enabled() || (await hasOwn(runAs, harness))) await useSharedBridge(runAs, harness)
-  if (!enabled()) return
+  if (!enabled()) {
+    for (const harness of BRIDGE_HARNESSES)
+      for (const runAs of teammates) await useSharedBridge(runAs, harness)
+    return
+  }
   const current = new Set<string>()
   for (const harness of BRIDGE_HARNESSES) {
     const template = await identityOf(harness).catch(() => null)
     if (!template) return
-    current.add(sharedName(harness, template.identity))
+    const name = sharedName(harness, template.identity)
+    current.add(name)
+    const dir = bridgeLink(join(ROOT, name), harness)
+    for (const runAs of teammates)
+      if (await isStale(runAs, harness, dir)) await useSharedBridge(runAs, harness)
   }
   // Unknown where a teammate's folder points: nothing goes.
   const linked = await linkTargets(teammates)
