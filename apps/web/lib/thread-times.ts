@@ -30,11 +30,23 @@ export function pauses<T extends { kind: string; key: string; at?: number; steer
   return marks
 }
 
+/**
+ * Formatters made once: toLocaleTimeString and the like build one on each call, which a thread's
+ * time marks did on each render (several per thread opened). The same options, the same text.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>()
+const format = (date: Date, options: Intl.DateTimeFormatOptions) => {
+  const key = JSON.stringify(options)
+  let formatter = formatters.get(key)
+  if (!formatter) formatters.set(key, (formatter = new Intl.DateTimeFormat([], options)))
+  return formatter.format(date)
+}
+
 /** "16:09" today, "Yesterday 18:51", "Tue 14:30" this week, then "Sep 14, 8:33" (with the year when not this one). */
 export function pauseLabel(at: number, now = Date.now()) {
   const date = new Date(at)
   const today = new Date(now)
-  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const time = format(date, { hour: '2-digit', minute: '2-digit' })
   if (date.toDateString() === today.toDateString()) return time
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
@@ -42,8 +54,8 @@ export function pauseLabel(at: number, now = Date.now()) {
   const weekAgo = new Date(today)
   weekAgo.setHours(0, 0, 0, 0)
   weekAgo.setDate(weekAgo.getDate() - 6)
-  if (date >= weekAgo) return `${date.toLocaleDateString([], { weekday: 'short' })} ${time}`
-  const day = date.toLocaleDateString([], {
+  if (date >= weekAgo) return `${format(date, { weekday: 'short' })} ${time}`
+  const day = format(date, {
     month: 'short',
     day: 'numeric',
     ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}),

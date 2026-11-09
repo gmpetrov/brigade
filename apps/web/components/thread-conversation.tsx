@@ -44,6 +44,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
+import { flushSync } from 'react-dom'
 import {
   ComposerMenu,
   ComputerIcon,
@@ -92,7 +93,7 @@ import {
 import type { SideAction } from '@/components/side-reply'
 import { EndFollower } from '@/lib/end-follow'
 import { expireAttempt, inThread, useOutgoing } from '@/lib/outgoing-messages'
-import { revealSeq } from '@/lib/reveal'
+import { onRevealSeq, revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -105,7 +106,7 @@ import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { ChangesPanel } from '@/components/changes-panel'
 import { useThreadPanel } from '@/components/thread-panel'
-import { ThreadSkeleton } from '@/components/thread-skeleton'
+import { ThreadLoaded, ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadTimeline, useThreadPrompts } from '@/components/thread-timeline'
 import {
   Answering,
@@ -150,6 +151,7 @@ import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
 import { readThreadSide, rememberThreadSide } from '@/lib/thread-side'
+import { MORE_MESSAGES, OPEN_MESSAGES, windowStart } from '@/lib/thread-window'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -315,6 +317,13 @@ export function ThreadConversation({
     if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
   })
   const { items, queued, seen, turnId, background, next } = useThreadItems(events, firstSeq, gaps)
+  // A long thread opens on its last messages, what is above them drawn as the person reads up to
+  // it (lib/thread-window.ts): the seq of the person's message it shows from, null for all of it.
+  // Set once, as its events come in: new messages below do not move where it starts.
+  const [startSeq, setStartSeq] = useState<number | null>()
+  if (startSeq === undefined && eventsLoaded) setStartSeq(windowStart(items, OPEN_MESSAGES))
+  const startRef = useRef(startSeq)
+  startRef.current = startSeq
   // Opened at once (lib/pending-threads.ts): its first message shows until an event has it.
   const opened = useOpenedMessage(id)
   const delivered = events.some((e) => e.event.type === 'message.user')
@@ -741,7 +750,34 @@ export function ThreadConversation({
     anchor.current = undefined
     const view = scroller.current
     if (fromEnd !== undefined && view) view.scrollTop = view.scrollHeight - fromEnd
-  }, [firstSeq, gaps])
+  }, [firstSeq, gaps, startSeq])
+  // Read up to the messages held back above: more of them, what is on screen staying where it was.
+  const showEarlier = () => {
+    if (startSeq == null) return
+    const view = scroller.current
+    anchor.current = view ? view.scrollHeight - view.scrollTop : undefined
+    setStartSeq(windowStart(items, MORE_MESSAGES, startSeq))
+  }
+  // Going to a message held back (a reply's quote): all of it at once, for what goes there to find
+  // it in the page right after, and again, for a fold that holds it to open now that it is drawn.
+  useEffect(
+    () =>
+      onRevealSeq((seq) => {
+        const start = startRef.current
+        if (start == null || seq >= start) return
+        startRef.current = null
+        // Going up on purpose: what goes in above must not pull the view back to the end. The view
+        // goes there at once, since the browser keeping it where it was as the rest goes in above
+        // reads as the view at the end, which it would follow again.
+        follower.leave()
+        flushSync(() => setStartSeq(null))
+        scroller.current
+          ?.querySelector<HTMLElement>(`[data-seq="${seq}"]`)
+          ?.scrollIntoView({ block: 'center' })
+        revealSeq(seq)
+      }),
+    [follower],
+  )
   // A gap's page goes in where it is: read up into it, what is on screen stays where it was.
   const loadGap = (gap: EventGap, line: HTMLElement) => {
     const view = scroller.current
@@ -764,6 +800,8 @@ export function ThreadConversation({
   const jump = (seq: number) => {
     setSettled(false)
     setJumping(seq)
+    // Held back above: all of it, for the message to be there to go to.
+    if (startSeq != null && seq < startSeq) setStartSeq(null)
     // Only this message's own failure: a newer click keeps its place.
     void jumpTo(seq).catch(() => setJumping((was) => (was === seq ? undefined : was)))
   }
@@ -1530,7 +1568,7 @@ export function ThreadConversation({
           <ThreadTimeline
             scroller={scroller}
             prompts={prompts}
-            long={firstSeq > 1 || gaps.length > 0}
+            long={firstSeq > 1 || gaps.length > 0 || startSeq != null}
             onJump={jump}
           />
         )}
@@ -1553,18 +1591,29 @@ export function ThreadConversation({
             {!eventsLoaded ? (
               <ThreadSkeleton since={openedAt} onRetry={retry} />
             ) : (
-              // In with a quick fade, in the column the placeholder held.
-              <div className="animate-in duration-200 fade-in motion-reduce:animate-none">
+              // In the column the placeholder held: with a quick fade after it, else at once.
+              <ThreadLoaded since={openedAt}>
                 <FileLinksProvider value={{ open: openFile, threadId: t.id }}>
-                  {/* Once its page is in and shown at its end, not before: it would load one at once. */}
-                  {firstSeq > 1 && (events.at(-1)?.seq ?? 0) >= firstSeq && (
+                  {/* Messages held back above: drawn as the person reads up to them. */}
+                  {startSeq != null ? (
                     <EarlierMessages
-                      key={firstSeq}
+                      key={`held-${startSeq}`}
                       root={scroller}
-                      loading={loadingOlder}
-                      onLoad={loadEarlier}
-                      auto={settled}
+                      loading={false}
+                      onLoad={async () => showEarlier()}
                     />
+                  ) : (
+                    /* Once its page is in and shown at its end, not before: it would load one at once. */
+                    firstSeq > 1 &&
+                    (events.at(-1)?.seq ?? 0) >= firstSeq && (
+                      <EarlierMessages
+                        key={firstSeq}
+                        root={scroller}
+                        loading={loadingOlder}
+                        onLoad={loadEarlier}
+                        auto={settled}
+                      />
+                    )
                   )}
                   {/* Opened at once: the message it started with, until its runner has it here. */}
                   {opened && !delivered && (
@@ -1612,6 +1661,7 @@ export function ThreadConversation({
                     }
                     threadId={t.id}
                     items={items}
+                    startSeq={startSeq}
                     teammate={t.teammate}
                     teammates={people}
                     drafting={text.trim() !== ''}
@@ -1718,7 +1768,7 @@ export function ThreadConversation({
                   )}
                   <ChildrenWaiting children={t.children} />
                 </FileLinksProvider>
-              </div>
+              </ThreadLoaded>
             )}
           </div>
         </div>
