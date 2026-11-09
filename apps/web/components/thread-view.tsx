@@ -4669,7 +4669,7 @@ export function ChoicesCard({
   }
 
   const mark = (text: React.ReactNode) => (
-    <span className="flex size-5 flex-none items-center justify-center rounded-md border bg-card font-mono text-[11px] text-muted-foreground">
+    <span className="flex size-5 flex-none items-center justify-center rounded-[4px] bg-foreground/[0.09] font-mono text-[11px] text-muted-foreground">
       {text}
     </span>
   )
