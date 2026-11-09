@@ -918,6 +918,50 @@ export async function seedWorkspace(
     ),
   })
 
+  // Ended on choices nobody picked: it needs you, with its card in the thread (only words).
+  await thread({
+    title: 'Subject line for the November newsletter',
+    teammateId: maya.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: hours(2),
+    events: turn(
+      maya.id,
+      adaAccount.id,
+      'Give me a few subject lines for the November newsletter, the one announcing CSV export.',
+      ada.id,
+      [
+        ...tool(
+          harness('offer_choices'),
+          {
+            question: 'Which subject line should the newsletter go out with?',
+            options: [
+              {
+                id: 'plain',
+                label: '1 · Plain and clear',
+                description: 'CSV export is here: every report, one click (42 characters)',
+              },
+              {
+                id: 'question',
+                label: '2 · A question',
+                description:
+                  'Still copying tables by hand? Export any report to CSV, from every page that shows one, in one click',
+              },
+              {
+                id: 'short',
+                label: '3 · Short',
+                description: 'Your data, your spreadsheet',
+              },
+            ],
+          },
+          { shown: true },
+        ),
+      ],
+      'Three directions, from the plainest to the shortest. I would go with the first: it says what changed, and plain subjects get opened most in our past sends.',
+    ),
+  })
+
   // Failed: the computer stopped mid-turn.
   const upgrade = await thread({
     title: 'Upgrade Next.js to 16',
