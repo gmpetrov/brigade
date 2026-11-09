@@ -60,6 +60,7 @@ import {
 } from '@/lib/file-view'
 import { contentUrl } from '@/lib/library-urls'
 import { isMac, useIsMac } from '@/lib/platform'
+import { openIntent, prepareDocument } from '@/lib/prepare-document'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -76,6 +77,10 @@ export type OpenDocument = {
   contentType?: string
   editable?: boolean
 }
+
+/** Whether it shows in the live editor (lib/file-view.ts), as far as the opener knew. */
+const inEditor = (document: OpenDocument) =>
+  document.target.kind !== 'library' || fileView(document.title, document, undefined) === 'editor'
 
 /** `history`: open on its History, as the library's row menu asks. */
 type OpenOptions = { history?: boolean }
@@ -190,6 +195,8 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   const open = useCallback(
     (document: OpenDocument, options: OpenOptions = {}) => {
       const key = keyOf(document.target)
+      // Opening it now rather than once the editor's code is in: both at once.
+      if (inEditor(document)) prepareDocument(document.target)
       seen(document.target)
       setHistoryFor(options.history ? key : null)
       update(({ tabs, active }) => {
@@ -204,6 +211,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   const replace = useCallback(
     (document: OpenDocument) => {
       const key = keyOf(document.target)
+      if (inEditor(document)) prepareDocument(document.target)
       seen(document.target)
       setHistoryFor(null)
       update(({ tabs, active }) => {
@@ -865,6 +873,7 @@ function DocumentTabs() {
                   type="button"
                   role="tab"
                   aria-selected={selected}
+                  {...openIntent(!selected && inEditor(t) ? t.target : null)}
                   onClick={() => open(t)}
                   // A middle click closes it, as in a browser.
                   onAuxClick={(e) => {

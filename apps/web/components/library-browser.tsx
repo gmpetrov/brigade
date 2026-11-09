@@ -84,7 +84,9 @@ import {
   type LibraryTree,
   type Teammate,
 } from '@/lib/api'
+import { fileView } from '@/lib/file-view'
 import { contentUrl } from '@/lib/library-urls'
+import { openIntent } from '@/lib/prepare-document'
 import { fileIcon } from '@/components/file-icon'
 import { folderSuggestions, splitTyped } from '@/lib/library-path'
 import { cn } from '@/lib/utils'
@@ -452,6 +454,9 @@ export function LibraryBrowser({
           </span>
           <button
             type="button"
+            {...openIntent(
+              fileView(f.path, f, f) === 'editor' ? { kind: 'library', id: f.id } : null,
+            )}
             onClick={() => open(f)}
             className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
           >

@@ -19,6 +19,7 @@ patchedDependencies:
   '@ai-sdk/harness-claude-code@1.0.180': patches/@ai-sdk__harness-claude-code@1.0.180.patch
   '@ai-sdk/harness-codex@1.0.178': patches/@ai-sdk__harness-codex@1.0.178.patch
   '@ai-sdk/harness@1.0.176': patches/@ai-sdk__harness@1.0.176.patch
+  '@blocknote/react@0.56.0': patches/@blocknote__react@0.56.0.patch
   '@opennextjs/cloudflare@1.20.7': patches/@opennextjs__cloudflare@1.20.7.patch
   '@prisma/client@7.10.1': patches/@prisma__client@7.10.1.patch
   pg-cloudflare@1.4.1: patches/pg-cloudflare@1.4.1.patch

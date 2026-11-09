@@ -29,6 +29,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAdmin, NAV, useDashboard } from '@/components/dashboard'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { isMac, useIsMac } from '@/lib/platform'
+import { isMarkdownName } from '@/lib/file-view'
+import { HOVER_MS, prepareDocument } from '@/lib/prepare-document'
 import { libraryFile } from '@/lib/search-open'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { api, pullHref } from '@/lib/api'
@@ -272,6 +274,18 @@ export function SearchDialog({
   useEffect(() => {
     list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [active])
+  // The document the row picked opens, once it stays picked a moment: Enter shows it at once.
+  const picked = flat[active]
+  const pickedFile = picked ? libraryFile(picked) : undefined
+  const prepared =
+    pickedFile && pickedFile.editable !== false && isMarkdownName(pickedFile.path)
+      ? pickedFile.id
+      : undefined
+  useEffect(() => {
+    if (!open || !prepared) return
+    const timer = setTimeout(() => prepareDocument({ kind: 'library', id: prepared }), HOVER_MS)
+    return () => clearTimeout(timer)
+  }, [open, prepared])
 
   const choose = useCallback(
     (item: Item, newTab = false) => {

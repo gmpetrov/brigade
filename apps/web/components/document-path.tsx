@@ -76,9 +76,18 @@ export function DocumentPath({
   top?: boolean
 }) {
   const row = useRef<HTMLElement>(null)
-  // A long path keeps its end in view: the folder the file is in.
+  // A long path keeps its end in view: the folder the file is in. Measured once laid out (a
+  // ResizeObserver reports after layout): measured here, on mount, it made the browser restyle
+  // and lay out the whole page once more each time a document opened.
   useEffect(() => {
-    if (row.current) row.current.scrollLeft = row.current.scrollWidth
+    const nav = row.current
+    if (!nav) return
+    const observer = new ResizeObserver(() => {
+      nav.scrollLeft = nav.scrollWidth
+      observer.disconnect()
+    })
+    observer.observe(nav)
+    return () => observer.disconnect()
   }, [folder])
   const folders = pathFolders(folder)
   if (!folders.length && !top) return null

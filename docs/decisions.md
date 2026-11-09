@@ -611,7 +611,16 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   back (`/collab/documents/:id`, authenticated by `COLLAB_SECRET`); the API converts with `@blocknote/server-util`
   and skips saves that only reformat. When a teammate or a thread writes a document, the API tells its room, which
   merges the change: the API diffs top-level blocks from the room's last saved state to the new text, so edits
-  people have not saved yet survive. Without `COLLAB_SECRET`, the editor works alone with a Save button. Media: files dropped, pasted or picked
+  people have not saved yet survive. Without `COLLAB_SECRET`, the editor works alone with a Save button. A room
+  that matched the stored text before opens on what it has and checks it behind (`?early=1`): the editor stays
+  read only until the room says `checked`, as a change it finds can replace a whole block. A document opens
+  before it shows (`apps/web/lib/live-documents.ts`, `apps/web/lib/prepare-document.ts`): a search row picked a
+  moment, a library row or panel tab under the pointer, or the panel opening it start its session and its room's
+  socket at once, and it stays open 5 minutes once its panel closes (at most 6 unused, presence cleared
+  meanwhile, none reused once someone else signs in or the workspace changes), so the editor shows it with
+  nothing to wait for. Shown again, it is read only until its room checks again on request (`check`). BlockNote is patched
+  (`patches/@blocknote__react@0.56.0.patch`): its virtual-keyboard hook restyled the whole page 4 to 5 times
+  each time an editor mounted. Media: files dropped, pasted or picked
   into a document go to the bucket under `<organization>/<workspace>/assets/<id>` (`DocumentAsset`; direct
   uploads with R2, through the API without) and are read through 5-minute signed URLs, so video seeks. The document
   refers to them as `asset:<id>`. The hourly sweep removes files no document refers to after a day (a block copied
