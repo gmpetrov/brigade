@@ -321,7 +321,7 @@ export const RELEASES: ChangelogRelease[] = [
           },
           {
             title: 'Ask about a library file',
-            text: 'Select text in a library file and ask a teammate about it, from the file. The library opens on Recent files.',
+            text: 'Highlight text in a library file and ask a teammate about it right there. The library opens on Recent files.',
             prs: [457, 480],
           },
         ],

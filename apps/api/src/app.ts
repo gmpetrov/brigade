@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
 import { auth, authRouteClosed } from './auth.js'
 import { checkoutReturn, stripeWebhook } from './billing.js'
-import { apiCors } from './cors.js'
+import { apiCors, apiCsrf } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { designFiles, sandboxHostOnlyDesigns, sharedDesignFiles } from './designs.js'
@@ -74,17 +74,16 @@ import { safeEqual } from './ops/send.js'
 export const app = new Hono()
 
 app.use(serverTiming)
-// Basic hardening on every reply (Google's CASA scan checks them): HTTPS only from now on,
-// no MIME sniffing, no full URLs leaked to other sites. Framing stays each route's own call
-// (designs are shown in the dashboard's frames).
+// No full URLs leaked to other sites (Google's CASA scan checks it). HSTS and nosniff come from
+// Cloudflare's zone settings for brigade.lol (SSL/TLS › Edge Certificates), on every host and
+// file. Framing stays each route's own call (designs are shown in the dashboard's frames).
 app.use(async (c, next) => {
   await next()
-  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-  c.header('X-Content-Type-Options', 'nosniff')
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
 })
 app.use(sandboxHostOnlyDesigns)
 app.use('/api/*', apiCors(env.WEB_URL))
+app.use('/api/*', apiCsrf(env.WEB_URL))
 
 app.get('/health', (c) =>
   c.json<HealthResponse>({

@@ -44,7 +44,34 @@ const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
 // Where Mintlify serves the public docs (apps/docs): its project's subdomain.
 const MINTLIFY = 'https://brigade.mintlify.site'
 
+/**
+ * The dashboard's Content-Security-Policy. Scripts and styles only from here, inline (Next's
+ * own inline scripts), Cloudflare Turnstile and PostHog; the three CDNs are for teammates'
+ * widgets, whose srcdoc frames inherit this policy (components/widget-frame.tsx). What a page
+ * shows of members' content stays open: images and fonts in mail and messages, previews in
+ * frames (brigade.surf, a provider's address, or <thread>.localhost on a member's Mac), uploads
+ * straight to R2. No upgrade-insecure-requests: it would break those localhost previews.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://eu-assets.i.posthog.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https:",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' data: blob: https:",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' blob: data: https: http://localhost:* http://*.localhost:*",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join('; ')
+
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
+  // No `X-Powered-By: Next.js`: the framework is nobody's business (Google's CASA scan flags it).
+  poweredByHeader: false,
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
     NEXT_PUBLIC_VERSION: version,
@@ -83,17 +110,14 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
       async headers() {
         return [
           {
-            source: '/:path*',
+            // Not /docs: Mintlify's pages, proxied (rewrites below), send their own policy.
+            source: '/((?!docs(?:/|$)).*)',
             headers: [
-              { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+              { key: 'Content-Security-Policy', value: CSP },
               { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-              // Also checked by Google's CASA scan: HTTPS only, no MIME sniffing, no full
-              // URLs leaked to other sites, no camera or location for any page.
-              {
-                key: 'Strict-Transport-Security',
-                value: 'max-age=31536000; includeSubDomains',
-              },
-              { key: 'X-Content-Type-Options', value: 'nosniff' },
+              // Also checked by Google's CASA scan: no full URLs leaked to other sites, no camera,
+              // location or payment for any page. HSTS and nosniff come from Cloudflare's zone
+              // settings for brigade.lol, which also cover the static files Next doesn't serve.
               { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
               { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), payment=()' },
             ],

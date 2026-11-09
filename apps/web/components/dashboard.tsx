@@ -123,7 +123,7 @@ import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-swit
 import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
 import { setDocumentScope } from '@/lib/prepare-document'
-import { markSignedIn, markSignedOut } from '@/lib/signed-in'
+import { markSignedIn, clearBrowserData, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
@@ -447,6 +447,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (DEMO) return signUp()
     await authClient.signOut()
     markSignedOut()
+    await clearBrowserData()
     setDocumentScope(undefined)
     keepShownFor(undefined)
     router.replace('/sign-in')

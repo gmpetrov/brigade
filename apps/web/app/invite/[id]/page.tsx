@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { api, ApiError, type InvitationView } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
-import { markSignedIn, markSignedOut } from '@/lib/signed-in'
+import { markSignedIn, clearBrowserData, markSignedOut } from '@/lib/signed-in'
 
 const AS = { owner: 'an owner', admin: 'an admin', member: 'a member', viewer: 'a viewer' } as const
 
@@ -58,6 +58,7 @@ export default function Invite() {
     setBusy(true)
     await authClient.signOut().catch(() => {})
     markSignedOut()
+    await clearBrowserData()
     signIn()
   }
 
