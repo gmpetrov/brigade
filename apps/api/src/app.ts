@@ -74,6 +74,15 @@ import { safeEqual } from './ops/send.js'
 export const app = new Hono()
 
 app.use(serverTiming)
+// Basic hardening on every reply (Google's CASA scan checks them): HTTPS only from now on,
+// no MIME sniffing, no full URLs leaked to other sites. Framing stays each route's own call
+// (designs are shown in the dashboard's frames).
+app.use(async (c, next) => {
+  await next()
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+})
 app.use(sandboxHostOnlyDesigns)
 app.use('/api/*', apiCors(env.WEB_URL))
 

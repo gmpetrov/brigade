@@ -87,6 +87,15 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
             headers: [
               { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
               { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+              // Also checked by Google's CASA scan: HTTPS only, no MIME sniffing, no full
+              // URLs leaked to other sites, no camera or location for any page.
+              {
+                key: 'Strict-Transport-Security',
+                value: 'max-age=31536000; includeSubDomains',
+              },
+              { key: 'X-Content-Type-Options', value: 'nosniff' },
+              { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+              { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), payment=()' },
             ],
           },
         ]
