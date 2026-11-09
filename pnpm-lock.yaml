@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@ai-sdk/harness-claude-code@1.0.180':
-    hash: 726480370cc69e9a21acbe29be9df40e3a662f269413dfaa0b299ee8847c8bcd
+    hash: c3c085cc3a258a9c6f701f7069b7f7ec8d0d6dc869eae5139d561c69734bba1c
     path: patches/@ai-sdk__harness-claude-code@1.0.180.patch
   '@ai-sdk/harness-codex@1.0.178':
     hash: a5d8463eba2dbf0b4ab42a75ba3324a5e935ab57273a05d0172d1b88ae06424f
@@ -204,7 +204,7 @@ importers:
         version: 1.0.176(patch_hash=3d2bd8447b19930c6cdc022f97179fe0aeddc77a51f4a3cdeccc452d703ca109)(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/harness-claude-code':
         specifier: 1.0.180
-        version: 1.0.180(patch_hash=726480370cc69e9a21acbe29be9df40e3a662f269413dfaa0b299ee8847c8bcd)(zod@4.6.7)
+        version: 1.0.180(patch_hash=c3c085cc3a258a9c6f701f7069b7f7ec8d0d6dc869eae5139d561c69734bba1c)(zod@4.6.7)
       '@ai-sdk/harness-codex':
         specifier: 1.0.178
         version: 1.0.178(patch_hash=a5d8463eba2dbf0b4ab42a75ba3324a5e935ab57273a05d0172d1b88ae06424f)(zod@4.6.7)
@@ -6415,7 +6415,7 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.6.7
 
-  '@ai-sdk/harness-claude-code@1.0.180(patch_hash=726480370cc69e9a21acbe29be9df40e3a662f269413dfaa0b299ee8847c8bcd)(zod@4.6.7)':
+  '@ai-sdk/harness-claude-code@1.0.180(patch_hash=c3c085cc3a258a9c6f701f7069b7f7ec8d0d6dc869eae5139d561c69734bba1c)(zod@4.6.7)':
     dependencies:
       '@ai-sdk/harness': 1.0.176(patch_hash=3d2bd8447b19930c6cdc022f97179fe0aeddc77a51f4a3cdeccc452d703ca109)(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/provider': 4.0.37

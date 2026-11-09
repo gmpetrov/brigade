@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 656d15c..40c6aaf 100644
+index 656d15c624eb1ca288749c7723cb6e0dc8645c66..2e89a97808f6de3b6965b400e2b392d4b8b38b09 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1,10 +1,19 @@
@@ -60,7 +60,7 @@ index 656d15c..40c6aaf 100644
  		});
  		else send({
  			type: "tool-input-end",
-@@ -1592,8 +1610,283 @@ await runBridge({
+@@ -1592,8 +1610,328 @@ await runBridge({
  			});
  		}
  	},
@@ -84,6 +84,51 @@ index 656d15c..40c6aaf 100644
 +*/
 +/** Brigade: how long a turn waits for a report Claude Code may have read already to start a turn of its own. */
 +const REPORT_WAIT_MS = env.BRIGADE_REPORT_WAIT_MS != null && env.BRIGADE_REPORT_WAIT_MS !== "" && Number.isFinite(Number(env.BRIGADE_REPORT_WAIT_MS)) ? Number(env.BRIGADE_REPORT_WAIT_MS) : 6e4;
++/** Brigade: the longest a new process waits for its in-process MCP servers before its first message. */
++const SDK_MCP_READY_MS = Number(env.BRIGADE_SDK_MCP_READY_MS) > 0 ? Number(env.BRIGADE_SDK_MCP_READY_MS) : 15e3;
++/**
++* Brigade: Claude Code connects the in-process (sdk) MCP servers, Brigade's own tools among them,
++* a moment after it starts. A message sent before then is answered without their tools: Claude
++* Code tells the model they are "no longer available (MCP server disconnected)" and not to look for
++* them, and the teammate believes it for the rest of the thread. A new process gets its first
++* message once each of them is connected (or failed), as Claude Code's status says.
++*/
++async function sdkMcpServersReady(q, mcpServers) {
++	const names = Object.entries(mcpServers ?? {}).filter(([, config]) => config?.type === "sdk").map(([name]) => name);
++	if (names.length === 0) return;
++	const until = Date.now() + SDK_MCP_READY_MS;
++	while (Date.now() < until) {
++		// Each ask bounded by what is left of the wait: an answer that never comes ends it too.
++		let timer;
++		const left = new Promise((resolve) => timer = setTimeout(resolve, Math.max(0, until - Date.now()), "timeout"));
++		let statuses;
++		try {
++			statuses = await Promise.race([q.mcpServerStatus(), left]);
++		} catch {
++			return;
++		} finally {
++			clearTimeout(timer);
++		}
++		if (statuses === "timeout") return;
++		if (names.every((name) => statuses.some((s) => s.name === name && s.status !== "pending"))) return;
++		await new Promise((resolve) => setTimeout(resolve, 25));
++	}
++}
++/** Brigade: Claude Code's query, its prompt held back until its sdk MCP servers are connected. */
++function queryWhenToolsReady(args) {
++	let release;
++	const ready = new Promise((resolve) => release = resolve);
++	const prompt = args.prompt;
++	const q = claudeSdk.query({
++		...args,
++		prompt: (async function* () {
++			await ready;
++			yield* prompt;
++		})()
++	});
++	sdkMcpServersReady(q, args.options?.mcpServers).finally(release);
++	return q;
++}
 +const CLAUDE_KEEP_MS = env.BRIGADE_CLAUDE_KEEP_MS != null && env.BRIGADE_CLAUDE_KEEP_MS !== "" && Number.isFinite(Number(env.BRIGADE_CLAUDE_KEEP_MS)) ? Number(env.BRIGADE_CLAUDE_KEEP_MS) : 12e4;
 +let liveQuery;
 +/** Brigade: the host's tools as served last, by their JSON's hash: a turn with the same converts none again. */
@@ -263,7 +308,7 @@ index 656d15c..40c6aaf 100644
 +		idleTimer: void 0,
 +		q: void 0
 +	};
-+	live.q = claudeSdk.query({
++	live.q = queryWhenToolsReady({
 +		prompt: input,
 +		options: {
 +			...queryArgs.options,
@@ -345,7 +390,7 @@ index 656d15c..40c6aaf 100644
  function createPermissionOptions(input) {
  	const permissionMode = input.start.permissionMode ?? "allow-all";
  	const inactiveNativeTools = new Set(input.inactiveNativeTools);
-@@ -1719,6 +2012,21 @@ function createPermissionSettings(input) {
+@@ -1719,6 +2057,21 @@ function createPermissionSettings(input) {
  	};
  }
  /**
@@ -367,7 +412,7 @@ index 656d15c..40c6aaf 100644
  * Claude Code picks a model's output limit, system prompt and default effort
  * from its own reading of the model id, and misreads AI Gateway ids with a
  * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
-@@ -1752,6 +2060,11 @@ async function needsHostApproval(input) {
+@@ -1752,6 +2105,11 @@ async function needsHostApproval(input) {
  		nativeName: input.toolName,
  		permissionMode: input.permissionMode
  	})) return true;
@@ -379,7 +424,7 @@ index 656d15c..40c6aaf 100644
  	const args = input.toolInput != null && typeof input.toolInput === "object" ? input.toolInput : {};
  	let paths;
  	let access;
-@@ -1825,6 +2138,36 @@ function createApprovalPreToolUseHook(input) {
+@@ -1825,6 +2183,36 @@ function createApprovalPreToolUseHook(input) {
  		} };
  	};
  }
@@ -416,7 +461,7 @@ index 656d15c..40c6aaf 100644
  function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-all") return false;
  	if (input.nativeName === "EnterWorktree" || input.nativeName === "ExitWorktree") return true;
-@@ -1833,6 +2176,160 @@ function nativeToolRequiresApproval(input) {
+@@ -1833,6 +2221,160 @@ function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-edits") return kind === "bash";
  	return kind === "edit" || kind === "bash";
  }
@@ -577,7 +622,7 @@ index 656d15c..40c6aaf 100644
  async function runTurn(start, turn) {
  	const emit = (msg) => {
  		if (!turn.abortSignal.aborted) turn.emit(msg);
-@@ -1848,85 +2345,112 @@ async function runTurn(start, turn) {
+@@ -1848,85 +2390,112 @@ async function runTurn(start, turn) {
  	else turn.abortSignal.addEventListener("abort", onHostAbort, { once: true });
  	const streamEventState = createClaudeStreamEventState();
  	const mcpServers = { ...start.mcpServers };
@@ -765,7 +810,7 @@ index 656d15c..40c6aaf 100644
  	}
  	const compaction = createCompactionLatch((event) => {
  		const hasOpenStep = streamEventState.stepOpen;
-@@ -1984,11 +2508,25 @@ async function runTurn(start, turn) {
+@@ -1984,11 +2553,25 @@ async function runTurn(start, turn) {
  		deferredToolUseIds,
  		nativeToolCallNames: streamEventState.nativeToolCallNames
  	});
@@ -793,7 +838,7 @@ index 656d15c..40c6aaf 100644
  	const questionPreToolUseHook = createQuestionPreToolUseHook({
  		turn,
  		emit,
-@@ -2003,9 +2541,19 @@ async function runTurn(start, turn) {
+@@ -2003,9 +2586,19 @@ async function runTurn(start, turn) {
  			toolUseId
  		})
  	});
@@ -813,7 +858,7 @@ index 656d15c..40c6aaf 100644
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
-@@ -2026,28 +2574,92 @@ async function runTurn(start, turn) {
+@@ -2026,28 +2619,92 @@ async function runTurn(start, turn) {
  			} } : {},
  			includePartialMessages: true,
  			hooks: {
@@ -910,11 +955,11 @@ index 656d15c..40c6aaf 100644
 +		disposeLiveQuery();
 +		serveHostTools();
 +	}
-+	let q = live ? liveView : deferredToolUseId == null ? claudeSdk.query(queryArgs) : void 0;
++	let q = live ? liveView : deferredToolUseId == null ? queryWhenToolsReady(queryArgs) : void 0;
  	const hostAborted = new Promise((resolve) => {
  		if (abortCtl.signal.aborted) resolve(void 0);
  		abortCtl.signal.addEventListener("abort", () => resolve(void 0), { once: true });
-@@ -2103,6 +2715,11 @@ async function runTurn(start, turn) {
+@@ -2103,6 +2760,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -926,7 +971,7 @@ index 656d15c..40c6aaf 100644
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -2122,6 +2739,81 @@ async function runTurn(start, turn) {
+@@ -2122,6 +2784,81 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -1008,7 +1053,16 @@ index 656d15c..40c6aaf 100644
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -2162,6 +2854,19 @@ async function runTurn(start, turn) {
+@@ -2135,7 +2872,7 @@ async function runTurn(start, turn) {
+ 				approvalDecisions.set(toolUseId, decision);
+ 				deferredToolUseId = void 0;
+ 				resumingDeferredCall = true;
+-				q = claudeSdk.query({
++				q = queryWhenToolsReady({
+ 					prompt: withoutInitialMessage(queryInput.input),
+ 					options: {
+ 						...queryArgs.options,
+@@ -2162,6 +2899,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -1028,7 +1082,7 @@ index 656d15c..40c6aaf 100644
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -2173,8 +2878,46 @@ async function runTurn(start, turn) {
+@@ -2173,8 +2923,46 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -1075,7 +1129,7 @@ index 656d15c..40c6aaf 100644
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2210,34 +2953,64 @@ async function runTurn(start, turn) {
+@@ -2210,34 +2998,64 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -1148,7 +1202,7 @@ index 656d15c..40c6aaf 100644
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
-@@ -2246,9 +3019,10 @@ async function runTurn(start, turn) {
+@@ -2246,9 +3064,10 @@ async function runTurn(start, turn) {
  			raw: "stop"
  		},
  		totalUsage: turnUsage ?? streamEventState.stepUsage ?? defaultUsage(),
@@ -1162,7 +1216,7 @@ index 656d15c..40c6aaf 100644
  	});
  }
 diff --git a/dist/bridge/package.json b/dist/bridge/package.json
-index c65fbaa..a8c4a90 100644
+index c65fbaaa7a4718894640b601eeae6486b6cbb769..a8c4a905843b689beb74b6af5655acadce60257c 100644
 --- a/dist/bridge/package.json
 +++ b/dist/bridge/package.json
 @@ -4,9 +4,9 @@
@@ -1179,7 +1233,7 @@ index c65fbaa..a8c4a90 100644
      "zod": "4.4.3"
    }
 diff --git a/dist/bridge/pnpm-lockfile.yaml b/dist/bridge/pnpm-lockfile.yaml
-index 719cf20..eb631e6 100644
+index 719cf20d9b12324f7244c4e0d715ce6023d9e9d7..eb631e66d5c5301f2a3f1996c747fa8d8f7b9645 100644
 --- a/dist/bridge/pnpm-lockfile.yaml
 +++ b/dist/bridge/pnpm-lockfile.yaml
 @@ -9,14 +9,14 @@ importers:
@@ -1510,7 +1564,7 @@ index 719cf20..eb631e6 100644
  
    ajv@8.20.0:
 diff --git a/dist/index.js b/dist/index.js
-index 5c3cf58..100a9d4 100644
+index 5c3cf580798b077ffcffe7cc40b5b36cdda2706a..100a9d4caf65364cda2d33ec1361e848c56a84d4 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -5,6 +5,7 @@ import { generateId, isRecord, safeParseJSON, tool } from "@ai-sdk/provider-util
