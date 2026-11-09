@@ -4711,7 +4711,7 @@ export function ChoicesCard({
           )
         )}
       </div>
-      <ul className="@container flex flex-col gap-1.5">
+      <ul className="@container flex flex-col gap-1">
         {choices.options.map((o, i) => {
           const { mark: number, name } = choiceLabel(o.label, i)
           const offered = o.design?.replace(/\/+$/, '')
@@ -4750,10 +4750,10 @@ export function ChoicesCard({
             </span>
           )
           const text = (
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="flex min-w-0 flex-1 flex-col">
               <span className="font-semibold">{name}</span>
               {o.description && (
-                <span className="line-clamp-2 text-sm text-muted-foreground">{o.description}</span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">{o.description}</span>
               )}
             </span>
           )
@@ -4764,14 +4764,14 @@ export function ChoicesCard({
               {text}
             </>
           )
-          const row = 'flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left'
+          const row = 'flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-1.5 text-left'
           // With designs, the tile opens its design and Pick picks; with only words, the tile picks.
           const opens = designs && !!design && !trashed
           const picks = !designs && open
           const content = opens ? (
             <button
               type="button"
-              className={cn(row, 'group cursor-pointer rounded-lg')}
+              className={cn(row, 'group cursor-pointer rounded-[10px]')}
               aria-label={`Open ${o.label}`}
               onClick={() => openDesign(design)}
             >
@@ -4780,7 +4780,7 @@ export function ChoicesCard({
           ) : picks ? (
             <button
               type="button"
-              className={cn(row, 'group cursor-pointer rounded-lg')}
+              className={cn(row, 'group cursor-pointer rounded-[10px]')}
               onClick={() => choose(o)}
             >
               {body}
@@ -4792,7 +4792,7 @@ export function ChoicesCard({
             <li
               key={o.id}
               className={cn(
-                'flex items-center rounded-lg bg-muted/55 transition-[background-color,opacity]',
+                'flex items-center rounded-[10px] bg-muted/55 transition-[background-color,opacity]',
                 (opens || picks) && 'hover:bg-muted',
                 chosen && 'bg-primary/15 hover:bg-primary/15',
                 ((picked && !chosen) || (sending && !chosen) || passed) && 'opacity-50',
@@ -4803,20 +4803,20 @@ export function ChoicesCard({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="mr-3 h-7 flex-none rounded-full px-3 text-xs"
+                  className="mr-2.5 h-7 flex-none rounded-full px-3 text-xs"
                   onClick={() => choose(o)}
                 >
                   Pick
                 </Button>
               )}
               {picked?.id === o.id && (
-                <Check aria-label="Picked" className="mr-3 size-4 flex-none text-success" />
+                <Check aria-label="Picked" className="mr-2.5 size-4 flex-none text-success" />
               )}
             </li>
           )
         })}
         {(open || sending === OWN_WORDS) && onChoose && (
-          <li className="flex items-start gap-3 rounded-lg border border-dashed px-3 py-2.5 focus-within:border-solid focus-within:border-primary/40">
+          <li className="flex items-start gap-2.5 rounded-[10px] border border-dashed px-2.5 py-1.5 focus-within:border-solid focus-within:border-primary/40">
             <span className="mt-0.5">
               {sending === OWN_WORDS ? spinner : mark(<Pencil aria-hidden className="size-3" />)}
             </span>
