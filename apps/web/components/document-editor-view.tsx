@@ -18,7 +18,7 @@ import { checkboxTapExtension } from '@/components/document-checkbox'
 import { checklistLookExtension } from '@/components/document-checklist'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { DocumentLoading, documentFadeIn } from '@/components/document-loading'
 import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { useLiveSession, type LiveConnection } from '@/lib/live-documents'
@@ -30,9 +30,9 @@ export function DocumentEditorView(props: DocumentEditorProps) {
   const { session, error, connection, held, deleted } = useLiveSession(props.target)
 
   if (error) return <p className="text-sm text-destructive-text">{error}</p>
-  if (!session) return <Skeleton className="h-32 w-full" />
+  if (!session) return <DocumentLoading />
   if (!session.live) return <SavedDocument key={session.documentId} session={session} {...props} />
-  if (!connection) return <Skeleton className="h-32 w-full" />
+  if (!connection) return <DocumentLoading />
   const { target, ...rest } = props
   return (
     <LiveEditor
@@ -162,16 +162,18 @@ function LiveEditor({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {synced ? (
-        <DocumentBlockNoteView
-          editor={editor}
-          documentId={documentId}
-          label={label}
-          ask={ask}
-          list={list}
-          readOnly={held}
-        />
+        <div className={documentFadeIn}>
+          <DocumentBlockNoteView
+            editor={editor}
+            documentId={documentId}
+            label={label}
+            ask={ask}
+            list={list}
+            readOnly={held}
+          />
+        </div>
       ) : (
-        <Skeleton className="h-32 w-full" />
+        <DocumentLoading />
       )}
       <EditorStatus
         status={status}
@@ -313,20 +315,22 @@ function SavedDocument({
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <DocumentBlockNoteView
-        editor={editor}
-        documentId={session.documentId}
-        label={label}
-        ask={ask}
-        list={target.kind === 'library'}
-        readOnly={session.readOnly}
-        onChange={() => {
-          if (filling.current) return
-          void blocksToMarkdown(editor, editor.document).then((text) =>
-            setDirty(text !== savedText.current),
-          )
-        }}
-      />
+      <div className={documentFadeIn}>
+        <DocumentBlockNoteView
+          editor={editor}
+          documentId={session.documentId}
+          label={label}
+          ask={ask}
+          list={target.kind === 'library'}
+          readOnly={session.readOnly}
+          onChange={() => {
+            if (filling.current) return
+            void blocksToMarkdown(editor, editor.document).then((text) =>
+              setDirty(text !== savedText.current),
+            )
+          }}
+        />
+      </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {!session.readOnly && (
         <div className="flex items-center justify-end gap-3">

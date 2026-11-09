@@ -2,7 +2,7 @@
 import type { EditTarget } from '@brigade/contracts'
 import { useEffect, useState, type ComponentType } from 'react'
 import type { PickedLines } from '@/components/list-items'
-import { Skeleton } from '@/components/ui/skeleton'
+import { DocumentLoading, DocumentOpening } from '@/components/document-loading'
 
 export type DocumentEditorProps = {
   /** The document: a Markdown library file, or a memory file. */
@@ -69,5 +69,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
         The editor could not load. Check your connection and reload the page.
       </p>
     )
-  return view.View ? <view.View {...props} /> : <Skeleton className="h-32 w-full" />
+  return (
+    <DocumentOpening target={props.target}>
+      {view.View ? <view.View {...props} /> : <DocumentLoading />}
+    </DocumentOpening>
+  )
 }
