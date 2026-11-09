@@ -9,7 +9,8 @@ import { bridgeTurn } from './fixtures/claude-bridge.js'
 // model they were "no longer available (MCP server disconnected)": teammates then said the
 // library was cut off. The bridge (patched) sends a new process its first message only once
 // those servers are connected. This stand-in reports `harness-tools` pending for its first
-// 300 ms, and writes down when it was connected and when each message came.
+// 300 ms (or never answers, with FAKE_STATUS_SILENT), and writes down when it was connected
+// and when each message came.
 
 const SLOW_SDK = `import { appendFileSync } from 'node:fs'
 const note = (what) => appendFileSync(process.env.FAKE_SDK_RECORD, JSON.stringify({ ...what, at: Date.now() }) + '\\n')
@@ -29,7 +30,7 @@ export function query({ prompt, options }) {
   }
   const messages = run()
   messages.interrupt = async () => {}
-  messages.mcpServerStatus = async () =>
+  messages.mcpServerStatus = process.env.FAKE_STATUS_SILENT ? () => new Promise(() => {}) : async () =>
     Object.entries(options.mcpServers ?? {}).map(([name, c]) => ({ name, status: c?.type === 'sdk' && !connected() ? 'pending' : 'connected' }))
   return messages
 }
@@ -71,4 +72,20 @@ test('a turn without an in-process server waits for nothing', async () => {
   const [message] = record.filter((r) => r.what === 'message')
   assert.deepEqual(query.sdk, [])
   assert.ok(message.at - query.at < 250, `waited ${message.at - query.at} ms`)
+})
+
+// Claude Code that never answers the status (FAKE_STATUS_SILENT): the wait still ends at its
+// deadline (BRIGADE_SDK_MCP_READY_MS, 15 s by default), and the message goes in.
+test('a status that never comes holds the first message back no longer than the deadline', async () => {
+  const { record } = await bridgeTurn(SLOW_SDK, {
+    permissionMode: 'allow-all',
+    env: { ...claudeSettingsEnv(), BRIGADE_SDK_MCP_READY_MS: '400', FAKE_STATUS_SILENT: '1' },
+    tools,
+    prompts: ['one'],
+  })
+  const [query] = record.filter((r) => r.what === 'query')
+  const [message] = record.filter((r) => r.what === 'message')
+  assert.equal(message?.text, 'one', JSON.stringify(record))
+  const waited = message.at - query.at
+  assert.ok(waited >= 350 && waited < 3000, `waited ${waited} ms`)
 })

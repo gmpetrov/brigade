@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f220acf71d 100644
+index 656d15c624eb1ca288749c7723cb6e0dc8645c66..2e89a97808f6de3b6965b400e2b392d4b8b38b09 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1,10 +1,19 @@
@@ -60,7 +60,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  		});
  		else send({
  			type: "tool-input-end",
-@@ -1592,8 +1610,322 @@ await runBridge({
+@@ -1592,8 +1610,328 @@ await runBridge({
  			});
  		}
  	},
@@ -85,7 +85,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
 +/** Brigade: how long a turn waits for a report Claude Code may have read already to start a turn of its own. */
 +const REPORT_WAIT_MS = env.BRIGADE_REPORT_WAIT_MS != null && env.BRIGADE_REPORT_WAIT_MS !== "" && Number.isFinite(Number(env.BRIGADE_REPORT_WAIT_MS)) ? Number(env.BRIGADE_REPORT_WAIT_MS) : 6e4;
 +/** Brigade: the longest a new process waits for its in-process MCP servers before its first message. */
-+const SDK_MCP_READY_MS = 15e3;
++const SDK_MCP_READY_MS = Number(env.BRIGADE_SDK_MCP_READY_MS) > 0 ? Number(env.BRIGADE_SDK_MCP_READY_MS) : 15e3;
 +/**
 +* Brigade: Claude Code connects the in-process (sdk) MCP servers, Brigade's own tools among them,
 +* a moment after it starts. A message sent before then is answered without their tools: Claude
@@ -98,12 +98,18 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
 +	if (names.length === 0) return;
 +	const until = Date.now() + SDK_MCP_READY_MS;
 +	while (Date.now() < until) {
++		// Each ask bounded by what is left of the wait: an answer that never comes ends it too.
++		let timer;
++		const left = new Promise((resolve) => timer = setTimeout(resolve, Math.max(0, until - Date.now()), "timeout"));
 +		let statuses;
 +		try {
-+			statuses = await q.mcpServerStatus();
++			statuses = await Promise.race([q.mcpServerStatus(), left]);
 +		} catch {
 +			return;
++		} finally {
++			clearTimeout(timer);
 +		}
++		if (statuses === "timeout") return;
 +		if (names.every((name) => statuses.some((s) => s.name === name && s.status !== "pending"))) return;
 +		await new Promise((resolve) => setTimeout(resolve, 25));
 +	}
@@ -384,7 +390,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  function createPermissionOptions(input) {
  	const permissionMode = input.start.permissionMode ?? "allow-all";
  	const inactiveNativeTools = new Set(input.inactiveNativeTools);
-@@ -1719,6 +2051,21 @@ function createPermissionSettings(input) {
+@@ -1719,6 +2057,21 @@ function createPermissionSettings(input) {
  	};
  }
  /**
@@ -406,7 +412,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  * Claude Code picks a model's output limit, system prompt and default effort
  * from its own reading of the model id, and misreads AI Gateway ids with a
  * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
-@@ -1752,6 +2099,11 @@ async function needsHostApproval(input) {
+@@ -1752,6 +2105,11 @@ async function needsHostApproval(input) {
  		nativeName: input.toolName,
  		permissionMode: input.permissionMode
  	})) return true;
@@ -418,7 +424,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	const args = input.toolInput != null && typeof input.toolInput === "object" ? input.toolInput : {};
  	let paths;
  	let access;
-@@ -1825,6 +2177,36 @@ function createApprovalPreToolUseHook(input) {
+@@ -1825,6 +2183,36 @@ function createApprovalPreToolUseHook(input) {
  		} };
  	};
  }
@@ -455,7 +461,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-all") return false;
  	if (input.nativeName === "EnterWorktree" || input.nativeName === "ExitWorktree") return true;
-@@ -1833,6 +2215,160 @@ function nativeToolRequiresApproval(input) {
+@@ -1833,6 +2221,160 @@ function nativeToolRequiresApproval(input) {
  	if (input.permissionMode === "allow-edits") return kind === "bash";
  	return kind === "edit" || kind === "bash";
  }
@@ -616,7 +622,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  async function runTurn(start, turn) {
  	const emit = (msg) => {
  		if (!turn.abortSignal.aborted) turn.emit(msg);
-@@ -1848,85 +2384,112 @@ async function runTurn(start, turn) {
+@@ -1848,85 +2390,112 @@ async function runTurn(start, turn) {
  	else turn.abortSignal.addEventListener("abort", onHostAbort, { once: true });
  	const streamEventState = createClaudeStreamEventState();
  	const mcpServers = { ...start.mcpServers };
@@ -804,7 +810,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	}
  	const compaction = createCompactionLatch((event) => {
  		const hasOpenStep = streamEventState.stepOpen;
-@@ -1984,11 +2547,25 @@ async function runTurn(start, turn) {
+@@ -1984,11 +2553,25 @@ async function runTurn(start, turn) {
  		deferredToolUseIds,
  		nativeToolCallNames: streamEventState.nativeToolCallNames
  	});
@@ -832,7 +838,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	const questionPreToolUseHook = createQuestionPreToolUseHook({
  		turn,
  		emit,
-@@ -2003,9 +2580,19 @@ async function runTurn(start, turn) {
+@@ -2003,9 +2586,19 @@ async function runTurn(start, turn) {
  			toolUseId
  		})
  	});
@@ -852,7 +858,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
-@@ -2026,28 +2613,92 @@ async function runTurn(start, turn) {
+@@ -2026,28 +2619,92 @@ async function runTurn(start, turn) {
  			} } : {},
  			includePartialMessages: true,
  			hooks: {
@@ -953,7 +959,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	const hostAborted = new Promise((resolve) => {
  		if (abortCtl.signal.aborted) resolve(void 0);
  		abortCtl.signal.addEventListener("abort", () => resolve(void 0), { once: true });
-@@ -2103,6 +2754,11 @@ async function runTurn(start, turn) {
+@@ -2103,6 +2760,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -965,7 +971,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -2122,6 +2778,81 @@ async function runTurn(start, turn) {
+@@ -2122,6 +2784,81 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -1047,7 +1053,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	async function* messages() {
  		for (;;) {
  			if (deferredToolUseId != null) {
-@@ -2135,7 +2866,7 @@ async function runTurn(start, turn) {
+@@ -2135,7 +2872,7 @@ async function runTurn(start, turn) {
  				approvalDecisions.set(toolUseId, decision);
  				deferredToolUseId = void 0;
  				resumingDeferredCall = true;
@@ -1056,7 +1062,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  					prompt: withoutInitialMessage(queryInput.input),
  					options: {
  						...queryArgs.options,
-@@ -2162,6 +2893,19 @@ async function runTurn(start, turn) {
+@@ -2162,6 +2899,19 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -1076,7 +1082,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  			emitStreamEvent(msg);
  			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
  				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
-@@ -2173,8 +2917,46 @@ async function runTurn(start, turn) {
+@@ -2173,8 +2923,46 @@ async function runTurn(start, turn) {
  					toolName: msg.deferred_tool_use.name,
  					toolInput: msg.deferred_tool_use.input
  				});
@@ -1123,7 +1129,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -2210,34 +2992,64 @@ async function runTurn(start, turn) {
+@@ -2210,34 +2998,64 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -1196,7 +1202,7 @@ index 656d15c624eb1ca288749c7723cb6e0dc8645c66..e56fbbc2fc7a1f4f520f8db0a66bd1f2
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
-@@ -2246,9 +3058,10 @@ async function runTurn(start, turn) {
+@@ -2246,9 +3064,10 @@ async function runTurn(start, turn) {
  			raw: "stop"
  		},
  		totalUsage: turnUsage ?? streamEventState.stepUsage ?? defaultUsage(),
