@@ -33,7 +33,7 @@ import {
 import { useDocumentDiscussion } from '@/components/document-discussion'
 import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
-import { DocumentPath } from '@/components/document-path'
+import { DocumentPath, FileNameMenu } from '@/components/document-path'
 import { fileIcon } from '@/components/file-icon'
 import { FilePreview } from '@/components/file-preview'
 import { FileHistory } from '@/components/library-history'
@@ -454,6 +454,10 @@ export function DocumentPanel() {
   const Icon = target.kind !== 'library' ? BookOpen : contentType ? fileIcon(contentType) : FileText
   const name = path ? path.slice(path.lastIndexOf('/') + 1) : current.title
   const tabbed = tabs.length > 1
+  const folder = path ? parentOf(path) : (current.subtitle ?? '')
+  // Where it is, under its name: its folders. At the top of the library, nothing (its name opens
+  // the library's menu), unless a tab names it instead: then "Library".
+  const placed = target.kind === 'library' ? Boolean(folder) || tabbed : Boolean(current.subtitle)
   return (
     <>
       <SidePanel
@@ -471,22 +475,32 @@ export function DocumentPanel() {
             className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/40 md:hidden"
           />
           {tabbed && <DocumentTabs />}
-          <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
+          {/* Its name and clickable path keep their room as the panel narrows: Ask shows as its
+              icon alone, then (a phone, a panel made narrow) what acts on the file goes on a row
+              of its own below, and Close stays in view. */}
+          <div className="@container flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b px-3 py-2.5">
             <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             <div className="flex min-w-0 flex-1 flex-col">
               {/* With tabs, the tab names it: only its folder here. */}
-              {!(tabbed && (current.subtitle || target.kind === 'library')) && (
-                <strong className="truncate text-sm font-semibold">
-                  {target.kind === 'library' ? name : current.title}
-                </strong>
-              )}
-              {(current.subtitle || target.kind === 'library' || share) && (
+              {!(tabbed && (current.subtitle || target.kind === 'library')) &&
+                (target.kind === 'library' ? (
+                  <FileNameMenu
+                    name={name}
+                    fileId={target.id}
+                    path={path ?? current.title}
+                    className="max-w-full self-start text-sm font-semibold"
+                  />
+                ) : (
+                  <strong className="truncate text-sm font-semibold">{current.title}</strong>
+                ))}
+              {(placed || share) && (
                 <div className="flex min-w-0 items-center text-xs text-muted-foreground">
                   {target.kind === 'library' ? (
                     <DocumentPath
-                      folder={path ? parentOf(path) : (current.subtitle ?? '')}
+                      folder={folder}
                       fileId={target.id}
                       path={path ?? current.title}
+                      top={tabbed}
                     />
                   ) : (
                     current.subtitle && (
@@ -495,7 +509,7 @@ export function DocumentPanel() {
                       </span>
                     )
                   )}
-                  {(current.subtitle || target.kind === 'library') && share && (
+                  {placed && share && (
                     <span aria-hidden className="shrink-0 px-1">
                       ·
                     </span>
@@ -504,43 +518,50 @@ export function DocumentPanel() {
                 </div>
               )}
             </div>
-            {discussion?.teammate && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void onAsk?.()}
-                tooltip={`Talk about this file with ${discussion.teammate.name}`}
-                aria-label={`Ask ${discussion.teammate.name}`}
-              >
-                <MessageSquare aria-hidden />
-                {/* On a phone, the icon alone: the file's path needs the room. */}
-                <span className="max-sm:hidden">Ask {discussion.teammate.name}</span>
-              </Button>
-            )}
-            {target.kind === 'library' && <ShareButton key={target.id} name={name} link={link} />}
-            {target.kind === 'library' && downloadable(view) && (
-              <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
-                <a href={contentUrl(target.id, true)} aria-label="Download">
-                  <Download aria-hidden />
-                </a>
-              </Button>
-            )}
-            {target.kind === 'library' && view !== 'missing' && (
-              <Button
-                type="button"
-                variant={history ? 'secondary' : 'ghost'}
-                size="icon-sm"
-                onClick={() => setHistory((h) => !h)}
-                aria-pressed={history}
-                aria-label="History"
-                tooltip="History"
-              >
-                <History aria-hidden />
-              </Button>
+            {(discussion?.teammate || target.kind === 'library') && (
+              <div className="flex items-center gap-2 @max-[27rem]:order-last @max-[27rem]:basis-full @max-[27rem]:pl-6">
+                {discussion?.teammate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void onAsk?.()}
+                    tooltip={`Talk about this file with ${discussion.teammate.name}`}
+                    aria-label={`Ask ${discussion.teammate.name}`}
+                  >
+                    <MessageSquare aria-hidden />
+                    <span className="@min-[27rem]:@max-[34rem]:hidden">
+                      Ask {discussion.teammate.name}
+                    </span>
+                  </Button>
+                )}
+                {target.kind === 'library' && (
+                  <ShareButton key={target.id} name={name} link={link} />
+                )}
+                {target.kind === 'library' && downloadable(view) && (
+                  <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
+                    <a href={contentUrl(target.id, true)} aria-label="Download">
+                      <Download aria-hidden />
+                    </a>
+                  </Button>
+                )}
+                {target.kind === 'library' && view !== 'missing' && (
+                  <Button
+                    type="button"
+                    variant={history ? 'secondary' : 'ghost'}
+                    size="icon-sm"
+                    onClick={() => setHistory((h) => !h)}
+                    aria-pressed={history}
+                    aria-label="History"
+                    tooltip="History"
+                  >
+                    <History aria-hidden />
+                  </Button>
+                )}
+              </div>
             )}
             {/* What acts on the panel itself, apart from what acts on the file. */}
-            <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
+            <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border @max-[27rem]:hidden" />
             <MinimizeButton onMinimize={minimize} />
             <PanelExpandButton />
             <Button
