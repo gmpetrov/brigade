@@ -9,7 +9,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import YProvider from 'y-partyserver/provider'
 import * as Y from 'yjs'
 import { api } from '@/lib/api'
-import { setOpener, takeAskedSession } from '@/lib/prepare-document'
+import { setForget, setOpener, takeAskedSession } from '@/lib/prepare-document'
 
 /** `id`: this connection, as its editor's key (a document closed and opened again has another). */
 export type LiveConnection = { id: number; doc: Y.Doc; provider: YProvider }
@@ -47,6 +47,13 @@ type Entry = {
   usedAt: number
   timer?: ReturnType<typeof setTimeout>
   closed: boolean
+  /**
+   * Edits wait for the room's check on its next connection: the first, and one made again when
+   * a kept document is shown again (a notice of a change the room missed meanwhile, say).
+   */
+  holdNext: boolean
+  /** When the room last checked what it has against the stored text. */
+  checkedAt?: number
 }
 
 const EMPTY: LiveSession = { held: false }
@@ -75,6 +82,7 @@ function start(target: EditTarget) {
     shown: false,
     usedAt: Date.now(),
     closed: false,
+    holdNext: true,
   }
   entries.set(entry.key, entry)
   // Asked for already when it was prepared before this code was in.
@@ -112,7 +120,15 @@ function connect(entry: Entry, live: NonNullable<EditSession['live']>) {
     },
   })
   // Listening from the start: the room says `checking` before anything else.
-  let checked = false
+  let checking = false
+  const checked = () => {
+    entry.holdNext = false
+    entry.checkedAt = Date.now()
+    if (entry.state.held) update(entry, { held: false })
+  }
+  provider.on('status', ({ status }: { status: string }) => {
+    if (status === 'connecting') checking = false
+  })
   provider.on('custom-message', (message: string) => {
     let notice: { type?: string }
     try {
@@ -120,12 +136,16 @@ function connect(entry: Entry, live: NonNullable<EditSession['live']>) {
     } catch {
       return
     }
-    // Once only: after a reconnect, what was typed meanwhile is the person's, as before.
-    if (notice.type === 'checking' && !checked) update(entry, { held: true })
-    if (notice.type === 'checked') {
-      checked = true
-      update(entry, { held: false })
+    // Otherwise (a reconnect after a network drop), what was typed meanwhile is the person's.
+    if (notice.type === 'checking') {
+      checking = true
+      if (entry.holdNext) update(entry, { held: true })
     }
+    if (notice.type === 'checked') checked()
+  })
+  // Synced without `checking`: the room checked before it synced (it had nothing to show yet).
+  provider.on('sync', (synced: boolean) => {
+    if (synced && !checking) checked()
   })
   provider.on('connection-close', (event: CloseEvent | null) => {
     if (event?.code !== 4404) return
@@ -167,16 +187,56 @@ export function prepare(target: EditTarget) {
 }
 setOpener(prepare)
 
+/**
+ * Someone else signed in, or the workspace changed: nothing open is reused. What shows a
+ * document now opens it again, as that person, in that workspace: the API decides afresh.
+ */
+function forgetAll() {
+  for (const entry of [...entries.values()]) {
+    close(entry)
+    if (!entry.users) continue
+    const again = start(entry.target)
+    again.users = entry.users
+    again.shown = true
+  }
+}
+setForget(forgetAll)
+
+/** A kept document shown again within this long of the room's check is not checked again. */
+const FRESH_MS = 2000
+
 function acquire(target: EditTarget) {
-  const entry = entries.get(keyOf(target)) ?? start(target)
+  const kept = entries.get(keyOf(target))
+  const entry = kept ?? start(target)
+  const connection = entry.state.connection
+  // Shown again from what was kept: at once, but edits wait for the room to check what it has
+  // against the stored text again, on a new connection, as when it opened (the API's notice of
+  // a change made meanwhile is best effort). The new connection asks the API for a new token.
+  if (
+    kept &&
+    !entry.users &&
+    connection &&
+    !entry.state.deleted &&
+    // Not checked yet, its first check is still to come, and holds edits already.
+    entry.checkedAt !== undefined &&
+    Date.now() - entry.checkedAt > FRESH_MS
+  ) {
+    entry.holdNext = true
+    update(entry, { held: true })
+    connection.provider.disconnect()
+    void connection.provider.connect()
+  }
   entry.users++
   entry.shown = true
   entry.usedAt = Date.now()
   clearTimeout(entry.timer)
-  return entry
+  return entry.key
 }
 
-function release(entry: Entry) {
+function release(key: string) {
+  // The entry now (opened again since, after someone else signed in, say).
+  const entry = entries.get(key)
+  if (!entry) return
   entry.users--
   entry.usedAt = Date.now()
   if (entry.users > 0) return
@@ -191,8 +251,8 @@ function release(entry: Entry) {
 export function useLiveSession(target: EditTarget): LiveSession {
   const key = keyOf(target)
   useEffect(() => {
-    const entry = acquire(JSON.parse(key) as EditTarget)
-    return () => release(entry)
+    acquire(JSON.parse(key) as EditTarget)
+    return () => release(key)
   }, [key])
   const subscribe = useCallback(
     (listener: () => void) => {

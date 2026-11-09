@@ -120,6 +120,7 @@ import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
+import { setDocumentScope } from '@/lib/prepare-document'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
@@ -247,6 +248,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const me = useApi<Me>('/me')
   // Its live sockets go to the hub of the workspace it shows, once known.
   setLiveWorkspace(me.data?.activeWorkspaceId)
+  // Documents kept open (lib/live-documents.ts) are this person's in this workspace: signed out,
+  // or in another, none is reused.
+  const documentScope = me.data ? `${me.data.user.id}:${me.data.activeWorkspaceId}` : undefined
+  useEffect(() => {
+    if (documentScope) setDocumentScope(documentScope)
+  }, [documentScope])
+  useEffect(() => () => setDocumentScope(undefined), [])
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
   const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const projects = useApi<ProjectSummary[]>('/projects', ['projects.updated'])
@@ -418,6 +426,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (DEMO) return signUp()
     await authClient.signOut()
     markSignedOut()
+    setDocumentScope(undefined)
     router.replace('/sign-in')
   }
 

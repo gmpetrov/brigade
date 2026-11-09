@@ -17,6 +17,29 @@ export const setOpener = (open: (target: EditTarget) => void) => {
   opener = open
 }
 
+/** Closes everything it opened (lib/live-documents.ts), once its code is in. */
+let forget: (() => void) | undefined
+export const setForget = (forgetAll: () => void) => {
+  forget = forgetAll
+}
+
+/** Whose documents are open: a person in a workspace (DashboardShell). */
+let scope: string | undefined
+
+/**
+ * The person signed in and the workspace they are in; undefined once they signed out. Another
+ * than before, and nothing open or asked for is reused: it was opened as someone else, or in
+ * another workspace. The first one known keeps what opened before it was (the same person).
+ */
+export function setDocumentScope(next: string | undefined) {
+  if (next === scope) return
+  const before = scope
+  scope = next
+  if (before === undefined) return
+  asked.clear()
+  forget?.()
+}
+
 /** Sessions asked for before that code was in, until it takes them. */
 const asked = new Map<string, Promise<EditSession>>()
 
