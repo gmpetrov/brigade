@@ -5,7 +5,7 @@ import { useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
-import { markSignedOut } from '@/lib/signed-in'
+import { clearBrowserData, markSignedOut } from '@/lib/signed-in'
 
 /**
  * In the browser, opened by Brigade.app's window to sign it in (lib/brigade-app.ts): this
@@ -39,6 +39,7 @@ export default function DesktopSignIn() {
   async function switchAccount() {
     await authClient.signOut()
     markSignedOut()
+    await clearBrowserData()
     location.replace(`/sign-in?next=${encodeURIComponent(location.pathname + location.search)}`)
   }
 
