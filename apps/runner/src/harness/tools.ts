@@ -433,6 +433,7 @@ export const TICKET_APP_KINDS = [
   'ahrefs',
   'revenuecat',
   'expo',
+  'vercel',
   'mcp',
 ] as const
 

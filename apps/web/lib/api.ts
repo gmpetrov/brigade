@@ -878,6 +878,7 @@ export type Connection = {
     | 'ahrefs'
     | 'revenuecat'
     | 'expo'
+    | 'vercel'
     | 'email'
     | 'mcp'
   label: string

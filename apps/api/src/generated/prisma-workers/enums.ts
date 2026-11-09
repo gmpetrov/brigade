@@ -218,6 +218,7 @@ export const ConnectorKind = {
   ahrefs: 'ahrefs',
   revenuecat: 'revenuecat',
   expo: 'expo',
+  vercel: 'vercel',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics',

@@ -59,6 +59,7 @@ export const APP_NAMES: Record<string, string> = {
   ahrefs: 'Ahrefs',
   revenuecat: 'RevenueCat',
   expo: 'Expo',
+  vercel: 'Vercel',
 }
 
 /** Where each App signs in. */
@@ -90,6 +91,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp' | 
   dataforseo: 'mcp',
   ahrefs: 'mcp',
   expo: 'mcp',
+  vercel: 'mcp',
   revenuecat: 'mcp',
 }
 

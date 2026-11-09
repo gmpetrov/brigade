@@ -43,6 +43,7 @@ const KINDS: ConnectorKind[] = [
   'ahrefs',
   'revenuecat',
   'expo',
+  'vercel',
   'email',
   'mcp',
   'webhook',

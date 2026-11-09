@@ -227,18 +227,23 @@ const googleClient = (): McpOAuthClient | null =>
     ? { clientId: env.GOOGLE_MCP_CLIENT_ID, clientSecret: env.GOOGLE_MCP_CLIENT_SECRET }
     : null
 
+/** Whether the server reads Brigade's client ID metadata document (only served over HTTPS). */
+const canUseDocument = (authServer: AuthServer) =>
+  Boolean(authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://'))
+
 /** Whether Brigade can be a client of this authorization server with nothing from the member. */
 const registersItself = (authServer: AuthServer) =>
   Boolean(
     authServer.registration_endpoint ||
-    (authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://')) ||
+    canUseDocument(authServer) ||
     (isGoogle(authServer) && googleClient()),
   )
 
 /**
  * Brigade as a client of this authorization server: the member's own client when they
  * gave one; else Brigade's Google client for Google; else registered once (dynamic client
- * registration) and reused; else its client ID metadata document.
+ * registration) and reused; else, or when registering is refused, its client ID metadata
+ * document.
  */
 async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<McpOAuthClient> {
   if (own) return own
@@ -273,10 +278,14 @@ async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<Mcp
     client_secret?: string
     error_description?: string
   }
-  if (!response.ok || !data.client_id)
+  if (!response.ok || !data.client_id) {
+    // Some servers register only the clients they approved (Vercel), yet read a metadata
+    // document: sign in with it, and register again next time in case that changes.
+    if (canUseDocument(authServer)) return { clientId: mcpClientDocumentUrl() }
     throw new Error(
       `Registering with ${authServer.issuer} failed: ${data.error_description ?? response.status}`,
     )
+  }
   return prisma.mcpClient.upsert({
     where: { issuer_redirectUri: { issuer: authServer.issuer, redirectUri } },
     create: {

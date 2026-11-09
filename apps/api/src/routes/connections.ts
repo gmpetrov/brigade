@@ -113,6 +113,7 @@ type OAuthState = {
     | 'dataforseo'
     | 'ahrefs'
     | 'expo'
+    | 'vercel'
     | 'revenuecat'
     | 'stripe'
     | 'mcp'
@@ -292,6 +293,7 @@ export const availableApps = (): Record<ConnectorKind, boolean> => ({
   ahrefs: true,
   revenuecat: true,
   expo: true,
+  vercel: true,
   email: !unavailable('email'),
   mcp: true,
   webhook: true,
