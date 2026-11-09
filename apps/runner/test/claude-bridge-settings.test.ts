@@ -44,6 +44,16 @@ test("Brigade's settings reach Claude Code in a thread that asks before nothing"
   assert.equal(options.promptSuggestions, undefined)
 })
 
+test("Claude Code reads every settings file, the project's too, so Brigade's CLAUDE.md is loaded", async () => {
+  // harness-claude-code 1.0.180 gives Claude Code the user's settings alone; Claude Code then
+  // skips the CLAUDE.md in the thread's folder, where Brigade's instructions are, and a
+  // repository's own (the bridge patch).
+  for (const mode of ['allow-all', 'allow-reads'] as const) {
+    const options = await queryOptions(mode, claudeSettingsEnv())
+    assert.deepEqual([...options.settingSources].sort(), ['local', 'project', 'user'])
+  }
+})
+
 test('they join the rules the bridge sets when its permission mode asks before edits', async () => {
   const options = await queryOptions('allow-reads', claudeSettingsEnv())
   assert.equal(options.settings.autoMemoryEnabled, false)
