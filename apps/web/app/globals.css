@@ -1065,11 +1065,21 @@
   [data-slot='sidebar-inset']:has([data-desktop-panel]) > [data-top-bar] {
     padding-right: calc(var(--desktop-w) + 1.5rem);
   }
+  /* So does the corner of a minimized document's button: at the page's top right. */
+  [data-slot='sidebar-inset']:has([data-desktop-panel]) > [data-documents-corner] {
+    margin-right: var(--desktop-w);
+  }
   /* The threads panel expanded is the page: a panel the thread opens (a file, the
    * preview, the computer) or a document sits beside its conversation. */
   [data-slot='sidebar-inset']:has([data-desktop-panel]) [data-thread-panel][data-expanded] {
     padding-right: var(--desktop-w);
   }
+}
+
+/* A page button the minimized document's button would touch steps aside while it shows
+ * (DocumentsCorner, components/document-panel.tsx): its width and a gap. */
+[data-corner-shifted] {
+  margin-right: 2.75rem;
 }
 
 /* Narrower, a panel is a sheet over the page: the page behind holds still, so a swipe

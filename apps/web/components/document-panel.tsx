@@ -6,8 +6,9 @@
 // previews it; memory files too. Each one opened is a tab; from two on, a row of tabs shows them, with a dot on those
 // a teammate changed since you last looked. The panel stays open while you
 // move between pages, and its tabs across a reload. Minimized (⌄, ⌘. or a
-// swipe down on a phone), it waits in a pill at the bottom right, with what it
-// shows kept as it was: a click on the pill brings it back.
+// swipe down on a phone), it folds into a round button, with what it shows
+// kept as it was: under a thread's Preview, else at the top right of the page
+// (DocumentsButton). A click on it brings it back.
 import type { EditTarget, LibraryFile } from '@brigade/contracts'
 import {
   ArrowUpRight,
@@ -39,7 +40,7 @@ import { FilePreview } from '@/components/file-preview'
 import { FileHistory } from '@/components/library-history'
 import { TextFile } from '@/components/library-text-file'
 import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
-import { editable, PanelExpandButton, SidePanel } from '@/components/side-panel'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import {
@@ -51,6 +52,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { api, ApiError } from '@/lib/api'
 import { changedSince, type Stamps } from '@/lib/document-changes'
+import { foldIntoButton, unfoldFromButton } from '@/lib/fold-animation'
 import {
   downloadable,
   fileView,
@@ -88,7 +90,7 @@ type OpenOptions = { history?: boolean }
 type DocumentPanel = {
   /** The tab in front, while the panel shows (not minimized). */
   current: OpenDocument | null
-  /** The tab in front while the panel is minimized to its pill. */
+  /** The tab in front while the panel is minimized to its button (DocumentsButton). */
   minimized: OpenDocument | null
   tabs: OpenDocument[]
   /** Library files a teammate changed since you last had them in front. */
@@ -101,7 +103,7 @@ type DocumentPanel = {
   historyFor: string | null
   /** Hides the panel; its tabs come back with the next document opened. */
   close: () => void
-  /** Puts it away in a pill, what it shows kept; `restore` (or opening a document) brings it back. */
+  /** Puts it away in its button, what it shows kept; `restore` (or opening a document) brings it back. */
   minimize: () => void
   restore: () => void
   /** Closes a document's tab, e.g. once the file is deleted. */
@@ -228,20 +230,20 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
     () => update((s) => ({ ...s, active: null, minimized: false })),
     [update],
   )
-  const minimize = useCallback(
-    () => update((s) => (s.active ? { ...s, minimized: true } : s)),
-    [update],
-  )
-  const restore = useCallback(
-    () =>
-      update((s) => {
-        // What changed while it was put away has been seen once it is back.
-        const front = s.tabs.find((t) => keyOf(t.target) === s.active)
-        if (front) seen(front.target)
-        return { ...s, minimized: false }
-      }),
-    [update, seen],
-  )
+  // Each way in or out (⌄, ⌘., a swipe, the button, a page change) shows where it goes.
+  const minimize = useCallback(() => {
+    foldIntoButton()
+    update((s) => (s.active ? { ...s, minimized: true } : s))
+  }, [update])
+  const restore = useCallback(() => {
+    unfoldFromButton()
+    update((s) => {
+      // What changed while it was put away has been seen once it is back.
+      const front = s.tabs.find((t) => keyOf(t.target) === s.active)
+      if (front) seen(front.target)
+      return { ...s, minimized: false }
+    })
+  }, [update, seen])
   const closeAll = useCallback(() => update(() => ({ tabs: [], active: null })), [update])
   const remove = useCallback(
     (target: EditTarget) => {
@@ -475,6 +477,7 @@ export function DocumentPanel() {
         raiseKey={current}
         besideSidebar
         hidden={!shown}
+        data-document-panel
       >
         {/* On a phone, where it fills the screen: swiped down, it goes to its pill. */}
         <div {...swipe} className="shrink-0">
@@ -640,7 +643,6 @@ export function DocumentPanel() {
         )}
         {handOff.dialog}
       </SidePanel>
-      {minimized && <MinimizedPill document={minimized} onRestore={restore} />}
     </>
   )
 }
@@ -710,123 +712,130 @@ function MinimizeButton({ onMinimize }: { onMinimize: () => void }) {
 }
 
 /**
- * Where the pill sits, from the window's bottom right: over a composer at the bottom (a
- * thread's), just above it and lined up with its right edge, so it reads as part of the page
- * and the send button stays in reach.
+ * The minimized documents: a round button, like a thread's Preview and under it in a thread,
+ * at the top right of other pages (DocumentsCorner). A click brings the panel back; it grows
+ * out of the button, as it folded into it (lib/fold-animation.ts). From two documents, how many;
+ * marked when a teammate changed one meanwhile.
  */
-function usePillPlace() {
-  const BASE = 16
-  const [place, setPlace] = useState({ bottom: BASE, right: BASE, lifted: false })
+export function DocumentsButton({ className }: { className?: string }) {
+  const { minimized, tabs, changed, restore } = useDocumentPanel()
+  const mac = useIsMac()
+  if (!minimized) return null
+  const Icon = iconOf(minimized)
+  const count = tabs.length
+  const anyChanged = tabs.some((t) => t.target.kind === 'library' && changed.has(t.target.id))
+  const names = count > 1 ? tabs.map((t) => t.title).join(', ') : minimized.title
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      data-documents-button
+      className={cn('relative rounded-full bg-card/90 shadow-sm backdrop-blur', className)}
+      onClick={restore}
+      aria-label={`Open ${count > 1 ? `${count} documents: ` : ''}${names}${anyChanged ? ', changed' : ''}`}
+      tooltip={`${names} (${mac ? '⌘' : 'Ctrl+'}.)`}
+    >
+      <Icon aria-hidden />
+      {count > 1 ? (
+        <span
+          aria-hidden
+          className={cn(
+            'absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border px-1 font-mono text-[0.625rem] leading-none',
+            anyChanged
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground',
+          )}
+        >
+          {count}
+        </span>
+      ) : (
+        anyChanged && (
+          <span
+            aria-hidden
+            className="absolute top-0.5 right-0.5 size-2 rounded-full bg-primary ring-2 ring-card"
+          />
+        )
+      )}
+    </Button>
+  )
+}
+
+/**
+ * The button's place on pages other than a thread (a thread has its own, under Preview). Wider
+ * than a phone, it floats at the top right of the page as it scrolls, beside a panel open there.
+ * On a phone, under the top bar's +: the page moves down to make room, and it scrolls away with
+ * the bar. Page buttons near that corner (marked data-corner-clear) step aside while it shows.
+ */
+export function DocumentsCorner() {
+  const { minimized } = useDocumentPanel()
+  const corner = useRef<HTMLDivElement>(null)
+  useCornerClear(corner, Boolean(minimized))
+  if (!minimized) return null
+  return (
+    <div
+      ref={corner}
+      data-documents-corner
+      className="pointer-events-none relative z-30 h-12 shrink-0 md:sticky md:top-0 md:h-0"
+    >
+      <DocumentsButton className="pointer-events-auto absolute top-0 right-4 md:top-2.5 md:right-2" />
+    </div>
+  )
+}
+
+/** How far a page button near the corner steps aside: the button and a gap. */
+const CLEAR = 44
+
+/**
+ * Marks the page's buttons that the corner's button would touch (data-corner-clear) so they
+ * step aside (globals.css): only where the page reaches the corner, as on a laptop, never on a
+ * wide screen where they stand clear of it. Measured where each would be without stepping aside.
+ */
+function useCornerClear(corner: React.RefObject<HTMLDivElement | null>, on: boolean) {
   useEffect(() => {
+    const clear = () =>
+      document
+        .querySelectorAll('[data-corner-shifted]')
+        .forEach((el) => el.removeAttribute('data-corner-shifted'))
+    if (!on) return clear
     let frame = 0
     const measure = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
-        const height = window.innerHeight
-        const width = window.innerWidth
-        let next = { bottom: BASE, right: BASE, lifted: false }
-        for (const el of document.querySelectorAll('[data-composer-frame]')) {
-          const box = el.getBoundingClientRect()
-          // Only one in view, low in the window, wide enough to carry the pill above it.
-          if (!box.height || box.top >= height || box.bottom < height - 240) continue
-          if (box.width < 280) continue
-          const bottom = height - box.top + 8
-          if (bottom > next.bottom)
-            next = { bottom, right: Math.max(BASE, Math.round(width - box.right)), lifted: true }
+        const button = corner.current?.querySelector('[data-documents-button]')
+        const box = button?.getBoundingClientRect()
+        for (const el of document.querySelectorAll<HTMLElement>('[data-corner-clear]')) {
+          const at = el.getBoundingClientRect()
+          const shifted = el.hasAttribute('data-corner-shifted')
+          const right = at.right + (shifted ? CLEAR : 0)
+          const near =
+            box !== undefined &&
+            box.width > 0 &&
+            at.height > 0 &&
+            right > box.left - 8 &&
+            at.top < box.bottom + 8 &&
+            at.bottom > box.top - 8
+          if (near !== shifted) el.toggleAttribute('data-corner-shifted', near)
         }
-        setPlace((p) => (p.bottom === next.bottom && p.right === next.right ? p : next))
       })
     }
     measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(document.body)
+    const resized = new ResizeObserver(measure)
+    resized.observe(document.body)
+    // Pages and their buttons come and go (an email opened in the Inbox).
     const changes = new MutationObserver(measure)
     changes.observe(document.body, { childList: true, subtree: true })
     window.addEventListener('resize', measure)
     window.addEventListener('scroll', measure, { capture: true, passive: true })
     return () => {
       cancelAnimationFrame(frame)
-      observer.disconnect()
+      resized.disconnect()
       changes.disconnect()
       window.removeEventListener('resize', measure)
       window.removeEventListener('scroll', measure, { capture: true })
+      clear()
     }
-  }, [])
-  return place
-}
-
-/** On a touch screen, whether its keyboard is likely up: something to type in has focus. */
-function useTyping() {
-  const [typing, setTyping] = useState(false)
-  useEffect(() => {
-    if (!window.matchMedia('(pointer: coarse)').matches) return
-    const check = () => {
-      const focus = document.activeElement
-      setTyping(Boolean(focus && editable(focus)))
-    }
-    check()
-    document.addEventListener('focusin', check)
-    document.addEventListener('focusout', check)
-    return () => {
-      document.removeEventListener('focusin', check)
-      document.removeEventListener('focusout', check)
-    }
-  }, [])
-  return typing
-}
-
-/** The minimized document, at the bottom right of every page: a click brings it back. */
-function MinimizedPill({ document, onRestore }: { document: OpenDocument; onRestore: () => void }) {
-  const { tabs, changed, closeAll } = useDocumentPanel()
-  const mac = useIsMac()
-  const place = usePillPlace()
-  const typing = useTyping()
-  const Icon = iconOf(document)
-  const others = tabs.length - 1
-  const anyChanged = tabs.some((t) => t.target.kind === 'library' && changed.has(t.target.id))
-  if (typing) return null
-  return (
-    <div
-      role="region"
-      aria-label="Minimized document"
-      className="fixed z-40 flex max-w-[calc(100vw-2rem)] items-center gap-0.5 rounded-full border bg-card py-1 pr-1 pl-1 shadow-lg"
-      style={{
-        right: place.right,
-        // Above a composer, which keeps clear of the phone's edge already.
-        bottom: place.lifted
-          ? place.bottom
-          : `calc(${place.bottom}px + env(safe-area-inset-bottom))`,
-      }}
-    >
-      <Hint label={`Open ${document.title} (${mac ? '⌘' : 'Ctrl+'}.)`}>
-        <button
-          type="button"
-          onClick={onRestore}
-          aria-label={`Open ${document.title}`}
-          className="flex min-w-0 items-center gap-2 rounded-full py-1 pr-2 pl-2.5 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Icon aria-hidden className="size-4 shrink-0 text-primary" />
-          <span className="max-w-56 truncate font-medium">{document.title}</span>
-          {others > 0 && (
-            <span className="shrink-0 font-mono text-xs text-muted-foreground">+{others}</span>
-          )}
-          {anyChanged && <ChangedDot />}
-          {anyChanged && <span className="sr-only">, changed</span>}
-        </button>
-      </Hint>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        className="shrink-0 rounded-full"
-        onClick={closeAll}
-        aria-label={others > 0 ? 'Close all documents' : `Close ${document.title}`}
-        tooltip={others > 0 ? 'Close all' : 'Close'}
-      >
-        <X aria-hidden />
-      </Button>
-    </div>
-  )
+  }, [corner, on])
 }
 
 const ChangedDot = () => <span aria-hidden className="size-1.5 flex-none rounded-full bg-primary" />

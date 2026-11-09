@@ -46,7 +46,7 @@ import {
 } from 'react'
 import { AppLoader } from '@/components/app-loader'
 import { ConnectAppsDialog, openConnectApps } from '@/components/connect-apps'
-import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
+import { DocumentPanel, DocumentPanelProvider, DocumentsCorner } from '@/components/document-panel'
 import { KeptPreviews } from '@/components/kept-previews'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { useSidebarKeys } from '@/components/sidebar-keys'
@@ -952,6 +952,8 @@ function Inset({ children }: { children: ReactNode }) {
       <DemoTour />
       <UpdatePill header={expanded} />
       {!expanded && <TopBar />}
+      {/* A minimized document's button, at the page's top right; a thread has its own. */}
+      {!expanded && <DocumentsCorner />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />
       {/* A thread's preview: here, so its page stays as it was while another thread shows. */}

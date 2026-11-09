@@ -646,6 +646,7 @@ export function InboxView() {
               variant="ghost"
               size="icon-sm"
               className="flex-none self-center text-muted-foreground"
+              data-corner-clear
               tooltip="Mailboxes"
             >
               <Link href="/app/inbox/mailboxes" aria-label="Mailboxes">
@@ -1051,6 +1052,7 @@ function Reader({
             variant="outline"
             size="icon"
             className="size-8 flex-none"
+            data-corner-clear
             disabled={busy}
             aria-label={done ? 'Not done' : 'Done'}
             tooltip={done ? 'Not done' : 'Done'}

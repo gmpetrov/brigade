@@ -68,7 +68,7 @@ import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { useTouchScreen } from '@/components/desktop-touch'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
 import { TeachTask } from '@/components/teach-task'
-import { AskedDocument, useDocumentPanel } from '@/components/document-panel'
+import { AskedDocument, DocumentsButton, useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
 import { dropKeptPreview, KeepPreview } from '@/components/kept-previews'
@@ -1389,47 +1389,52 @@ export function ThreadConversation({
       : live
         ? 'Open preview'
         : 'Start preview'
-  const previewButton = offersPreview && top && (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="pointer-events-auto relative rounded-full bg-card/90 shadow-sm backdrop-blur"
-        aria-pressed={previewing}
-        aria-label={previewLabel}
-        disabled={previewStart.busy}
-        onClick={() => {
-          if (previewing) return setPreviewing(false)
-          if (live) return openPreview()
-          // Stopped: the panel says what happens while it starts again.
-          if (preview) openPreview()
-          void previewStart.start()
-        }}
-        tooltip={
-          previewStart.busy || previewing
-            ? previewLabel
-            : live
-              ? `${previewLabel}: the app ${previewTeammate?.name ?? answering.name} runs, to try it`
-              : `${previewLabel}: runs the app this thread builds, to try it`
-        }
-      >
-        {previewStart.busy ? (
-          <LoaderCircle aria-hidden className="animate-spin" />
-        ) : (
-          <Globe aria-hidden />
-        )}
-        {preview && live && (
-          <span
-            className={cn(
-              'absolute top-0.5 right-0.5 size-2 rounded-full ring-2 ring-card',
-              PHASE[previewPhase(preview)].dot,
-            )}
-            aria-label={PHASE[previewPhase(preview)].label}
-            role="img"
-          />
-        )}
-      </Button>
+  const previewButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      className="pointer-events-auto relative rounded-full bg-card/90 shadow-sm backdrop-blur"
+      aria-pressed={previewing}
+      aria-label={previewLabel}
+      disabled={previewStart.busy}
+      onClick={() => {
+        if (previewing) return setPreviewing(false)
+        if (live) return openPreview()
+        // Stopped: the panel says what happens while it starts again.
+        if (preview) openPreview()
+        void previewStart.start()
+      }}
+      tooltip={
+        previewStart.busy || previewing
+          ? previewLabel
+          : live
+            ? `${previewLabel}: the app ${previewTeammate?.name ?? answering.name} runs, to try it`
+            : `${previewLabel}: runs the app this thread builds, to try it`
+      }
+    >
+      {previewStart.busy ? (
+        <LoaderCircle aria-hidden className="animate-spin" />
+      ) : (
+        <Globe aria-hidden />
+      )}
+      {preview && live && (
+        <span
+          className={cn(
+            'absolute top-0.5 right-0.5 size-2 rounded-full ring-2 ring-card',
+            PHASE[previewPhase(preview)].dot,
+          )}
+          aria-label={PHASE[previewPhase(preview)].label}
+          role="img"
+        />
+      )}
+    </Button>
+  )
+  // Under it, a minimized document's button (DocumentsButton): in its place without a preview.
+  const corner = top && (
+    <div className="pointer-events-none absolute top-0 right-0 z-20 flex flex-col items-end gap-2 px-2 pt-2.5">
+      {offersPreview && previewButton}
+      <DocumentsButton className="pointer-events-auto" />
     </div>
   )
 
@@ -1563,7 +1568,7 @@ export function ThreadConversation({
       >
         {drop.dragging && <DropOverlay />}
         {top}
-        {previewButton}
+        {corner}
         {expanded && eventsLoaded && (
           <ThreadTimeline
             scroller={scroller}
