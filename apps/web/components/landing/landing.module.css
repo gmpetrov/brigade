@@ -5183,6 +5183,17 @@ a.lgr:hover .tt {
 .demo-tab:hover {
   color: var(--foreground);
 }
+.demo-tab-short {
+  display: none;
+}
+@media (max-width: 1099px) {
+  .demo-tab-long {
+    display: none;
+  }
+  .demo-tab-short {
+    display: inline;
+  }
+}
 .demo-tab[aria-selected='true'] {
   position: relative;
   margin-bottom: -1px;
@@ -5194,6 +5205,8 @@ a.lgr:hover .tt {
 }
 .demo-bar a {
   margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;

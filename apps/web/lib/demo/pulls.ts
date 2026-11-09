@@ -400,12 +400,38 @@ const EXPORT_FIX: DiffFile[] = [
   },
 ]
 
-/** What a teammate's scripted run can open (lib/demo/scripts.ts). */
-export type NewPull = 'annual' | 'export' | 'csv'
+/** One a teammate opens for a list's line it was handed (lib/demo/scripts.ts, `workOnItems`). */
+export type ItemPull = {
+  number: number
+  title: string
+  head: string
+  body: string
+  files: DiffFile[]
+  thread: string
+  review: string
+}
 
-/** The pull request a teammate opens in the demo: the annual billing toggle, or the export fix. */
+/** What a teammate's scripted run can open (lib/demo/scripts.ts). */
+export type NewPull = 'annual' | 'export' | 'csv' | ItemPull
+
+/**
+ * The pull request a teammate opens in the demo: the annual billing toggle, the export fix, the
+ * CSV export, or the work on a list's line.
+ */
 export function newPull(threadId: string, teammate: Ref, kind: NewPull = 'annual') {
   const slug = teammate.name.toLowerCase()
+  if (typeof kind === 'object')
+    return make({
+      number: kind.number,
+      title: kind.title,
+      head: kind.head,
+      body: kind.body,
+      files: kind.files,
+      author: teammate,
+      session: { id: threadId, title: kind.thread },
+      review: { state: 'skipped', reason: kind.review },
+      updatedAt: new Date().toISOString(),
+    })
   if (kind === 'csv')
     return make({
       number: 154,

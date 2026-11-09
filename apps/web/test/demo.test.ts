@@ -60,6 +60,7 @@ test('a message the demo knows plays its task; anything else offers what it know
       openPull: () => ({}) as never,
       addRoutine: () => undefined,
       openTickets: () => [],
+      items: () => [],
       playbook: () => undefined,
     },
   }
@@ -260,6 +261,8 @@ test('every walkthrough the landing page offers plays to its end', async () => {
   const { STORIES } = await import('../lib/demo/tour')
   const teammates = (await call('/teammates')).body as { id: string; name: string }[]
   for (const [name, story] of Object.entries(STORIES)) {
+    // Played from a list, not asked in Home: its own test below.
+    if ('list' in story) continue
     const who = teammates.find((t) => t.name === story.teammate)!
     const { body } = await call('/threads', { body: { text: story.ask, teammateId: who.id } })
     const id = body.id as string
@@ -294,4 +297,87 @@ test('every teammate shown says its job', async () => {
     [],
   )
   assert.equal(teammates.find((t) => t.name === 'Chief')?.title, 'Chief of staff')
+})
+
+test('a list: a line added, handed to Riley, worked on, merged and ticked', async () => {
+  const { STORIES, LIST_LINE, LIST_TITLE } = await import('../lib/demo/tour')
+  const lists = (await call('/lists')).body as {
+    documentId: string
+    title: string
+    done: number
+    total: number
+    projectId: string | null
+  }[]
+  const list = lists.find((l) => l.title === LIST_TITLE)!
+  assert.ok(list, 'the launch checklist is a list')
+  assert.deepEqual([list.done, list.total], [2, 4])
+  const projects = (await call('/projects')).body as { id: string; name: string }[]
+  assert.equal(list.projectId, projects.find((p) => p.name === 'Website')!.id)
+
+  // The editor opens the file without a collab server, and saves it whole.
+  const opened = await call('/library/edit', { body: { kind: 'library', id: list.documentId } })
+  assert.equal(opened.body.live, null)
+  assert.match(opened.body.text, /Open Graph images/)
+  const saved = await call(`/library/edit/${list.documentId}`, {
+    method: 'PUT',
+    body: { text: `${opened.body.text.trimEnd()}\n* [ ] ${LIST_LINE}\n` },
+  })
+  assert.equal(saved.status, 200)
+  assert.equal((await call(`/lists/${list.documentId}`)).body.total, 5)
+
+  // Handed to Riley: a thread on the line, in the list's project, under the list in the sidebar.
+  const riley = ((await call('/teammates')).body as { id: string; name: string }[]).find(
+    (t) => t.name === STORIES.list.teammate,
+  )!
+  const item = 'demolistitem0001'
+  const handed = await call(`/lists/${list.documentId}/hand-off`, {
+    body: { teammateId: riley.id, items: [{ id: item, text: LIST_LINE }], mode: 'together' },
+  })
+  const [threadId] = handed.body.threadIds as string[]
+  const thread = (await call(`/threads/${threadId}`)).body
+  assert.equal(thread.title, LIST_LINE)
+  assert.equal(thread.projectId, list.projectId)
+  assert.deepEqual(thread.list, { documentId: list.documentId, title: LIST_TITLE })
+  const line = () =>
+    call(`/lists/${list.documentId}`).then((r) =>
+      (
+        r.body.items as {
+          id: string
+          state: string
+          done: boolean
+          doneBy: { name: string } | null
+          pulls: { number: number }[]
+        }[]
+      ).find((i) => i.id === item)!,
+    )
+  assert.equal((await line()).state, 'in_progress')
+  assert.equal((await call(`/lists/threads/${threadId}`)).body[0].id, item)
+
+  // Its pull request closes the line, which waits on a person to merge it.
+  const status = async () => (await call(`/threads/${threadId}`)).body.status
+  await until(async () => (await status()) === 'idle', 30_000)
+  const { number } = (await line()).pulls[0]!
+  assert.equal(`Merge #${number}`, STORIES.list.presses[0])
+  assert.equal((await line()).state, 'needs_you')
+
+  // Merged: the line is ticked with the pull request's number, credited to Riley.
+  await call(`/pulls/acme/web/${number}/merge`, { body: { method: 'squash' } })
+  const ticked = await line()
+  assert.equal(ticked.done, true)
+  assert.equal(ticked.doneBy?.name, 'Riley')
+  const { handle } = await server()
+  const text = await (
+    await handle(new Request(`${DEMO_API}/api/library/${list.documentId}/content`))
+  ).text()
+  assert.match(
+    text,
+    new RegExp(`\\* \\[x\\] ${LIST_LINE} \\*PR #${number}, .+\\* <!-- item:${item} -->`),
+  )
+  await until(async () => (await status()) === 'idle', 30_000)
+  const events = ((await call(`/threads/${threadId}/events`)).body.events as { event: any }[]).map(
+    (e) => e.event,
+  )
+  assert.ok(events.some((e) => e.type === 'message.done' && e.text.includes(STORIES.list.done)))
+  const after = (await call('/lists')).body.find((l: { title: string }) => l.title === LIST_TITLE)
+  assert.deepEqual([after.done, after.total], [3, 5])
 })

@@ -1,11 +1,18 @@
 // The demo's API, in the browser: the responses recorded from the sample Acme workspace
 // (fixtures.json, scripts/demo-record.mjs), with the writes that matter done in memory
 // (approve or decline a ticket, answer a question, merge a pull request, archive a thread,
-// send a message) and the others accepted without effect. A reload starts over.
-import type { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
+// send a message, edit a library file, hand a list's lines to a teammate) and the others
+// accepted without effect. A reload starts over.
+import {
+  handOffMessage,
+  plainItemText,
+  type ApiToBrowser,
+  type SequencedEvent,
+} from '@brigade/contracts'
 import fixtures from './fixtures.json'
 import { demoUsage } from './usage'
 import { DEMO_API, DEMO_THREAD } from './flag'
+import { demoLists } from './lists'
 import { demoPulls, mergedPull, newPull, type DemoPull, type NewPull } from './pulls'
 import { afterDecision, replyTo, type Run } from './scripts'
 import { keyOf, reviveDates } from './shared'
@@ -53,6 +60,82 @@ const TITLES: Record<string, string> = { Chief: 'Chief of staff', Maya: 'Marketi
 const ticketTemplates = structuredClone(body<Json[]>('GET /tickets') ?? [])
 calm()
 const pulls = demoPulls(store)
+
+// ---- The library's files, and the lists in them ----
+
+type LibraryEntry = {
+  id: string
+  path: string
+  contentType: string
+  size: number
+  updatedAt: string
+  updatedBy: Json | null
+}
+const libraryFiles = () => body<LibraryEntry[]>('GET /library') ?? []
+const contentKey = (id: string) => `GET /library/${id}/content`
+const libraryText = (id: string) => {
+  const stored = body<{ $text?: string }>(contentKey(id))
+  return typeof stored?.$text === 'string' ? stored.$text : undefined
+}
+
+/** A save of a Markdown file: its text, its row in the library, and a version by who saved it. */
+function writeLibrary(
+  documentId: string,
+  text: string,
+  by: { type: 'member' | 'teammate'; id: string; name: string },
+) {
+  const file = libraryFiles().find((f) => f.id === documentId)
+  const stored = body<{ $text: string }>(contentKey(documentId))
+  if (!file || !stored) return
+  stored.$text = text
+  const at = now()
+  const actor = { type: by.type, id: by.id, name: by.name, sessionId: null }
+  Object.assign(file, {
+    size: new TextEncoder().encode(text).length,
+    updatedAt: at,
+    updatedBy: actor,
+  })
+  const versionsKey = `GET /library/${documentId}/versions`
+  const versions = body<Json[]>(versionsKey)
+  if (versions) {
+    for (const v of versions) v.current = false
+    const versionId = `demo-version-${id()}`
+    versions.unshift({
+      id: versionId,
+      path: file.path,
+      contentType: file.contentType,
+      size: file.size,
+      sha256: versionId,
+      by: actor,
+      restoredFromId: null,
+      createdAt: at,
+      updatedAt: at,
+      current: true,
+    })
+    store.set(`${versionsKey}/${versionId}/content`, {
+      status: 200,
+      body: { $text: text, type: 'text/markdown' },
+    })
+  }
+  broadcast({ type: 'library.updated' })
+  broadcast({ type: 'lists.updated' })
+}
+
+const lists = demoLists({
+  docs: () =>
+    libraryFiles().filter(
+      (f) => f.contentType === 'text/markdown' && libraryText(f.id) !== undefined,
+    ),
+  text: libraryText,
+  write: writeLibrary,
+  thread: (threadId) => body(`GET /threads/${threadId}`),
+  pull: (number) => {
+    const pull = pulls.get(number)
+    return pull && { number, state: pull.summary.state, threadId: pull.session?.id ?? null }
+  },
+  projects: () => body<{ id: string; name: string }[]>('GET /projects') ?? [],
+})
+const ada = { type: 'member' as const, id: me.memberId, name: me.user.name }
 
 function calm() {
   const hidden = new Set(
@@ -328,9 +411,14 @@ const actions = {
     const pull = newPull(threadId, teammate, kind)
     pulls.set(pull.number, pull)
     if (merged) afterMerge.set(pull.number, { threadId, run: merged })
+    // It closes the items its thread works on (github_create_pull_request's `items`).
+    lists.linkPull(threadId, pull.number)
     syncPulls()
     return pull
   },
+  /** The list items the thread works on. */
+  items: (threadId: string) =>
+    lists.ofThread(threadId).map((i) => ({ id: i.id, text: i.text, list: i.listTitle })),
   addRoutine,
   openTickets: () => body<{ title: string; session?: { title: string } }[]>('GET /tickets') ?? [],
   playbook: () =>
@@ -532,6 +620,9 @@ function merge(number: number) {
   const pull = pulls.get(number)
   if (!pull || pull.summary.state !== 'open') return false
   pulls.set(number, mergedPull(pull))
+  // The items it closes are ticked, credited to the teammate that opened it.
+  const author = pull.summary.tracking?.author
+  if (author) lists.settleMerge(number, { type: 'teammate', id: author.id, name: author.name })
   syncPulls()
   const next = afterMerge.get(number)
   afterMerge.delete(number)
@@ -707,6 +798,43 @@ function unarchive(threadId: string) {
   }
 }
 
+/**
+ * Lines handed to a teammate (docs/lists.md): one thread for them all, or one each, in the
+ * project whose folder holds the list. Each starts on the person's hand-off message.
+ */
+function handOff(documentId: string, input: Json) {
+  const file = libraryFiles().find((f) => f.id === documentId)
+  const teammate = teammates.find((t) => t.id === input.teammateId)
+  const items = (Array.isArray(input.items) ? input.items : []) as { id: string; text: string }[]
+  if (!file || libraryText(documentId) === undefined)
+    return { status: 404, body: { error: 'List not found' } }
+  if (!teammate) return { status: 404, body: { error: 'Teammate not found' } }
+  if (!items.length) return { status: 400, body: { error: 'Pick a line to hand over' } }
+  const note = typeof input.note === 'string' ? input.note : undefined
+  const groups = input.mode === 'each' ? items.map((i) => [i]) : [items]
+  const threadIds = groups.map((group) => {
+    const { id: threadId } = newThread({
+      teammateId: teammate.id,
+      title: plainTitle(group[0]!.text),
+      projectId: lists.projectOf(file.path),
+    })
+    lists.attach(documentId, group, threadId, ada)
+    patchThread(threadId, { list: lists.listOf(threadId) })
+    sendMessage(
+      threadId,
+      handOffMessage(
+        file,
+        group.map((i) => i.text),
+        note,
+      ),
+    )
+    return threadId
+  })
+  return { threadIds }
+}
+// As the API titles it: the first line's text, without its Markdown.
+const plainTitle = (text: string) => plainItemText(text).slice(0, 120)
+
 const OFF = 'That is off in the demo workspace. Sign up to do it for real.'
 const CREATES =
   /^\/(teammates|teammates\/team|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
@@ -718,13 +846,77 @@ type Handler = (params: [string, string], input: Json, url: URL) => Stored | unk
 const ok = { ok: true }
 const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/threads$/, (_, input) => newThread(input as never)],
-  // Lists (docs/lists.md) were recorded before they existed: none, and handing lines over is off.
-  ['GET', /^\/lists$/, () => []],
+  // Lists (docs/lists.md) were recorded before they existed: lib/demo/lists.ts reads them from
+  // the library's files, and keeps in memory the work on their lines.
+  ['GET', /^\/lists$/, () => lists.summaries()],
   ['GET', /^\/lists\/pins$/, () => []],
+  ['GET', /^\/lists\/threads\/([^/]+)$/, ([threadId]) => lists.ofThread(threadId)],
+  [
+    'GET',
+    /^\/lists\/([^/]+)$/,
+    ([documentId]) =>
+      lists.detail(documentId) ?? { status: 404, body: { error: 'List not found' } },
+  ],
+  ['POST', /^\/lists\/([^/]+)\/hand-off$/, ([documentId], input) => handOff(documentId, input)],
+  [
+    'POST',
+    /^\/lists\/([^/]+)\/link$/,
+    ([documentId], input) => {
+      const file = libraryFiles().find((f) => f.id === documentId)
+      const items = (input.items ?? []) as { id: string; text: string }[]
+      const threadId = String(input.sessionId ?? '')
+      if (!file || !store.has(`GET /threads/${threadId}`))
+        return { status: 404, body: { error: 'Not found' } }
+      const itemIds = lists.attach(documentId, items, threadId, ada)
+      patchThread(threadId, { list: lists.listOf(threadId) })
+      const note = typeof input.note === 'string' ? input.note : undefined
+      return {
+        sessionId: threadId,
+        itemIds,
+        message: handOffMessage(
+          file,
+          items.map((i) => i.text),
+          note,
+        ),
+      }
+    },
+  ],
+  [
+    'PUT',
+    /^\/lists\/items\/([^/]+)\/done$/,
+    ([itemId], input) =>
+      lists.setDone(itemId, Boolean(input.done), ada)
+        ? ok
+        : { status: 404, body: { error: 'Item not found' } },
+  ],
   // The Board needs the API's reading of lists, threads and routines: the demo shows it empty.
   ['GET', /^\/board$/, () => ({ cards: [], stopped: [], closed: [], routines: [], lists: [] })],
-  ['POST', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
-  ['PUT', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
+  // A library file opens to edit without a collab server: its text, saved whole as edited.
+  [
+    'POST',
+    /^\/library\/edit$/,
+    (_, input) => {
+      if (input.kind !== 'library') return undefined
+      const text = libraryText(String(input.id))
+      if (text === undefined) return { status: 404, body: { error: 'Not in the demo' } }
+      return { documentId: String(input.id), text, live: null }
+    },
+  ],
+  [
+    'PUT',
+    /^\/library\/edit\/([^/]+)$/,
+    ([documentId], input) => {
+      if (libraryText(documentId) === undefined || typeof input.text !== 'string')
+        return { status: 404, body: { error: 'Not in the demo' } }
+      writeLibrary(documentId, input.text, ada)
+      return ok
+    },
+  ],
+  [
+    'GET',
+    /^\/library\/([^/]+)$/,
+    ([documentId]) => libraryFiles().find((f) => f.id === documentId),
+  ],
   [
     'POST',
     /^\/threads\/([^/]+)\/messages$/,

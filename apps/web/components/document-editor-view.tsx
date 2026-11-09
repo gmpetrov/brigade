@@ -21,7 +21,10 @@ import { Button } from '@/components/ui/button'
 import { DocumentLoading, documentFadeIn } from '@/components/document-loading'
 import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import { useLiveSession, type LiveConnection } from '@/lib/live-documents'
+import { debouncedSave } from '@/lib/debounced-save'
+import { DEMO } from '@/lib/demo/flag'
+import { openDocument, useLiveSession, type LiveConnection } from '@/lib/live-documents'
+import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 export function DocumentEditorView(props: DocumentEditorProps) {
@@ -242,7 +245,14 @@ function EditorStatus({
   )
 }
 
-/** Without a collab server: edited alone and saved whole. */
+/** How long the demo waits after the last change before it saves (it has no Save button). */
+const DEMO_SAVE_MS = 600
+
+/**
+ * Without a collab server: edited alone and saved whole. While it has no unsaved change, it
+ * follows the file as others change it (Brigade ticking a list's line, say). In the demo, which
+ * has no collab server, it saves on its own as the live editor does.
+ */
 function SavedDocument({
   session,
   label,
@@ -264,8 +274,9 @@ function SavedDocument({
     ],
   })
   self.current = editor
-  // Always there without `live`.
-  const stored = session.text ?? ''
+  // Always there without `live`; again from the API when someone else changed it.
+  const [source, setSource] = useState(() => ({ text: session.text ?? '', n: 0 }))
+  const stored = source.text
   const [saved, setSaved] = useState(stored)
   // For onChange, which runs with the render it was made in.
   const savedText = useRef(stored)
@@ -275,7 +286,27 @@ function SavedDocument({
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  // For the live listener, which runs outside renders.
+  const unsaved = useRef(false)
+  unsaved.current = dirty || busy
+  // The demo saves a moment after the last change; leaving the page saves what waits at once.
+  const saveNow = useRef<(text: string) => Promise<void>>(async () => {})
+  const [autosave] = useState(() => debouncedSave((text) => saveNow.current(text), DEMO_SAVE_MS))
+  useEffect(() => () => autosave.close(), [autosave])
 
+  // Changed elsewhere: shown, unless edits here are not saved yet (saving would replace it).
+  useLive((message) => {
+    if (message.type !== 'library.updated' || unsaved.current || filling.current) return
+    void openDocument(target).then(
+      (fresh) => {
+        const text = fresh.text
+        if (text === undefined || unsaved.current || filling.current) return
+        if (text === savedText.current || text === source.text) return
+        setSource((s) => ({ text, n: s.n + 1 }))
+      },
+      () => {},
+    )
+  })
   useEffect(() => {
     // Only the last load fills the editor: an earlier one, still converting, would replace
     // blocks that are gone by then.
@@ -296,14 +327,15 @@ function SavedDocument({
     return () => {
       live = false
     }
-  }, [editor, stored])
+  }, [editor, stored, source.n])
 
-  async function save() {
+  async function save(given?: string) {
     setBusy(true)
     setError(undefined)
-    const text = await blocksToMarkdown(editor, editor.document)
+    const text = given ?? (await blocksToMarkdown(editor, editor.document))
     try {
       await api(`/library/edit/${session.documentId}`, { method: 'PUT', body: { text } })
+      savedText.current = text
       setSaved(text)
       setDirty(false)
       onSaved?.()
@@ -312,6 +344,7 @@ function SavedDocument({
     }
     setBusy(false)
   }
+  saveNow.current = save
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -325,14 +358,20 @@ function SavedDocument({
           readOnly={session.readOnly}
           onChange={() => {
             if (filling.current) return
-            void blocksToMarkdown(editor, editor.document).then((text) =>
-              setDirty(text !== savedText.current),
-            )
+            void blocksToMarkdown(editor, editor.document).then((text) => {
+              const changed = text !== savedText.current
+              unsaved.current = changed || busy
+              setDirty(changed)
+              if (!DEMO) return
+              // Back to what was saved (ticked then unticked, an undo): nothing waits any more.
+              if (changed) autosave.schedule(text)
+              else autosave.cancel()
+            })
           }}
         />
       </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
-      {!session.readOnly && (
+      {!session.readOnly && !DEMO && (
         <div className="flex items-center justify-end gap-3">
           <span className="text-xs text-muted-foreground">
             {dirty ? 'Unsaved changes' : 'Saved'}
