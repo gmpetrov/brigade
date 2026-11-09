@@ -285,7 +285,7 @@ const answers = new Map<string, unknown>()
 /** Paths kept, the least recently used going first. */
 const ANSWERS_KEPT = 100
 let answersScope: string | undefined
-/** Counts scope changes: an answer asked for under an earlier one is not kept. */
+/** Counts scopes left: an answer asked for in one left since is not kept. */
 let answersGeneration = 0
 
 function keepAnswer(path: string, data: unknown) {
@@ -316,8 +316,10 @@ export const keptAnswer = <T>(path: string) => answers.get(path) as T | undefine
  */
 export function setAnswersScope(scope: string | undefined) {
   if (scope === answersScope) return
+  // Leaving someone's scope drops what was asked for them; the first one set (the dashboard
+  // opening, before /me is in) is that of what was asked meanwhile.
+  if (answersScope !== undefined) answersGeneration++
   answersScope = scope
-  answersGeneration++
   answers.clear()
 }
 

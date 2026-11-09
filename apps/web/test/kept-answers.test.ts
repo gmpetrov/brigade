@@ -26,3 +26,12 @@ test('nothing is kept while no one is signed in', () => {
   assert.equal(askingNow()('/board', 1), true)
   assert.equal(keptAnswer('/board'), undefined)
 })
+
+test('answers asked for as the dashboard opens are kept once its person is known', () => {
+  setAnswersScope(undefined)
+  const keep = askingNow()
+  // /me comes back first and sets whose answers these are.
+  setAnswersScope('dave:w5')
+  assert.equal(keep('/accounts', ['dave-account']), true)
+  assert.deepEqual(keptAnswer('/accounts'), ['dave-account'])
+})

@@ -35,6 +35,8 @@ const shownLast = new Map<string, { firstSeq: number; lastSeq: number; events: S
 const THREADS_KEPT = 10
 
 let shownScope: string | undefined
+/** Counts scopes left: a thread opened in one left since is not kept. */
+let shownGeneration = 0
 
 /**
  * Whose threads are kept (person and workspace), as lib/api.ts's setAnswersScope: another one,
@@ -42,6 +44,7 @@ let shownScope: string | undefined
  */
 export function setThreadsShownScope(scope: string | undefined) {
   if (scope === shownScope) return
+  if (shownScope !== undefined) shownGeneration++
   shownScope = scope
   shownLast.clear()
 }
@@ -155,7 +158,7 @@ export function useThreadEvents(
       )
     }
     // Kept on leaving only for the person and workspace it opened for.
-    const scope = shownScope
+    const generation = shownGeneration
     // Shown as it was left until its latest page is in, which replaces it.
     const kept = shownLast.get(sessionId)
     if (kept) openOn(kept.firstSeq, kept.lastSeq, kept.events)
@@ -242,7 +245,7 @@ export function useThreadEvents(
       const end = pageEnd.current
       if (
         shownScope === undefined ||
-        shownScope !== scope ||
+        shownGeneration !== generation ||
         end === undefined ||
         gapsRef.current.length ||
         (end >= first.current && !bySeq.current.has(end))
