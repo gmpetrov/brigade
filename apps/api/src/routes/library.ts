@@ -522,6 +522,21 @@ export const library = new Hono<AppEnv>()
   })
 
   /**
+   * One file as the list shows it, for the dashboard's file panel, which opens a file from a
+   * mention, a thread or search knowing only its id: what it is decides how it shows. 404 once
+   * it is gone, or in the trash.
+   */
+  .get('/:id', async (c) => {
+    const { db } = c.var
+    const row = await db.document.findFirst({
+      where: { id: c.req.param('id'), kind: 'library', deletedAt: null },
+      select: LIBRARY_FILE_COLUMNS,
+    })
+    if (!row) throw new HTTPException(404, { message: 'File not found' })
+    return c.json(await libraryFileOf(db, row))
+  })
+
+  /**
    * Its public link (docs/public-links.md), or null. POST turns it on (the one it has, or a new
    * one), DELETE turns it off: its address stops working at once. A viewer may only look.
    */

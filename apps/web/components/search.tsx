@@ -29,7 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAdmin, NAV, useDashboard } from '@/components/dashboard'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { isMac, useIsMac } from '@/lib/platform'
-import { markdownFile } from '@/lib/search-open'
+import { libraryFile } from '@/lib/search-open'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { api, pullHref } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -281,8 +281,8 @@ export function SearchDialog({
         return
       }
       onOpenChange(false)
-      const markdown = markdownFile(item)
-      if (markdown) documents.open(libraryDocument(markdown))
+      const file = libraryFile(item)
+      if (file) documents.open(libraryDocument(file))
       else router.push(item.href)
     },
     [onOpenChange, router, workspaceId, documents],

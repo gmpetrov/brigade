@@ -1,7 +1,9 @@
 'use client'
 // Documents open in a panel beside whatever page is showing, the way an
-// artifact opens beside a chat: from the library, a thread, search. Each one
-// opened is a tab; from two on, a row of tabs shows them, with a dot on those
+// artifact opens beside a chat: from the library, a thread, search. Any library
+// file opens here, shown as what it is (lib/file-view.ts): a Markdown document
+// in the live editor, another text file as text, anything else as the library
+// previews it; memory files too. Each one opened is a tab; from two on, a row of tabs shows them, with a dot on those
 // a teammate changed since you last looked. The panel stays open while you
 // move between pages, and its tabs across a reload. Minimized (⌄, ⌘. or a
 // swipe down on a phone), it waits in a pill at the bottom right, with what it
@@ -11,6 +13,7 @@ import {
   ArrowUpRight,
   BookOpen,
   ChevronDown,
+  Download,
   FileText,
   History,
   List,
@@ -31,7 +34,10 @@ import { useDocumentDiscussion } from '@/components/document-discussion'
 import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
 import { DocumentPath } from '@/components/document-path'
+import { fileIcon } from '@/components/file-icon'
+import { FilePreview } from '@/components/file-preview'
 import { FileHistory } from '@/components/library-history'
+import { TextFile } from '@/components/library-text-file'
 import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
 import { editable, PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
@@ -43,8 +49,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { changedSince, type Stamps } from '@/lib/document-changes'
+import {
+  downloadable,
+  fileView,
+  lookupAfter,
+  type FileLookup,
+  type FileView,
+} from '@/lib/file-view'
+import { contentUrl } from '@/lib/library-urls'
 import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -55,7 +69,16 @@ export type OpenDocument = {
   title: string
   /** The folder, or what the document is for. */
   subtitle?: string
+  /**
+   * A library file: what it is, when the opener knew (the library's list, a thread's file), so
+   * it shows at once. Otherwise the panel asks the API (lib/file-view.ts).
+   */
+  contentType?: string
+  editable?: boolean
 }
+
+/** `history`: open on its History, as the library's row menu asks. */
+type OpenOptions = { history?: boolean }
 
 type DocumentPanel = {
   /** The tab in front, while the panel shows (not minimized). */
@@ -66,9 +89,11 @@ type DocumentPanel = {
   /** Library files a teammate changed since you last had them in front. */
   changed: ReadonlySet<string>
   /** Shows it, in its tab: a new one after the tab in front. */
-  open: (document: OpenDocument) => void
+  open: (document: OpenDocument, options?: OpenOptions) => void
   /** Shows it in place of the tab in front (or in its own tab, when it has one already). */
   replace: (document: OpenDocument) => void
+  /** The tab, by its key, that was opened on its History: it shows that first. */
+  historyFor: string | null
   /** Hides the panel; its tabs come back with the next document opened. */
   close: () => void
   /** Puts it away in a pill, what it shows kept; `restore` (or opening a document) brings it back. */
@@ -102,13 +127,20 @@ export function useDocumentPanel() {
 /** The panel, where there is one (the dashboard); null elsewhere. */
 export const useOptionalDocumentPanel = () => useContext(Context)
 
-/** A library file's panel title: its name, and its folder below. */
-export function libraryDocument(file: { id: string; path: string }): OpenDocument {
+/** A library file's panel title: its name, and its folder below; what it is, when known. */
+export function libraryDocument(file: {
+  id: string
+  path: string
+  contentType?: string
+  editable?: boolean
+}): OpenDocument {
   const slash = file.path.lastIndexOf('/')
   return {
     target: { kind: 'library', id: file.id },
     title: file.path.slice(slash + 1),
     ...(slash > 0 ? { subtitle: file.path.slice(0, slash) } : {}),
+    ...(file.contentType !== undefined ? { contentType: file.contentType } : {}),
+    ...(file.editable !== undefined ? { editable: file.editable } : {}),
   }
 }
 
@@ -118,6 +150,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Tabs>({ tabs: [], active: null })
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set())
   const [asked, setAsked] = useState<OpenDocument | null>(null)
+  const [historyFor, setHistoryFor] = useState<string | null>(null)
 
   // What was open before a reload, in this tab.
   useEffect(() => {
@@ -155,9 +188,10 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const open = useCallback(
-    (document: OpenDocument) => {
+    (document: OpenDocument, options: OpenOptions = {}) => {
       const key = keyOf(document.target)
       seen(document.target)
+      setHistoryFor(options.history ? key : null)
       update(({ tabs, active }) => {
         const at = tabs.findIndex((t) => keyOf(t.target) === key)
         if (at >= 0) return { tabs: tabs.with(at, document), active: key, minimized: false }
@@ -171,6 +205,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
     (document: OpenDocument) => {
       const key = keyOf(document.target)
       seen(document.target)
+      setHistoryFor(null)
       update(({ tabs, active }) => {
         const at = tabs.findIndex((t) => keyOf(t.target) === key)
         if (at >= 0) return { tabs: tabs.with(at, document), active: key, minimized: false }
@@ -228,6 +263,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
       changed,
       open,
       replace,
+      historyFor,
       close,
       minimize,
       restore,
@@ -243,6 +279,7 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
       changed,
       open,
       replace,
+      historyFor,
       close,
       minimize,
       restore,
@@ -314,12 +351,51 @@ function WatchChanges({
   return null
 }
 
+/**
+ * A library file as the API has it now (GET /library/:id), again each time the library
+ * changes: undefined until it answers, or when it never could; null once it says the file is
+ * gone. A refresh that fails keeps what was read (lookupAfter). A route the API does not have
+ * yet answers 404 without that message: not taken for gone.
+ */
+function useLibraryFile(id: string | null) {
+  const [state, setState] = useState<FileLookup<LibraryFile>>()
+  const asked = useRef(0)
+  const load = useCallback(() => {
+    if (!id) return
+    const ask = ++asked.current
+    api<LibraryFile>(`/library/${id}`).then(
+      (file) => ask === asked.current && setState((s) => lookupAfter(s, id, { file })),
+      (e: Error) => {
+        if (ask !== asked.current) return
+        const gone = e instanceof ApiError && e.status === 404 && e.message === 'File not found'
+        setState((s) => lookupAfter(s, id, gone ? { gone: true } : { error: e.message }))
+      },
+    )
+  }, [id])
+  useEffect(() => load(), [load])
+  useLive((message) => {
+    if (message.type === 'library.updated') load()
+  })
+  const now = state?.id === id ? state : undefined
+  return { file: now?.file, error: now?.error, reload: load }
+}
+
+const parentOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '')
+
+/** A tab's icon: a memory file's, else its file's by what it is, as far as known. */
+function iconOf(document: OpenDocument) {
+  if (document.target.kind !== 'library') return BookOpen
+  if (document.contentType) return fileIcon(document.contentType)
+  return FileText
+}
+
 /** The open document, beside the page. Rendered once, by the dashboard. */
 export function DocumentPanel() {
   const {
     current: shown,
     minimized,
     tabs,
+    historyFor,
     close,
     closeAll,
     minimize,
@@ -334,9 +410,13 @@ export function DocumentPanel() {
   // The editor again after a restore, with what was restored.
   const [opened, setOpened] = useState(0)
   const key = JSON.stringify(current?.target ?? null)
-  useEffect(() => setHistory(false), [key])
+  // Each tab opens on the file, unless it was opened on its History.
+  useEffect(() => setHistory(historyFor === key), [key, historyFor])
   const libraryId = current?.target.kind === 'library' ? current.target.id : null
-  const path = current?.subtitle ? `${current.subtitle}/${current.title}` : current?.title
+  const looked = useLibraryFile(libraryId)
+  // Where it is now (moved since it opened, it says so), else where it was opened from.
+  const opener = current?.subtitle ? `${current.subtitle}/${current.title}` : current?.title
+  const path = looked.file?.path ?? opener
   const file = useMemo(
     () => (libraryId && path ? { id: libraryId, path } : null),
     [libraryId, path],
@@ -367,8 +447,12 @@ export function DocumentPanel() {
     [askName, onAsk, handOff.start],
   )
   if (!current) return null
-  const Icon = current.target.kind === 'library' ? FileText : BookOpen
   const target = current.target
+  const view: FileView =
+    target.kind === 'library' ? fileView(current.title, current, looked.file) : 'editor'
+  const contentType = looked.file?.contentType ?? current.contentType
+  const Icon = target.kind !== 'library' ? BookOpen : contentType ? fileIcon(contentType) : FileText
+  const name = path ? path.slice(path.lastIndexOf('/') + 1) : current.title
   const tabbed = tabs.length > 1
   return (
     <>
@@ -392,12 +476,18 @@ export function DocumentPanel() {
             <div className="flex min-w-0 flex-1 flex-col">
               {/* With tabs, the tab names it: only its folder here. */}
               {!(tabbed && (current.subtitle || target.kind === 'library')) && (
-                <strong className="truncate text-sm font-semibold">{current.title}</strong>
+                <strong className="truncate text-sm font-semibold">
+                  {target.kind === 'library' ? name : current.title}
+                </strong>
               )}
               {(current.subtitle || target.kind === 'library' || share) && (
                 <div className="flex min-w-0 items-center text-xs text-muted-foreground">
                   {target.kind === 'library' ? (
-                    <DocumentPath folder={current.subtitle ?? ''} fileId={target.id} />
+                    <DocumentPath
+                      folder={path ? parentOf(path) : (current.subtitle ?? '')}
+                      fileId={target.id}
+                      path={path ?? current.title}
+                    />
                   ) : (
                     current.subtitle && (
                       <span className="truncate" title={current.subtitle}>
@@ -421,15 +511,22 @@ export function DocumentPanel() {
                 size="sm"
                 onClick={() => void onAsk?.()}
                 tooltip={`Talk about this file with ${discussion.teammate.name}`}
+                aria-label={`Ask ${discussion.teammate.name}`}
               >
                 <MessageSquare aria-hidden />
-                Ask {discussion.teammate.name}
+                {/* On a phone, the icon alone: the file's path needs the room. */}
+                <span className="max-sm:hidden">Ask {discussion.teammate.name}</span>
               </Button>
             )}
-            {target.kind === 'library' && (
-              <ShareButton key={target.id} name={current.title} link={link} />
+            {target.kind === 'library' && <ShareButton key={target.id} name={name} link={link} />}
+            {target.kind === 'library' && downloadable(view) && (
+              <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
+                <a href={contentUrl(target.id, true)} aria-label="Download">
+                  <Download aria-hidden />
+                </a>
+              </Button>
             )}
-            {target.kind === 'library' && (
+            {target.kind === 'library' && view !== 'missing' && (
               <Button
                 type="button"
                 variant={history ? 'secondary' : 'ghost'}
@@ -458,17 +555,18 @@ export function DocumentPanel() {
             </Button>
           </div>
         </div>
-        {history && target.kind === 'library' ? (
+        {history && target.kind === 'library' && view !== 'missing' ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <FileHistory
               file={{ id: target.id, path: path ?? current.title }}
               onRestored={() => {
                 setHistory(false)
                 setOpened((n) => n + 1)
+                looked.reload()
               }}
             />
           </div>
-        ) : (
+        ) : target.kind !== 'library' || view === 'editor' ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
             <DocumentEditor
               key={`${key}:${opened}`}
@@ -477,6 +575,38 @@ export function DocumentPanel() {
               className="min-h-full"
               ask={ask}
             />
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-auto">
+            {view === 'missing' ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {name} is no longer in the library.
+              </p>
+            ) : view === 'loading' ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {looked.error ?? `Opening ${name}…`}
+              </p>
+            ) : view === 'text' && contentType ? (
+              <TextFile
+                key={`${key}:${opened}`}
+                file={{
+                  id: target.id,
+                  path: path ?? current.title,
+                  contentType,
+                  updatedAt: looked.file?.updatedAt ?? '',
+                }}
+                onSaved={looked.reload}
+              />
+            ) : (
+              <FilePreview
+                key={`${target.id}:${looked.file?.updatedAt ?? ''}`}
+                url={contentUrl(target.id)}
+                previewUrl={`/library/${target.id}/preview`}
+                name={name}
+                contentType={contentType ?? ''}
+                download={contentUrl(target.id, true)}
+              />
+            )}
           </div>
         )}
         {handOff.dialog}
@@ -622,7 +752,7 @@ function MinimizedPill({ document, onRestore }: { document: OpenDocument; onRest
   const mac = useIsMac()
   const place = usePillPlace()
   const typing = useTyping()
-  const Icon = document.target.kind === 'library' ? FileText : BookOpen
+  const Icon = iconOf(document)
   const others = tabs.length - 1
   const anyChanged = tabs.some((t) => t.target.kind === 'library' && changed.has(t.target.id))
   if (typing) return null
@@ -698,7 +828,7 @@ function DocumentTabs() {
           const key = keyOf(t.target)
           const selected = key === active
           const changed = isChanged(t)
-          const Icon = t.target.kind === 'library' ? FileText : BookOpen
+          const Icon = iconOf(t)
           return (
             <div
               key={key}

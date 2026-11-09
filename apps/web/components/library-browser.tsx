@@ -19,13 +19,7 @@ import {
   Download,
   Ellipsis,
   File,
-  FileArchive,
-  FileAudio,
-  FileCode,
-  FileImage,
-  FileSpreadsheet,
   FileText,
-  FileVideoCamera,
   Folder,
   FolderLock,
   History,
@@ -35,11 +29,9 @@ import {
   Pencil,
   Pin,
   PinOff,
-  Presentation,
   ShieldCheck,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react'
 import {
   useEffect,
@@ -53,10 +45,8 @@ import {
 import { timeAgo } from '@/components/dashboard'
 import { DesignPanel } from '@/components/design-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
-import { FilePreview } from '@/components/file-preview'
-import { PUBLIC_LINK, ShareButton, useShare } from '@/components/share-button'
-import { ActorName, FileHistory, size } from '@/components/library-history'
-import { PanelExpandButton, SidePanel } from '@/components/side-panel'
+import { PUBLIC_LINK } from '@/components/share-button'
+import { ActorName, size } from '@/components/library-history'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -86,7 +76,6 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
 import { Hint, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   api,
@@ -95,12 +84,12 @@ import {
   type LibraryTree,
   type Teammate,
 } from '@/lib/api'
-import { API_URL } from '@/lib/config'
+import { contentUrl } from '@/lib/library-urls'
+import { fileIcon } from '@/components/file-icon'
 import { folderSuggestions, splitTyped } from '@/lib/library-path'
 import { cn } from '@/lib/utils'
 
-export const contentUrl = (id: string, download = false) =>
-  `${API_URL}/api/library/${id}/content${download ? '?download' : ''}`
+export { contentUrl }
 
 const DRAG_TYPE = 'application/x-brigade-library'
 type Dragged = { kind: 'file'; id: string; path: string } | { kind: 'folder'; path: string }
@@ -108,19 +97,6 @@ type Dragged = { kind: 'file'; id: string; path: string } | { kind: 'folder'; pa
 const parentOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '')
 const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1)
 export const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name)
-
-function fileIcon(contentType: string) {
-  if (contentType.startsWith('image/')) return FileImage
-  if (contentType.startsWith('video/')) return FileVideoCamera
-  if (contentType.startsWith('audio/')) return FileAudio
-  if (/spreadsheet|text\/csv|tab-separated/.test(contentType)) return FileSpreadsheet
-  if (/presentation/.test(contentType)) return Presentation
-  if (/zip/.test(contentType)) return FileArchive
-  if (/json|yaml|xml|javascript|python|shellscript|text\/css|text\/html/.test(contentType))
-    return FileCode
-  if (contentType.startsWith('text/') || /pdf|wordprocessing/.test(contentType)) return FileText
-  return File
-}
 
 /** Every folder: the ones with a row, and the ones that exist through their files. */
 function allFolders(tree: LibraryTree) {
@@ -190,7 +166,6 @@ export function LibraryBrowser({
   view?: [LibrarySort, (sort: LibrarySort) => void]
 }) {
   const documents = useDocumentPanel()
-  const [panel, setPanel] = useState<{ id: string; tab: 'preview' | 'history' }>()
   /** The design open beside the page: its folder. */
   const [design, setDesign] = useState<string>()
   const [renaming, setRenaming] = useState<string>()
@@ -233,7 +208,6 @@ export function LibraryBrowser({
           .map((id) => tree?.files.find((f) => f.id === id))
           .filter((f): f is LibraryFile => !!f && (!home || f.path.startsWith(`${home}/`)))
       : []
-  const opened = tree?.files.find((f) => f.id === panel?.id)
 
   // A file asked for by the address: its folder, then the file itself.
   const loaded = Boolean(tree)
@@ -266,26 +240,15 @@ export function LibraryBrowser({
   useEffect(() => {
     if (design && tree && designFiles?.length === 0) setDesign(undefined)
   }, [design, tree, designFiles?.length])
-  // A file that went away (moved to the trash elsewhere) closes.
-  useEffect(() => {
-    if (panel && tree && !opened) setPanel(undefined)
-  }, [panel, tree, opened])
 
-  function open(file: LibraryFile, tab: 'preview' | 'history' = 'preview') {
-    // Markdown opens in the editor, which has its own history.
-    if (file.contentType === 'text/markdown' && file.editable && tab === 'preview') {
-      setPanel(undefined)
-      documents.open(libraryDocument(file))
-      return
-    }
-    documents.close()
+  // Any file opens in the file panel (components/document-panel.tsx), beside whatever page shows.
+  function open(file: LibraryFile, show: 'file' | 'history' = 'file') {
     setDesign(undefined)
-    setPanel({ id: file.id, tab })
+    documents.open(libraryDocument(file), { history: show === 'history' })
   }
 
   function openDesign(path: string) {
     documents.close()
-    setPanel(undefined)
     setDesign(path)
   }
 
@@ -470,8 +433,7 @@ export function LibraryBrowser({
   const fileRow = (f: LibraryFile, where: 'list' | 'pinned', flat = false) => {
     const Icon = fileIcon(f.contentType)
     const isOpen =
-      panel?.id === f.id ||
-      (documents.current?.target.kind === 'library' && documents.current.target.id === f.id)
+      documents.current?.target.kind === 'library' && documents.current.target.id === f.id
     return (
       <div
         key={f.id}
@@ -547,7 +509,6 @@ export function LibraryBrowser({
               onSelect={() =>
                 void act(async () => {
                   await api(`/library/${f.id}`, { method: 'DELETE' })
-                  if (panel?.id === f.id) setPanel(undefined)
                   documents.remove({ kind: 'library', id: f.id })
                 })
               }
@@ -643,9 +604,7 @@ export function LibraryBrowser({
             setCreating(null)
             await reload()
             if (made.kind === 'folder') setFolder(made.path)
-            else if (made.file.contentType === 'text/markdown')
-              documents.open(libraryDocument(made.file))
-            else setPanel({ id: made.file.id, tab: 'preview' })
+            else open(made.file)
           }}
         />
       )}
@@ -688,15 +647,6 @@ export function LibraryBrowser({
           {...(designOptionsOf(design)
             ? { options: optionsIn(tree.files, designOptionsOf(design)!) }
             : {})}
-        />
-      )}
-      {opened && panel && (
-        <LibraryFilePanel
-          file={opened}
-          tab={panel.tab}
-          setTab={(tab) => setPanel({ id: opened.id, tab })}
-          onChanged={reload}
-          onClose={() => setPanel(undefined)}
         />
       )}
       {access !== undefined && (
@@ -1081,171 +1031,6 @@ function NewItem({
         </Button>
       </div>
     </form>
-  )
-}
-
-/** A library file beside the page: its preview (text files editable) and its history. */
-function LibraryFilePanel({
-  file,
-  tab,
-  setTab,
-  onChanged,
-  onClose,
-}: {
-  file: LibraryFile
-  tab: 'preview' | 'history'
-  setTab: (tab: 'preview' | 'history') => void
-  onChanged: () => Promise<void>
-  onClose: () => void
-}) {
-  const name = nameOf(file.path)
-  const folder = parentOf(file.path)
-  const Icon = fileIcon(file.contentType)
-  const link = useShare(file.id)
-  const share = link.share
-  // Markdown edits in the editor; other text files here.
-  const editable = file.editable && file.contentType !== 'text/markdown'
-  return (
-    <SidePanel aria-label={`File ${file.path}`} onClose={onClose} raiseKey={file.id}>
-      <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
-        <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <strong className="truncate text-sm font-semibold">{name}</strong>
-          <span className="truncate text-xs text-muted-foreground">
-            {folder && <span className="font-mono">{folder} · </span>}
-            {file.createdBy ? (
-              <>
-                added by <ActorName actor={file.createdBy} /> {timeAgo(file.createdAt)}
-              </>
-            ) : (
-              `added ${timeAgo(file.createdAt)}`
-            )}
-            {share && ` · ${PUBLIC_LINK}`}
-          </span>
-        </div>
-        <ShareButton key={file.id} name={name} link={link} onChange={() => void onChanged()} />
-        <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
-          <a href={contentUrl(file.id, true)} aria-label="Download">
-            <Download aria-hidden />
-          </a>
-        </Button>
-        <PanelExpandButton />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Close file"
-        >
-          <X aria-hidden />
-        </Button>
-      </div>
-      <Tabs
-        value={tab}
-        onValueChange={(v) => setTab(v as 'preview' | 'history')}
-        className="border-b px-3 py-2"
-      >
-        <TabsList>
-          <TabsTrigger value="preview">{editable ? 'File' : 'Preview'}</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {tab === 'history' ? (
-          <FileHistory file={file} onRestored={onChanged} />
-        ) : editable ? (
-          <TextFile file={file} onSaved={onChanged} />
-        ) : (
-          <FilePreview
-            key={file.updatedAt}
-            url={contentUrl(file.id)}
-            previewUrl={`/library/${file.id}/preview`}
-            name={name}
-            contentType={file.contentType}
-            download={contentUrl(file.id, true)}
-          />
-        )}
-      </div>
-    </SidePanel>
-  )
-}
-
-/** A plain text file (not Markdown, which opens in the editor), read and edited in place. */
-function TextFile({ file, onSaved }: { file: LibraryFile; onSaved: () => Promise<void> }) {
-  const [text, setText] = useState<string>()
-  const [draft, setDraft] = useState<string>()
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    fetch(contentUrl(file.id), { credentials: 'include', cache: 'no-store' })
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(r.statusText))))
-      .then(setText, (e: Error) => setError(e.message))
-  }, [file.id, file.updatedAt])
-
-  async function save() {
-    setBusy(true)
-    setError(undefined)
-    try {
-      await api(`/library/${file.id}/text`, { method: 'PUT', body: { text: draft } })
-      setText(draft)
-      setDraft(undefined)
-      await onSaved()
-    } catch (e) {
-      setError((e as Error).message)
-    }
-    setBusy(false)
-  }
-
-  if (text === undefined)
-    return <p className="p-4 text-sm text-muted-foreground">{error ?? 'Loading…'}</p>
-  if (draft === undefined && /^text\/(csv|tab-separated-values|html)$/.test(file.contentType))
-    return (
-      <div className="flex flex-col">
-        <div className="flex justify-end border-b px-4 py-2">
-          <Button size="sm" variant="outline" onClick={() => setDraft(text)}>
-            Edit
-          </Button>
-        </div>
-        <FilePreview
-          key={file.updatedAt}
-          url={contentUrl(file.id)}
-          name={nameOf(file.path)}
-          contentType={file.contentType}
-        />
-      </div>
-    )
-  return (
-    <div className="flex flex-col gap-3 p-4">
-      {draft === undefined ? (
-        <pre className="font-mono text-xs whitespace-pre-wrap wrap-anywhere">{text}</pre>
-      ) : (
-        <Textarea
-          aria-label={`Contents of ${file.path}`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={Math.min(30, Math.max(8, draft.split('\n').length + 1))}
-          className="bg-card font-mono text-sm"
-        />
-      )}
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <div className="flex justify-end gap-2">
-        {draft === undefined ? (
-          <Button size="sm" onClick={() => setDraft(text)}>
-            Edit
-          </Button>
-        ) : (
-          <>
-            <Button variant="outline" size="sm" onClick={() => setDraft(undefined)}>
-              Cancel
-            </Button>
-            <Button size="sm" disabled={busy} onClick={() => void save()}>
-              Save
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
   )
 }
 

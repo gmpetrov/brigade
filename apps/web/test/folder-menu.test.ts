@@ -6,7 +6,6 @@ import {
   folderEntries,
   folderMatches,
   makeRoom,
-  opensInPanel,
   pathFolders,
 } from '../lib/folder-menu'
 
@@ -67,22 +66,6 @@ test('a design is one entry, and what is in it is not listed', () => {
 test('a folder whose name starts like another is not taken for it', () => {
   const entries = folderEntries([file('a/bc/x.md'), file('a/b/y.md')], 'a/b')
   assert.deepEqual(names(entries), ['file:y.md'])
-})
-
-test('only Markdown files the editor takes open in the panel; others in the library', () => {
-  const panel = Object.fromEntries(
-    folderEntries(files, 'Projects/Brigade/decisions').flatMap((e) =>
-      e.kind === 'file' ? [[e.name, e.panel]] : [],
-    ),
-  )
-  assert.deepEqual(panel, {
-    'apps-proposal.md': true,
-    'flow.pdf': false,
-    'huge.md': false,
-    'missions-spec.md': true,
-    'README.md': true,
-  })
-  assert.equal(opensInPanel(file('Projects/Brigade/designs/inbox.design/notes.md')), false)
 })
 
 test('a filter finds files anywhere under the folder, named from there, best first', () => {

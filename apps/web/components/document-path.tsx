@@ -1,15 +1,14 @@
 'use client'
 // The folder of the library file in front of the document panel, one button per folder: each
 // opens a menu of what that folder holds, to go to a file beside this one without leaving the
-// page. A Markdown file opens in place of this one (in a tab of its own with ⌘ or Ctrl), other
-// files and designs in the library, as there.
+// page. A file opens in place of this one (in a tab of its own with ⌘ or Ctrl), a design in the
+// library, as there. The menu also copies the file's path.
 import type { LibraryFile } from '@brigade/contracts'
 import {
   ArrowUpRight,
   Check,
   ChevronLeft,
-  File,
-  FileText,
+  Copy,
   Folder,
   House,
   Palette,
@@ -18,6 +17,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
+import { fileIcon } from '@/components/file-icon'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,9 +33,18 @@ import { cn } from '@/lib/utils'
 
 /**
  * `folder`: where the file is, e.g. "Projects/Brigade/decisions", '' at the top of the library;
- * `fileId`: the file. The top of the library leads, as a house, so a file there has a path too.
+ * `fileId` and `path`: the file. The top of the library leads, as a house, so a file there has a
+ * path too.
  */
-export function DocumentPath({ folder, fileId }: { folder: string; fileId: string }) {
+export function DocumentPath({
+  folder,
+  fileId,
+  path,
+}: {
+  folder: string
+  fileId: string
+  path: string
+}) {
   const row = useRef<HTMLElement>(null)
   // A long path keeps its end in view: the folder the file is in.
   useEffect(() => {
@@ -48,18 +57,28 @@ export function DocumentPath({ folder, fileId }: { folder: string; fileId: strin
       aria-label="File location"
       className="-ml-1 flex min-w-0 items-center overflow-x-auto font-mono text-xs text-muted-foreground [scrollbar-width:none]"
     >
-      <FolderMenu folder="" name="Library" fileId={fileId} />
+      <FolderMenu folder="" name="Library" fileId={fileId} path={path} />
       {folders.map((f) => (
         <span key={f.path} className="flex shrink-0 items-center">
           <span aria-hidden>/</span>
-          <FolderMenu folder={f.path} name={f.name} fileId={fileId} />
+          <FolderMenu folder={f.path} name={f.name} fileId={fileId} path={path} />
         </span>
       ))}
     </nav>
   )
 }
 
-function FolderMenu({ folder, name, fileId }: { folder: string; name: string; fileId: string }) {
+function FolderMenu({
+  folder,
+  name,
+  fileId,
+  path,
+}: {
+  folder: string
+  name: string
+  fileId: string
+  path: string
+}) {
   const [open, setOpen] = useState(false)
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -69,7 +88,14 @@ function FolderMenu({ folder, name, fileId }: { folder: string; name: string; fi
       >
         {folder ? name : <House aria-hidden className="size-3.5" />}
       </DropdownMenuTrigger>
-      {open && <FolderMenuContent folder={folder} fileId={fileId} onDone={() => setOpen(false)} />}
+      {open && (
+        <FolderMenuContent
+          folder={folder}
+          fileId={fileId}
+          path={path}
+          onDone={() => setOpen(false)}
+        />
+      )}
     </DropdownMenu>
   )
 }
@@ -79,10 +105,12 @@ const ICON = { folder: Folder, design: Palette }
 function FolderMenuContent({
   folder,
   fileId,
+  path,
   onDone,
 }: {
   folder: string
   fileId: string
+  path: string
   onDone: () => void
 }) {
   const router = useRouter()
@@ -126,7 +154,6 @@ function FolderMenuContent({
     onDone()
     if (entry.kind === 'design')
       return toLibrary(`/app/library?design=${encodeURIComponent(entry.path)}`)
-    if (!entry.panel) return toLibrary(`/app/library?file=${entry.file.id}`)
     if (entry.file.id === fileId) return
     const document = libraryDocument(entry.file)
     if (newTab) documents.open(document)
@@ -229,6 +256,10 @@ function FolderMenuContent({
         <ArrowUpRight aria-hidden />
         Open in Library
       </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => void navigator.clipboard.writeText(path)}>
+        <Copy aria-hidden />
+        Copy path
+      </DropdownMenuItem>
     </DropdownMenuContent>
   )
 }
@@ -244,7 +275,7 @@ function EntryItem({
   onGo: (newTab: boolean) => void
   newTabKey: (e: { metaKey: boolean; ctrlKey: boolean }) => boolean
 }) {
-  const Icon = entry.kind === 'file' ? (entry.panel ? FileText : File) : ICON[entry.kind]
+  const Icon = entry.kind === 'file' ? fileIcon(entry.file.contentType) : ICON[entry.kind]
   return (
     <DropdownMenuItem
       // A folder opens in the menu, which stays.
