@@ -2,7 +2,7 @@
 // What a thread shows while its messages load: the shape of a conversation, a
 // light passing over it. Only once loading takes a moment, so a fast load does not
 // flash; a slow one says so and offers to try again.
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -108,6 +108,21 @@ export function ThreadSkeleton({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * The thread once it is in: after the placeholder (it took SHOW_AFTER or more), in with a quick
+ * fade; in sooner (from this tab's memory, or sent ahead as the pointer rested on its link), at
+ * once. A fade on every thread opened made even a short one look slow to show: the click came
+ * through in about 40 ms, the thread was fully there only after about 240.
+ */
+export function ThreadLoaded({ since, children }: { since: number; children: ReactNode }) {
+  const [fade] = useState(() => Date.now() - since >= SHOW_AFTER)
+  return (
+    <div className={cn(fade && 'animate-in duration-200 fade-in motion-reduce:animate-none')}>
+      {children}
     </div>
   )
 }

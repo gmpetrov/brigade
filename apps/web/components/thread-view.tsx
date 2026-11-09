@@ -1350,17 +1350,27 @@ function ThreadImage({
 
 type ActivityItem = Extract<Item, { kind: 'thinking' | 'tool' | 'file' }>
 
-/** A step on a teammate's way to its answer: steps in a row fold under one line saying what they were. */
-const isActivity = (item: Item): item is ActivityItem =>
-  item.kind === 'thinking' ||
-  item.kind === 'file' ||
-  (item.kind === 'tool' &&
-    !offeredChoices(item) &&
-    !suggestedReplies(item) &&
-    !shownWidget(item) &&
-    !proposedTeam(item) &&
-    !playbookCard(item) &&
-    !(item.finished && !item.isError && (openedPull(item) || startedChild(item))))
+/**
+ * A step on a teammate's way to its answer: steps in a row fold under one line saying what they were.
+ * Asked of each item many times as a thread lays out, a tool's by parsing its input: known once per
+ * item (useThreadItems makes new ones whenever what they hold changes, and never changes them after).
+ */
+const activities = new WeakMap<Item, boolean>()
+const isActivity = (item: Item): item is ActivityItem => {
+  if (item.kind !== 'tool') return item.kind === 'thinking' || item.kind === 'file'
+  let known = activities.get(item)
+  if (known === undefined) {
+    known =
+      !offeredChoices(item) &&
+      !suggestedReplies(item) &&
+      !shownWidget(item) &&
+      !proposedTeam(item) &&
+      !playbookCard(item) &&
+      !(item.finished && !item.isError && (openedPull(item) || startedChild(item)))
+    activities.set(item, known)
+  }
+  return known
+}
 
 /**
  * A step that does no work: thinking, loading a tool, a card refused and called
@@ -2470,9 +2480,19 @@ function WorkingLine({
 }
 
 /** When the thread picked up again, centred above the message (lib/thread-times.ts). */
+/** The whole date and time over a pause's mark: toLocaleString's, with a formatter made once. */
+const pauseHint = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+})
+
 function PauseTime({ at }: { at: number }) {
   return (
-    <Hint label={new Date(at).toLocaleString()}>
+    <Hint label={pauseHint.format(at)}>
       <time
         dateTime={new Date(at).toISOString()}
         className="text-muted-foreground self-center pt-2 text-xs"
@@ -2607,6 +2627,7 @@ export function ThreadItems({
   onRetry,
   admin = false,
   gapLine,
+  startSeq,
   onSideAction,
   pending,
   next = [],
@@ -2678,6 +2699,11 @@ export function ThreadItems({
   admin?: boolean
   /** Where events are not loaded: what loads them. */
   gapLine?: (gap: EventGap) => React.ReactNode
+  /**
+   * Shows the thread from the person's message with this seq on, what is before it held back above
+   * (lib/thread-window.ts): all of it when unset, or when no message starts there.
+   */
+  startSeq?: number | null
   /** Changes what becomes of a message answered on the side. Unset when they cannot write in the thread. */
   onSideAction?: (messageId: string, action: SideAction) => Promise<void>
 }) {
@@ -3373,6 +3399,17 @@ export function ThreadItems({
     }
   }
   const nodes = layoutThread(items, working)
+  // Where it shows from: the node of the person's message `from` names, else the start.
+  const shownFrom =
+    startSeq == null
+      ? 0
+      : Math.max(
+          0,
+          nodes.findIndex((n) => {
+            const item = n.type === 'item' ? items[n.i]! : undefined
+            return item?.kind === 'user' && item.seq === startSeq
+          }),
+        )
   // Messages after a pause: their time above them.
   const marks = pauses(items)
   // Working, and nothing from the teammate since the last message (or only its turn waiting
@@ -3424,7 +3461,8 @@ export function ThreadItems({
       ? 'step'
       : 'break'
   }
-  const show = (list: Node[]): React.ReactNode[] => {
+  // `start`: the first node shown, those before it laid out (a run of messages reads the same) but not drawn.
+  const show = (list: Node[], start = 0): React.ReactNode[] => {
     const runs = messageRuns(list.map(runEntry))
     const runAt = (at: number): Run => ({
       starts: runs.starts.has(at),
@@ -3432,7 +3470,7 @@ export function ThreadItems({
       close: runs.close.has(at),
       followed: runs.close.has(at + 1),
     })
-    return list.map((node, at) =>
+    return list.slice(start).map((node, k, _, at = k + start) =>
       node.type === 'item' ? (
         marks.has(items[node.i]!.key) ? (
           <Fragment key={items[node.i]!.key}>
@@ -3507,7 +3545,7 @@ export function ThreadItems({
   )
   return (
     <div className="flex flex-col gap-4">
-      {show(nodes)}
+      {show(nodes, shownFrom)}
       {pending}
       {/* Where the turn says how it goes: as tall as its Working line even when empty, so a line
           showing up there ("Riley is reading your message", then Working) pushes nothing up. */}
