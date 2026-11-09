@@ -1,7 +1,7 @@
 // Triggers, as admins manage them: chosen from each connection's catalog, with
 // the vendor subscribed to the events they need (see subscriptions/).
 import { randomBytes } from 'node:crypto'
-import { CreateTrigger, SetProject } from '@brigade/contracts'
+import { CreateTrigger, SetProject, UpdateTrigger } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from '../audit.js'
@@ -89,20 +89,19 @@ export async function resync(scope: Scope, connectionIds: Iterable<string>) {
 }
 
 /**
- * Create a trigger and subscribe the vendor to its events now, so a refusal is seen by
- * whoever asked and the trigger is not kept. A custom app's hmac signing secret is only
- * ever returned here: the caller shows it once, or keeps it in the vault.
+ * What a trigger may be, checked against its account: its teammate, the catalog's options for its
+ * event (without empty ones) and its project. Brigade's own addresses: an agent's rules are its
+ * own, in the project of the variant they watch; an inbox's rules are its project's, and their
+ * teammate gets the inbox to answer from.
  */
-export async function createTrigger(
+async function checkedTrigger(
   db: ScopedDb,
-  scope: Scope,
-  input: ReturnType<typeof CreateTrigger.parse>,
-  by: {
-    /** Its threads run on this member's accounts. */
-    createdByMemberId: string
-    actor: Actor
-    /** Who approved it, when a teammate asked for it. */
-    approvedByMemberId?: string
+  input: {
+    connectionId: string
+    teammateId: string
+    event: string
+    options: Record<string, string>
+    projectId?: string | null
   },
 ) {
   const [connection, teammate] = await Promise.all([
@@ -119,7 +118,6 @@ export async function createTrigger(
   const reason = unavailable(connection.kind)
   if (reason) throw new HTTPException(409, { message: reason })
 
-  // Only the catalog's options, without empty ones.
   const options: Record<string, string> = {}
   for (const option of definition.options ?? []) {
     const value = input.options[option.name]?.trim()
@@ -128,8 +126,6 @@ export async function createTrigger(
       throw new HTTPException(400, { message: `${option.label} is required` })
   }
 
-  // Brigade's own addresses: an agent's rules are its own, in the project of the variant they
-  // watch; an inbox's rules are its project's, and their teammate gets the inbox to answer from.
   let projectId = (await usableProject(db, input.projectId)) ?? null
   if (connection.kind === 'email') {
     const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
@@ -151,6 +147,27 @@ export async function createTrigger(
         })
     }
   }
+  return { connection, teammate, options, projectId }
+}
+
+/**
+ * Create a trigger and subscribe the vendor to its events now, so a refusal is seen by
+ * whoever asked and the trigger is not kept. A custom app's hmac signing secret is only
+ * ever returned here: the caller shows it once, or keeps it in the vault.
+ */
+export async function createTrigger(
+  db: ScopedDb,
+  scope: Scope,
+  input: ReturnType<typeof CreateTrigger.parse>,
+  by: {
+    /** Its threads run on this member's accounts. */
+    createdByMemberId: string
+    actor: Actor
+    /** Who approved it, when a teammate asked for it. */
+    approvedByMemberId?: string
+  },
+) {
+  const { connection, teammate, options, projectId } = await checkedTrigger(db, input)
   // Last among the account's rules: the first that matches a mail takes it.
   const last = await db.trigger.findFirst({
     where: { connectionId: connection.id },
@@ -282,6 +299,66 @@ export const triggers = new Hono<AppEnv>()
       action: 'trigger.updated',
       target: { type: 'trigger', id: c.req.param('id') },
       data: { projectId: next },
+    })
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Admins: what a trigger does (its teammate, label, options, project, instructions), changed in
+   * place, keeping its place in its account's order. A playbook's changes in the playbook.
+   */
+  .put('/:id', async (c) => {
+    const { scope, db } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const input = await parseBody(c.req.raw, UpdateTrigger)
+    await notThePlaybooks(db, c.req.param('id'))
+    const before = await db.trigger.findFirst({ where: { id: c.req.param('id') } })
+    if (!before) throw new HTTPException(404, { message: 'Trigger not found' })
+    const { teammate, options, projectId } = await checkedTrigger(db, {
+      ...input,
+      connectionId: before.connectionId,
+      event: before.event,
+    })
+    const fields = (row: {
+      teammateId: string
+      label: string
+      options: unknown
+      projectId: string | null
+      instructions: string | null
+    }) => ({
+      teammateId: row.teammateId,
+      label: row.label,
+      options: row.options as never,
+      projectId: row.projectId,
+      instructions: row.instructions,
+    })
+    await db.trigger.updateMany({
+      where: { id: before.id },
+      data: fields({
+        teammateId: teammate.id,
+        label: input.label,
+        options,
+        projectId,
+        instructions: input.instructions || null,
+      }),
+    })
+    // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
+    try {
+      await syncConnection(scope, before.connectionId)
+    } catch (error) {
+      await db.trigger.updateMany({ where: { id: before.id }, data: fields(before) })
+      await resync(scope, [before.connectionId])
+      if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
+      throw new HTTPException(502, {
+        message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
+      })
+    }
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'trigger.updated',
+      target: { type: 'trigger', id: before.id },
+      data: { teammateId: teammate.id, label: input.label, options, projectId },
     })
     return c.json({ ok: true })
   })

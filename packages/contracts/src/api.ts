@@ -255,6 +255,16 @@ export const CreateTrigger = z.object({
   /** What the teammate does with each event, before the event in each thread. */
   instructions: TriggerInstructions.optional(),
 })
+/** A trigger changed in place: what it does, never what it listens to (its account and event). */
+export const UpdateTrigger = z.object({
+  teammateId: z.string(),
+  label: z.string().trim().min(1).max(80),
+  /** Its options, whole: those left out are removed. */
+  options: z.record(z.string(), z.string().trim().max(500)).default({}),
+  projectId: z.string().nullish(),
+  /** Empty or null: none. */
+  instructions: TriggerInstructions.nullish(),
+})
 /**
  * An email's draft as a person approving it changed it (email_send, gmail_send), or only when it
  * leaves (Send later).

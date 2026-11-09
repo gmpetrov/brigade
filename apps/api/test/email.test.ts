@@ -1143,6 +1143,81 @@ describe('rules on any mailbox', { skip }, () => {
   })
 })
 
+describe('a rule changed in place', { skip }, () => {
+  test('an admin changes what a rule does, in its place; never to another workspace’s teammate', async () => {
+    const db = scoped(a)
+    const { auth } = await import('../src/auth.js')
+    const { triggers } = await import('../src/routes/triggers.js')
+    const realSession = auth.api.getSession
+    ;(auth.api as any).getSession = sessionStub(() => ({
+      user: { id: users[0]! },
+      session: {
+        id: 'test-session',
+        activeOrganizationId: a.organizationId,
+        activeWorkspaceId: a.workspaceId,
+      },
+    }))
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const rule = await prisma.trigger.create({
+      data: {
+        ...a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        label: 'Support',
+        event: 'email_received',
+        options: { from: '@old.test', perDay: '5' },
+        instructions: 'Old instructions',
+        position: 3,
+        createdByMemberId: members[0]!,
+      },
+    })
+    const put = (triggerId: string, body: unknown) =>
+      triggers.request(`/${triggerId}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    try {
+      const changed = await put(rule.id, {
+        teammateId: riley.id,
+        label: 'Billing',
+        options: { subject: 'invoice', automated: 'skip', unknown: 'dropped' },
+        instructions: 'Answer invoices',
+      })
+      assert.equal(changed.status, 200, await changed.text())
+      const after = await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
+      assert.equal(after.label, 'Billing')
+      // Its options whole: the old ones left out are gone, unknown ones never kept.
+      assert.deepEqual(after.options, { subject: 'invoice', automated: 'skip' })
+      assert.equal(after.instructions, 'Answer invoices')
+      assert.equal(after.position, 3)
+      assert.equal(after.connectionId, rule.connectionId)
+
+      // Instructions emptied: none.
+      assert.equal(
+        (await put(rule.id, { teammateId: riley.id, label: 'Billing', instructions: null })).status,
+        200,
+      )
+      assert.equal(
+        (await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })).instructions,
+        null,
+      )
+
+      // Another workspace's teammate is not found, and the rule stays as it was.
+      assert.equal((await put(rule.id, { teammateId: rileyB.id, label: 'Stolen' })).status, 404)
+      assert.equal(
+        (await prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })).label,
+        'Billing',
+      )
+
+      assert.equal((await put(`missing-${id}`, { teammateId: riley.id, label: 'X' })).status, 404)
+    } finally {
+      ;(auth.api as any).getSession = realSession
+      await prisma.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+})
+
 describe('races and boundaries', { skip }, () => {
   test('email_wait must return the email it consumes', async () => {
     const db = scoped(a)
