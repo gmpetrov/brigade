@@ -54,6 +54,8 @@ type Entry = {
   holdNext: boolean
   /** When the room last checked what it has against the stored text. */
   checkedAt?: number
+  /** Asks the room to check again, edits waiting for `checked`. */
+  recheck?: () => void
 }
 
 const EMPTY: LiveSession = { held: false }
@@ -121,21 +123,28 @@ function connect(entry: Entry, live: NonNullable<EditSession['live']>) {
   })
   // Listening from the start: the room says `checking` before anything else.
   let checking = false
+  // The room can be asked to check again on this connection (apps/collab, onCustomMessage).
+  let checks = false
   const checked = () => {
     entry.holdNext = false
     entry.checkedAt = Date.now()
-    if (entry.state.held) update(entry, { held: false })
+    // Not shown: held until shown, which decides (acquire).
+    const held = !entry.users
+    if (entry.state.held !== held) update(entry, { held })
   }
   provider.on('status', ({ status }: { status: string }) => {
-    if (status === 'connecting') checking = false
+    if (status !== 'connecting') return
+    checking = false
+    checks = false
   })
   provider.on('custom-message', (message: string) => {
-    let notice: { type?: string }
+    let notice: { type?: string; checks?: boolean }
     try {
       notice = JSON.parse(message) as typeof notice
     } catch {
       return
     }
+    if (notice.checks) checks = true
     // Otherwise (a reconnect after a network drop), what was typed meanwhile is the person's.
     if (notice.type === 'checking') {
       checking = true
@@ -153,6 +162,13 @@ function connect(entry: Entry, live: NonNullable<EditSession['live']>) {
     update(entry, { deleted: true })
     if (!entry.users) close(entry)
   })
+  entry.recheck = () => {
+    if (checks && provider.wsconnected)
+      return provider.sendMessage(JSON.stringify({ type: 'check' }))
+    // A room from before it could be asked: connecting again makes it check.
+    provider.disconnect()
+    void provider.connect()
+  }
   update(entry, { connection: { id: ++connections, doc, provider } })
 }
 
@@ -210,21 +226,14 @@ function acquire(target: EditTarget) {
   const entry = kept ?? start(target)
   const connection = entry.state.connection
   // Shown again from what was kept: at once, but edits wait for the room to check what it has
-  // against the stored text again, on a new connection, as when it opened (the API's notice of
-  // a change made meanwhile is best effort). The new connection asks the API for a new token.
-  if (
-    kept &&
-    !entry.users &&
-    connection &&
-    !entry.state.deleted &&
-    // Not checked yet, its first check is still to come, and holds edits already.
-    entry.checkedAt !== undefined &&
-    Date.now() - entry.checkedAt > FRESH_MS
-  ) {
-    entry.holdNext = true
-    update(entry, { held: true })
-    connection.provider.disconnect()
-    void connection.provider.connect()
+  // against the stored text again, as on connecting (the API's notice of a change made
+  // meanwhile is best effort). It starts read only already (release, checked), so the editor
+  // never flashes editable first.
+  if (kept && !entry.users && connection && !entry.state.deleted && entry.checkedAt !== undefined) {
+    if (Date.now() - entry.checkedAt > FRESH_MS) {
+      entry.holdNext = true
+      entry.recheck?.()
+    } else if (entry.state.held) update(entry, { held: false })
   }
   entry.users++
   entry.shown = true
@@ -244,6 +253,8 @@ function release(key: string) {
   // No longer here: the others' faces go (LiveEditor). Shown again, the editor sets it back.
   connection?.provider.awareness.setLocalStateField('user', null)
   if (error || deleted || (session && !session.live)) return close(entry)
+  // Shown again, it starts read only, until it is known to be up to date (acquire).
+  if (!entry.state.held) update(entry, { held: true })
   schedule(entry)
 }
 

@@ -200,17 +200,12 @@ export class DocRoom extends YServer<Env> {
     // open. Its edits wait for `checked`: a change the check finds can replace a whole block,
     // and what was typed in the block it replaced would be lost. Editors that do not ask,
     // such as a dashboard loaded before this, wait for the check as before.
-    if (this.#base && new URL(ctx.request.url).searchParams.get('early') === '1') {
-      this.sendCustomMessage(connection, JSON.stringify({ type: 'checking' }))
+    const early = new URL(ctx.request.url).searchParams.get('early') === '1'
+    if (this.#base && early) {
+      // `checks`: it can be asked to check again (onCustomMessage).
+      this.sendCustomMessage(connection, JSON.stringify({ type: 'checking', checks: true }))
       super.onConnect(connection, ctx)
-      void this.#serial(() => this.#reconcile())
-        .catch((error) => console.error(`${this.name}: could not check the stored text`, error))
-        // After the change it found, if any: that went out first, on the same socket. Without
-        // the API, edits go ahead on what the room has, as they do when an editor waited.
-        .finally(() => {
-          if (!this.#deleted)
-            this.sendCustomMessage(connection, JSON.stringify({ type: 'checked' }))
-        })
+      this.#check(connection)
       return
     }
     // Otherwise the editor waits for the check: a room that never matched the stored text has
@@ -223,7 +218,37 @@ export class DocRoom extends YServer<Env> {
       if (!this.#base) return connection.close(4503, 'Could not load the document')
     }
     if (this.#deleted) return
-    return super.onConnect(connection, ctx)
+    super.onConnect(connection, ctx)
+    // Checked already; that it can be asked again.
+    if (early) this.sendCustomMessage(connection, JSON.stringify({ type: 'checked', checks: true }))
+  }
+
+  /**
+   * Check what the room has against the stored text, then tell `connection` it is `checked`:
+   * after the change it found, if any, which went out first on the same socket. Without the
+   * API, edits go ahead on what the room has, as they do when an editor waited.
+   */
+  #check(connection: Connection<Editor>) {
+    void this.#serial(() => this.#reconcile())
+      .catch((error) => console.error(`${this.name}: could not check the stored text`, error))
+      .finally(() => {
+        if (!this.#deleted) this.sendCustomMessage(connection, JSON.stringify({ type: 'checked' }))
+      })
+  }
+
+  /**
+   * An editor showing again a document it kept open (apps/web/lib/live-documents.ts): the
+   * stored text may have changed meanwhile, its notice missed. Checked as on connecting, its
+   * edits waiting for `checked`, without a new connection.
+   */
+  onCustomMessage(connection: Connection<Editor>, message: string) {
+    let request: { type?: string }
+    try {
+      request = JSON.parse(message) as typeof request
+    } catch {
+      return
+    }
+    if (request.type === 'check') this.#check(connection)
   }
 
   /** The API's notices: the stored text changed, or the document is gone. */
