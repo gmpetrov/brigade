@@ -99,7 +99,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   a project that needs another one still puts its own first.
   New adapter releases can keep pinning old CLIs, so Brigade's patches of the adapters (`patches/`) set the versions it
   runs; the lockfile covers every platform's binary (Linux and macOS, both CPUs). Upgrading the adapters means
-  redoing those patches.
+  redoing those patches. Since harness-claude-code 1.0.180 the adapter gives Claude Code the user's settings alone
+  (`settingSources: ["user"]`), and Claude Code then skips every CLAUDE.md: the bridge patch gives it all three
+  again (user, project, local), since Brigade's instructions are the CLAUDE.md in the thread's folder
+  (`claude-bridge-settings.test.ts`).
 - **Sign-in never needs access to the computer** (changes the spec's "sign in through takeover"). The runner runs the
   vendor's own login command into a config directory per account (`~/.brigade/accounts/<id>`, via
   `CLAUDE_CONFIG_DIR` / `CODEX_HOME`). Codex uses its device-code flow: the dashboard shows the vendor URL and code,

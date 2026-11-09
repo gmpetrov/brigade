@@ -193,32 +193,20 @@ function EditorStatus({
   synced: boolean
   others: { name: string; color: string }[]
 }) {
-  const text =
+  // Saving as you type is the norm, so nothing says so: the row speaks only when edits
+  // cannot reach the document. A reconnect in progress stays quiet, its edits are kept.
+  const problem =
     status === 'offline'
       ? synced
         ? 'Offline. Your edits are kept and sync when you reconnect.'
         : 'Could not reach the document. Retrying…'
-      : status === 'connecting' || !synced
-        ? 'Connecting…'
-        : 'Changes save as you type.'
+      : undefined
+  // Both at the foot of the panel. The notice is a child of the editor's column, which spans the
+  // whole document, so it stays in view while the document scrolls.
   return (
-    <div className="flex min-h-6 items-center justify-between gap-3 text-xs text-muted-foreground">
-      <span role="status" className="flex items-center gap-1.5">
-        <span
-          aria-hidden
-          className={cn(
-            'size-1.5 rounded-full',
-            status === 'live' && synced
-              ? 'bg-success'
-              : status === 'offline'
-                ? 'bg-warning'
-                : 'bg-muted-foreground/50',
-          )}
-        />
-        {text}
-      </span>
+    <>
       {others.length > 0 && (
-        <span className="flex items-center gap-2">
+        <span className="mt-auto flex items-center justify-end gap-2 text-xs text-muted-foreground">
           <span className="flex -space-x-1.5">
             {others.slice(0, 4).map((o) => (
               <Hint key={o.name} label={o.name}>
@@ -234,7 +222,21 @@ function EditorStatus({
           {others.length === 1 ? `${others[0]!.name} is here` : `${others.length} others here`}
         </span>
       )}
-    </div>
+      <p
+        role="status"
+        className={cn(
+          'sticky bottom-0 flex items-center gap-2 rounded-md bg-[color-mix(in_oklch,var(--warning)_14%,var(--card))] px-3 py-2 text-xs text-foreground empty:hidden',
+          others.length === 0 && 'mt-auto',
+        )}
+      >
+        {problem && (
+          <>
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-warning" />
+            {problem}
+          </>
+        )}
+      </p>
+    </>
   )
 }
 
