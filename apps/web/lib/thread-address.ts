@@ -1,4 +1,5 @@
-import type { MouseEvent } from 'react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useRef, useSyncExternalStore, type MouseEvent } from 'react'
 
 /**
  * Whether an address is the threads panel expanded (the threads' list, or a thread): its
@@ -15,8 +16,57 @@ export const isPanelAddress = (href: string) => /^\/app\/threads(?:\/[^/?#]+)?\/
  */
 export function openInPlace(href: string) {
   if (!isPanelAddress(href)) return false
-  if (location.pathname !== href || location.search) history.pushState(null, '', href)
+  if (location.pathname !== href || location.search) {
+    history.pushState(null, '', href)
+    open(href)
+  }
   return true
+}
+
+/**
+ * The panel's address opened in place (or by Back and Forward), until Next's own pathname moves.
+ * Next follows `history.pushState` in a transition, which React starts over each time something
+ * more urgent renders (a working thread's events, the sidebar): a long thread then took more than
+ * a second to show, the click doing nothing meanwhile. The panel reads this instead
+ * (usePanelPathname), so the thread clicked renders at once.
+ */
+let opening: string | null = null
+const listeners = new Set<() => void>()
+function open(path: string | null) {
+  if (opening === path) return
+  opening = path
+  listeners.forEach((l) => l())
+}
+// Back and Forward to a panel address: the same, at once.
+const popped = () => open(isPanelAddress(location.pathname) ? location.pathname : null)
+
+/** The address opened in place that Next has not caught up with, if any; `subscribe` follows it. */
+export const openedInPlace = () => opening
+
+export function subscribe(listener: () => void) {
+  if (!listeners.size) addEventListener('popstate', popped)
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+    if (!listeners.size) removeEventListener('popstate', popped)
+  }
+}
+
+/**
+ * The pathname, as usePathname, but a panel address opened in place shows at once, before
+ * Next's transition to it ends. Once Next's pathname moves (there, or anywhere else since),
+ * it is Next's again.
+ */
+export function usePanelPathname() {
+  const pathname = usePathname()
+  const path = useSyncExternalStore(subscribe, openedInPlace, () => null)
+  const seen = useRef(pathname)
+  useEffect(() => {
+    if (seen.current === pathname) return
+    seen.current = pathname
+    open(null)
+  }, [pathname])
+  return path ?? pathname
 }
 
 /**
