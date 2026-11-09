@@ -1,7 +1,8 @@
 // The demo's API, in the browser: the responses recorded from the sample Acme workspace
 // (fixtures.json, scripts/demo-record.mjs), with the writes that matter done in memory
 // (approve or decline a ticket, answer a question, merge a pull request, archive a thread,
-// send a message) and the others accepted without effect. A reload starts over.
+// send a message, edit a library file, hand a list's lines to a teammate) and the others
+// accepted without effect. A reload starts over.
 import {
   handOffMessage,
   plainItemText,

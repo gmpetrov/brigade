@@ -27,22 +27,36 @@ request leaves the browser; a reload starts over.
   - archive, pin or put off a thread;
   - send a message or start a thread: the teammate answers with a scripted run, streamed
     with its tool steps as a runner streams one (`replyTo` in `lib/demo/scripts.ts`).
-    Unknown requests get a reply that says what the demo knows, with three to click.
+    Unknown requests get a reply that says what the demo knows, with three to click;
+  - edit a Markdown file of the library, and work through a list (below).
 
   Any other write succeeds and changes nothing. Attaching or uploading a file says it is
   off in the demo.
 
+- **Lists, worked out in the browser** (`lib/demo/lists.ts`). The fixtures were recorded
+  before lists existed, but the library's files were: Lists and a list's page read the
+  Markdown files with checkboxes as the API does (`parseList`), and the work on their lines
+  lives in memory. Hand to starts the teammate's thread on the line (`workOnItems` in
+  `lib/demo/scripts.ts`): it says what done means, builds it and opens a pull request that closes
+  the line (#155, then on). Merging it ticks the line with the pull request's number, credited to
+  the teammate, as the API's merge does. The Board stays empty.
+- **Documents edited without a collab server.** `POST /library/edit` answers with the file's
+  text and no `live`, so the editor edits it alone (`SavedDocument` in
+  `components/document-editor-view.tsx`). In the demo it saves on its own a moment after the
+  last change, with no Save button, as the live editor does; anywhere it has no unsaved change,
+  it shows what others change in the file (a line Brigade ticks).
 - **A calm first visit.** The sample workspace has more than a newcomer should meet (a failed
   upgrade, a stalled thread, App writes waiting in their raw form). On load, `calm()` in
   `lib/demo/server.ts` keeps three threads in the lists (`SHOWN_THREADS`), hides Kai, empties
   Tickets and the pull requests that wait, and drops Today's loose ends. A hidden thread's own
   page stays, should a link lead there.
-- **Four walkthroughs.** `/app?tour=<story>` plays one (`STORIES` in `lib/demo/tour.ts`): `bug`
+- **Five walkthroughs.** `/app?tour=<story>` plays one (`STORIES` in `lib/demo/tour.ts`): `bug`
   (fix a customer's bug, the default), `feature` (ship a requested feature and announce it),
-  `call` (prep a sales call) and `payment` (chase a failed payment). Each asks a teammate from
-  Today, then presses what waits for a person (a merge, an email) until the teammate's last
-  reply. The landing page picks one with the buttons above its window
-  (`components/landing/live-demo.tsx`).
+  `call` (prep a sales call), `payment` (chase a failed payment) and `list` (work through a
+  list). The first four ask a teammate from Today, then press what waits for a person (a merge,
+  an email) until the teammate's last reply; `list` starts in Lists (below). The landing page
+  picks one with the buttons above its window (`components/landing/live-demo.tsx`), with shorter
+  labels in a window narrower than 1100px, where the long ones do not fit.
 - **What needs a computer** (the app preview, a teammate's screen, a terminal) shows
   what it would be instead (`components/demo-machine.tsx`).
 - **The sign.** A card at the foot of the sidebar (a strip atop the page on a phone) says
@@ -125,13 +139,21 @@ visitor, signed in as Ada) asks a teammate from Today, the teammate's side plays
   PostHog; the cursor allows the agenda to Jo.
 - `payment`: Sam finds why Globex's payment failed; the cursor allows the email with the link
   to pay with a new card.
+- `list`: in Lists, the cursor opens Acme's launch checklist, adds "Add a changelog page linked
+  from the footer" at its end and hands it to Riley (Hand to, then Riley in the dialog). Riley's
+  thread opens; back in the list, the line shows the thread at work, then #155 waiting on a
+  person. The cursor opens the thread from the line's chip, merges #155, and back in the list the
+  line is ticked ("PR #155, <day>"), then shows under Done's Recently done.
 
-Each takes 15 to 35 seconds.
+Each takes 15 to 40 seconds.
 
 It drives the real dashboard with events no person made: the visitor's first click, key,
 scroll or touch in the frame stops it, and a violet "Your turn · click around" pill offers a replay (Today
 again, `/app?tour=<story>`, which starts the demo over). A thread the visitor started lives in memory:
 reloaded on its address, the demo opens Today instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
-"Merge #153", "Merge #154", "Allow"): a change to those labels needs the same change in `lib/demo/tour.ts`.
+"Merge #153", "Merge #154", "Allow", Lists, "Hand to", the hand-off dialog's teammate, a line's
+chips, the Done filter): a change to those labels needs the same change in `lib/demo/tour.ts`.
+In a document, it sets the page's selection, which the editor reads, rather than click in the
+text: a press on the editor would move the caret.
 `pnpm test` plays every story against the demo's server; the clicks themselves are checked
 by running it in a browser.
