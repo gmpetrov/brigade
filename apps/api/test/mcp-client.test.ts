@@ -40,15 +40,20 @@ async function reachable() {
 }
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
-const { mcpAuthUrl, mcpClientDocumentUrl } = await import('../src/connectors/mcp.js')
+const { exchangeMcpCode, mcpAuthUrl, mcpClientDocumentUrl } =
+  await import('../src/connectors/mcp.js')
 
 const realFetch = globalThis.fetch
 const AUTH = 'https://auth.vercel.test'
 let documentSupported = true
 let registrations = 0
+/** Whether Vercel approves the next registration, as it might once it reviews Brigade. */
+let approved = false
+/** The client IDs the token endpoint was asked as. */
+let exchangedAs: string[] = []
 
 before(() => {
-  globalThis.fetch = (async (input: string | URL | Request) => {
+  globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}) => {
     const url = new URL(typeof input === 'string' ? input : input.toString())
     const json = (body: unknown, status = 200) =>
       new Response(JSON.stringify(body), {
@@ -68,6 +73,7 @@ before(() => {
       })
     if (url.origin === AUTH && url.pathname === '/oauth/register') {
       registrations++
+      if (approved) return json({ client_id: 'registered-client' }, 201)
       return json(
         {
           error: 'invalid_redirect_uri',
@@ -77,12 +83,23 @@ before(() => {
         400,
       )
     }
+    if (url.origin === AUTH && url.pathname === '/oauth/token') {
+      exchangedAs.push(new URLSearchParams(String(init.body)).get('client_id') ?? '')
+      return json({ access_token: 'token', refresh_token: 'refresh', expires_in: 3600 })
+    }
     return new Response(null, { status: 401 })
   }) as typeof fetch
 })
 
-after(() => {
+const forget = async () => {
+  if (skip) return
+  const { prisma } = await import('../src/db.js')
+  await prisma.mcpClient.deleteMany({ where: { issuer: AUTH } })
+}
+before(forget)
+after(async () => {
   globalThis.fetch = realFetch
+  await forget()
 })
 
 const server = { url: 'https://mcp.vercel.test', tools: {} }
@@ -93,7 +110,9 @@ test(
   async () => {
     documentSupported = true
     registrations = 0
-    const url = new URL(await mcpAuthUrl(server, 'state', 'verifier'))
+    const signIn = await mcpAuthUrl(server, 'state', 'verifier')
+    assert.equal(signIn.clientId, mcpClientDocumentUrl())
+    const url = new URL(signIn.url)
     assert.equal(url.origin + url.pathname, `${AUTH}/oauth/authorize`)
     assert.equal(url.searchParams.get('client_id'), mcpClientDocumentUrl())
     assert.equal(registrations, 1)
@@ -107,3 +126,32 @@ test('registering refused and no metadata document: the error says so', { skip }
   documentSupported = false
   await assert.rejects(mcpAuthUrl(server, 'state', 'verifier'), /not approved/)
 })
+
+test(
+  'registering approved mid sign-in: the code is exchanged as the client it was issued to',
+  { skip },
+  async () => {
+    documentSupported = true
+    approved = false
+    exchangedAs = []
+    const signIn = await mcpAuthUrl(server, 'state', 'verifier')
+    assert.equal(signIn.clientId, mcpClientDocumentUrl())
+    // The person signs in meanwhile, and the provider now registers Brigade.
+    approved = true
+    const { credential } = await exchangeMcpCode(
+      server,
+      'code',
+      'verifier',
+      undefined,
+      signIn.clientId,
+    )
+    assert.deepEqual(exchangedAs, [mcpClientDocumentUrl()])
+    assert.equal(credential.clientId, mcpClientDocumentUrl())
+    // The next sign-in registers, and its code is exchanged as the registered client.
+    const next = await mcpAuthUrl(server, 'state', 'verifier')
+    assert.equal(next.clientId, 'registered-client')
+    await exchangeMcpCode(server, 'code', 'verifier', undefined, next.clientId)
+    assert.deepEqual(exchangedAs, [mcpClientDocumentUrl(), 'registered-client'])
+    approved = false
+  },
+)
