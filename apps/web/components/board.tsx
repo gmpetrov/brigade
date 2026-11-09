@@ -903,9 +903,9 @@ export function BoardPage() {
         ))}
       </div>
 
-      <div className="grid items-start gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-3">
         {COLUMNS.map((c) => (
-          <div key={c.value} className={cn(column !== c.value && 'hidden md:block')}>
+          <div key={c.value} className={cn('min-w-0', column !== c.value && 'hidden md:block')}>
             <Column
               column={c}
               cards={c.value === 'done' ? done : columns[c.value]}
