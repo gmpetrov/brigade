@@ -966,6 +966,157 @@ describe('a hand-over again, pages and the reader’s retries', { skip }, () => 
   })
 })
 
+describe('a Gmail rule with nobody', { skip }, () => {
+  test('it keeps what it takes for a person, even from an account not in the Inbox; no thread starts', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailBobs } })
+    const rule = await db.trigger.create({
+      data: {
+        connectionId: gmailBobs,
+        teammateId: null,
+        createdByMemberId: members[1]!,
+        label: 'Keep for Bob',
+        event: 'email_received',
+        // Before the account's other rules: the first that matches takes the mail.
+        position: -1,
+      } as never,
+    })
+    try {
+      const { dispatch } = await import('../src/triggers.js')
+      const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+      const payload = {
+        id: `kept-${id}`,
+        threadId: `kept-conv-${id}`,
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'Kept for Bob',
+        date: new Date().toUTCString(),
+        snippet: 'Help',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'Help',
+        attachments: [],
+        automatic: false,
+      }
+      const sessions = await prisma.session.count({ where: { ...scope } })
+      const delivered = await dispatch(connection, { id: payload.id, type: 'email', payload })
+      assert.deepEqual(delivered, { started: 0, failed: false, kept: true, triggerId: rule.id })
+      assert.equal(await prisma.session.count({ where: { ...scope } }), sessions)
+      // As the reader keeps it (src/subscriptions/gmail.ts): Bob's own account shows only what a
+      // rule took, and this one did.
+      await keepGmail(connection, payload, { route: 'kept', triggerId: rule.id })
+      const kept = await db.mailMessage.findFirstOrThrow({
+        where: { connectionId: gmailBobs, sourceId: payload.id },
+      })
+      assert.deepEqual([kept.route, kept.triggerId, kept.sessionId], ['kept', rule.id, null])
+      const item = (
+        await inbox.listInbox(db, as(1), { status: 'waiting', source: `gmail:${gmailBobs}` })
+      ).items.find((i) => i.id === `mail:${kept.id}`)
+      assert.equal(item?.status, 'waiting')
+      assert.equal(item?.rule?.label, 'Keep for Bob')
+      // Bob's own account: never another member's.
+      const others = await inbox.listInbox(db, as(0), { status: 'all' })
+      assert.ok(!others.items.some((i) => i.id === `mail:${kept.id}`))
+    } finally {
+      await db.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+  test('a Nobody rule alone is enough for the account to be read: subscribed, and its mail kept', async () => {
+    const db = scoped(scope)
+    const { createTrigger, deleteTriggers } = await import('../src/routes/triggers.js')
+    const { CreateTrigger } = await import('@brigade/contracts')
+    const { syncConnection } = await import('../src/subscriptions/index.js')
+    const { readInbox } = await import('../src/subscriptions/gmail.js')
+    const app = await db.app.findFirstOrThrow({ where: { key: 'gmail' } })
+    const address = `nobody-only-${id}@acme.test`
+    const message = `nobody-only-${id}`
+    let fetched = 0
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+      )
+      if (url.pathname.endsWith('/profile')) return json({ historyId: '100' })
+      if (url.pathname.endsWith('/history'))
+        return json({
+          historyId: '150',
+          history: [
+            {
+              id: '150',
+              messagesAdded: [
+                { message: { id: message, threadId: `${message}-conv`, labelIds: ['INBOX'] } },
+              ],
+            },
+          ],
+        })
+      if (url.pathname.endsWith(`/messages/${message}`)) {
+        fetched++
+        return json({
+          id: message,
+          threadId: `${message}-conv`,
+          labelIds: ['INBOX'],
+          payload: {
+            mimeType: 'text/plain',
+            headers: [
+              { name: 'From', value: 'Client <client@outside.test>' },
+              { name: 'To', value: address },
+              { name: 'Subject', value: 'Please keep me' },
+              { name: 'Date', value: new Date().toUTCString() },
+            ],
+            body: { data: Buffer.from('Help').toString('base64url') },
+          },
+        })
+      }
+      return json({})
+    }) as typeof fetch
+    // Bob's own account, not in the Inbox, with no other rule and no awaited reply.
+    const connection = await db.connection.create({
+      data: {
+        appId: app.id,
+        kind: 'gmail',
+        label: address,
+        externalAccount: address,
+        reach: 'mine',
+        inbox: false,
+        createdByMemberId: members[1]!,
+        vaultSecretId: await sealSecret(db, scope, {
+          accessToken: 'token',
+          refreshToken: 'refresh',
+          expiresAt: Date.now() + 3600_000,
+        }),
+      } as never,
+    })
+    try {
+      const rule = await createTrigger(
+        db,
+        scope,
+        CreateTrigger.parse({
+          connectionId: connection.id,
+          teammateId: null,
+          event: 'email_received',
+          label: 'Keep it',
+        }),
+        { createdByMemberId: members[1]!, actor: { type: 'member', id: members[1]! } },
+      )
+      const sub = await db.subscription.findFirst({ where: { connectionId: connection.id } })
+      assert.ok(sub, 'the account is read for its Nobody rule')
+      await readInbox(sub.id)
+      assert.equal(fetched, 1)
+      const kept = await db.mailMessage.findFirstOrThrow({
+        where: { connectionId: connection.id, sourceId: message },
+      })
+      assert.deepEqual([kept.route, kept.triggerId, kept.sessionId], ['kept', rule.id, null])
+      // The rule gone, nothing reads the account any more.
+      await deleteTriggers(db, { id: rule.id })
+      await syncConnection(scope, connection.id)
+      assert.equal(await db.subscription.count({ where: { connectionId: connection.id } }), 0)
+    } finally {
+      globalThis.fetch = realFetch
+      await db.trigger.deleteMany({ where: { connectionId: connection.id } })
+      await db.connection.deleteMany({ where: { id: connection.id } })
+    }
+  })
+})
+
 describe('hand-overs at once, and a thread deleted since', { skip }, () => {
   test('overlapping Gmail handovers retain one live recipient', async () => {
     const db = scoped(scope)

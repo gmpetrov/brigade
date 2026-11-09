@@ -242,7 +242,8 @@ export const UpdateApp = z.object({ disabledTools: z.array(z.string().max(100)).
 /** A trigger from the connection's catalog; a custom app's also says how its sender is verified. */
 export const CreateTrigger = z.object({
   connectionId: z.string(),
-  teammateId: z.string(),
+  /** Null: nobody. A mailbox's rule then keeps its mail in the Inbox for a person. */
+  teammateId: z.string().nullable(),
   label: z.string().trim().min(1).max(80),
   /** The catalog id, e.g. payment_received. A custom app's is "received". */
   event: z.string().max(80),
@@ -257,7 +258,8 @@ export const CreateTrigger = z.object({
 })
 /** A trigger changed in place: what it does, never what it listens to (its account and event). */
 export const UpdateTrigger = z.object({
-  teammateId: z.string(),
+  /** Null: nobody, as in CreateTrigger. */
+  teammateId: z.string().nullable(),
   label: z.string().trim().min(1).max(80),
   /** Its options, whole: those left out are removed. */
   options: z.record(z.string(), z.string().trim().max(500)).default({}),

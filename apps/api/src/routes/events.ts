@@ -186,7 +186,7 @@ export const customApps = new Hono().post('/:token', async (c) => {
     if (!verifyHmac(c.req.header('x-brigade-signature'), body, secret))
       return c.json({ error: 'Bad signature' }, 401)
   }
-  if (trigger.teammate.archivedAt || trigger.connection.status === 'removed')
+  if (!trigger.teammate || trigger.teammate.archivedAt || trigger.connection.status === 'removed')
     return c.json({ error: 'This webhook is no longer active' }, 410)
 
   let payload: unknown = body
@@ -236,7 +236,12 @@ onInbound('hook', async ({ source, externalId, type, payload }) => {
     where: { id: source.slice('hook:'.length) },
     include: { teammate: true, connection: true },
   })
-  if (!trigger || trigger.teammate.archivedAt || trigger.connection.status === 'removed')
+  if (
+    !trigger ||
+    !trigger.teammate ||
+    trigger.teammate.archivedAt ||
+    trigger.connection.status === 'removed'
+  )
     return 'done'
   const { failed } = await dispatch(trigger.connection, { id: externalId, type, payload }, trigger)
   if (failed) noteFailure('trigger-webhook', 'custom app: could not start a thread yet')

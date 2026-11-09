@@ -100,7 +100,10 @@ address's journal (`GET /api/email/addresses/:id/journal`):
    variant's project, as if they had typed it.
 4. **The address's rules** (`rule`): triggers `email.email_received` in their order
    (`Trigger.position`, `PUT /api/email/rules/order`). The first that matches takes it; an agent's
-   rule watches its project's variant only.
+   rule watches its project's variant only. A rule with nobody (`Trigger.teammateId` null, "Nobody:
+   keep it in the Inbox") takes it too but starts no thread (`kept`, with its `triggerId`): it waits
+   in the box for a person, as long as the box keeps mail, and no later rule sees it. Only a
+   mailbox's rule (an exclusive event) may have nobody; it has no instructions and no daily limit.
 5. **Its box** (`box`): read on demand with `email_list`; deleted after 30 days (`sweepMail`), but a
    sign-up's mail whose conversation has mail that stays: it marks the conversation as its thread's.
 
@@ -191,8 +194,9 @@ has to keep its messages there.
   A shared account its owner or an admin put in the Inbox (`Connection.inbox`, "Show all its mail
   in the Inbox" in the account's menu) shows all its mail, without promotions and social, and is
   read even without triggers. Any other account, a member's own included, shows only the mail that
-  went to a thread (`TAKEN_ROUTES`: a rule's or a playbook's, one waiting on a reply in its
-  conversation, one a person handed it to); the rest, personal mail, is never kept. A member's own
+  went to a thread or a rule kept (`TAKEN_ROUTES`: a rule's or a playbook's, one a rule with nobody
+  kept for a person, one waiting on a reply in its conversation, one a person handed it to); the
+  rest, personal mail, is never kept. A member's own
   account shows to them alone; a shared one to everyone.
 - **A conversation** shows as its latest received mail (its head), with its number of mails. Its
   status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right

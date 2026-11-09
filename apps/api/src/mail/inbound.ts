@@ -391,6 +391,7 @@ type Outcome = {
     | 'conversation'
     | 'member'
     | 'rule'
+    | 'kept'
     | 'box'
     | 'duplicate'
     | 'loop'
@@ -563,6 +564,8 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       return { route: 'rule', sessionId: delivered.threadId, triggerId: delivered.triggerId }
     if (delivered.capped)
       return { route: 'cap', note: delivered.capped, triggerId: delivered.triggerId }
+    // A rule with nobody: it waits in the box for a person, as the rule's.
+    if (delivered.kept) return { route: 'kept', triggerId: delivered.triggerId }
     if (delivered.failed) throw new Error('A rule could not start its thread yet')
   }
 

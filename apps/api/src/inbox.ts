@@ -42,7 +42,7 @@ import { startThread } from './work.js'
 
 const PAGE = 50
 /** Routes that leave a mail for a person: nobody took it. */
-const WAITING_ROUTES = ['box', 'cap', 'loop']
+const WAITING_ROUTES = ['box', 'kept', 'cap', 'loop']
 
 export type InboxFilters = {
   source?: string
@@ -61,7 +61,7 @@ const admin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role ==
  * conversation, one a person handed it to): kept and shown even when the account is not in the
  * Inbox, so a playbook's mail shows without the rest of the mailbox (src/mail/gmail-inbox.ts).
  */
-export const TAKEN_ROUTES = ['rule', 'cap', 'awaited', 'handed']
+export const TAKEN_ROUTES = ['rule', 'kept', 'cap', 'awaited', 'handed']
 
 /**
  * The mailboxes the Inbox shows this member: Brigade's addresses, and the Gmail accounts it may
@@ -895,6 +895,7 @@ function reasonOf(m: Row, rules: number) {
   if (m.status === 'pending') return 'Brigade has not delivered it yet.'
   if (m.status === 'failed') return 'Brigade could not read or deliver it.'
   if (m.route === 'cap') return 'Its rule already started its threads for the day.'
+  if (m.route === 'kept') return 'Its rule keeps it here for a person: hand it to a teammate.'
   if (m.route === 'loop')
     return 'Too many mails of this conversation went to threads within the hour.'
   if (m.routeNote) return `${m.routeNote[0]!.toUpperCase()}${m.routeNote.slice(1)}.`

@@ -362,10 +362,16 @@ async function deliverOnce(
   if (run && 'skipped' in run) return { skipped: run.skipped }
   if (run && 'limit' in run) return { error: run.limit }
   const runId = run?.runId
+  // A rule with nobody keeps its mail for a person (dispatch): it never starts a thread.
+  const teammate = trigger.teammate
+  if (!teammate) {
+    if (runId) await settleRun(db, runId, null)
+    return { skipped: 'its rule has no teammate: it keeps mail for a person' }
+  }
 
   try {
     const { thread, outcome } = await startThread(db, scope, {
-      teammate: trigger.teammate,
+      teammate,
       computer,
       memberId: trigger.createdByMemberId,
       title: event.title,
@@ -436,6 +442,8 @@ export async function dispatch(
   triggerId?: string
   /** Why a mailbox's rule left it in the box: its cap for the day. */
   capped?: string
+  /** A mailbox's rule with nobody took it: it stays in the Inbox for a person (triggerId). */
+  kept?: true
 }> {
   if (connection.status === 'removed') return { started: 0, failed: false }
   // Brigade's own ops alerts, mailed back in: never a thread's. An alert about a computer that is
@@ -520,6 +528,19 @@ export async function dispatch(
       !(await definition.matches(event, options, { ...ctx, connectionId: connection.id }))
     )
       continue
+    // A rule with nobody: the first that matches takes the mail and keeps it in the Inbox for a
+    // person. No thread starts, so nothing of the mail is fetched or handed to a teammate.
+    if (!trigger.teammate) {
+      if (!definition.exclusive) continue
+      await audit({
+        ...scope,
+        actor: { type: 'system', id: `trigger:${trigger.id}` },
+        action: 'trigger.received',
+        target: { type: 'trigger', id: trigger.id },
+        data: { eventId: event.id, eventType: event.type, outcome: 'kept' },
+      })
+      return { started, failed, kept: true, triggerId: trigger.id }
+    }
     // A rule whose teammate was archived: the mail is not lost, a person is told.
     if (trigger.teammate.archivedAt) {
       if (definition.exclusive) {

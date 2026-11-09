@@ -1036,7 +1036,8 @@ export type Trigger = {
   url: string | null
   hasSecret: boolean
   createdAt: string
-  teammate: { id: string; name: string }
+  /** Null: nobody, a mailbox's rule that keeps its mail in the Inbox for a person. */
+  teammate: { id: string; name: string } | null
   projectId: string | null
   project: ProjectRef | null
 }

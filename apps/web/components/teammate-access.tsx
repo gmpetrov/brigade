@@ -109,7 +109,7 @@ export function TeammateAccess({
   // A custom app only sends events: nothing to grant. An address of the Email App is its agent's
   // or its project's, never granted to another: the Email address row shows this teammate's.
   const list = all.filter((c) => c.kind !== 'webhook' && c.kind !== 'email')
-  const triggers = (hooks.data ?? []).filter((w) => w.teammate.id === teammate.id)
+  const triggers = (hooks.data ?? []).filter((w) => w.teammate?.id === teammate.id)
   return (
     <Card className="gap-0 overflow-hidden pb-0">
       <CardHeader className="pb-4">

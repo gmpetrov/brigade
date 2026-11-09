@@ -22,6 +22,9 @@ import {
   Address,
   Dot,
   ErrorLine,
+  NOBODY,
+  RuleTeammate,
+  ruleTarget,
   rulesSummary,
   useAction,
 } from '@/components/project-email'
@@ -1128,7 +1131,7 @@ function MailboxRules({
                   <span className="font-medium">
                     {rule.playbook ? `Playbook ${rule.playbook.name}` : rule.label}
                   </span>{' '}
-                  <span className="text-muted-foreground">→ {rule.teammate.name}</span>
+                  <span className="text-muted-foreground">→ {ruleTarget(rule)}</span>
                   {rule.playbook && rule.playbook.status !== 'active' && (
                     <span className="ml-1.5 rounded bg-muted px-1.5 py-px text-xs text-muted-foreground">
                       {rule.playbook.status}
@@ -1138,7 +1141,7 @@ function MailboxRules({
                 <span className="text-xs text-muted-foreground">
                   {m.kind === 'gmail'
                     ? rule.options.query || 'Any mail'
-                    : rulesSummary(rule.options)}
+                    : rulesSummary(rule.options, !!rule.teammate)}
                   {rule.project && ` · ${rule.project.name}`}
                 </span>
                 {rule.playbook && (
@@ -1268,19 +1271,20 @@ function GmailRule({
   onDone: () => void
   reload: () => Promise<unknown>
 }) {
-  const { teammates } = useDashboard()
   const [label, setLabel] = useState(rule?.label ?? 'Answer')
   const [query, setQuery] = useState(rule?.options.query ?? '')
-  const [teammateId, setTeammateId] = useState(rule?.teammate.id ?? m.readers[0]?.id ?? '')
+  const [teammateId, setTeammateId] = useState(
+    rule ? (rule.teammate?.id ?? NOBODY) : (m.readers[0]?.id ?? ''),
+  )
   const [projectId, setProjectId] = useState(rule?.project?.id ?? 'none')
   const action = useAction()
-  const choices = teammates
 
   async function add(event: FormEvent) {
     event.preventDefault()
     if (!teammateId || !label.trim()) return
+    const nobody = teammateId === NOBODY
     const fields = {
-      teammateId,
+      teammateId: nobody ? null : teammateId,
       label: label.trim(),
       // A rule made before keeps how it treats automatic mail.
       options: {
@@ -1297,7 +1301,7 @@ function GmailRule({
       if (rule)
         await api(`/triggers/${rule.id}`, {
           method: 'PUT',
-          body: { ...fields, instructions: rule.instructions },
+          body: { ...fields, instructions: nobody ? null : rule.instructions },
         })
       else
         await api('/triggers', {
@@ -1327,21 +1331,7 @@ function GmailRule({
             className="bg-card"
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="gmail-rule-teammate">Teammate</Label>
-          <Select value={teammateId} onValueChange={setTeammateId}>
-            <SelectTrigger id="gmail-rule-teammate" className="w-full bg-card">
-              <SelectValue placeholder="Pick a teammate" />
-            </SelectTrigger>
-            <SelectContent>
-              {choices.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <RuleTeammate id="gmail-rule-teammate" value={teammateId} onChange={setTeammateId} />
         <div className="flex flex-col gap-2">
           <Label htmlFor="gmail-rule-query">Only mail matching (a Gmail search)</Label>
           <Input

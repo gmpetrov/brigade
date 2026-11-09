@@ -128,6 +128,7 @@ export const MAIL_ROUTES = [
   'conversation',
   'member',
   'rule',
+  'kept',
   'box',
   'duplicate',
   'loop',

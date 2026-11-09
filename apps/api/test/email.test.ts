@@ -1218,6 +1218,124 @@ describe('a rule changed in place', { skip }, () => {
   })
 })
 
+describe('a rule with nobody', { skip }, () => {
+  test('it keeps the mail it takes in the Inbox for a person: no thread starts, and only a mailbox rule may have nobody', async () => {
+    const db = scoped(a)
+    const { auth } = await import('../src/auth.js')
+    const { triggers } = await import('../src/routes/triggers.js')
+    const { appFor } = await import('../src/apps.js')
+    const inbox = await import('../src/inbox.js')
+    const realSession = auth.api.getSession
+    ;(auth.api as any).getSession = sessionStub(() => ({
+      user: { id: users[0]! },
+      session: {
+        id: 'test-session',
+        activeOrganizationId: a.organizationId,
+        activeWorkspaceId: a.workspaceId,
+      },
+    }))
+    const call = (path: string, method: string, body: unknown) =>
+      triggers.request(path, {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const sender = `kept-${id}.test`
+    const made: string[] = []
+    const webhook = await prisma.connection.create({
+      data: {
+        ...a,
+        appId: (await appFor(db, ws(a), 'webhook')).id,
+        kind: 'webhook',
+        label: `Hooks ${id}`,
+        createdByMemberId: members[0]!,
+      } as never,
+    })
+    try {
+      // Another App's trigger with nobody would go nowhere: refused.
+      const refused = await call('/', 'POST', {
+        connectionId: webhook.id,
+        teammateId: null,
+        event: 'received',
+        label: 'Nowhere',
+        verification: 'none',
+      })
+      assert.equal(refused.status, 400, await refused.text())
+
+      const created = await call('/', 'POST', {
+        connectionId: address.connectionId,
+        teammateId: null,
+        event: 'email_received',
+        label: 'Keep for Ada',
+        options: { from: `@${sender}`, perDay: '3' },
+        instructions: 'Nobody reads these',
+      })
+      assert.equal(created.status, 201, await created.clone().text())
+      const ruleId = ((await created.json()) as { id: string }).id
+      made.push(ruleId)
+      const rule = await prisma.trigger.findUniqueOrThrow({ where: { id: ruleId } })
+      assert.equal(rule.teammateId, null)
+      // Nobody reads instructions.
+      assert.equal(rule.instructions, null)
+
+      const before = await prisma.session.count({ where: { ...a } })
+      const [kept] = await arrive(
+        mail({
+          to: [`${base()}@mails.brigade.test`],
+          from: `jane@${sender}`,
+          subject: 'Can you help?',
+        }),
+      )
+      assert.equal(kept!.route, 'kept')
+      assert.equal(kept!.triggerId, ruleId)
+      assert.equal(kept!.sessionId, null)
+      assert.ok(kept!.expiresAt, 'it waits as long as the box keeps mail')
+      assert.equal(await prisma.session.count({ where: { ...a } }), before)
+      // Mail the rule does not match goes on to the box, as before.
+      const [other] = await arrive(
+        mail({ to: [`${base()}@mails.brigade.test`], from: 'someone@else.test' }),
+      )
+      assert.equal(other!.route, 'box')
+
+      // The Inbox shows it To do, kept by its rule, for a person to hand over.
+      const { items } = await inbox.listInbox(db, ws(a), { status: 'waiting' })
+      const item = items.find((i) => i.id === `mail:${kept!.id}`)
+      assert.ok(item, 'the kept mail is in the Inbox')
+      assert.equal(item.status, 'waiting')
+      assert.equal(item.route, 'kept')
+      assert.equal(item.rule?.label, 'Keep for Ada')
+
+      // Given a teammate later, the same rule starts threads again: refused here for another
+      // teammate than the address's own agent, as any rule on an agent's address.
+      assert.equal(
+        (await call(`/${ruleId}`, 'PUT', { teammateId: rileyB.id, label: 'Keep for Ada' })).status,
+        404,
+      )
+      const back = await call(`/${ruleId}`, 'PUT', {
+        teammateId: riley.id,
+        label: 'Answer',
+        options: { from: `@${sender}` },
+        instructions: 'Answer politely',
+      })
+      assert.equal(back.status, 200, await back.text())
+      const given = await prisma.trigger.findUniqueOrThrow({ where: { id: ruleId } })
+      assert.deepEqual([given.teammateId, given.instructions], [riley.id, 'Answer politely'])
+      // And back to nobody: its instructions go.
+      assert.equal(
+        (await call(`/${ruleId}`, 'PUT', { teammateId: null, label: 'Keep' })).status,
+        200,
+      )
+      const none = await prisma.trigger.findUniqueOrThrow({ where: { id: ruleId } })
+      assert.deepEqual([none.teammateId, none.instructions], [null, null])
+    } finally {
+      ;(auth.api as any).getSession = realSession
+      await prisma.trigger.deleteMany({ where: { id: { in: made } } })
+      await prisma.connection.deleteMany({ where: { id: webhook.id } })
+    }
+  })
+})
+
 describe('a refused change undone', { skip }, () => {
   test('saves of one rule run one at a time: overlapping refused saves leave the last good rule', async () => {
     const db = scoped(a)

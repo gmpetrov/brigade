@@ -57,3 +57,11 @@ export const retryLater = (subscriptionId: string, at: number | null) =>
     where: { id: subscriptionId },
     data: { retryAt: at === null ? null : new Date(at) },
   })
+
+/**
+ * The triggers an account is read for: those whose teammate is not archived, and a mailbox's rules
+ * with nobody, which keep their mail in the Inbox for a person (src/triggers.ts).
+ */
+export const LISTENING = {
+  OR: [{ teammateId: null }, { teammate: { archivedAt: null } }],
+}

@@ -6,7 +6,7 @@
 import { env } from '../config.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
-import { SubscribeError, type Target } from './common.js'
+import { LISTENING, SubscribeError, type Target } from './common.js'
 import { gmailPush, readInbox, syncGmail } from './gmail.js'
 import { readCalendar, syncCalendar } from './google-calendar.js'
 import { syncStripe } from './stripe.js'
@@ -47,7 +47,7 @@ export async function syncConnection(
   const triggers = options.removing
     ? []
     : await db.trigger.findMany({
-        where: { connectionId, teammate: { archivedAt: null } },
+        where: { connectionId, ...LISTENING },
         select: { event: true, options: true },
       })
   const target: Target = {
@@ -76,7 +76,7 @@ async function listened(scope: Scope, connectionId: string) {
   })
   return (
     (connection ? inInbox(connection) : false) ||
-    (await db.trigger.count({ where: { connectionId, teammate: { archivedAt: null } } })) > 0 ||
+    (await db.trigger.count({ where: { connectionId, ...LISTENING } })) > 0 ||
     (await awaitingReplies(db, connectionId))
   )
 }
