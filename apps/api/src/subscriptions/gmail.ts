@@ -19,7 +19,7 @@ import { prisma, scoped, type Scope } from '../db.js'
 import { automatic, bounced, wakeOnReply } from '../replies.js'
 import { dispatch } from '../triggers.js'
 import { inInbox, keepGmail } from '../mail/gmail-inbox.js'
-import { reachable, retryLater, serially, type Target } from './common.js'
+import { LISTENING, reachable, retryLater, serially, type Target } from './common.js'
 
 const RESOURCE = 'inbox'
 /** Renew a watch once it has less than this left (Google suggests renewing daily). */
@@ -133,7 +133,7 @@ export const readInbox = (subscriptionId: string) =>
     const listed = inInbox(sub.connection)
     const listeners = async () => ({
       triggered: await db.trigger.count({
-        where: { connectionId: sub.connectionId, teammate: { archivedAt: null } },
+        where: { connectionId: sub.connectionId, ...LISTENING },
       }),
       awaited: new Set(
         (
