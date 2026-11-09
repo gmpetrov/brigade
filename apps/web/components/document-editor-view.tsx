@@ -298,6 +298,24 @@ function SavedDocument({
   const [autosave] = useState(() => debouncedSave((text) => saveNow.current(text), DEMO_SAVE_MS))
   useEffect(() => () => autosave.close(), [autosave])
 
+  // The session may be one kept open for another view of this file (the document panel, say),
+  // from before a change made since: shown, the file is read again.
+  useEffect(() => {
+    let live = true
+    void openDocument(target).then(
+      (fresh) => {
+        const text = fresh.text
+        if (!live || text === undefined || unsaved.current) return
+        setSource((s) => (text === s.text ? s : { text, n: s.n + 1 }))
+      },
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+    // Once, as it shows: later changes come with library.updated (below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Changed elsewhere: shown, unless edits here are not saved yet (saving would replace it).
   useLive((message) => {
     if (message.type !== 'library.updated' || unsaved.current || filling.current) return
