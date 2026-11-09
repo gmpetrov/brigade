@@ -344,8 +344,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (me.error?.status === 401) {
       markSignedOut()
       keepShownFor(undefined)
-      // Brigade.app's sign-in in the browser comes back here once signed in.
-      router.replace(
+      // Brigade.app's sign-in in the browser comes back here once signed in. A full load, as on
+      // signing out: no draft kept in memory waits for whoever signs in next in this tab.
+      location.replace(
         location.pathname === DESKTOP_SIGN_IN
           ? `/sign-in?next=${encodeURIComponent(location.pathname + location.search)}`
           : '/sign-in',
@@ -450,7 +451,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     await clearBrowserData()
     setDocumentScope(undefined)
     keepShownFor(undefined)
-    router.replace('/sign-in')
+    // A full load, not the router: drafts and other state kept in memory (reply and code drafts,
+    // pending attachments) go with the page, so the next person to sign in here finds none.
+    location.replace('/sign-in')
   }
 
   const dashboard = {

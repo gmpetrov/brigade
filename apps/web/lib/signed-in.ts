@@ -42,7 +42,8 @@ export function markSignedOut() {
 /**
  * On signing out, leave nothing of the account in this browser: drafts, recent searches and
  * other local state, and this device's push subscription, so the next person on it sees none
- * of it and gets none of the previous member's notifications.
+ * of it and gets none of the previous member's notifications. What the page keeps in memory
+ * goes with it: every sign-out ends on a full page load (location, not the router).
  */
 export async function clearBrowserData() {
   try {
