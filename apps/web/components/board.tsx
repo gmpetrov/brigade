@@ -90,6 +90,28 @@ function saveBoard(key: string, next: SavedBoard) {
   }
 }
 
+/**
+ * What the Board showed last in this tab (filters, column, open sections), per workspace: Back
+ * to it opens it as it was left at once, rather than closed and then changing as it reads them.
+ * On iPhone, Safari's Back keeps a picture of the page until it is drawn about as full as it was.
+ */
+const shownLast = new Map<string, Record<string, unknown>>()
+
+/** A state of the Board kept in `shownLast` under `name`, for Back to find it. */
+function useShownLast<T>(key: string, name: string, initial: T): [T, (next: T) => void] {
+  const [value, setValue] = useState<T>(() =>
+    shownLast.get(key) && name in shownLast.get(key)! ? (shownLast.get(key)![name] as T) : initial,
+  )
+  const change = useCallback(
+    (next: T) => {
+      shownLast.set(key, { ...shownLast.get(key), [name]: next })
+      setValue(next)
+    },
+    [key, name],
+  )
+  return [value, change]
+}
+
 function writeAddress(filters: Filters) {
   const url = new URL(window.location.href)
   url.search = ''
@@ -104,7 +126,13 @@ function writeAddress(filters: Filters) {
  * in this browser: the Board opened with none in its address shows the last ones set.
  */
 function useFilters(key: string): [Filters, (next: Partial<Filters>) => void] {
-  const [filters, setFilters] = useState<Filters>({ project: '', lists: [], teammate: '' })
+  const [kept, keep] = useShownLast<Filters>(key, 'filters', {
+    project: '',
+    lists: [],
+    teammate: '',
+  })
+  const [filters, setFilters] = useState<Filters>(kept)
+  useEffect(() => keep(filters), [filters, keep])
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const fromAddress = ['project', 'list', 'teammate'].some((k) => params.has(k))
@@ -140,17 +168,17 @@ function useFilters(key: string): [Filters, (next: Partial<Filters>) => void] {
 
 /** The column shown on a phone, remembered in this browser. */
 function useColumn(key: string): [BoardColumn, (next: BoardColumn) => void] {
-  const [column, setColumn] = useState<BoardColumn>('needs_you')
+  const [column, setColumn] = useShownLast<BoardColumn>(key, 'column', 'needs_you')
   useEffect(() => {
     const saved = readBoard(key).column
     if (saved) setColumn(saved)
-  }, [key])
+  }, [key, setColumn])
   const change = useCallback(
     (next: BoardColumn) => {
       setColumn(next)
       saveBoard(key, { column: next })
     },
-    [key],
+    [key, setColumn],
   )
   return [column, change]
 }
@@ -781,10 +809,14 @@ export function BoardPage() {
   const key = boardKey(me.activeWorkspaceId ?? me.activeOrganizationId ?? '')
   const [filters, setFilters] = useFilters(key)
   const [column, setColumn] = useColumn(key)
-  const [allDone, setAllDone] = useState(false)
-  const [showClosed, setShowClosed] = useState(false)
+  const [allDone, setAllDone] = useShownLast(key, 'allDone', false)
+  const [showClosed, setShowClosed] = useShownLast(key, 'showClosed', false)
   // Unset until someone opens or closes it: open by default when it is short.
-  const [stoppedOpen, setStoppedOpen] = useState<boolean>()
+  const [stoppedOpen, setStoppedOpen] = useShownLast<boolean | undefined>(
+    key,
+    'stoppedOpen',
+    undefined,
+  )
 
   const view = useMemo(() => {
     const data = board.data

@@ -99,6 +99,7 @@ import {
 } from '@/components/ui/sidebar'
 import {
   api,
+  setAnswersScope,
   choicesWaiting,
   failuresWaiting,
   isAdmin,
@@ -116,6 +117,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { setLiveWorkspace } from '@/lib/live-socket'
+import { setThreadsShownScope } from '@/lib/use-thread-events'
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
@@ -239,6 +241,15 @@ export function TeammateAvatar({
   )
 }
 
+/**
+ * Whose pages and threads this tab keeps as they were last shown, for Back to show them at once:
+ * another person or workspace, or none (signed out), forgets them.
+ */
+function keepShownFor(scope: string | undefined) {
+  setAnswersScope(scope)
+  setThreadsShownScope(scope)
+}
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -252,9 +263,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // or in another, none is reused.
   const documentScope = me.data ? `${me.data.user.id}:${me.data.activeWorkspaceId}` : undefined
   useEffect(() => {
-    if (documentScope) setDocumentScope(documentScope)
+    if (!documentScope) return
+    setDocumentScope(documentScope)
+    // So are the pages' last answers (lib/api.ts's useApi).
+    keepShownFor(documentScope)
   }, [documentScope])
-  useEffect(() => () => setDocumentScope(undefined), [])
+  useEffect(
+    () => () => {
+      setDocumentScope(undefined)
+      keepShownFor(undefined)
+    },
+    [],
+  )
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
   const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const projects = useApi<ProjectSummary[]>('/projects', ['projects.updated'])
@@ -323,6 +343,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (me.error?.status === 401) {
       markSignedOut()
+      keepShownFor(undefined)
       // Brigade.app's sign-in in the browser comes back here once signed in.
       router.replace(
         location.pathname === DESKTOP_SIGN_IN
@@ -427,6 +448,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     await authClient.signOut()
     markSignedOut()
     setDocumentScope(undefined)
+    keepShownFor(undefined)
     router.replace('/sign-in')
   }
 
