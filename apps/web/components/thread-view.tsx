@@ -195,6 +195,7 @@ import { closeOpenMarkdown, useSmoothText } from '@/lib/stream-text'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
+import { choiceLabel } from '@/lib/choice-label'
 
 export type Item =
   | {
@@ -4566,10 +4567,13 @@ function AskView({
 }
 
 /**
- * Alternatives a teammate offers: a card each, with the design's picture when
- * the option is one (it opens beside the thread). Picking sends the choice as a
- * message; any message after it closes the offer. Home's Needs you shows it too,
- * out of its thread (`thread`: where to write instead).
+ * Alternatives a teammate offers, as a list: a row each, its mark (the label's own number,
+ * as the widget above shows it), name and description. With only words, a click on a row
+ * picks it. When an option is a design, every row gets a Pick button and a click on a row
+ * opens its design beside the thread instead, with its picture at the start of the row: one
+ * gesture per card, so a row never picks when the same-looking one above it opens. Picking
+ * sends the choice as a message; any message after it closes the offer. Home's Needs you
+ * shows it too, out of its thread (`thread`: where to write instead).
  */
 export function ChoicesCard({
   choices,
@@ -4592,6 +4596,7 @@ export function ChoicesCard({
 }) {
   const links = useFileLinks()
   const router = useRouter()
+  const card = useRef<HTMLDivElement>(null)
   // Beside its thread, a design opens in the panel; out of it (Today's Needs you), in the library.
   const openDesign = (path: string) =>
     links ? links.open({ path }) : router.push(`/app/library?design=${encodeURIComponent(path)}`)
@@ -4604,6 +4609,8 @@ export function ChoicesCard({
   const closed = dismissed || dismissing === 'done'
   const picked = reply === undefined ? undefined : pickedChoice(choices.options, reply)
   const open = reply === undefined && !closed && !!onChoose && !sending && !dismissing
+  // Answered with other words, or closed: no option is the one.
+  const passed = (reply !== undefined && !picked) || closed
 
   async function dismiss() {
     if (!onDismiss) return
@@ -4634,10 +4641,28 @@ export function ChoicesCard({
     }
   }
 
+  // Their own words go in the composer of the thread around the card.
+  function writeInstead() {
+    let around = card.current?.parentElement
+    while (around) {
+      const field = around.querySelector<HTMLElement>(
+        '[data-composer-frame] [contenteditable="true"], [data-composer-frame] textarea',
+      )
+      if (field) return field.focus()
+      around = around.parentElement
+    }
+  }
+
+  const mark = (text: React.ReactNode) => (
+    <span className="flex size-5 flex-none items-center justify-center rounded-md border bg-card font-mono text-[11px] text-muted-foreground">
+      {text}
+    </span>
+  )
+
   return (
-    <Card className="gap-4 border-primary/40 px-5 py-4">
-      <div className="flex items-start gap-2">
-        <LayoutTemplate aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
+    <Card ref={card} className="gap-3 border-primary/40 px-4 py-3.5">
+      <div className="flex items-center gap-2 px-1">
+        <LayoutTemplate aria-hidden className="size-4 flex-none text-primary" />
         <div className="min-w-0 flex-1 font-semibold">
           <Markdown text={choices.question} className="[&>p]:inline" />
         </div>
@@ -4647,12 +4672,28 @@ export function ChoicesCard({
             tone={picked ? 'success' : 'neutral'}
             label={picked ? 'Picked' : 'Replied'}
           />
+        ) : closed ? (
+          <StatusBadge status="dismissed" tone="neutral" label="Dismissed" />
         ) : (
-          closed && <StatusBadge status="dismissed" tone="neutral" label="Dismissed" />
+          (open || dismissing === 'sending') &&
+          onDismiss && (
+            <Hint label="Close it without picking: the thread stops, and the teammate is told">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="-my-1 h-7 flex-none px-2 text-xs text-muted-foreground"
+                disabled={!!dismissing}
+                onClick={() => void dismiss()}
+              >
+                {dismissing === 'sending' ? 'Dismissing…' : 'Dismiss'}
+              </Button>
+            </Hint>
+          )
         )}
       </div>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {choices.options.map((o) => {
+      <ul className="divide-y overflow-hidden rounded-lg border">
+        {choices.options.map((o, i) => {
+          const { mark: number, name } = choiceLabel(o.label, i)
           const offered = o.design?.replace(/\/+$/, '')
           const chosen = picked?.id === o.id || sending === o.id
           // Once picked, an option from an options folder is copied to the design, which it opens;
@@ -4666,96 +4707,124 @@ export function ChoicesCard({
             .map((d) => d && library.data?.find((f) => f.path === `${d}/${DESIGN_THUMBNAIL}`))
             .find(Boolean)
           const trashed = !!options && !!picked && !!library.data && !has(offered) && !has(made)
+          const picture = design && (
+            <span className="relative flex aspect-[16/10] w-24 flex-none items-center justify-center overflow-hidden rounded-md border bg-muted/50 sm:w-32">
+              {trashed ? (
+                <span className="text-xs text-muted-foreground">In the trash</span>
+              ) : thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
+                <img
+                  src={contentUrl(thumbnail.id)}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover object-top transition group-hover:scale-[1.02]"
+                />
+              ) : (
+                <LayoutTemplate aria-hidden className="size-6 text-muted-foreground/60" />
+              )}
+              {!trashed && (
+                <span className="absolute right-1.5 bottom-1.5 rounded-full bg-background/85 px-2 py-0.5 text-[11px] font-semibold opacity-0 backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                  Open
+                </span>
+              )}
+            </span>
+          )
+          const words = (
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="font-semibold">{name}</span>
+              {o.description && (
+                <span className="line-clamp-2 text-sm text-muted-foreground">{o.description}</span>
+              )}
+            </span>
+          )
+          const body = (
+            <>
+              {mark(number)}
+              {picture}
+              {words}
+            </>
+          )
+          const row = 'flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left'
+          // With designs, the row opens its design and Pick picks; with only words, the row picks.
+          const content =
+            designs && design && !trashed ? (
+              <button
+                type="button"
+                className={cn(row, 'group cursor-pointer hover:bg-muted/50')}
+                aria-label={`Open ${o.label}`}
+                onClick={() => openDesign(design)}
+              >
+                {body}
+              </button>
+            ) : !designs && open ? (
+              <button
+                type="button"
+                className={cn(row, 'group cursor-pointer hover:bg-muted/50')}
+                onClick={() => void choose(o)}
+              >
+                {body}
+                <ChevronRight
+                  aria-hidden
+                  className="size-4 flex-none text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
+                />
+              </button>
+            ) : (
+              <div className={row}>{body}</div>
+            )
           return (
             <li
               key={o.id}
               className={cn(
-                'flex flex-col overflow-hidden rounded-lg border bg-card',
-                chosen && 'border-primary ring-2 ring-primary/30',
-                picked && !chosen && 'opacity-60',
+                'flex items-center',
+                chosen && 'bg-primary/10',
+                ((picked && !chosen) || passed) && 'opacity-60',
               )}
             >
-              {design && trashed && (
-                <span className="flex aspect-[16/10] items-center justify-center border-b bg-muted/50 text-xs text-muted-foreground">
-                  In the trash
-                </span>
+              {content}
+              {designs && open && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mr-3 h-7 flex-none rounded-full px-3 text-xs"
+                  onClick={() => void choose(o)}
+                >
+                  Pick
+                </Button>
               )}
-              {design && !trashed && (
-                <Hint label={`Open ${design}`}>
-                  <button
-                    type="button"
-                    className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
-                    aria-label={`Open ${o.label}`}
-                    onClick={() => openDesign(design)}
-                  >
-                    {thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
-                      <img
-                        src={contentUrl(thumbnail.id)}
-                        alt=""
-                        loading="lazy"
-                        className="size-full object-cover object-top transition group-hover:scale-[1.02]"
-                      />
-                    ) : (
-                      <LayoutTemplate aria-hidden className="size-7 text-muted-foreground/60" />
-                    )}
-                    <span className="absolute right-2 bottom-2 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
-                      Open
-                    </span>
-                  </button>
-                </Hint>
+              {sending === o.id && !picked && (
+                <span className="mr-3 flex-none text-sm text-muted-foreground">Sending…</span>
               )}
-              <div className="flex flex-1 flex-col gap-1 px-3.5 py-3">
-                <span className="font-semibold">{o.label}</span>
-                {o.description && (
-                  <span className="text-sm text-muted-foreground">{o.description}</span>
-                )}
-                {open && (
-                  <div className="mt-auto pt-2">
-                    <Button size="sm" variant="outline" onClick={() => void choose(o)}>
-                      Pick this one
-                    </Button>
-                  </div>
-                )}
-                {sending === o.id && !picked && (
-                  <span className="mt-2 text-sm text-muted-foreground">Sending…</span>
-                )}
-              </div>
+              {picked?.id === o.id && (
+                <Check aria-label="Picked" className="mr-3 size-4 flex-none text-success" />
+              )}
             </li>
           )
         })}
-      </ul>
-      {(open || dismissing === 'sending') && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+        {open && (
+          <li>
             {thread ? (
-              <>
-                Or write what you want instead{' '}
-                <Link href={thread} className="underline underline-offset-4 hover:text-foreground">
-                  in the thread
-                </Link>
-                : mix two, or change one.
-              </>
-            ) : (
-              'Or write what you want instead: mix two, or change one.'
-            )}
-          </p>
-          {onDismiss && (
-            <Hint label="Close it without picking: the thread stops, and the teammate is told">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="flex-none text-muted-foreground"
-                disabled={!!dismissing}
-                onClick={() => void dismiss()}
+              <Link
+                href={thread}
+                className="group flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               >
-                {dismissing === 'sending' ? 'Dismissing…' : 'Dismiss'}
-              </Button>
-            </Hint>
-          )}
-        </div>
-      )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+                {mark(<Pencil aria-hidden className="size-3" />)}
+                <span className="flex-1">Something else… in the thread</span>
+                <ChevronRight aria-hidden className="size-4 flex-none" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                onClick={writeInstead}
+              >
+                {mark(<Pencil aria-hidden className="size-3" />)}
+                <span className="flex-1">Something else…</span>
+              </button>
+            )}
+          </li>
+        )}
+      </ul>
+      {error && <p className="px-1 text-sm text-destructive">{error}</p>}
     </Card>
   )
 }
