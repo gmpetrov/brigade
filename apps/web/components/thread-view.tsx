@@ -4661,8 +4661,8 @@ export function ChoicesCard({
 
   return (
     <Card ref={card} className="gap-3 border-primary/40 px-4 py-3.5">
-      <div className="flex items-center gap-2 px-1">
-        <LayoutTemplate aria-hidden className="size-4 flex-none text-primary" />
+      <div className="flex items-start gap-2 px-1">
+        <LayoutTemplate aria-hidden className="mt-1 size-4 flex-none text-primary" />
         <div className="min-w-0 flex-1 font-semibold">
           <Markdown text={choices.question} className="[&>p]:inline" />
         </div>
@@ -4681,7 +4681,7 @@ export function ChoicesCard({
               <Button
                 size="sm"
                 variant="ghost"
-                className="-my-1 h-7 flex-none px-2 text-xs text-muted-foreground"
+                className="-my-0.5 h-7 flex-none px-2 text-xs text-muted-foreground"
                 disabled={!!dismissing}
                 onClick={() => void dismiss()}
               >
@@ -4691,7 +4691,7 @@ export function ChoicesCard({
           )
         )}
       </div>
-      <ul className="divide-y overflow-hidden rounded-lg border">
+      <ul className="@container divide-y overflow-hidden rounded-lg border">
         {choices.options.map((o, i) => {
           const { mark: number, name } = choiceLabel(o.label, i)
           const offered = o.design?.replace(/\/+$/, '')
@@ -4708,7 +4708,7 @@ export function ChoicesCard({
             .find(Boolean)
           const trashed = !!options && !!picked && !!library.data && !has(offered) && !has(made)
           const picture = design && (
-            <span className="relative flex aspect-[16/10] w-24 flex-none items-center justify-center overflow-hidden rounded-md border bg-muted/50 sm:w-32">
+            <span className="relative flex aspect-[16/10] w-24 flex-none items-center justify-center overflow-hidden rounded-md border bg-muted/50 @md:w-32">
               {trashed ? (
                 <span className="text-xs text-muted-foreground">In the trash</span>
               ) : thumbnail ? (
@@ -4746,36 +4746,38 @@ export function ChoicesCard({
           )
           const row = 'flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left'
           // With designs, the row opens its design and Pick picks; with only words, the row picks.
-          const content =
-            designs && design && !trashed ? (
-              <button
-                type="button"
-                className={cn(row, 'group cursor-pointer hover:bg-muted/50')}
-                aria-label={`Open ${o.label}`}
-                onClick={() => openDesign(design)}
-              >
-                {body}
-              </button>
-            ) : !designs && open ? (
-              <button
-                type="button"
-                className={cn(row, 'group cursor-pointer hover:bg-muted/50')}
-                onClick={() => void choose(o)}
-              >
-                {body}
-                <ChevronRight
-                  aria-hidden
-                  className="size-4 flex-none text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
-                />
-              </button>
-            ) : (
-              <div className={row}>{body}</div>
-            )
+          const opens = designs && !!design && !trashed
+          const picks = !designs && open
+          const content = opens ? (
+            <button
+              type="button"
+              className={cn(row, 'group cursor-pointer')}
+              aria-label={`Open ${o.label}`}
+              onClick={() => openDesign(design)}
+            >
+              {body}
+            </button>
+          ) : picks ? (
+            <button
+              type="button"
+              className={cn(row, 'group cursor-pointer')}
+              onClick={() => void choose(o)}
+            >
+              {body}
+              <ChevronRight
+                aria-hidden
+                className="size-4 flex-none text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            </button>
+          ) : (
+            <div className={row}>{body}</div>
+          )
           return (
             <li
               key={o.id}
               className={cn(
                 'flex items-center',
+                (opens || picks) && 'hover:bg-muted',
                 chosen && 'bg-primary/10',
                 ((picked && !chosen) || passed) && 'opacity-60',
               )}
@@ -4805,7 +4807,7 @@ export function ChoicesCard({
             {thread ? (
               <Link
                 href={thread}
-                className="group flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                className="group flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 {mark(<Pencil aria-hidden className="size-3" />)}
                 <span className="flex-1">Something else… in the thread</span>
@@ -4814,7 +4816,7 @@ export function ChoicesCard({
             ) : (
               <button
                 type="button"
-                className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-muted-foreground hover:bg-muted hover:text-foreground"
                 onClick={writeInstead}
               >
                 {mark(<Pencil aria-hidden className="size-3" />)}
