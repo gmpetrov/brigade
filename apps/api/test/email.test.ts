@@ -1221,7 +1221,7 @@ describe('a rule changed in place', { skip }, () => {
 describe('a refused change undone', { skip }, () => {
   test('saves of one rule run one at a time: overlapping refused saves leave the last good rule', async () => {
     const db = scoped(a)
-    const { updateTrigger, SAVE_MS } = await import('../src/routes/triggers.js')
+    const { updateTrigger, setTriggerProject, SAVE_MS } = await import('../src/routes/triggers.js')
     const { SubscribeError } = await import('../src/subscriptions/index.js')
     const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
     const rule = await prisma.trigger.create({
@@ -1236,14 +1236,18 @@ describe('a refused change undone', { skip }, () => {
       },
     })
     const read = () => prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
-    const save = (label: string, sync: () => Promise<unknown>) =>
+    const save = (
+      label: string,
+      sync: () => Promise<unknown>,
+      times: { holdMs?: number; syncMs?: number } = {},
+    ) =>
       updateTrigger(
         db,
         a,
         rule.id,
         { teammateId: riley.id, label, options: { from: `@${label.toLowerCase()}.test` } },
         members[0]!,
-        sync,
+        { sync, ...times },
       ).then(
         () => 200,
         (error: { status?: number }) => error.status ?? 500,
@@ -1293,6 +1297,25 @@ describe('a refused change undone', { skip }, () => {
       })
       assert.equal(await save('W', async () => undefined), 200)
       assert.equal((await read()).savingUntil, null)
+
+      // A vendor that never answers counts as refusing: undone while the save still holds it.
+      assert.equal(await save('V', () => new Promise(() => {}), { syncMs: 50 }), 502)
+      const timedOut = await read()
+      assert.deepEqual([timedOut.label, timedOut.savingUntil], ['W', null])
+
+      // A save whose hold expired while its vendor thought: a project change took the rule, and
+      // the save's late rollback leaves it.
+      const project = await prisma.project.findFirstOrThrow({ where: { id: projectId } })
+      const late = gate()
+      const slow = save('S', late.sync, { holdMs: 100 })
+      for (let i = 0; i < 50 && (await read()).label !== 'S'; i++)
+        await new Promise((r) => setTimeout(r, 10))
+      await assert.rejects(setTriggerProject(db, rule.id, project.id), { status: 409 })
+      await new Promise((r) => setTimeout(r, 150))
+      await setTriggerProject(db, rule.id, project.id)
+      late.answer(true)
+      assert.equal(await slow, 400)
+      assert.equal((await read()).projectId, project.id)
     } finally {
       await prisma.trigger.deleteMany({ where: { id: rule.id } })
     }

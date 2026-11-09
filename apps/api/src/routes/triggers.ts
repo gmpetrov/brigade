@@ -245,8 +245,10 @@ export async function createTrigger(
   }
 }
 
-/** How long a save holds its trigger, at most: well past its vendor's answer. */
+/** How long a save holds its trigger, at most. */
 export const SAVE_MS = 2 * 60_000
+/** How long its vendor has to answer: well within the hold, so a refusal is undone while held. */
+export const SYNC_MS = 60_000
 
 /**
  * What a trigger does (its teammate, label, options, project, instructions), changed in place,
@@ -262,11 +264,17 @@ export async function updateTrigger(
   input: ReturnType<typeof UpdateTrigger.parse>,
   /** The member saving it, for the audit log. */
   memberId: string,
-  sync: (scope: Scope, connectionId: string) => Promise<unknown> = syncConnection,
+  /** Tests': the vendor, and shorter times. */
+  test: {
+    sync?: (scope: Scope, connectionId: string) => Promise<unknown>
+    holdMs?: number
+    syncMs?: number
+  } = {},
 ) {
+  const { sync = syncConnection, holdMs = SAVE_MS, syncMs = SYNC_MS } = test
   await notThePlaybooks(db, id)
   const now = new Date()
-  const claim = new Date(now.getTime() + SAVE_MS)
+  const claim = new Date(now.getTime() + holdMs)
   const { count } = await db.trigger.updateMany({
     where: { id, OR: [{ savingUntil: null }, { savingUntil: { lt: now } }] },
     data: { savingUntil: claim },
@@ -276,17 +284,19 @@ export async function updateTrigger(
       throw new HTTPException(404, { message: 'Trigger not found' })
     throw new HTTPException(409, { message: 'This rule is being saved. Try again in a moment.' })
   }
-  const held = { id, savingUntil: claim }
+  // Every write is fenced by the hold, while it lasts: once it expired, another writer may have
+  // taken the trigger (a save, a project change), and what it wrote stands.
+  const held = () => ({ id, savingUntil: { equals: claim, gt: new Date() } })
   try {
-    const before = await db.trigger.findFirst({ where: held })
+    const before = await db.trigger.findFirst({ where: held() })
     if (!before) throw new HTTPException(404, { message: 'Trigger not found' })
     const { teammate, options, projectId } = await checkedTrigger(db, {
       ...input,
       connectionId: before.connectionId,
       event: before.event,
     })
-    await db.trigger.updateMany({
-      where: held,
+    const wrote = await db.trigger.updateMany({
+      where: held(),
       data: triggerFields({
         teammateId: teammate.id,
         label: input.label,
@@ -295,17 +305,27 @@ export async function updateTrigger(
         instructions: input.instructions || null,
       }),
     })
+    if (!wrote.count)
+      throw new HTTPException(409, { message: 'This rule was changed meanwhile. Try again.' })
     // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
+    // A vendor that does not answer in time counts as refusing, so it is undone while held.
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      await sync(scope, before.connectionId)
+      await Promise.race([
+        sync(scope, before.connectionId),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('no answer in time')), syncMs)
+        }),
+      ])
     } catch (error) {
-      // Only while still held: past SAVE_MS, a later save owns it and its own outcome stands.
-      await db.trigger.updateMany({ where: held, data: triggerFields(before) })
+      await db.trigger.updateMany({ where: held(), data: triggerFields(before) })
       await resync(scope, [before.connectionId])
       if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
       throw new HTTPException(502, {
         message: `It could not be subscribed to: ${error instanceof Error ? error.message : error}`,
       })
+    } finally {
+      clearTimeout(timer)
     }
     await audit({
       ...scope,
@@ -315,8 +335,24 @@ export async function updateTrigger(
       data: { teammateId: teammate.id, label: input.label, options, projectId },
     })
   } finally {
-    await db.trigger.updateMany({ where: held, data: { savingUntil: null } })
+    await db.trigger.updateMany({ where: { id, savingUntil: claim }, data: { savingUntil: null } })
   }
+}
+
+/**
+ * The project a trigger's threads start in. Not while a save holds it (409), as that save's
+ * rollback would put the old one back; an expired hold is cleared, so a late rollback never does.
+ */
+export async function setTriggerProject(db: ScopedDb, id: string, projectId: string | null) {
+  await notThePlaybooks(db, id)
+  const { count } = await db.trigger.updateMany({
+    where: { id, OR: [{ savingUntil: null }, { savingUntil: { lt: new Date() } }] },
+    data: { projectId, savingUntil: null },
+  })
+  if (count) return
+  if (await db.trigger.count({ where: { id } }))
+    throw new HTTPException(409, { message: 'This rule is being saved. Try again in a moment.' })
+  throw new HTTPException(404, { message: 'Trigger not found' })
 }
 
 export const triggers = new Hono<AppEnv>()
@@ -377,23 +413,7 @@ export const triggers = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     const { projectId } = await parseBody(c.req.raw, SetProject)
     const next = (await usableProject(db, projectId)) ?? null
-    await notThePlaybooks(db, c.req.param('id'))
-    // Not while a save holds it: its rollback would put the old project back.
-    const now = new Date()
-    const { count } = await db.trigger.updateMany({
-      where: {
-        id: c.req.param('id'),
-        OR: [{ savingUntil: null }, { savingUntil: { lt: now } }],
-      },
-      data: { projectId: next },
-    })
-    if (!count) {
-      if (await db.trigger.count({ where: { id: c.req.param('id') } }))
-        throw new HTTPException(409, {
-          message: 'This rule is being saved. Try again in a moment.',
-        })
-      throw new HTTPException(404, { message: 'Trigger not found' })
-    }
+    await setTriggerProject(db, c.req.param('id'), next)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
