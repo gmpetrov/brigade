@@ -154,6 +154,8 @@ export function useThreadEvents(
         JSON.stringify({ type: 'subscribe', sessionId, afterSeq: contiguous(), tail: true }),
       )
     }
+    // Kept on leaving only for the person and workspace it opened for.
+    const scope = shownScope
     // Shown as it was left until its latest page is in, which replaces it.
     const kept = shownLast.get(sessionId)
     if (kept) openOn(kept.firstSeq, kept.lastSeq, kept.events)
@@ -240,6 +242,7 @@ export function useThreadEvents(
       const end = pageEnd.current
       if (
         shownScope === undefined ||
+        shownScope !== scope ||
         end === undefined ||
         gapsRef.current.length ||
         (end >= first.current && !bySeq.current.has(end))

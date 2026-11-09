@@ -285,6 +285,8 @@ const answers = new Map<string, unknown>()
 /** Paths kept, the least recently used going first. */
 const ANSWERS_KEPT = 100
 let answersScope: string | undefined
+/** Counts scope changes: an answer asked for under an earlier one is not kept. */
+let answersGeneration = 0
 
 function keepAnswer(path: string, data: unknown) {
   answers.delete(path)
@@ -302,6 +304,7 @@ export const keptAnswer = <T>(path: string) => answers.get(path) as T | undefine
 export function setAnswersScope(scope: string | undefined) {
   if (scope === answersScope) return
   answersScope = scope
+  answersGeneration++
   answers.clear()
 }
 
@@ -334,8 +337,11 @@ export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['typ
   const load = useCallback(
     async (opening: boolean) => {
       if (!path) return
+      // Asked for one person in one workspace: kept only if it is still theirs once it is in.
+      const generation = answersGeneration
       try {
         const value = await ((opening ? preloaded<T>(path) : undefined) ?? api<T>(path))
+        if (generation !== answersGeneration) return
         if (answersScope !== undefined) keepAnswer(path, value)
         if (pathRef.current === path) setState(value)
         setError(undefined)
