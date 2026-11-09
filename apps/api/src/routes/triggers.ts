@@ -80,6 +80,47 @@ async function notThePlaybooks(db: ScopedDb, id: string) {
     })
 }
 
+type TriggerFields = {
+  teammateId: string
+  label: string
+  options: unknown
+  projectId: string | null
+  instructions: string | null
+}
+
+const triggerFields = (row: TriggerFields) => ({
+  teammateId: row.teammateId,
+  label: row.label,
+  options: row.options as never,
+  projectId: row.projectId,
+  instructions: row.instructions,
+})
+
+/**
+ * A change the vendor refused, undone: back to what the trigger was, only while it still holds
+ * what that change wrote. A save made meanwhile, which may have succeeded, is never overwritten.
+ * Returns whether it was undone.
+ */
+export async function rollBackTrigger(
+  db: ScopedDb,
+  id: string,
+  wrote: TriggerFields,
+  before: TriggerFields,
+) {
+  const { count } = await db.trigger.updateMany({
+    where: {
+      id,
+      teammateId: wrote.teammateId,
+      label: wrote.label,
+      options: { equals: wrote.options as never },
+      projectId: wrote.projectId,
+      instructions: wrote.instructions,
+    },
+    data: triggerFields(before),
+  })
+  return count > 0
+}
+
 /** Re-sync after triggers went away; a vendor error here only leaves a stale subscription. */
 export async function resync(scope: Scope, connectionIds: Iterable<string>) {
   for (const id of new Set(connectionIds))
@@ -319,34 +360,19 @@ export const triggers = new Hono<AppEnv>()
       connectionId: before.connectionId,
       event: before.event,
     })
-    const fields = (row: {
-      teammateId: string
-      label: string
-      options: unknown
-      projectId: string | null
-      instructions: string | null
-    }) => ({
-      teammateId: row.teammateId,
-      label: row.label,
-      options: row.options as never,
-      projectId: row.projectId,
-      instructions: row.instructions,
-    })
-    await db.trigger.updateMany({
-      where: { id: before.id },
-      data: fields({
-        teammateId: teammate.id,
-        label: input.label,
-        options,
-        projectId,
-        instructions: input.instructions || null,
-      }),
-    })
+    const wrote = {
+      teammateId: teammate.id,
+      label: input.label,
+      options,
+      projectId,
+      instructions: input.instructions || null,
+    }
+    await db.trigger.updateMany({ where: { id: before.id }, data: triggerFields(wrote) })
     // The vendor follows the new options now, so a refusal is seen here and the old ones kept.
     try {
       await syncConnection(scope, before.connectionId)
     } catch (error) {
-      await db.trigger.updateMany({ where: { id: before.id }, data: fields(before) })
+      await rollBackTrigger(db, before.id, wrote, before)
       await resync(scope, [before.connectionId])
       if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
       throw new HTTPException(502, {

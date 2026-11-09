@@ -1218,6 +1218,61 @@ describe('a rule changed in place', { skip }, () => {
   })
 })
 
+describe('a refused change undone', { skip }, () => {
+  test('a save the vendor refused goes back to the old rule, never over a save made meanwhile', async () => {
+    const db = scoped(a)
+    const { rollBackTrigger } = await import('../src/routes/triggers.js')
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const old = {
+      teammateId: riley.id,
+      label: 'Old',
+      options: { from: '@old.test' },
+      projectId: null,
+      instructions: 'Old instructions',
+    }
+    const rule = await prisma.trigger.create({
+      data: {
+        ...a,
+        ...old,
+        connectionId: address.connectionId!,
+        event: 'email_received',
+        createdByMemberId: members[0]!,
+      },
+    })
+    const saveA = { ...old, label: 'A', options: { from: '@a.test' }, instructions: null }
+    const saveB = { ...old, label: 'B', options: { from: '@b.test' }, instructions: 'B' }
+    const read = () => prisma.trigger.findUniqueOrThrow({ where: { id: rule.id } })
+    try {
+      // A writes, B writes and succeeds, then A is refused: B stays.
+      await prisma.trigger.update({ where: { id: rule.id }, data: saveA })
+      await prisma.trigger.update({ where: { id: rule.id }, data: saveB })
+      assert.equal(await rollBackTrigger(db, rule.id, saveA, old), false)
+      const kept = await read()
+      assert.deepEqual([kept.label, kept.options, kept.instructions], ['B', saveB.options, 'B'])
+
+      // Only the options differ from what A wrote: still a newer save, still kept.
+      await prisma.trigger.update({ where: { id: rule.id }, data: saveA })
+      await prisma.trigger.update({
+        where: { id: rule.id },
+        data: { options: { from: '@c.test' } },
+      })
+      assert.equal(await rollBackTrigger(db, rule.id, saveA, old), false)
+      assert.deepEqual((await read()).options, { from: '@c.test' })
+
+      // Nothing meanwhile: A is undone.
+      await prisma.trigger.update({ where: { id: rule.id }, data: saveA })
+      assert.equal(await rollBackTrigger(db, rule.id, saveA, old), true)
+      const undone = await read()
+      assert.deepEqual(
+        [undone.label, undone.options, undone.instructions],
+        ['Old', old.options, 'Old instructions'],
+      )
+    } finally {
+      await prisma.trigger.deleteMany({ where: { id: rule.id } })
+    }
+  })
+})
+
 describe('races and boundaries', { skip }, () => {
   test('email_wait must return the email it consumes', async () => {
     const db = scoped(a)
