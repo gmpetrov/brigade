@@ -257,28 +257,13 @@ async function playList(stage: Stage, story: (typeof STORIES)['list']) {
     await waitFor(() => byText('[role="dialog"] button', `Hand to ${story.teammate}`), signal),
   )
 
-  // Its thread: Riley takes it on. Back in the list, the line shows the thread at work.
+  // Its thread: Riley works there, so the walkthrough stays to watch, until the pull request
+  // waits on a person. Merged, Riley says the line is ticked; then the list shows it.
   await waitFor(() => location.pathname.startsWith('/app/threads/'), signal)
-  await waitFor(() => byText('p', 'Done when'), signal)
-  await sleep(1500, signal)
-  await press(stage, await waitFor(() => listLink(story.list), signal))
-  const chip = () =>
-    listLine(story.ask)?.querySelector<HTMLElement>('[data-list-item] [role="link"]')
-  await waitFor(chip, signal)
-  // The pull request on the line: it waits for a person to merge it.
   const merge = story.presses[0]
-  const number = merge.replace('Merge ', '')
-  await waitFor(
-    () => listLine(story.ask)?.querySelector('[data-list-item]')?.textContent?.includes(number),
-    signal,
-    60_000,
-  )
+  const button = await waitFor(() => byText('button', merge), signal, 60_000)
   await sleep(1500, signal)
-  await press(stage, chip)
-
-  // Merged from its thread; back in the list, the line is ticked, credited to Riley.
-  await sleep(800, signal)
-  await press(stage, await waitFor(() => byText('button', merge), signal, 30_000))
+  await press(stage, () => (button.isConnected ? button : byText('button', merge)))
   await waitFor(() => byText('p', story.done), signal, 30_000)
   await sleep(1200, signal)
   await press(stage, await waitFor(() => listLink(story.list), signal))
