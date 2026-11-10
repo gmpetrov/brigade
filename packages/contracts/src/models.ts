@@ -25,9 +25,15 @@ export const HARNESS_MODELS = {
       effort: 'medium',
     },
     {
+      id: 'claude-fable-5-2',
+      label: 'Fable 5.2',
+      description: 'Anthropic’s most capable model, for the hardest long tasks.',
+      effort: 'high',
+    },
+    {
       id: 'claude-fable-5-1',
       label: 'Fable 5.1',
-      description: 'Anthropic’s most capable model, for the hardest long tasks.',
+      description: 'Previous Fable model.',
       effort: 'high',
     },
     {
