@@ -7,6 +7,7 @@
 import { Download, FileText } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
+import { RenewingAudio, RenewingVideo } from '@/components/renewing-media'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { API_URL } from '@/lib/config'
@@ -36,14 +37,19 @@ function Anchor({ href, title, children }: ComponentProps<'a'>) {
   if (block?.kind === 'video')
     return (
       <span className="my-3 block">
-        <video src={href} controls preload="metadata" className="max-h-[70vh] w-full rounded-lg" />
+        <RenewingVideo
+          src={href}
+          controls
+          preload="metadata"
+          className="max-h-[70vh] w-full rounded-lg"
+        />
         {block.caption && <Caption>{block.caption}</Caption>}
       </span>
     )
   if (block?.kind === 'audio')
     return (
       <span className="my-3 block">
-        <audio src={href} controls preload="metadata" className="w-full" />
+        <RenewingAudio src={href} controls preload="metadata" className="w-full" />
         {block.caption && <Caption>{block.caption}</Caption>}
       </span>
     )
