@@ -40,7 +40,39 @@ function random(seed: number) {
   }
 }
 
-/** The pebble's look, all of it drawn from the seed: colours, the three outlines it
+/**
+ * The brand's teammate colours, those of the og-image (Projects/Brigade/brand/og-image.png),
+ * as OKLCH [hue, lightness, chroma], by hue. They are the waypoints of the curve every
+ * pebble's colour sits on, not a list to pick from: any hue has a colour, as light and as
+ * vivid as the brand colours either side of it (a bright yellow, a deep purple, a soft pink).
+ */
+const BRAND: readonly (readonly [number, number, number])[] = [
+  [21, 0.801, 0.079], // pink #edaaa8
+  [50, 0.741, 0.17], // orange #fd8637
+  [90, 0.871, 0.14], // yellow #f8d05c
+  [155, 0.781, 0.161], // green #4ed589
+  [250, 0.721, 0.13], // blue #60aaf3
+  [290, 0.621, 0.22], // purple #8a63fe
+]
+
+/** A pebble's colour for a hue (0 to 360), on the brand's curve: lightness and chroma
+ * go in a straight line from one brand colour to the next, around the circle. */
+export function pebbleColor(hue: number) {
+  const h = ((hue % 360) + 360) % 360
+  const next = BRAND.findIndex(([at]) => at > h)
+  const [h1, l1, c1] = BRAND.at(next === -1 ? -1 : next - 1)!
+  const [h2, l2, c2] = BRAND[next === -1 ? 0 : next]!
+  const span = (h2 - h1 + 360) % 360
+  const t = ((h - h1 + 360) % 360) / span
+  const l = l1 + t * (l2 - l1)
+  const c = c1 + t * (c2 - c1)
+  return `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h})`
+}
+
+/** The eyes' ink, the og-image's: one for every pebble, dark on every colour. */
+const INK = '#1b1230'
+
+/** The pebble's look, all of it drawn from the seed: its colour, the three outlines it
  * morphs between, its eyes and when it blinks and glances. */
 export function pebbleStyle(seed: string): CSSProperties {
   const r = random(hash(seed))
@@ -53,13 +85,15 @@ export function pebbleStyle(seed: string): CSSProperties {
     const [a, b, c, d] = [whole(30, 70), whole(30, 70), whole(30, 70), whole(30, 70)]
     return `${a}% ${100 - a}% ${b}% ${100 - b}% / ${c}% ${d}% ${100 - d}% ${100 - c}%`
   }
-  const hue = whole(0, 359)
-  const hue2 = (hue + (r() < 0.5 ? -1 : 1) * whole(30, 80) + 360) % 360
-  const sat = whole(75, 95)
+  const color = pebbleColor(whole(0, 359))
+  // Draws the gradient's second hue and saturation used to take, so each teammate keeps
+  // the outline, eyes and rhythm it had.
+  for (let i = 0; i < 3; i++) r()
   return {
-    '--pebble-c1': `hsl(${hue} ${sat}% 68%)`,
-    '--pebble-c2': `hsl(${hue2} ${sat}% 60%)`,
-    '--pebble-eye': `hsl(${hue} 55% 11%)`,
+    // Flat, as on the og-image: one colour, no gradient.
+    '--pebble-c1': color,
+    '--pebble-c2': color,
+    '--pebble-eye': INK,
     '--pebble-angle': `${whole(0, 359)}deg`,
     '--pebble-r1': outline(),
     '--pebble-r2': outline(),
