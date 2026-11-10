@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { pebbleColor, pebbleStyle } from '../components/pebble-avatar'
+import { pebbleColor, pebbleOutline, pebbleStyle } from '../components/pebble-avatar'
 
 const parts = (color: string) => {
   const [, l, c, h] = color.match(/^oklch\(([\d.]+) ([\d.]+) ([\d.]+)\)$/)!
@@ -34,4 +34,35 @@ test('a pebble is flat, with the brand ink for eyes, and the same for the same s
   assert.equal(style['--pebble-c1'], style['--pebble-c2'])
   assert.equal(style['--pebble-eye'], '#1b1230')
   assert.deepEqual(pebbleStyle('teammate-1'), style)
+})
+
+test('a shaped pebble morphs between three outlines of as many points, inside its box', () => {
+  for (const [lobes, depth] of [
+    [3, 0.17],
+    [5, 0.08],
+    [6, 0.12],
+  ] as const) {
+    const points = pebbleOutline(lobes, depth, 0.2, 1)
+      .slice('polygon('.length, -1)
+      .split(',')
+      .map((p) => p.trim().split(' ').map(parseFloat))
+    assert.equal(points.length, 48)
+    for (const [x, y] of points) {
+      assert.ok(x! >= 0 && x! <= 100 && y! >= 0 && y! <= 100, `${x} ${y}`)
+    }
+  }
+})
+
+test('about one seed in five gives a plain pebble, the others three morphing outlines', () => {
+  let plain = 0
+  for (let i = 0; i < 200; i++) {
+    const style = pebbleStyle(`teammate-${i}`) as Record<string, string>
+    if (!style['--pebble-p1']) {
+      plain++
+      continue
+    }
+    assert.ok(style['--pebble-p2'] && style['--pebble-p3'])
+    assert.notEqual(style['--pebble-p1'], style['--pebble-p2'])
+  }
+  assert.ok(plain > 20 && plain < 70, String(plain))
 })
