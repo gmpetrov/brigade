@@ -587,6 +587,13 @@
     border-radius: var(--pebble-r1);
     animation: pebble-morph var(--pebble-morph) ease-in-out infinite var(--pebble-morph-at);
   }
+  /* A pebble with lobes (a rounded triangle, a star, a flower…): clipped to its outline,
+   * which morphs between three like the plain pebble's corners do. */
+  .pebble-body[data-shaped] {
+    border-radius: 0;
+    clip-path: var(--pebble-p1);
+    animation-name: pebble-shape;
+  }
   .pebble-face {
     position: absolute;
     inset: 0;
@@ -644,6 +651,18 @@
     }
     66% {
       border-radius: var(--pebble-r3);
+    }
+  }
+  @keyframes pebble-shape {
+    0%,
+    100% {
+      clip-path: var(--pebble-p1);
+    }
+    33% {
+      clip-path: var(--pebble-p2);
+    }
+    66% {
+      clip-path: var(--pebble-p3);
     }
   }
   @keyframes pebble-look {

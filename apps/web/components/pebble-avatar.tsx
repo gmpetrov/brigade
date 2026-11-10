@@ -72,9 +72,49 @@ export function pebbleColor(hue: number) {
 /** The eyes' ink, the og-image's: one for every pebble, dark on every colour. */
 const INK = '#1b1230'
 
-/** The pebble's look, all of it drawn from the seed: its colour, the three outlines it
- * morphs between, its eyes and when it blinks and glances. */
+/** How many points draw a shaped pebble's outline: enough for its lobes to stay round at
+ * 64px. Every outline has as many, so the browser can morph one into the other. */
+const POINTS = 48
+
+/**
+ * A shaped pebble's outline, as a `clip-path` polygon in % of its box: a circle pushed out
+ * into `lobes` soft lobes (radius 1 + depth·cos(lobes·θ)): a rounded triangle with 3, a
+ * clover with 4, a star with 5, a flower with 6. `tilt` turns it from its upright pose,
+ * where a lobe points up; `phase` sets a slight wobble, so its three outlines differ and
+ * it still morphs like a pebble.
+ */
+export function pebbleOutline(lobes: number, depth: number, tilt: number, phase: number) {
+  const wobble = (a: number) =>
+    0.035 * Math.sin(2 * a + phase) + 0.025 * Math.sin(3 * a - 2 * phase)
+  // The widest it can get fills the box, and no wider.
+  const scale = 50 / (1 + depth + 0.06)
+  const up = -Math.PI / 2 + tilt
+  const points: string[] = []
+  for (let k = 0; k < POINTS; k++) {
+    const a = (k / POINTS) * 2 * Math.PI
+    const r = scale * (1 + depth * Math.cos(lobes * (a - up)) + wobble(a))
+    points.push(`${(50 + r * Math.cos(a)).toFixed(1)}% ${(50 + r * Math.sin(a)).toFixed(1)}%`)
+  }
+  return `polygon(${points.join(',')})`
+}
+
+/** A pebble's look is worked out once per seed: a long thread draws the same few
+ * teammates' pebbles hundreds of times. */
+const looks = new Map<string, CSSProperties>()
+
+/** The pebble's look, all of it drawn from the seed: its colour, its shape (a plain
+ * pebble, or one with 3 to 6 lobes) and the three outlines it morphs between, its eyes
+ * and when it blinks and glances. */
 export function pebbleStyle(seed: string): CSSProperties {
+  let look = looks.get(seed)
+  if (!look) {
+    look = drawLook(seed)
+    looks.set(seed, look)
+  }
+  return look
+}
+
+function drawLook(seed: string): CSSProperties {
   const r = random(hash(seed))
   const between = (min: number, max: number) => min + r() * (max - min)
   const whole = (min: number, max: number) => Math.round(between(min, max))
@@ -89,7 +129,7 @@ export function pebbleStyle(seed: string): CSSProperties {
   // Draws the gradient's second hue and saturation used to take, so each teammate keeps
   // the outline, eyes and rhythm it had.
   for (let i = 0; i < 3; i++) r()
-  return {
+  const look = {
     // Flat, as on the og-image: one colour, no gradient.
     '--pebble-c1': color,
     '--pebble-c2': color,
@@ -109,7 +149,24 @@ export function pebbleStyle(seed: string): CSSProperties {
     '--pebble-look-at': secs(-between(0, 9)),
     '--pebble-blink': secs(between(4, 7)),
     '--pebble-blink-at': secs(-between(0, 7)),
-  } as CSSProperties
+  } as Record<string, string>
+  // Its shape, drawn after the rest so each teammate keeps its colour, eyes and rhythm:
+  // as often a plain pebble as each lobed shape, from a rounded triangle to a flower.
+  const lobes = [0, 3, 4, 5, 6][Math.min(4, Math.floor(r() * 5))]!
+  const depth = between(0.08, 0.17)
+  const tilt = between(-0.3, 0.3) * (Math.PI / Math.max(lobes, 1))
+  const phase = between(0, 2 * Math.PI)
+  if (lobes) {
+    for (const [i, shift] of [0, 2.1, 4.2].entries()) {
+      look[`--pebble-p${i + 1}`] = pebbleOutline(lobes, depth, tilt, phase + shift)
+    }
+  }
+  return look as CSSProperties
+}
+
+/** Whether the seed's pebble has lobes (pebbleStyle gave it outlines to clip it to). */
+function shaped(look: CSSProperties) {
+  return '--pebble-p1' in look
 }
 
 /** A teammate's name in its pebble's colour (`.teammate-name` sets how light, for the
@@ -248,6 +305,7 @@ export function PebbleAvatar({
   expression?: PebbleExpression
 }) {
   const expressive = useExpression(expression)
+  const look = pebbleStyle(seed)
   const ref = useCallback(
     (node: HTMLElement | null) => {
       expressive.current = node
@@ -264,9 +322,13 @@ export function PebbleAvatar({
       aria-label={title}
       title={title}
       className={cn('pebble relative flex size-8 shrink-0', className)}
-      style={tone === 'neutral' ? { ...pebbleStyle(seed), ...NEUTRAL } : pebbleStyle(seed)}
+      style={tone === 'neutral' ? { ...look, ...NEUTRAL } : look}
     >
-      <span className="pebble-body" />
+      {/* The Working pebble stays a plain pebble: a status, not someone. */}
+      <span
+        className="pebble-body"
+        data-shaped={shaped(look) && tone !== 'neutral' ? '' : undefined}
+      />
       <span className="pebble-face">
         {[0, 1].map((i) => (
           <span key={i} className="pebble-eye">
