@@ -29,6 +29,7 @@ import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markd
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { MediaPreview } from '@/components/attachments'
+import { useRenewingMedia } from '@/hooks/use-renewing-media'
 import {
   FileLinksProvider,
   looksLikeFile,
@@ -297,34 +298,36 @@ function MarkdownImage({ src, alt }: { src?: unknown; alt?: string }) {
 /**
  * A video or a sound of the library, played in the thread under the text that names it. Only its
  * start loads until it plays; the bytes come from the bucket, by ranges. One that cannot load
- * (gone, or not this person's to read) leaves just its chip.
+ * (gone, or not this person's to read) leaves just its chip; one left open past its signed
+ * address's minutes asks for it again (hooks/use-renewing-media.ts).
  */
 function LibraryPlayer({ file }: { file: PlayedFile }) {
   const [failed, setFailed] = useState(false)
+  // Its first frame shows before it plays.
+  const base = `${API_URL}/api/library/${encodeURIComponent(file.id)}/content`
+  const media = useRenewingMedia(file.kind === 'audio' ? base : `${base}#t=0.1`, () =>
+    setFailed(true),
+  )
   if (failed) return null
-  const src = `${API_URL}/api/library/${encodeURIComponent(file.id)}/content`
   const name = file.name.split('/').pop() ?? file.name
   if (file.kind === 'audio')
     return (
       <audio
-        src={src}
+        {...media}
         controls
         preload="metadata"
         aria-label={name}
-        onError={() => setFailed(true)}
         className="my-2 block w-full max-w-md first:mt-0 last:mb-0"
       />
     )
   return (
     <span className="my-3 block w-fit max-w-full overflow-hidden rounded-lg border bg-black first:mt-0 last:mb-0">
       <video
-        // Its first frame shows before it plays.
-        src={`${src}#t=0.1`}
+        {...media}
         controls
         playsInline
         preload="metadata"
         aria-label={name}
-        onError={() => setFailed(true)}
         // Bounded like an image in a chat: a 16:9 film stays about 36rem wide, a vertical one
         // about 20rem tall, so a reply never turns into a wall of video. Full screen is a click away.
         className="block max-h-[min(20rem,50vh)] max-w-[min(100%,36rem)]"

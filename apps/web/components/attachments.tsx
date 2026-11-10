@@ -35,6 +35,7 @@ import {
 } from 'react'
 import { EffortBars, type EffortPick, EffortSlider } from '@/components/effort'
 import { useFileLinks } from '@/components/file-links'
+import { RenewingAudio, RenewingVideo } from '@/components/renewing-media'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -697,7 +698,7 @@ export function MediaPreview({
             />
           ))}
         {media?.kind === 'video' && (
-          <video
+          <RenewingVideo
             src={media.src}
             aria-label={media.name}
             controls
@@ -714,7 +715,13 @@ export function MediaPreview({
                 {media.name}
               </span>
             </p>
-            <audio src={media.src} aria-label={media.name} controls autoPlay className="w-full" />
+            <RenewingAudio
+              src={media.src}
+              aria-label={media.name}
+              controls
+              autoPlay
+              className="w-full"
+            />
           </div>
         )}
       </DialogContent>

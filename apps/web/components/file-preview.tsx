@@ -7,6 +7,7 @@ import type { LibraryPreview } from '@brigade/contracts'
 import { FileText, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Markdown } from '@/components/markdown'
+import { RenewingAudio, RenewingVideo } from '@/components/renewing-media'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -343,13 +344,13 @@ export function FilePreview({
   if (VIDEO_TYPE.test(contentType))
     return (
       <div className="flex justify-center bg-black">
-        <video src={url} controls className="max-h-[80vh] max-w-full" aria-label={name} />
+        <RenewingVideo src={url} controls className="max-h-[80vh] max-w-full" aria-label={name} />
       </div>
     )
   if (AUDIO_TYPE.test(contentType))
     return (
       <div className="p-4">
-        <audio src={url} controls className="w-full" aria-label={name} />
+        <RenewingAudio src={url} controls className="w-full" aria-label={name} />
       </div>
     )
   if (contentType === 'application/pdf') return <PdfView url={url} name={name} />
