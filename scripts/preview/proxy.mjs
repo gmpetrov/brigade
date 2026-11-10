@@ -63,8 +63,10 @@ function hasSession(cookie) {
   })
 }
 
-const markerCookie = () =>
-  `${MARKER}=1; Path=/; HttpOnly` +
+// A partitioned cookie (HTTPS, in the thread's frame) is replaced or removed only by one with
+// the same attributes: the reset removes the marker with these too.
+const markerCookie = (value = '1', extra = '') =>
+  `${MARKER}=${value}; Path=/; HttpOnly${extra}` +
   (ORIGIN.startsWith('https://') ? '; Secure; SameSite=None; Partitioned' : '; SameSite=Lax')
 
 /**
@@ -157,7 +159,7 @@ function handleReset(req, res) {
     const empty = new URLSearchParams(body).get('mode') === 'empty'
     resetting = true
     // Signed out on purpose before: signed in again as SIGN_IN once the sample is back.
-    const clear = `${MARKER}=; Path=/; Max-Age=0`
+    const clear = markerCookie('', '; Max-Age=0')
     res.writeHead(200, { ...headers, 'set-cookie': clear })
     res.write(
       page('<h1 style="font-size:1.25rem">Resetting…</h1><pre style="white-space:pre-wrap">'),
