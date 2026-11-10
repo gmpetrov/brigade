@@ -65,11 +65,35 @@ export const mayWake = (session: Session) =>
     !session.playbookRunId &&
     !session.chiefDecisionId)
 
-/** A child thread's own wake-up still to come: its report waits for the turn it brings. */
-export const wakeupHold = async (db: ScopedDb, sessionId: string) =>
-  (await db.wakeup.count({
-    where: { sessionId, status: 'pending', kind: 'wakeup', sourceId: null },
-  })) > 0
+/** How long a wake-up that fired still holds its child's report while its prompt has not shown. */
+const UNSHOWN_HOLD_MS = 24 * 60 * 60_000
+
+/**
+ * A child thread's own wake-up still to come: its report waits for the turn it brings. Pending,
+ * or fired and its prompt not shown yet: fire() settles it once the prompt is kept, which may
+ * queue behind a turn at work (a person's message, its parent's); that turn's end does not
+ * report. Its prompt shows with its id (wakeupMessageId) when its own turn comes. One that never
+ * shows holds a day at most; its parent's wait runs out before (outlastWakeup).
+ */
+export async function wakeupHold(db: ScopedDb, sessionId: string) {
+  const own = { sessionId, kind: 'wakeup' as const, sourceId: null }
+  if (await db.wakeup.count({ where: { ...own, status: 'pending' } })) return true
+  const last = await db.wakeup.findFirst({
+    where: { ...own, status: 'fired', firedAt: { gt: new Date(Date.now() - UNSHOWN_HOLD_MS) } },
+    orderBy: { firedAt: 'desc' },
+    select: { id: true },
+  })
+  if (!last) return false
+  const shown = await db.sessionEvent.findFirst({
+    where: {
+      sessionId,
+      type: 'message.user',
+      data: { path: ['messageId'], equals: wakeupMessageId(last.id) },
+    },
+    select: { seq: true },
+  })
+  return !shown
+}
 
 const changed = (scope: Scope, session: { id: string; status: string }) =>
   void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, session.status))
@@ -292,7 +316,10 @@ async function fire(wakeup: {
           : wakeup.note,
       memberId: null,
       ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
-      ...(wakeup.kind === 'report' ? { messageId: wakeupMessageId(wakeup.id) } : {}),
+      // A child's own wake-up too: its report waits until its prompt shows (wakeupHold).
+      ...(wakeup.kind === 'report' || (wakeup.kind === 'wakeup' && thread.parentId)
+        ? { messageId: wakeupMessageId(wakeup.id) }
+        : {}),
     },
     { commandId: wakeupCommandId(wakeup.id) },
   ).catch((error: unknown) => {

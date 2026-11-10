@@ -135,12 +135,12 @@ const wake = (session: Row, minutes = 120) =>
   }) as Promise<{ wakeupId?: string; error?: string }>
 
 let seq = 0
-/** A message in the child: a person's when `memberId` is given. */
+/** A message in the child: a person's when `memberId` is given; a wake-up's with its `messageId`. */
 async function message(
   child: Row,
   type: 'message.user' | 'message.done',
   text: string,
-  memberId?: string,
+  options: { memberId?: string; messageId?: string } = {},
 ) {
   await prisma.sessionEvent.create({
     data: {
@@ -148,7 +148,7 @@ async function message(
       sessionId: child.id,
       seq: ++seq,
       type,
-      data: { type, text, ...(memberId ? { memberId } : {}) },
+      data: { type, text, ...options },
       at: new Date().toISOString(),
     },
   })
@@ -205,10 +205,13 @@ test('a child holds its report for the turn its wake-up brings', { skip }, async
   })) as { error?: string }
   assert.match(refused.error ?? '', /wake-up still to come/)
 
-  // It fires: the turn it brings reports.
+  // It fires: the turn it brings, its prompt shown with its id, reports.
   await prisma.wakeup.updateMany({
     where: { id: set.wakeupId },
     data: { status: 'fired', firedAt: new Date() },
+  })
+  await message(child, 'message.user', 'Check whether the scan is done.', {
+    messageId: `wakeup-${set.wakeupId}`,
   })
   await endTurn(child, 'The scan is done: 0 findings.')
   const [note, ...more] = await notes(parent)
@@ -222,7 +225,7 @@ test(
   async () => {
     const { parent, child } = await family()
     assert.ok((await wake(child)).wakeupId)
-    await message(child, 'message.user', 'Check the scan later.', ids.member)
+    await message(child, 'message.user', 'Check the scan later.', { memberId: ids.member })
     await endTurn(child, 'I check it in two hours.')
     assert.equal((await state(child)).reportDueAt, null)
     assert.deepEqual(await notes(parent), [])
@@ -242,4 +245,30 @@ test('a wake-up cancelled from the panel lets the held child report', { skip }, 
   )
   const [note] = await notes(parent)
   assert.match(note!, /I check it in two hours/)
+})
+
+test('a turn its fired wake-up queued behind does not report', { skip }, async () => {
+  const { parent, child } = await family()
+  const set = await wake(child)
+  // A person writes; as their turn runs, the wake-up falls due: fire() keeps its prompt, queued
+  // behind that turn, and settles it.
+  await message(child, 'message.user', 'Where is the scan at?', { memberId: ids.member })
+  await prisma.wakeup.updateMany({
+    where: { id: set.wakeupId },
+    data: { status: 'fired', firedAt: new Date() },
+  })
+  await endTurn(child, 'Still running; my check comes next.')
+  assert.deepEqual(await notes(parent), [])
+  const held = await state(child)
+  assert.equal(held.reportDeliveredAt, null)
+  assert.equal(held.reportDueAt, null)
+
+  // The wake-up's own turn reports.
+  await message(child, 'message.user', 'Check whether the scan is done.', {
+    messageId: `wakeup-${set.wakeupId}`,
+  })
+  await endTurn(child, 'The scan is done: 2 findings.')
+  const [note, ...more] = await notes(parent)
+  assert.equal(more.length, 0)
+  assert.match(note!, /2 findings/)
 })
