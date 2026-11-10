@@ -38,7 +38,7 @@ import { hubs, threadUpdated } from './hub.js'
 import { markOnChiefsWord } from './chief-answers.js'
 import { looksTaken, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { askedBy, loadThread, noSuchTeammate } from './thread-spec.js'
-import { fireNow, firedInARow, wakeupMessageId } from './wakeups.js'
+import { fireNow, firedInARow, wakeupHold, wakeupMessageId } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
 type ChildOperation = Extract<
@@ -233,6 +233,17 @@ export async function holdForReview(
     })
   await outlast(db, childId, options.until)
   await parentChanged(scope, child.parentId)
+}
+
+/**
+ * A child set a wake-up for `wakeAt` (src/wakeups.ts): its parent waits for it past then, as for
+ * a review, to hear what the turn it brings finds.
+ */
+export async function outlastWakeup(scope: Scope, childId: string, wakeAt: Date) {
+  const db = scoped(scope)
+  await outlast(db, childId, wakeAt)
+  const child = await db.session.findFirst({ where: { id: childId }, select: { parentId: true } })
+  if (child?.parentId) await parentChanged(scope, child.parentId)
 }
 
 /** How long a child's parent waits for it past the review it waits for: it hears the review first. */
@@ -607,8 +618,9 @@ export async function reportConversation(scope: Scope, childId: string) {
 
 /**
  * A child its review held from reporting (reviewHold), once that review stopped with no word to
- * it (its pull request was closed): its last message goes to its parent, as at the end of its
- * turn. Not while it works, asks a person or talks with one: what ends that reports.
+ * it (its pull request was closed), or its wake-up held (wakeupHold), once that one was cancelled
+ * or missed: its last message goes to its parent, as at the end of its turn. Not while it works,
+ * asks a person or talks with one, nor while something else still holds it: what ends that reports.
  */
 export async function reportHeld(scope: Scope, childId: string) {
   const db = scoped(scope)
@@ -624,7 +636,12 @@ export async function reportHeld(scope: Scope, childId: string) {
   })
   if (!child?.parentId || child.reportDeliveredAt || child.reportDueAt || reportOf(child.report))
     return
-  if (!['idle', 'done'].includes(child.status) || (await reviewHold(db, childId))) return
+  if (
+    !['idle', 'done'].includes(child.status) ||
+    (await reviewHold(db, childId)) ||
+    (await wakeupHold(db, childId))
+  )
+    return
   const report: ChildReport = {
     status: 'report',
     summary: clipReport((await lastMessage(childId)) || 'It ended without a word.', REPORT_MAX),
@@ -645,7 +662,8 @@ export async function reportHeld(scope: Scope, childId: string) {
  * child works again; the end of its turn settles its report (its last message
  * stands in for one it did not make) and sends it on; an error is a failed report.
  * While a review of its pull request is under way in a child of its own (reviewHold), the end
- * of a turn sends nothing: the review's report wakes it, and that turn reports.
+ * of a turn sends nothing: the review's report wakes it, and that turn reports. So with a wake-up
+ * of its own still to come (wakeupHold): the turn it brings reports.
  * A turn that answered a person, with no report, sends nothing yet: they may still be
  * talking it through, so its last message goes once they have been quiet a while
  * (reportConversation). An error the runner tries the turn again after (stopped for memory, a
@@ -710,11 +728,12 @@ export async function noteChildEvents(
       })
       if (!row || row.reportDeliveredAt) continue
       // Its pull request's review is under way, or its report is still to wake it: it reports
-      // once that is done, from the turn the review's report brings.
+      // once that is done, from the turn the review's report brings. A wake-up it set too, ahead
+      // of a person's conversation: the turn it brings reports.
       if (
         !reportOf(row.report) &&
         event.type === 'turn.completed' &&
-        (await reviewHold(db, session.id))
+        ((await reviewHold(db, session.id)) || (await wakeupHold(db, session.id)))
       ) {
         await parentChanged(scope, session.parentId)
         continue
@@ -1164,6 +1183,12 @@ export async function handleChildCall(
           `#${held.number} is still in review by ${held.reviewer}: do not report yet. End your turn now; ` +
           'you are woken here with its report. Report once it approves, or once you stop asking it ' +
           'to look again because it goes in circles, with its verdict.',
+      }
+    if (await wakeupHold(db, session.id))
+      return {
+        error:
+          'You have a wake-up still to come in this thread: do not report yet. End your turn now, and ' +
+          'report from the turn it brings; or, if you are done, cancel it (cancel_wakeup) and report.',
       }
     // Its files are its parent's now: in each of its teammates' folders before its next turn.
     const files = op.files?.length

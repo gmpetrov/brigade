@@ -163,17 +163,31 @@ test('schedules, triggers and wake-ups are offered only in a thread a person sta
   for (const extra of [
     { origin: 'trigger' },
     { origin: 'schedule' },
+    // A child is told of wake-ups alone (below), never of schedules or triggers.
     { origin: 'child', parent: { id: 'p', title: 'Parent' } },
     // An API older than origin: a child is still told none.
     { parent: { id: 'p', title: 'Parent' } },
   ]) {
     const text = textFor(extra)
-    assert.doesNotMatch(text, /## Schedules|`set_wakeup`|`create_schedule`|`create_trigger`/)
+    assert.doesNotMatch(text, /## Schedules|`create_schedule`|`create_trigger`/)
+    if (extra.origin !== 'child') assert.doesNotMatch(text, /`set_wakeup`/)
   }
-  assert.match(
-    textFor({ parent: { id: 'p', title: 'Parent' } }),
-    /cannot start child threads, schedules or wake-ups/,
-  )
+  // A child a teammate started has wake-ups alone, and reports from the turn one brings.
+  const child = textFor({ origin: 'child', parent: { id: 'p', title: 'Parent' } })
+  assert.match(child, /cannot start child threads or schedules/)
+  assert.match(child, /set a wake-up with `set_wakeup`[^]*your report waits for the turn it brings/)
+  // An API older than origin refuses them, and a playbook's thread has none.
+  for (const extra of [
+    { parent: { id: 'p', title: 'Parent' } },
+    {
+      origin: 'child',
+      parent: { id: 'p', title: 'Parent' },
+      playbook: { installationId: 'i', runId: 'r', name: 'Support', apps: ['gmail'] },
+    },
+  ]) {
+    const text = textFor(extra)
+    assert.match(text, /cannot start child threads or schedules[^]*Nor wake-ups\./)
+  }
 })
 
 test("a schedule's run declares nothing done, and no merge wakes it", () => {

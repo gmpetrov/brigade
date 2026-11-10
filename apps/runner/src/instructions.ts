@@ -48,6 +48,14 @@ const remembered = (memory: LayeredMemory | null): memory is LayeredMemory =>
 export const startedByPerson = (spec: ThreadSpec) =>
   !spec.parent && !spec.playbook && (spec.origin ?? 'member') === 'member'
 
+/**
+ * A child thread a teammate started (start_child, a review): it sets wake-ups of its own, to check
+ * on something later, and reports from the turn one brings (the API refuses them in a playbook's
+ * thread, a schedule's run and Chief's decisions). An API older than `origin` refuses them.
+ */
+export const wakesInChild = (spec: ThreadSpec) =>
+  !!spec.parent && spec.origin === 'child' && !spec.playbook && spec.teammate.kind !== 'chief'
+
 /** A schedule's run, which ends with its turn: it declares nothing done and no merge wakes it. */
 const scheduledRun = (spec: ThreadSpec) => spec.origin === 'schedule'
 
@@ -963,10 +971,15 @@ const children = (spec: ThreadSpec) =>
       '`report` once and end your turn: your report reaches the parent when your turn ends. If something you need ' +
       'is missing (a decision, an input), do not guess: report it as what you need, and the parent answers by ' +
       'writing here. When only a person can decide, open a ticket: your turn waits for their answer, then carry ' +
-      'on. You cannot start child threads, schedules or wake-ups of your own' +
+      'on. You cannot start child threads or schedules of your own' +
       (spec.git
         ? ': the review of a pull request you open is the one thread Brigade starts under this one (see Code). '
         : '. ') +
+      (wakesInChild(spec)
+        ? 'To check on something later (a scan, a deploy, a CI run), set a wake-up with `set_wakeup` and ' +
+          'end your turn, instead of waiting, polling or asking a person to write here later: you are ' +
+          'prompted again here with your note, and your report waits for the turn it brings. '
+        : 'Nor wake-ups. ') +
       SUB_THREAD +
       '\n\n' +
       'When a person writes here, talk it through with them; your answers do not go to the parent. Once they ' +

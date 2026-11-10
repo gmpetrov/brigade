@@ -2077,6 +2077,15 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
 }
 
 /**
+ * Wake-ups alone, in a child thread a teammate started (wakesInChild): it checks on something
+ * later, and reports from the turn one brings. The API checks the thread too (mayWake).
+ */
+export function wakeupTools(call: ScheduleCaller): Record<string, Tool> {
+  const { set_wakeup, list_wakeups, cancel_wakeup } = scheduleTools(call)
+  return { set_wakeup: set_wakeup!, list_wakeups: list_wakeups!, cancel_wakeup: cancel_wakeup! }
+}
+
+/**
  * Schedules: the teammate prompted with the same instructions on a cron
  * schedule, on the thread starter's accounts. The API checks the thread (a
  * member's, not a trigger's or a schedule's) and whose schedules they are.
@@ -2264,7 +2273,8 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
         'the note is the prompt you get back. Then end your turn: never sleep or poll in a loop to wait. ' +
         "Prefer what notifies you by itself (a child thread's report, such as a pull request's review, or a ticket) when there is one. " +
         `At most ${WAKEUPS_PER_THREAD} pending per thread, and ${WAKEUPS_IN_A_ROW} in a row without a word ` +
-        'from a person. Only in a thread a person started.',
+        'from a person. Only in a thread a person started, or in a child thread, whose report waits for ' +
+        'the turn it brings.',
       inputSchema: jsonSchema<{ minutes?: number; at?: string; note: string }>({
         type: 'object',
         properties: {
