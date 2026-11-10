@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono'
 import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
 import { auth, authRouteClosed } from './auth.js'
+import { scannerLogin } from './scanner-login.js'
 import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors, apiCsrf } from './cors.js'
 import { env } from './config.js'
@@ -186,6 +187,9 @@ app.get('/ops/vm-costs/:workspaceId', async (c) => {
 // signature (BOAT_WEBHOOK_SECRET); needs no session.
 app.post('/api/boat/webhook', (c) => boatWebhook(c.req.raw, env.BOAT_WEBHOOK_SECRET))
 
+// TEMPORARY login aliases for the CASA lab's scanner (src/scanner-login.ts): remove after the audit.
+for (const path of ['/api/auth/login', '/api/v1/auth/login', '/auth/login'])
+  app.post(path, scannerLogin(auth))
 app.on(['GET', 'POST'], '/api/auth/*', (c) =>
   authRouteClosed(c.req.raw)
     ? Response.json({ error: 'Not found' }, { status: 404 })
