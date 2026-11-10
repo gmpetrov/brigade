@@ -47,6 +47,7 @@ import {
   builtinSkills,
   instructions,
   startedByPerson,
+  wakesInChild,
   writeInstructions,
   writeMemoryFiles,
 } from '../instructions.js'
@@ -129,6 +130,7 @@ import {
   reviewTools,
   listTools,
   scheduleTools,
+  wakeupTools,
   childTools,
   chiefTools,
   playbookTools,
@@ -390,7 +392,12 @@ function createAgent(
         ...startedThreadTools(callSchedule, { playbook: !!spec.playbook }),
         // Schedules, triggers and wake-ups: only in a thread a person started (the API refuses them
         // elsewhere), never in a playbook's run, whose schedules' runs would be threads outside it.
-        ...(startedByPerson(spec) ? scheduleTools(callSchedule) : {}),
+        // A child thread a teammate started has wake-ups alone, and reports from the turn one brings.
+        ...(startedByPerson(spec)
+          ? scheduleTools(callSchedule)
+          : wakesInChild(spec)
+            ? wakeupTools(callSchedule)
+            : {}),
         // Nor the workspace's other Apps: it has only those the playbook declares.
         ...appTools(callSchedule, { playbook: !!spec.playbook }),
         // Lists' items (docs/lists.md): read, attach to this thread, tick, add.

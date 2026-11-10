@@ -17,7 +17,7 @@ import { hubs, threadUpdated } from './hub.js'
 import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
-import { dueChildren, settleOverdueChildren } from './children.js'
+import { dueChildren, outlastWakeup, reportHeld, settleOverdueChildren } from './children.js'
 import { CHIEF_SOURCE, wakeupCommandId } from './chief-order.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
@@ -42,7 +42,58 @@ export { CHIEF_SOURCE }
 export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation =>
   op.name === 'wake' || op.name === 'list_wakeups' || op.name === 'cancel_wakeup'
 
-type Session = { id: string; origin: string; startedByMemberId: string; status: string }
+type Session = {
+  id: string
+  origin: string
+  startedByMemberId: string
+  status: string
+  parentId?: string | null
+  playbookRunId?: string | null
+  chiefDecisionId?: string | null
+}
+
+/**
+ * Where a teammate may set wake-ups: a thread a person started, or a child thread a teammate
+ * started (start_child, a review), which waits on something as its parent would (a scan, a CI
+ * run). Not a schedule's or a trigger's run, nor a playbook's thread or Chief's decision: nobody
+ * set those up to wait. A child's report waits for the turn its wake-up brings (wakeupHold).
+ */
+export const mayWake = (session: Session) =>
+  session.origin === 'member' ||
+  (session.origin === 'child' &&
+    !!session.parentId &&
+    !session.playbookRunId &&
+    !session.chiefDecisionId)
+
+/** How long a wake-up that fired still holds its child's report while its prompt has not shown. */
+const UNSHOWN_HOLD_MS = 24 * 60 * 60_000
+
+/**
+ * A child thread's own wake-up still to come: its report waits for the turn it brings. Pending,
+ * or fired and its prompt not shown yet: fire() settles it once the prompt is kept, which may
+ * queue behind a turn at work (a person's message, its parent's); that turn's end does not
+ * report. Its prompt shows with its id (wakeupMessageId) when its own turn comes. One that never
+ * shows holds a day at most; its parent's wait runs out before (outlastWakeup).
+ */
+export async function wakeupHold(db: ScopedDb, sessionId: string) {
+  const own = { sessionId, kind: 'wakeup' as const, sourceId: null }
+  if (await db.wakeup.count({ where: { ...own, status: 'pending' } })) return true
+  const last = await db.wakeup.findFirst({
+    where: { ...own, status: 'fired', firedAt: { gt: new Date(Date.now() - UNSHOWN_HOLD_MS) } },
+    orderBy: { firedAt: 'desc' },
+    select: { id: true },
+  })
+  if (!last) return false
+  const shown = await db.sessionEvent.findFirst({
+    where: {
+      sessionId,
+      type: 'message.user',
+      data: { path: ['messageId'], equals: wakeupMessageId(last.id) },
+    },
+    select: { seq: true },
+  })
+  return !shown
+}
 
 const changed = (scope: Scope, session: { id: string; status: string }) =>
   void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, session.status))
@@ -64,7 +115,7 @@ export async function firedInARow(db: ScopedDb, sessionId: string) {
   })
 }
 
-/** A teammate's wake-up tools, from a thread a person started. */
+/** A teammate's wake-up tools, from a thread a person started or a child thread (mayWake). */
 export async function handleWakeup(
   db: ScopedDb,
   scope: Scope,
@@ -72,10 +123,11 @@ export async function handleWakeup(
   teammate: { id: string; name: string },
   op: WakeupOperation,
 ): Promise<object | { error: string }> {
-  if (session.origin !== 'member')
+  if (!mayWake(session))
     return {
       error:
-        'Wake-ups are set only in a thread a person started. Finish the work now, or open a ticket.',
+        'Wake-ups are set only in a thread a person started or in a child thread. Finish the work ' +
+        'now, or open a ticket.',
     }
   const timezone = await memberTimezone(db, session.startedByMemberId)
   const brief = (w: { id: string; note: string; wakeAt: Date }) => ({
@@ -124,11 +176,15 @@ export async function handleWakeup(
     data: { wakeupId: wakeup.id, wakeAt: when.toISOString() },
   })
   changed(scope, session)
+  // A child: its parent waits for it past the wake-up, to hear what it brings.
+  if (session.parentId) await outlastWakeup(scope, session.id, when)
   return {
     ...brief(wakeup),
-    next:
-      'Set. At that time you are prompted again in this thread with your note. End your turn now; ' +
-      'do not wait or poll. Tell the person in one line when you will check again.',
+    next: session.parentId
+      ? 'Set. At that time you are prompted again in this thread with your note. End your turn now; ' +
+        'do not wait or poll. Your report waits for the turn it brings: report then, with what you found.'
+      : 'Set. At that time you are prompted again in this thread with your note. End your turn now; ' +
+        'do not wait or poll. Tell the person in one line when you will check again.',
   }
 }
 
@@ -152,6 +208,11 @@ async function cancel(
     data: { wakeupId: id },
   })
   changed(scope, session)
+  // A child its wake-up held from reporting, idle: what it has goes to its parent now. Cancelled
+  // all the same when that fails: the parent's wait running out settles it.
+  await reportHeld(scope, session.id).catch((error: unknown) =>
+    console.error(`thread ${session.id}: could not send its held report`, error),
+  )
   return true
 }
 
@@ -218,7 +279,7 @@ async function fire(wakeup: {
   // emails' replies go to whoever is there.
   const seat = thread.teammates.find((t) => t.teammateId === wakeup.teammateId)
   if ((!seat || seat.teammate.archivedAt) && wakeup.kind === 'wakeup') {
-    await settle('missed')
+    if (await settle('missed')) await reportHeld(scope, thread.id)
     return changed(scope, thread)
   }
   // An answer of Chief's for the person (src/chief-answers.ts) the person's word or their
@@ -255,7 +316,10 @@ async function fire(wakeup: {
           : wakeup.note,
       memberId: null,
       ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
-      ...(wakeup.kind === 'report' ? { messageId: wakeupMessageId(wakeup.id) } : {}),
+      // A child's own wake-up too: its report waits until its prompt shows (wakeupHold).
+      ...(wakeup.kind === 'report' || (wakeup.kind === 'wakeup' && thread.parentId)
+        ? { messageId: wakeupMessageId(wakeup.id) }
+        : {}),
     },
     { commandId: wakeupCommandId(wakeup.id) },
   ).catch((error: unknown) => {
@@ -264,7 +328,8 @@ async function fire(wakeup: {
   })
   // A member's machine asleep: pending again, tried each minute, until it is too late.
   if (outcome === 'offline') {
-    if (now.getTime() - wakeup.wakeAt.getTime() > MISSED_AFTER_MS) await settle('missed')
+    if (now.getTime() - wakeup.wakeAt.getTime() > MISSED_AFTER_MS && (await settle('missed')))
+      await reportHeld(scope, thread.id)
   } else if (!(await settle('fired'))) return
   // paused: a cap ticket holds the prompt and sends it when allowed.
   changed(scope, thread)
