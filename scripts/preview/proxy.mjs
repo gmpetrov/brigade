@@ -3,8 +3,10 @@
 // session cookie is first-party to its API. Designs' pages are the API's too: the
 // preview has no sandbox host of its own (DESIGN_URL is its address), so /v/<token>/…
 // and a shared design's /s/<token>/… go there, while /s/<token> is Next's page.
+import { spawn } from 'node:child_process'
 import http from 'node:http'
 import net from 'node:net'
+import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const API_PORT = Number(process.env.API_PORT ?? 3001)
@@ -120,7 +122,73 @@ const WAITING =
   '<!doctype html><meta http-equiv="refresh" content="3"><title>Starting…</title>' +
   '<p style="font-family:system-ui,sans-serif;padding:2rem">Brigade is starting. This page reloads by itself.</p>'
 
+// /__preview/reset: reset.sh from the preview itself, to try a flow again (sign-up, onboarding,
+// billing). A page with its choices, then its output as it goes, and back to the dashboard.
+const RESET_PATH = '/__preview/reset'
+const RESET_SCRIPT = fileURLToPath(new URL('reset.sh', import.meta.url))
+const page = (body) =>
+  '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">' +
+  '<title>Reset the preview</title><body style="font-family:system-ui,sans-serif;padding:2rem;max-width:40rem">' +
+  body
+const RESET_PAGE = page(
+  '<h1 style="font-size:1.25rem">Reset the preview</h1>' +
+    '<p>Puts the database and library files back as the preview first made them. Everything ' +
+    'done in it since is gone, and everyone is signed out.</p>' +
+    `<form method="post" action="${RESET_PATH}"><p><button name="mode" value="seed">` +
+    'Reset with the sample workspace</button> Ada, Bob and Carol in Acme; Dana without an ' +
+    'organization, for onboarding.</p>' +
+    '<p><button name="mode" value="empty">Reset empty</button> No account at all: sign up ' +
+    'as a new customer would.</p></form>',
+)
+let resetting = false
+
+function handleReset(req, res) {
+  const headers = { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }
+  if (req.method !== 'POST') return res.writeHead(200, headers).end(RESET_PAGE)
+  // Only from the preview's own page, not another site's form.
+  const origin = req.headers.origin
+  if (origin && origin !== 'null' && origin !== new URL(ORIGIN).origin)
+    return res.writeHead(403, headers).end(page('<p>Reset only from this preview.</p>'))
+  if (resetting) return res.writeHead(409, headers).end(page('<p>A reset is already running.</p>'))
+  let body = ''
+  req.setEncoding('utf8')
+  req.on('data', (chunk) => (body += chunk))
+  req.on('end', () => {
+    const empty = new URLSearchParams(body).get('mode') === 'empty'
+    resetting = true
+    // Signed out on purpose before: signed in again as SIGN_IN once the sample is back.
+    const clear = `${MARKER}=; Path=/; Max-Age=0`
+    res.writeHead(200, { ...headers, 'set-cookie': clear })
+    res.write(
+      page('<h1 style="font-size:1.25rem">Resetting…</h1><pre style="white-space:pre-wrap">'),
+    )
+    const child = spawn(RESET_SCRIPT, empty ? ['--empty'] : [], {
+      env: { ...process.env, API_PORT: String(API_PORT) },
+    })
+    const escape = (text) =>
+      text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replace(/\x1b\[[0-9;]*m/g, '')
+    for (const stream of [child.stdout, child.stderr])
+      stream.on('data', (chunk) => {
+        process.stdout.write(chunk)
+        res.write(escape(chunk.toString()))
+      })
+    child.on('close', (code) => {
+      resetting = false
+      res.end(
+        code === 0
+          ? '</pre><p>Done. <a href="/app">Open the dashboard</a></p>' +
+              '<script>setTimeout(() => location.assign("/app"), 1500)</script>'
+          : `</pre><p>The reset failed (exit code ${code}). <a href="${RESET_PATH}">Try again</a></p>`,
+      )
+    })
+  })
+}
+
 const server = http.createServer(async (req, res) => {
+  if ((req.url ?? '/').split('?')[0] === RESET_PATH) return handleReset(req, res)
   // Signed in for this request already, and for the next ones once the browser keeps the cookies.
   const first = await needsSignIn(req)
   const signedIn = first ? await signIn() : null

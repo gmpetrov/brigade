@@ -160,3 +160,35 @@ wait_any() {
     sleep 2
   done
 }
+
+# Stops a process and every one under it (pnpm, then tsx, then Node), within 10 seconds or
+# killed. With pgrep, which Linux and macOS both have.
+stop_tree() {
+  local pids=$1 all=$1 children
+  while [ -n "$pids" ]; do
+    children=$(for pid in $pids; do pgrep -P "$pid" || true; done)
+    all="$all $children"
+    pids=$children
+  done
+  kill $all 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    kill -0 $all 2>/dev/null || return 0
+    sleep 0.5
+  done
+  kill -9 $all 2>/dev/null || true
+}
+
+# Runs the API (its command, in apps/api) until it stops, with its PID in $DATA/api.pid for
+# reset.sh. Stopped by reset.sh (which leaves $DATA/api.hold while it works), it starts again
+# once that file is gone; stopped otherwise, it returns, which ends the preview as before.
+run_api() {
+  mkdir -p "$DATA"
+  while true; do
+    (cd "$REPO/apps/api" && exec "$@") &
+    echo $! >"$DATA/api.pid"
+    wait $! || true
+    [ -f "$DATA/api.hold" ] || return 0
+    echo "The API is held while its database is reset"
+    while [ -f "$DATA/api.hold" ]; do sleep 0.5; done
+  done
+}

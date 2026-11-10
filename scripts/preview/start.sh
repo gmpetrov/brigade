@@ -22,8 +22,10 @@ if [[ ${STRIPE_SECRET_KEY:-} == sk_test_* || ${STRIPE_SECRET_KEY:-} == rk_test_*
   (cd "$REPO/apps/api" && WEB_URL=$URL node scripts/stripe-setup.mjs) || echo "Stripe setup failed: billing may not work"
 fi
 
-(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES PASSWORD_SIGN_IN=true \
-  "${PNPM[@]}" dev) &
+# Started again after reset.sh (lib.sh's run_api).
+rm -f "$DATA/api.hold"
+PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES PASSWORD_SIGN_IN=true \
+  run_api "${PNPM[@]}" dev &
 
 # Turbopack sometimes panics and exits: start Next again when it does.
 (cd "$REPO/apps/web" && while true; do

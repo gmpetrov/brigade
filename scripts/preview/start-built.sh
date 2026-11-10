@@ -27,8 +27,9 @@ if [ "$(cat "$DATA/built" 2>/dev/null)" != "$STAMP" ]; then
 fi
 
 # Node itself, not through pnpm: each pnpm in between is another resident Node.
-(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES \
-  exec node --env-file-if-exists=.env dist/index.js) &
+rm -f "$DATA/api.hold"
+PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES \
+  run_api node --env-file-if-exists=.env dist/index.js &
 (cd "$REPO/apps/web" && NEXT_PUBLIC_API_URL=$URL exec node node_modules/next/dist/bin/next start --port "$WEB_PORT") &
 
 PREVIEW_URL=$URL PREVIEW_SIGN_IN=${PREVIEW_SIGN_IN-ada@example.com} node "$HERE/proxy.mjs" &
