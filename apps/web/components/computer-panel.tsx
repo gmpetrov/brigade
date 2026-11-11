@@ -32,7 +32,7 @@ import {
   type Thread,
   type ThreadSummary,
 } from '@/lib/api'
-import { changeControl, useControlError } from '@/lib/control'
+import { changeControl, useControlError, useControlPending } from '@/lib/control'
 import { savedReplies } from '@/lib/ticket-replies'
 
 function Section({
@@ -239,6 +239,8 @@ function useControl(thread: Thread, memberId: string, onChange: () => void) {
   const [browserError, setBrowserError] = useState<string>()
   // Undone, a change of control says why wherever the thread shows.
   const controlError = useControlError(thread.id)
+  // Asked anywhere (the hand back card, a ticket), a change of control holds these too.
+  const pending = useControlPending(thread.id)
   const mine = !!memberId && thread.controlledByMemberId === memberId
 
   async function act(fn: () => Promise<unknown>) {
@@ -268,7 +270,7 @@ function useControl(thread: Thread, memberId: string, onChange: () => void) {
   }
 
   return {
-    busy,
+    busy: busy || pending,
     error: browserError ?? controlError,
     mine,
     takeOver: () =>

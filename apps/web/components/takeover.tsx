@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { api, type Thread } from '@/lib/api'
-import { changeControl, useControlError } from '@/lib/control'
+import { changeControl, useControlError, useControlPending } from '@/lib/control'
 import { savedReplies } from '@/lib/ticket-replies'
 
 /** A note written for a hand back the API refused, while the dashboard is open. */
@@ -27,9 +27,12 @@ export function Takeover({
   // Handing back hides this card at once: undone, it comes back with its note and why.
   const [note, setNote] = useState(() => notes.get(thread.id) ?? '')
   const error = useControlError(thread.id)
+  // Shown at once while its takeover still goes: the hand back waits for it.
+  const pending = useControlPending(thread.id)
   const mine = thread.controlledByMemberId === memberId
 
   function handBack() {
+    if (pending) return
     notes.set(thread.id, note)
     void changeControl(thread.id, null, () =>
       api(`/threads/${thread.id}/handback`, { body: { note, replies: savedReplies() } }),
@@ -86,7 +89,7 @@ export function Takeover({
           aria-label="Note for the teammate"
           className="min-w-0 flex-[1_1_14rem]"
         />
-        <Button>Hand back</Button>
+        <Button disabled={pending}>Hand back</Button>
       </form>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </Card>

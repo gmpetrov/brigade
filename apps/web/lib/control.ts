@@ -23,6 +23,8 @@ type Change = {
 
 const changes = new Map<string, Change>()
 const errors = new Map<string, string>()
+/** Each thread's request going now, the last asked: the next goes once it is through. */
+const inFlight = new Map<string, Promise<unknown>>()
 const listeners = new Set<() => void>()
 
 function changed() {
@@ -39,6 +41,11 @@ function subscribe(listener: () => void) {
 /**
  * Gives control to `to` (a member, or null to hand back) through `request`, shown at once. Throws
  * what the request threw, once every view is back to who had control before.
+ *
+ * One request at a time per thread: shown at once, the opposite button is there before the API
+ * took the first, and a hand back sent while its takeover still goes could reach the runner first,
+ * leaving it paused with nobody in control. So the next waits for the one before, and
+ * useControlPending holds every button that changes control meanwhile.
  */
 export async function changeControl(
   threadId: string,
@@ -48,19 +55,23 @@ export async function changeControl(
   const change: Change = { to, settled: false, stale: new WeakSet(), shown: new WeakMap() }
   changes.set(threadId, change)
   errors.delete(threadId)
+  const going = (inFlight.get(threadId) ?? Promise.resolve()).catch(() => undefined).then(request)
+  inFlight.set(threadId, going)
   changed()
   try {
-    await request()
+    await going
+    change.settled = true
   } catch (e) {
     // A later change of this thread's is its own.
     if (changes.get(threadId) === change) {
       changes.delete(threadId)
       errors.set(threadId, (e as Error).message)
-      changed()
     }
     throw e
+  } finally {
+    if (inFlight.get(threadId) === going) inFlight.delete(threadId)
+    changed()
   }
-  change.settled = true
 }
 
 /** The thread as the member's change of control shows it, the same object while nothing changes. */
@@ -97,6 +108,20 @@ export function useControlError(threadId: string) {
     () => errors.get(threadId),
     () => undefined,
   )
+}
+
+/** A change of the thread's control goes now: its buttons wait. */
+export function useControlPending(threadId: string) {
+  return useSyncExternalStore(
+    subscribe,
+    () => inFlight.has(threadId),
+    () => false,
+  )
+}
+
+/** Whether a change of the thread's control goes now, outside React. */
+export function controlPending(threadId: string) {
+  return inFlight.has(threadId)
 }
 
 /** The thread as its views show it now, outside React (useControlled in it). */

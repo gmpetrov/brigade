@@ -147,7 +147,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { ThreadItemsCard } from '@/components/list-items'
-import { changeControl, useControlled } from '@/lib/control'
+import { changeControl, useControlled, useControlPending } from '@/lib/control'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
@@ -262,6 +262,7 @@ export function ThreadConversation({
   const fetched = useApi<Thread>(`/threads/${id}`)
   // Taking control or handing it back shows here at once, while the API takes it.
   const thread = { ...fetched, data: useControlled(fetched.data) }
+  const controlPending = useControlPending(id)
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
   // Since when its updates have not reached Brigade, as the thread and then the API say.
@@ -1752,6 +1753,7 @@ export function ThreadConversation({
                       (!t.controlledByMemberId || t.controlledByMemberId === me.memberId)
                         ? {
                             mine: t.controlledByMemberId === me.memberId,
+                            pending: controlPending,
                             open: async () => {
                               if (t.controlledByMemberId === me.memberId) return showComputer()
                               // The computer opens at once, already in the member's hands.
