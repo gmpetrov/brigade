@@ -11,6 +11,8 @@ test('only the public pages may send analytics', () => {
     '/subprocessors',
     '/changelog',
     '/changelog/2026-10-29',
+    '/compare',
+    '/compare/openclaw',
   ])
     assert.equal(isPublicPage(page), true, page)
   for (const page of [
@@ -22,6 +24,7 @@ test('only the public pages may send analytics', () => {
     '/privacy/x',
     '/how-it-works',
     '/changelog/rss.xml',
+    '/compare/openclaw/x',
   ])
     assert.equal(isPublicPage(page), false, page)
 })

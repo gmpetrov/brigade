@@ -23,8 +23,8 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
             Brigade is built by Brigade.
           </h2>
           <p className={c('lead')}>
-            Our own teammates write {share} of Brigade&apos;s code, and a person approves every
-            change before it goes in. The whole history is public.
+            Our own teammates write {share} of Brigade&apos;s code, and a person makes the calls
+            that matter. The whole history is public.
           </p>
           <p className={c('mark-note')}>
             <span className={c('av mark')} aria-hidden="true">
@@ -162,6 +162,54 @@ export function Pricing() {
   )
 }
 
+/** The landing's questions: shown in Faq, and given to search engines as an FAQPage (app/page.tsx). */
+export const FAQ: { q: string; a: string }[] = [
+  {
+    q: 'Do I need to know how to code?',
+    a: 'No. You describe a job in a message, the way you would to a new hire. For a task in a website or an app, take over a teammate\'s cloud computer and show it once.',
+  },
+  {
+    q: 'What does Brigade cost?',
+    a: 'Brigade is free when teammates run on your own computer. Cloud is $99 a month per workspace and gives them a computer of their own that keeps working when yours is off. On top of that, you bring the Claude or ChatGPT plan you already pay for: we never bill you for AI usage.',
+  },
+  {
+    q: 'Which AI plans work?',
+    a: 'Claude plans through Claude Code, and ChatGPT plans through Codex. Max or Pro gives the most room. Pick a model per teammate, and stack several accounts: when one hits its limit, the teammate carries on with the next account of the same provider, in the middle of the task.',
+  },
+  {
+    q: 'How do I stay in control?',
+    a: 'For each teammate, you choose what it does on its own and what waits for your yes in Needs you, which Apps it can reach, and daily caps on its threads, computer hours and writes to each App. Every step it takes is in its thread, for you to read.',
+  },
+  {
+    q: 'Why several teammates rather than one agent?',
+    a: 'One agent with every tool and no owner gets vague fast. Each teammate holds one job, with its own Apps, memory and rules, so you see who did what and fix the one that is off.',
+  },
+  {
+    q: 'Where do my passwords go?',
+    a: 'In your workspace\'s vault. When a teammate signs in to a website, Brigade types the login for it: the teammate never sees the password, and it never ends up in a thread.',
+  },
+  {
+    q: 'Is my data used to train AI models?',
+    a: 'Not by us. The work runs on the AI plan you bring, so your data goes only to the provider you picked, under the terms of your plan.',
+  },
+  {
+    q: 'Can a teammate have its own email address?',
+    a: 'Yes, with Cloud. Turn on the Email App and each teammate gets an address of its own. It sends from it, and replies come back to the teammate that started the conversation, not to your inbox.',
+  },
+  {
+    q: 'Can my team see the work?',
+    a: 'Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing sits in one person\'s chat history.',
+  },
+  {
+    q: 'Is it open source?',
+    a: 'Yes. The whole product is on GitHub under the MIT license, so you can read every line and run it yourself.',
+  },
+  {
+    q: 'What if I cancel?',
+    a: 'Cancel from Settings whenever you want: Cloud stops at the end of the month you paid for. Your workspace stays, and your teammates can keep working for free on your own computer.',
+  },
+]
+
 export function Faq() {
   return (
     <section aria-labelledby="faq-title" className={c('sec faq')}>
@@ -172,147 +220,17 @@ export function Faq() {
           </h2>
         </div>
         <div className={c('qs')}>
-          <details open>
-            <summary>
-              Do I need to know how to code?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              No. You describe a job in a message, the way you would to a new hire. For a task in a
-              website or an app, take over a teammate&apos;s cloud computer and show it once.
-            </p>
-          </details>
-          <details>
-            <summary>
-              What does Brigade cost?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Brigade is free when teammates run on your own computer. Cloud is $99 a month per
-              workspace and gives them a computer of their own that keeps working when yours is off.
-              On top of that, you bring the Claude or ChatGPT plan you already pay for: we never
-              bill you for AI usage.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Which AI plans work?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Claude plans through Claude Code, and ChatGPT plans through Codex. Max or Pro gives
-              the most room. Pick a model per teammate, and stack several accounts: when one hits
-              its limit, the teammate carries on with the next account of the same provider, in the
-              middle of the task.
-            </p>
-          </details>
-          <details>
-            <summary>
-              How do I stay in control?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              For each teammate, you choose what it does on its own and what waits for your yes in
-              Needs you, which Apps it can reach, and daily caps on its threads, computer hours and
-              writes to each App. Every step it takes is in its thread, for you to read.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Why several teammates rather than one agent?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              One agent with every tool and no owner gets vague fast. Each teammate holds one job,
-              with its own Apps, memory and rules, so you see who did what and fix the one that is
-              off.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Where do my passwords go?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              In your workspace&apos;s vault. When a teammate signs in to a website, Brigade types
-              the login for it: the teammate never sees the password, and it never ends up in a
-              thread.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Is my data used to train AI models?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Not by us. The work runs on the AI plan you bring, so your data goes only to the
-              provider you picked, under the terms of your plan.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Can a teammate have its own email address?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Yes, with Cloud. Turn on the Email App and each teammate gets an address of its own.
-              It sends from it, and replies come back to the teammate that started the conversation,
-              not to your inbox.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Can my team see the work?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing
-              sits in one person&apos;s chat history.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Is it open source?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Yes. The whole product is on GitHub under the MIT license, so you can read every line
-              and run it yourself.
-            </p>
-          </details>
-          <details>
-            <summary>
-              What if I cancel?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Cancel from Settings whenever you want: Cloud stops at the end of the month you paid
-              for. Your workspace stays, and your teammates can keep working for free on your own
-              computer.
-            </p>
-          </details>
+          {FAQ.map(({ q, a }, i) => (
+            <details key={q} open={i === 0}>
+              <summary>
+                {q}
+                <span className={c('pm')}>
+                  <Icon name="plus" />
+                </span>
+              </summary>
+              <p>{a}</p>
+            </details>
+          ))}
         </div>
       </div>
     </section>
@@ -345,7 +263,9 @@ export function Footer() {
         <nav aria-label="Footer">
           <a href={REPO_URL}>GitHub</a>
           <a href="https://status.brigade.lol">Status</a>
+          <a href="/docs">Docs</a>
           <Link href="/changelog">Changelog</Link>
+          <Link href="/compare">Compare</Link>
           <AuthLink href={SIGN_IN}>Sign in</AuthLink>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
