@@ -48,11 +48,18 @@ const { auth } = await import('../src/auth.js')
 const { prisma } = await import('../src/db.js')
 const { env } = await import('../src/config.js')
 const { scannerLogin } = await import('../src/scanner-login.js')
+const { requireUser } = await import('../src/scope.js')
 
 const app = new Hono()
 for (const path of ['/api/auth/login', '/api/v1/auth/login', '/auth/login'])
   app.post(path, scannerLogin(auth))
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+app.get('/api/me', requireUser, (c) => c.json({ userId: c.get('userId') }))
+app.onError((error, c) =>
+  'status' in error && error.status === 401
+    ? c.json({ error: error.message }, 401)
+    : c.json({ error: String(error) }, 500),
+)
 
 const email = `scanner-${randomUUID().slice(0, 8)}@example.com`
 const password = `pw-${randomUUID()}`
@@ -101,3 +108,23 @@ test('a wrong password or a missing field signs nobody in', { skip }, async () =
   assert.equal(missing.status, 400)
   assert.equal(sessionCookie(missing), undefined)
 })
+
+test(
+  'the token sign-in returns works as a bearer token, and nothing else does',
+  { skip },
+  async () => {
+    const response = await json('/api/v1/auth/login', { email, password })
+    const { token } = (await response.json()) as { token: string }
+    assert.ok(token)
+    const me = (authorization?: string) =>
+      app.request(`${env.API_URL}/api/me`, {
+        headers: { ...(authorization && { authorization }), origin: origin() },
+      })
+    const signedIn = await me(`Bearer ${token}`)
+    assert.equal(signedIn.status, 200)
+    assert.ok(((await signedIn.json()) as { userId: string }).userId)
+    assert.equal((await me()).status, 401)
+    assert.equal((await me(`Bearer ${token}x`)).status, 401)
+    assert.equal((await me('Bearer not-a-token')).status, 401)
+  },
+)

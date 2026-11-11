@@ -1,7 +1,7 @@
 import { type BetterAuthPlugin, betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
-import { captcha, emailOTP, organization } from 'better-auth/plugins'
+import { bearer, captcha, emailOTP, organization } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import {
   adminAc,
@@ -107,6 +107,10 @@ export const auth = betterAuth({
     }),
   },
   plugins: [
+    // TEMPORARY, for Google's CASA assessment only (with src/scanner-login.ts): the lab's
+    // scanner keeps the session token sign-in returns and sends it as `Authorization: Bearer`,
+    // not as the cookie. Remove once the lab's letter of validation is in.
+    bearer(),
     desktopSignIn(),
     passwordSignIn(),
     emailOTP({
