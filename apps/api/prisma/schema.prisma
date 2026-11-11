@@ -1055,6 +1055,8 @@ model Goal {
   decidedByMemberId  String?
   /// The thread's last turn.completed event the loop took (its seq): each turn's end counts once.
   turnSeq            Int               @default(0)
+  /// The last turn's end whose measurement counted toward progress: each counts once.
+  countedSeq         Int               @default(0)
   /// Turns ended since it was approved, and in a row without progress.
   turns              Int               @default(0)
   stalledTurns       Int               @default(0)
@@ -1097,6 +1099,8 @@ model GoalMeasurement {
   turnSeq        Int?
   at             DateTime  @default(now())
   measuredAt     DateTime?
+  /// When the loop moved on from it (afterMeasure): one kept and not handled is taken again.
+  handledAt      DateTime?
 
   @@index([goalId, at])
   @@index([status, at])

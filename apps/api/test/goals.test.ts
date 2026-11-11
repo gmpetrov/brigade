@@ -722,6 +722,164 @@ describe('goals', { skip: !database && 'no database answers' }, () => {
     assert.equal(status.ok, true, 'a sub-thread reads where its parent’s goal stands')
   })
 
+  test('a goal the person judges goes on when resumed', async () => {
+    const goals = await import('../src/goals.js')
+    const session = await thread()
+    const proposed = await call(session.id, {
+      name: 'propose_goal',
+      contract: {
+        outcome: 'A launch post people like',
+        recipe: { kind: 'person' },
+        budget: { tokens: 5_000_000, hours: 24 },
+        permissions: [],
+      },
+    })
+    assert.equal(proposed.ok, true, proposed.error)
+    const goalId = proposed.output!.goalId as string
+    await runner.run(() => goals.approveGoal(db, member(), session, goalId))
+    // Its turn's end: no figure, nothing open, relaunched.
+    const before = notes('relaunch').length
+    await turnEnds(session.id)
+    assert.equal(notes('relaunch').length, before + 1)
+    await runner.run(() => goals.pauseGoal(db, member(), session, goalId))
+    await runner.run(() => goals.resumeGoal(db, member(), session, goalId))
+    assert.equal(notes('relaunch').length, before + 2, 'resumed, it works again')
+    const view = await goals.goalView(db, scope, session.id, { act: true, approve: true })
+    assert.equal(view?.measurements.length, 0, 'no figure shows in its series')
+    await runner.run(() => goals.judgeGoal(db, member(), session, goalId, true))
+    assert.equal((await db.goal.findFirst({ where: { id: goalId } }))!.status, 'achieved')
+  })
+
+  test('a relaunch held for usage and cancelled by a pause is made again on resume', async () => {
+    const goals = await import('../src/goals.js')
+    const session = await thread()
+    demos = 0
+    const proposed = await call(session.id, {
+      name: 'propose_goal',
+      contract: {
+        outcome: '5 demos',
+        target: { comparison: 'at_least', value: 5 },
+        recipe: {
+          kind: 'app',
+          connectionId: ids.email,
+          operation: 'goal_test_demos',
+          input: {},
+          read: { path: 'booked', op: 'count' },
+        },
+        budget: { tokens: 5_000_000, hours: 24 },
+        permissions: [],
+      },
+    })
+    const goalId = proposed.output!.goalId as string
+    await runner.run(() => goals.approveGoal(db, member(), session, goalId))
+    await db.account.updateMany({
+      where: { id: ids.account },
+      data: {
+        lastUsage: [
+          {
+            window: '5-hour',
+            utilization: 0.95,
+            resetsAt: new Date(Date.now() + 3_600_000).toISOString(),
+          },
+        ],
+        lastUsageAt: new Date(),
+      },
+    })
+    await turnEnds(session.id)
+    const held = await db.wakeup.findFirst({
+      where: {
+        sessionId: session.id,
+        status: 'pending',
+        sourceId: { startsWith: `goal:${goalId}:relaunch:` },
+      },
+    })
+    assert.ok(held, 'held for usage')
+    await runner.run(() => goals.pauseGoal(db, member(), session, goalId))
+    assert.equal((await db.wakeup.findFirst({ where: { id: held.id } }))!.status, 'cancelled')
+    await db.account.updateMany({ where: { id: ids.account }, data: { lastUsage: [] } })
+    const before = notes('relaunch').length
+    await runner.run(() => goals.resumeGoal(db, member(), session, goalId))
+    assert.equal(
+      notes('relaunch').length,
+      before + 1,
+      'a new relaunch, not refused as made already',
+    )
+    await runner.run(() => goals.stopGoal(db, member(), session, goalId))
+  })
+
+  test('what a restart stopped halfway is taken again by the minute’s job', async () => {
+    const goals = await import('../src/goals.js')
+    const session = await thread()
+    demos = 1
+    const proposed = await call(session.id, {
+      name: 'propose_goal',
+      contract: {
+        outcome: '5 demos',
+        target: { comparison: 'at_least', value: 5 },
+        recipe: {
+          kind: 'app',
+          connectionId: ids.email,
+          operation: 'goal_test_demos',
+          input: {},
+          read: { path: 'booked', op: 'count' },
+        },
+        budget: { tokens: 5_000_000, hours: 24 },
+        permissions: [],
+      },
+    })
+    const goalId = proposed.output!.goalId as string
+    await runner.run(() => goals.approveGoal(db, member(), session, goalId))
+    await db.goal.updateMany({
+      where: { id: goalId },
+      data: { nextMeasureAt: new Date(Date.now() + 3_600_000) },
+    })
+    // A turn's end claimed with its measurement, and the process stopped before reading the App.
+    seq += 1
+    await db.goal.updateMany({
+      where: { id: goalId },
+      data: { turnSeq: seq, turns: { increment: 1 } },
+    })
+    const unread = await db.goalMeasurement.create({
+      data: {
+        goalId,
+        reason: 'turn',
+        turnSeq: seq,
+        at: new Date(Date.now() - 10 * 60_000),
+      } as never,
+    })
+    const before = notes('relaunch').length
+    await runner.run(() => goals.measureDueGoals(scope.workspaceId))
+    const read = (await db.goalMeasurement.findFirst({ where: { id: unread.id } }))!
+    assert.equal(read.value, 1, 'read then')
+    assert.ok(read.handledAt)
+    assert.equal(notes('relaunch').length, before + 1, 'and the loop moved on')
+    // Measured, counted, and stopped before the loop moved on: moved on, its turn not counted twice.
+    seq += 1
+    await db.goal.updateMany({
+      where: { id: goalId },
+      data: { turnSeq: seq, countedSeq: seq, stalledTurns: { increment: 1 } },
+    })
+    const kept = await db.goalMeasurement.create({
+      data: {
+        goalId,
+        reason: 'turn',
+        turnSeq: seq,
+        status: 'ok',
+        value: 1,
+        met: false,
+        measuredAt: new Date(),
+        at: new Date(Date.now() - 10 * 60_000),
+      } as never,
+    })
+    const stalled = (await db.goal.findFirst({ where: { id: goalId } }))!.stalledTurns
+    await runner.run(() => goals.measureDueGoals(scope.workspaceId))
+    await runner.run(() => goals.measureDueGoals(scope.workspaceId))
+    assert.ok((await db.goalMeasurement.findFirst({ where: { id: kept.id } }))!.handledAt)
+    assert.equal((await db.goal.findFirst({ where: { id: goalId } }))!.stalledTurns, stalled)
+    assert.equal(notes('relaunch').length, before + 2)
+    await runner.run(() => goals.stopGoal(db, member(), session, goalId))
+  })
+
   test('reading a number out of an answer', async () => {
     const { readNumber, lastNumber } = await import('../src/goals.js')
     assert.equal(

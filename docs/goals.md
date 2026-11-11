@@ -78,6 +78,13 @@ between turns (`measureDueGoals`). A measurement that moves away from the target
 sleeps, at most once in `GOAL_DRIFT_GAP_MS`. A deadline that passes is measured once more, then ends
 the goal unless reached.
 
+**Restarts.** A turn's end is claimed together with its measurement row (pending, or of no figure for a
+goal the person judges), a start or an end with its note: a process that stops in between leaves them
+for the minute's job, which reads an App's or a list's measurement still pending, and moves the loop on
+from any measurement not handled yet (`handledAt`). Each step is safe to do twice: a turn counts toward
+progress once (`countedSeq`), and a relaunch is keyed by the turn's end and the measurement that decided
+it, so a resume after a pause makes a new one.
+
 **Quota.** When a usage window of the thread's account is past `GOAL_QUOTA_RESERVE` (80%), the
 relaunch waits until it resets (`heldUntil`): a goal never spends what the person's other threads need.
 

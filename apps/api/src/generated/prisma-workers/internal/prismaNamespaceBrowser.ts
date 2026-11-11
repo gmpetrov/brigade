@@ -643,6 +643,7 @@ export const GoalScalarFieldEnum = {
   endReason: 'endReason',
   decidedByMemberId: 'decidedByMemberId',
   turnSeq: 'turnSeq',
+  countedSeq: 'countedSeq',
   turns: 'turns',
   stalledTurns: 'stalledTurns',
   best: 'best',
@@ -670,7 +671,8 @@ export const GoalMeasurementScalarFieldEnum = {
   detail: 'detail',
   turnSeq: 'turnSeq',
   at: 'at',
-  measuredAt: 'measuredAt'
+  measuredAt: 'measuredAt',
+  handledAt: 'handledAt'
 } as const
 
 export type GoalMeasurementScalarFieldEnum = (typeof GoalMeasurementScalarFieldEnum)[keyof typeof GoalMeasurementScalarFieldEnum]

@@ -29,6 +29,7 @@ export type AggregateGoal = {
 
 export type GoalAvgAggregateOutputType = {
   turnSeq: number | null
+  countedSeq: number | null
   turns: number | null
   stalledTurns: number | null
   best: number | null
@@ -36,6 +37,7 @@ export type GoalAvgAggregateOutputType = {
 
 export type GoalSumAggregateOutputType = {
   turnSeq: number | null
+  countedSeq: number | null
   turns: number | null
   stalledTurns: number | null
   best: number | null
@@ -54,6 +56,7 @@ export type GoalMinAggregateOutputType = {
   endReason: string | null
   decidedByMemberId: string | null
   turnSeq: number | null
+  countedSeq: number | null
   turns: number | null
   stalledTurns: number | null
   best: number | null
@@ -78,6 +81,7 @@ export type GoalMaxAggregateOutputType = {
   endReason: string | null
   decidedByMemberId: string | null
   turnSeq: number | null
+  countedSeq: number | null
   turns: number | null
   stalledTurns: number | null
   best: number | null
@@ -104,6 +108,7 @@ export type GoalCountAggregateOutputType = {
   endReason: number
   decidedByMemberId: number
   turnSeq: number
+  countedSeq: number
   turns: number
   stalledTurns: number
   best: number
@@ -120,6 +125,7 @@ export type GoalCountAggregateOutputType = {
 
 export type GoalAvgAggregateInputType = {
   turnSeq?: true
+  countedSeq?: true
   turns?: true
   stalledTurns?: true
   best?: true
@@ -127,6 +133,7 @@ export type GoalAvgAggregateInputType = {
 
 export type GoalSumAggregateInputType = {
   turnSeq?: true
+  countedSeq?: true
   turns?: true
   stalledTurns?: true
   best?: true
@@ -145,6 +152,7 @@ export type GoalMinAggregateInputType = {
   endReason?: true
   decidedByMemberId?: true
   turnSeq?: true
+  countedSeq?: true
   turns?: true
   stalledTurns?: true
   best?: true
@@ -169,6 +177,7 @@ export type GoalMaxAggregateInputType = {
   endReason?: true
   decidedByMemberId?: true
   turnSeq?: true
+  countedSeq?: true
   turns?: true
   stalledTurns?: true
   best?: true
@@ -195,6 +204,7 @@ export type GoalCountAggregateInputType = {
   endReason?: true
   decidedByMemberId?: true
   turnSeq?: true
+  countedSeq?: true
   turns?: true
   stalledTurns?: true
   best?: true
@@ -309,6 +319,7 @@ export type GoalGroupByOutputType = {
   endReason: string | null
   decidedByMemberId: string | null
   turnSeq: number
+  countedSeq: number
   turns: number
   stalledTurns: number
   best: number | null
@@ -359,6 +370,7 @@ export type GoalWhereInput = {
   endReason?: Prisma.StringNullableFilter<"Goal"> | string | null
   decidedByMemberId?: Prisma.StringNullableFilter<"Goal"> | string | null
   turnSeq?: Prisma.IntFilter<"Goal"> | number
+  countedSeq?: Prisma.IntFilter<"Goal"> | number
   turns?: Prisma.IntFilter<"Goal"> | number
   stalledTurns?: Prisma.IntFilter<"Goal"> | number
   best?: Prisma.FloatNullableFilter<"Goal"> | number | null
@@ -389,6 +401,7 @@ export type GoalOrderByWithRelationInput = {
   endReason?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -422,6 +435,7 @@ export type GoalWhereUniqueInput = Prisma.AtLeast<{
   endReason?: Prisma.StringNullableFilter<"Goal"> | string | null
   decidedByMemberId?: Prisma.StringNullableFilter<"Goal"> | string | null
   turnSeq?: Prisma.IntFilter<"Goal"> | number
+  countedSeq?: Prisma.IntFilter<"Goal"> | number
   turns?: Prisma.IntFilter<"Goal"> | number
   stalledTurns?: Prisma.IntFilter<"Goal"> | number
   best?: Prisma.FloatNullableFilter<"Goal"> | number | null
@@ -452,6 +466,7 @@ export type GoalOrderByWithAggregationInput = {
   endReason?: Prisma.SortOrderInput | Prisma.SortOrder
   decidedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -487,6 +502,7 @@ export type GoalScalarWhereWithAggregatesInput = {
   endReason?: Prisma.StringNullableWithAggregatesFilter<"Goal"> | string | null
   decidedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"Goal"> | string | null
   turnSeq?: Prisma.IntWithAggregatesFilter<"Goal"> | number
+  countedSeq?: Prisma.IntWithAggregatesFilter<"Goal"> | number
   turns?: Prisma.IntWithAggregatesFilter<"Goal"> | number
   stalledTurns?: Prisma.IntWithAggregatesFilter<"Goal"> | number
   best?: Prisma.FloatNullableWithAggregatesFilter<"Goal"> | number | null
@@ -512,6 +528,7 @@ export type GoalCreateInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -542,6 +559,7 @@ export type GoalUncheckedCreateInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -568,6 +586,7 @@ export type GoalUpdateInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -598,6 +617,7 @@ export type GoalUncheckedUpdateInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -626,6 +646,7 @@ export type GoalCreateManyInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -651,6 +672,7 @@ export type GoalUpdateManyMutationInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -678,6 +700,7 @@ export type GoalUncheckedUpdateManyInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -715,6 +738,7 @@ export type GoalCountOrderByAggregateInput = {
   endReason?: Prisma.SortOrder
   decidedByMemberId?: Prisma.SortOrder
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrder
@@ -729,6 +753,7 @@ export type GoalCountOrderByAggregateInput = {
 
 export type GoalAvgOrderByAggregateInput = {
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrder
@@ -747,6 +772,7 @@ export type GoalMaxOrderByAggregateInput = {
   endReason?: Prisma.SortOrder
   decidedByMemberId?: Prisma.SortOrder
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrder
@@ -771,6 +797,7 @@ export type GoalMinOrderByAggregateInput = {
   endReason?: Prisma.SortOrder
   decidedByMemberId?: Prisma.SortOrder
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrder
@@ -784,6 +811,7 @@ export type GoalMinOrderByAggregateInput = {
 
 export type GoalSumOrderByAggregateInput = {
   turnSeq?: Prisma.SortOrder
+  countedSeq?: Prisma.SortOrder
   turns?: Prisma.SortOrder
   stalledTurns?: Prisma.SortOrder
   best?: Prisma.SortOrder
@@ -917,6 +945,7 @@ export type GoalCreateWithoutWorkspaceInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -945,6 +974,7 @@ export type GoalUncheckedCreateWithoutWorkspaceInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1002,6 +1032,7 @@ export type GoalScalarWhereInput = {
   endReason?: Prisma.StringNullableFilter<"Goal"> | string | null
   decidedByMemberId?: Prisma.StringNullableFilter<"Goal"> | string | null
   turnSeq?: Prisma.IntFilter<"Goal"> | number
+  countedSeq?: Prisma.IntFilter<"Goal"> | number
   turns?: Prisma.IntFilter<"Goal"> | number
   stalledTurns?: Prisma.IntFilter<"Goal"> | number
   best?: Prisma.FloatNullableFilter<"Goal"> | number | null
@@ -1027,6 +1058,7 @@ export type GoalCreateWithoutSessionInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1055,6 +1087,7 @@ export type GoalUncheckedCreateWithoutSessionInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1107,6 +1140,7 @@ export type GoalCreateWithoutMeasurementsInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1136,6 +1170,7 @@ export type GoalUncheckedCreateWithoutMeasurementsInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1177,6 +1212,7 @@ export type GoalUpdateWithoutMeasurementsInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1206,6 +1242,7 @@ export type GoalUncheckedUpdateWithoutMeasurementsInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1232,6 +1269,7 @@ export type GoalCreateManyWorkspaceInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1257,6 +1295,7 @@ export type GoalUpdateWithoutWorkspaceInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1285,6 +1324,7 @@ export type GoalUncheckedUpdateWithoutWorkspaceInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1312,6 +1352,7 @@ export type GoalUncheckedUpdateManyWithoutWorkspaceInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1338,6 +1379,7 @@ export type GoalCreateManySessionInput = {
   endReason?: string | null
   decidedByMemberId?: string | null
   turnSeq?: number
+  countedSeq?: number
   turns?: number
   stalledTurns?: number
   best?: number | null
@@ -1363,6 +1405,7 @@ export type GoalUpdateWithoutSessionInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1391,6 +1434,7 @@ export type GoalUncheckedUpdateWithoutSessionInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1418,6 +1462,7 @@ export type GoalUncheckedUpdateManyWithoutSessionInput = {
   endReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   decidedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   turnSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  countedSeq?: Prisma.IntFieldUpdateOperationsInput | number
   turns?: Prisma.IntFieldUpdateOperationsInput | number
   stalledTurns?: Prisma.IntFieldUpdateOperationsInput | number
   best?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1476,6 +1521,7 @@ export type GoalSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   endReason?: boolean
   decidedByMemberId?: boolean
   turnSeq?: boolean
+  countedSeq?: boolean
   turns?: boolean
   stalledTurns?: boolean
   best?: boolean
@@ -1507,6 +1553,7 @@ export type GoalSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   endReason?: boolean
   decidedByMemberId?: boolean
   turnSeq?: boolean
+  countedSeq?: boolean
   turns?: boolean
   stalledTurns?: boolean
   best?: boolean
@@ -1536,6 +1583,7 @@ export type GoalSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   endReason?: boolean
   decidedByMemberId?: boolean
   turnSeq?: boolean
+  countedSeq?: boolean
   turns?: boolean
   stalledTurns?: boolean
   best?: boolean
@@ -1565,6 +1613,7 @@ export type GoalSelectScalar = {
   endReason?: boolean
   decidedByMemberId?: boolean
   turnSeq?: boolean
+  countedSeq?: boolean
   turns?: boolean
   stalledTurns?: boolean
   best?: boolean
@@ -1577,7 +1626,7 @@ export type GoalSelectScalar = {
   updatedAt?: boolean
 }
 
-export type GoalOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "teammateId" | "status" | "contract" | "revoked" | "approvedByMemberId" | "approvedAt" | "endedAt" | "endReason" | "decidedByMemberId" | "turnSeq" | "turns" | "stalledTurns" | "best" | "nextMeasureAt" | "heldUntil" | "holdReason" | "driftWokeAt" | "report" | "createdAt" | "updatedAt", ExtArgs["result"]["goal"]>
+export type GoalOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "teammateId" | "status" | "contract" | "revoked" | "approvedByMemberId" | "approvedAt" | "endedAt" | "endReason" | "decidedByMemberId" | "turnSeq" | "countedSeq" | "turns" | "stalledTurns" | "best" | "nextMeasureAt" | "heldUntil" | "holdReason" | "driftWokeAt" | "report" | "createdAt" | "updatedAt", ExtArgs["result"]["goal"]>
 export type GoalInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1633,6 +1682,10 @@ export type $GoalPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      * The thread's last turn.completed event the loop took (its seq): each turn's end counts once.
      */
     turnSeq: number
+    /**
+     * The last turn's end whose measurement counted toward progress: each counts once.
+     */
+    countedSeq: number
     /**
      * Turns ended since it was approved, and in a row without progress.
      */
@@ -2101,6 +2154,7 @@ export interface GoalFieldRefs {
   readonly endReason: Prisma.FieldRef<"Goal", 'String'>
   readonly decidedByMemberId: Prisma.FieldRef<"Goal", 'String'>
   readonly turnSeq: Prisma.FieldRef<"Goal", 'Int'>
+  readonly countedSeq: Prisma.FieldRef<"Goal", 'Int'>
   readonly turns: Prisma.FieldRef<"Goal", 'Int'>
   readonly stalledTurns: Prisma.FieldRef<"Goal", 'Int'>
   readonly best: Prisma.FieldRef<"Goal", 'Float'>

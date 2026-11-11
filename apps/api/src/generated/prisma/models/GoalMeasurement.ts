@@ -50,6 +50,7 @@ export type GoalMeasurementMinAggregateOutputType = {
   turnSeq: number | null
   at: Date | null
   measuredAt: Date | null
+  handledAt: Date | null
 }
 
 export type GoalMeasurementMaxAggregateOutputType = {
@@ -65,6 +66,7 @@ export type GoalMeasurementMaxAggregateOutputType = {
   turnSeq: number | null
   at: Date | null
   measuredAt: Date | null
+  handledAt: Date | null
 }
 
 export type GoalMeasurementCountAggregateOutputType = {
@@ -80,6 +82,7 @@ export type GoalMeasurementCountAggregateOutputType = {
   turnSeq: number
   at: number
   measuredAt: number
+  handledAt: number
   _all: number
 }
 
@@ -107,6 +110,7 @@ export type GoalMeasurementMinAggregateInputType = {
   turnSeq?: true
   at?: true
   measuredAt?: true
+  handledAt?: true
 }
 
 export type GoalMeasurementMaxAggregateInputType = {
@@ -122,6 +126,7 @@ export type GoalMeasurementMaxAggregateInputType = {
   turnSeq?: true
   at?: true
   measuredAt?: true
+  handledAt?: true
 }
 
 export type GoalMeasurementCountAggregateInputType = {
@@ -137,6 +142,7 @@ export type GoalMeasurementCountAggregateInputType = {
   turnSeq?: true
   at?: true
   measuredAt?: true
+  handledAt?: true
   _all?: true
 }
 
@@ -239,6 +245,7 @@ export type GoalMeasurementGroupByOutputType = {
   turnSeq: number | null
   at: Date
   measuredAt: Date | null
+  handledAt: Date | null
   _count: GoalMeasurementCountAggregateOutputType | null
   _avg: GoalMeasurementAvgAggregateOutputType | null
   _sum: GoalMeasurementSumAggregateOutputType | null
@@ -277,6 +284,7 @@ export type GoalMeasurementWhereInput = {
   turnSeq?: Prisma.IntNullableFilter<"GoalMeasurement"> | number | null
   at?: Prisma.DateTimeFilter<"GoalMeasurement"> | Date | string
   measuredAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
+  handledAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
   goal?: Prisma.XOR<Prisma.GoalScalarRelationFilter, Prisma.GoalWhereInput>
 }
 
@@ -293,6 +301,7 @@ export type GoalMeasurementOrderByWithRelationInput = {
   turnSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   at?: Prisma.SortOrder
   measuredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  handledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   goal?: Prisma.GoalOrderByWithRelationInput
 }
 
@@ -312,6 +321,7 @@ export type GoalMeasurementWhereUniqueInput = Prisma.AtLeast<{
   turnSeq?: Prisma.IntNullableFilter<"GoalMeasurement"> | number | null
   at?: Prisma.DateTimeFilter<"GoalMeasurement"> | Date | string
   measuredAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
+  handledAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
   goal?: Prisma.XOR<Prisma.GoalScalarRelationFilter, Prisma.GoalWhereInput>
 }, "id">
 
@@ -328,6 +338,7 @@ export type GoalMeasurementOrderByWithAggregationInput = {
   turnSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   at?: Prisma.SortOrder
   measuredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  handledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.GoalMeasurementCountOrderByAggregateInput
   _avg?: Prisma.GoalMeasurementAvgOrderByAggregateInput
   _max?: Prisma.GoalMeasurementMaxOrderByAggregateInput
@@ -351,6 +362,7 @@ export type GoalMeasurementScalarWhereWithAggregatesInput = {
   turnSeq?: Prisma.IntNullableWithAggregatesFilter<"GoalMeasurement"> | number | null
   at?: Prisma.DateTimeWithAggregatesFilter<"GoalMeasurement"> | Date | string
   measuredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"GoalMeasurement"> | Date | string | null
+  handledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"GoalMeasurement"> | Date | string | null
 }
 
 export type GoalMeasurementCreateInput = {
@@ -365,6 +377,7 @@ export type GoalMeasurementCreateInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
   goal: Prisma.GoalCreateNestedOneWithoutMeasurementsInput
 }
 
@@ -381,6 +394,7 @@ export type GoalMeasurementUncheckedCreateInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
 }
 
 export type GoalMeasurementUpdateInput = {
@@ -395,6 +409,7 @@ export type GoalMeasurementUpdateInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   goal?: Prisma.GoalUpdateOneRequiredWithoutMeasurementsNestedInput
 }
 
@@ -411,6 +426,7 @@ export type GoalMeasurementUncheckedUpdateInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type GoalMeasurementCreateManyInput = {
@@ -426,6 +442,7 @@ export type GoalMeasurementCreateManyInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
 }
 
 export type GoalMeasurementUpdateManyMutationInput = {
@@ -440,6 +457,7 @@ export type GoalMeasurementUpdateManyMutationInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type GoalMeasurementUncheckedUpdateManyInput = {
@@ -455,6 +473,7 @@ export type GoalMeasurementUncheckedUpdateManyInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type GoalMeasurementListRelationFilter = {
@@ -480,6 +499,7 @@ export type GoalMeasurementCountOrderByAggregateInput = {
   turnSeq?: Prisma.SortOrder
   at?: Prisma.SortOrder
   measuredAt?: Prisma.SortOrder
+  handledAt?: Prisma.SortOrder
 }
 
 export type GoalMeasurementAvgOrderByAggregateInput = {
@@ -500,6 +520,7 @@ export type GoalMeasurementMaxOrderByAggregateInput = {
   turnSeq?: Prisma.SortOrder
   at?: Prisma.SortOrder
   measuredAt?: Prisma.SortOrder
+  handledAt?: Prisma.SortOrder
 }
 
 export type GoalMeasurementMinOrderByAggregateInput = {
@@ -515,6 +536,7 @@ export type GoalMeasurementMinOrderByAggregateInput = {
   turnSeq?: Prisma.SortOrder
   at?: Prisma.SortOrder
   measuredAt?: Prisma.SortOrder
+  handledAt?: Prisma.SortOrder
 }
 
 export type GoalMeasurementSumOrderByAggregateInput = {
@@ -580,6 +602,7 @@ export type GoalMeasurementCreateWithoutGoalInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
 }
 
 export type GoalMeasurementUncheckedCreateWithoutGoalInput = {
@@ -594,6 +617,7 @@ export type GoalMeasurementUncheckedCreateWithoutGoalInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
 }
 
 export type GoalMeasurementCreateOrConnectWithoutGoalInput = {
@@ -638,6 +662,7 @@ export type GoalMeasurementScalarWhereInput = {
   turnSeq?: Prisma.IntNullableFilter<"GoalMeasurement"> | number | null
   at?: Prisma.DateTimeFilter<"GoalMeasurement"> | Date | string
   measuredAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
+  handledAt?: Prisma.DateTimeNullableFilter<"GoalMeasurement"> | Date | string | null
 }
 
 export type GoalMeasurementCreateManyGoalInput = {
@@ -652,6 +677,7 @@ export type GoalMeasurementCreateManyGoalInput = {
   turnSeq?: number | null
   at?: Date | string
   measuredAt?: Date | string | null
+  handledAt?: Date | string | null
 }
 
 export type GoalMeasurementUpdateWithoutGoalInput = {
@@ -666,6 +692,7 @@ export type GoalMeasurementUpdateWithoutGoalInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type GoalMeasurementUncheckedUpdateWithoutGoalInput = {
@@ -680,6 +707,7 @@ export type GoalMeasurementUncheckedUpdateWithoutGoalInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type GoalMeasurementUncheckedUpdateManyWithoutGoalInput = {
@@ -694,6 +722,7 @@ export type GoalMeasurementUncheckedUpdateManyWithoutGoalInput = {
   turnSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   measuredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -711,6 +740,7 @@ export type GoalMeasurementSelect<ExtArgs extends runtime.Types.Extensions.Inter
   turnSeq?: boolean
   at?: boolean
   measuredAt?: boolean
+  handledAt?: boolean
   goal?: boolean | Prisma.GoalDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["goalMeasurement"]>
 
@@ -727,6 +757,7 @@ export type GoalMeasurementSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   turnSeq?: boolean
   at?: boolean
   measuredAt?: boolean
+  handledAt?: boolean
   goal?: boolean | Prisma.GoalDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["goalMeasurement"]>
 
@@ -743,6 +774,7 @@ export type GoalMeasurementSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   turnSeq?: boolean
   at?: boolean
   measuredAt?: boolean
+  handledAt?: boolean
   goal?: boolean | Prisma.GoalDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["goalMeasurement"]>
 
@@ -759,9 +791,10 @@ export type GoalMeasurementSelectScalar = {
   turnSeq?: boolean
   at?: boolean
   measuredAt?: boolean
+  handledAt?: boolean
 }
 
-export type GoalMeasurementOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "goalId" | "reason" | "status" | "value" | "met" | "detail" | "turnSeq" | "at" | "measuredAt", ExtArgs["result"]["goalMeasurement"]>
+export type GoalMeasurementOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "goalId" | "reason" | "status" | "value" | "met" | "detail" | "turnSeq" | "at" | "measuredAt" | "handledAt", ExtArgs["result"]["goalMeasurement"]>
 export type GoalMeasurementInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   goal?: boolean | Prisma.GoalDefaultArgs<ExtArgs>
 }
@@ -802,6 +835,10 @@ export type $GoalMeasurementPayload<ExtArgs extends runtime.Types.Extensions.Int
     turnSeq: number | null
     at: Date
     measuredAt: Date | null
+    /**
+     * When the loop moved on from it (afterMeasure): one kept and not handled is taken again.
+     */
+    handledAt: Date | null
   }, ExtArgs["result"]["goalMeasurement"]>
   composites: {}
 }
@@ -1238,6 +1275,7 @@ export interface GoalMeasurementFieldRefs {
   readonly turnSeq: Prisma.FieldRef<"GoalMeasurement", 'Int'>
   readonly at: Prisma.FieldRef<"GoalMeasurement", 'DateTime'>
   readonly measuredAt: Prisma.FieldRef<"GoalMeasurement", 'DateTime'>
+  readonly handledAt: Prisma.FieldRef<"GoalMeasurement", 'DateTime'>
 }
     
 

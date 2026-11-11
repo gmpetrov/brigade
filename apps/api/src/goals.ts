@@ -43,6 +43,7 @@ import {
   type ScheduleOperation,
   type SequencedEvent,
 } from '@brigade/contracts'
+import { randomUUID } from 'node:crypto'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { audit, type Actor } from './audit.js'
@@ -384,32 +385,49 @@ async function note(
   text: string,
   wakeAt = new Date(),
 ) {
-  let id: string
-  try {
-    id = (
-      await prisma.wakeup.create({
-        data: {
-          organizationId: scope.organizationId,
-          workspaceId: scope.workspaceId,
-          sessionId: goal.sessionId,
-          teammateId: goal.teammateId,
-          kind: 'wakeup',
-          note: text,
-          wakeAt,
-          sourceId: sourceOf(goal.id, kind, key),
-        },
-      })
-    ).id
-  } catch (error) {
-    // Made already: a retry of the same step.
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null
-    throw error
-  }
-  if (wakeAt.getTime() <= Date.now()) {
-    const { fireNow } = await import('./wakeups.js')
-    await fireNow(id)
-  }
+  const id = await keepNote(prisma, scope, goal, kind, key, text, wakeAt)
+  if (id && wakeAt.getTime() <= Date.now()) await fireNote(id)
   return id
+}
+
+/**
+ * Keep a goal's note as its wake-up, in the transaction that changes the goal when given one: a
+ * process that stops right after still has it, and the minute's tick fires it. Null when made
+ * already (a retry of the same step).
+ */
+async function keepNote(
+  client: Pick<Prisma.TransactionClient, 'wakeup'>,
+  scope: Scope,
+  goal: { id: string; sessionId: string; teammateId: string },
+  kind: 'start' | 'relaunch' | 'drift' | 'end',
+  key: string,
+  text: string,
+  wakeAt = new Date(),
+) {
+  const id = randomUUID()
+  const { count } = await client.wakeup.createMany({
+    data: [
+      {
+        id,
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        sessionId: goal.sessionId,
+        teammateId: goal.teammateId,
+        kind: 'wakeup',
+        note: text,
+        wakeAt,
+        sourceId: sourceOf(goal.id, kind, key),
+      },
+    ],
+    skipDuplicates: true,
+  })
+  return count ? id : null
+}
+
+/** Fire a note kept due now, rather than at the next minute's tick. */
+async function fireNote(id: string) {
+  const { fireNow } = await import('./wakeups.js')
+  await fireNow(id)
 }
 
 /** Cancel the loop's notes not sent yet: its relaunches and drift wake-ups. */
@@ -439,16 +457,32 @@ export async function approveGoal(
   const contract = contractOf(goal)
   const now = new Date()
   const every = 'everyMinutes' in contract.recipe ? contract.recipe.everyMinutes : undefined
-  const { count } = await db.goal.updateMany({
-    where: { id: goal.id, status: 'proposed' },
-    data: {
-      status: 'active',
-      approvedAt: now,
-      approvedByMemberId: scope.memberId,
-      ...(every ? { nextMeasureAt: new Date(now.getTime() + every * 60_000) } : {}),
-    },
+  // Approved and its start note kept together: a restart in between loses neither.
+  const started = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.goal.updateMany({
+      where: { id: goal.id, workspaceId: scope.workspaceId, status: 'proposed' },
+      data: {
+        status: 'active',
+        approvedAt: now,
+        approvedByMemberId: scope.memberId,
+        ...(every ? { nextMeasureAt: new Date(now.getTime() + every * 60_000) } : {}),
+      },
+    })
+    if (!count) return null
+    return keepNote(
+      tx,
+      scope,
+      goal,
+      'start',
+      'once',
+      goalStartMessage({
+        goalId: goal.id,
+        outcome: contract.outcome,
+        contract: contractText(contract),
+      }),
+    )
   })
-  if (!count)
+  if (started === null)
     throw new HTTPException(409, { message: 'This goal is no longer waiting for approval' })
   await audit({
     ...scope,
@@ -457,19 +491,9 @@ export async function approveGoal(
     target: { type: 'thread', id: thread.id },
     data: { goalId: goal.id, permissions: contract.permissions.map((p) => p.label) },
   })
+  await fireNote(started)
   // Where it starts from: a first measurement, which may find it reached already.
   if (contract.recipe.kind !== 'person') await measure(scope, goal.id, 'start')
-  await note(
-    scope,
-    goal,
-    'start',
-    'once',
-    goalStartMessage({
-      goalId: goal.id,
-      outcome: contract.outcome,
-      contract: contractText(contract),
-    }),
-  )
   changed(scope, thread.id)
 }
 
@@ -737,17 +761,46 @@ export async function measure(
   scope: Scope,
   goalId: string,
   reason: Reason,
-  turnSeq?: number,
 ): Promise<string | null> {
   const db = scoped(scope)
   const goal = await db.goal.findFirst({ where: { id: goalId } })
   if (!goal) return null
-  const contract = contractOf(goal)
-  const recipe = contract.recipe
-  if (recipe.kind === 'person') return null
+  const person = contractOf(goal).recipe.kind === 'person'
   const row = await db.goalMeasurement.create({
-    data: { goalId, reason, ...(turnSeq !== undefined ? { turnSeq } : {}) } as never,
+    data: {
+      goalId,
+      reason,
+      ...(person ? { status: NO_FIGURE, measuredAt: new Date() } : {}),
+    } as never,
   })
+  await runMeasurement(scope, row.id)
+  return row.id
+}
+
+/**
+ * A goal the person judges has no figure: its turn's end, or its resume, is a row of this status,
+ * which moves the loop on (afterMeasure) and shows in no series.
+ */
+const NO_FIGURE = 'none'
+
+/**
+ * Run a measurement kept pending, by its goal's recipe; a row with no figure moves the loop on.
+ * Tried again by the minute's job when a restart stopped it (measureDueGoals).
+ */
+async function runMeasurement(scope: Scope, measurementId: string) {
+  const db = scoped(scope)
+  const row = await db.goalMeasurement.findFirst({
+    where: { id: measurementId },
+    select: { id: true, status: true, reason: true, goalId: true },
+  })
+  if (!row) return
+  if (row.status === NO_FIGURE) return afterMeasure(scope, row.id)
+  if (row.status !== 'pending') return
+  const goal = await db.goal.findFirst({ where: { id: row.goalId } })
+  if (!goal) return
+  const reason = row.reason
+  const recipe = contractOf(goal).recipe
+  if (recipe.kind === 'person') return
   if (recipe.kind === 'command') {
     const session = await db.session.findFirst({
       where: { id: goal.sessionId },
@@ -780,7 +833,7 @@ export async function measure(
             ? "The computer's runner is too old to measure by a command"
             : 'The computer is offline',
       })
-    return row.id
+    return
   }
   let result: { value: number } | { error: string }
   try {
@@ -793,7 +846,6 @@ export async function measure(
     result = { error: error instanceof Error ? error.message : String(error) }
   }
   await finish(scope, row.id, result)
-  return row.id
 }
 
 /** A command's measurement came back from the computer (goal.measured). */
@@ -936,7 +988,7 @@ async function quotaHold(sessionId: string) {
 /** The latest measurements of a goal, oldest first. */
 async function series(db: ScopedDb, goalId: string, take = GOAL_SERIES_MAX) {
   const rows = await db.goalMeasurement.findMany({
-    where: { goalId },
+    where: { goalId, status: { not: NO_FIGURE } },
     orderBy: { at: 'desc' },
     take,
   })
@@ -985,7 +1037,7 @@ async function standing(db: ScopedDb, goal: GoalRow, contract: GoalContract) {
 /** The latest measurement in words. */
 async function latestLine(db: ScopedDb, goal: GoalRow, contract: GoalContract) {
   const last = await db.goalMeasurement.findFirst({
-    where: { goalId: goal.id, status: { not: 'pending' } },
+    where: { goalId: goal.id, status: { notIn: ['pending', NO_FIGURE] } },
     orderBy: { at: 'desc' },
   })
   return measureLine(
@@ -1003,6 +1055,15 @@ async function latestLine(db: ScopedDb, goal: GoalRow, contract: GoalContract) {
 /** The goal is reached: over, and the teammate writes its summary. Whether this call ended it. */
 async function achieve(scope: Scope, goalId: string, actor?: Actor) {
   const db = scoped(scope)
+  const before = await db.goal.findFirst({ where: { id: goalId } })
+  if (!before) return false
+  const text = goalEndMessage({
+    goalId,
+    outcome: contractOf(before).outcome,
+    how: END_WORDS.achieved,
+    measure: await latestLine(db, before, contractOf(before)),
+  })
+  let noteId: string | null = null
   const ended = await prisma.$transaction(async (tx) => {
     const { count } = await tx.goal.updateMany({
       where: { id: goalId, workspaceId: scope.workspaceId, status: { in: ['active', 'paused'] } },
@@ -1014,12 +1075,14 @@ async function achieve(scope: Scope, goalId: string, actor?: Actor) {
         ...(actor?.type === 'member' ? { decidedByMemberId: actor.id } : {}),
       },
     })
-    if (count) await cancelNotes(tx, goalId)
-    return count > 0
+    if (!count) return false
+    await cancelNotes(tx, goalId)
+    // Its end note with it: the teammate is asked for its summary even after a restart.
+    noteId = await keepNote(tx, scope, before, 'end', 'once', text)
+    return true
   })
   if (!ended) return false
   const goal = (await db.goal.findFirst({ where: { id: goalId } }))!
-  const contract = contractOf(goal)
   await audit({
     ...scope,
     actor: actor ?? { type: 'system', id: 'brigade' },
@@ -1027,18 +1090,7 @@ async function achieve(scope: Scope, goalId: string, actor?: Actor) {
     target: { type: 'thread', id: goal.sessionId },
     data: { goalId },
   })
-  await note(
-    scope,
-    goal,
-    'end',
-    'once',
-    goalEndMessage({
-      goalId,
-      outcome: contract.outcome,
-      how: END_WORDS.achieved,
-      measure: await latestLine(db, goal, contract),
-    }),
-  )
+  if (noteId) await fireNote(noteId)
   changed(scope, goal.sessionId)
   return true
 }
@@ -1046,6 +1098,19 @@ async function achieve(scope: Scope, goalId: string, actor?: Actor) {
 /** The goal is over without being reached. Whether this call ended it. */
 async function end(scope: Scope, goalId: string, reason: GoalEndReason, actor?: Actor) {
   const db = scoped(scope)
+  const before = await db.goal.findFirst({ where: { id: goalId } })
+  if (!before) return false
+  // Stopped by a person: no more turn for it. Otherwise one last, for its summary.
+  const text =
+    reason === 'stopped'
+      ? null
+      : goalEndMessage({
+          goalId,
+          outcome: contractOf(before).outcome,
+          how: END_WORDS[reason],
+          measure: await latestLine(db, before, contractOf(before)),
+        })
+  let noteId: string | null = null
   const ended = await prisma.$transaction(async (tx) => {
     const { count } = await tx.goal.updateMany({
       where: { id: goalId, workspaceId: scope.workspaceId, status: { in: ['active', 'paused'] } },
@@ -1058,12 +1123,13 @@ async function end(scope: Scope, goalId: string, reason: GoalEndReason, actor?: 
         ...(actor?.type === 'member' ? { decidedByMemberId: actor.id } : {}),
       },
     })
-    if (count) await cancelNotes(tx, goalId)
-    return count > 0
+    if (!count) return false
+    await cancelNotes(tx, goalId)
+    if (text) noteId = await keepNote(tx, scope, before, 'end', 'once', text)
+    return true
   })
   if (!ended) return false
   const goal = (await db.goal.findFirst({ where: { id: goalId } }))!
-  const contract = contractOf(goal)
   await audit({
     ...scope,
     actor: actor ?? { type: 'system', id: 'brigade' },
@@ -1071,20 +1137,7 @@ async function end(scope: Scope, goalId: string, reason: GoalEndReason, actor?: 
     target: { type: 'thread', id: goal.sessionId },
     data: { goalId, reason },
   })
-  // Stopped by a person: no more turn for it. Otherwise one last, for its summary.
-  if (reason !== 'stopped')
-    await note(
-      scope,
-      goal,
-      'end',
-      'once',
-      goalEndMessage({
-        goalId,
-        outcome: contract.outcome,
-        how: END_WORDS[reason],
-        measure: await latestLine(db, goal, contract),
-      }),
-    )
+  if (noteId) await fireNote(noteId)
   changed(scope, goal.sessionId)
   return true
 }
@@ -1095,6 +1148,16 @@ async function end(scope: Scope, goalId: string, reason: GoalEndReason, actor?: 
  * from the target wakes a waiting teammate (drift).
  */
 async function afterMeasure(scope: Scope, measurementId: string) {
+  await movedOn(scope, measurementId)
+  // Handled once all of it is done: a restart before this has the minute's job do it again
+  // (measureDueGoals), and each step is safe to do twice.
+  await scoped(scope).goalMeasurement.updateMany({
+    where: { id: measurementId, handledAt: null },
+    data: { handledAt: new Date() },
+  })
+}
+
+async function movedOn(scope: Scope, measurementId: string) {
   const db = scoped(scope)
   const m = await db.goalMeasurement.findFirst({ where: { id: measurementId } })
   if (!m) return
@@ -1103,12 +1166,16 @@ async function afterMeasure(scope: Scope, measurementId: string) {
   const contract = contractOf(goal)
   const target = targetOf(contract)
   if (m.met) return void (await achieve(scope, goal.id))
-  if (m.reason === 'turn' && target) {
+  if (m.reason === 'turn' && target && m.turnSeq !== null) {
     const progressed =
       m.value !== null && (goal.best === null || better(target, m.value, goal.best))
+    // Each turn's end counted once, done again or not.
     await db.goal.updateMany({
-      where: { id: goal.id, status: 'active' },
-      data: progressed ? { best: m.value, stalledTurns: 0 } : { stalledTurns: { increment: 1 } },
+      where: { id: goal.id, status: 'active', countedSeq: { lt: m.turnSeq } },
+      data: {
+        countedSeq: m.turnSeq,
+        ...(progressed ? { best: m.value, stalledTurns: 0 } : { stalledTurns: { increment: 1 } }),
+      },
     })
   } else if (
     m.value !== null &&
@@ -1117,7 +1184,7 @@ async function afterMeasure(scope: Scope, measurementId: string) {
   )
     await db.goal.updateMany({ where: { id: goal.id }, data: { best: m.value } })
   if (m.reason === 'turn' || m.reason === 'resume' || m.reason === 'deadline')
-    return afterTurn(scope, goal.id)
+    return afterTurn(scope, goal.id, m.id)
   if (m.reason === 'periodic') {
     const fresh = (await db.goal.findFirst({ where: { id: goal.id } }))!
     const over = await overBecause(fresh, contract)
@@ -1131,7 +1198,7 @@ async function afterMeasure(scope: Scope, measurementId: string) {
  * judgment is still to come): over, asleep while something is open, held for the account's usage,
  * or prompted again.
  */
-async function afterTurn(scope: Scope, goalId: string) {
+async function afterTurn(scope: Scope, goalId: string, measurementId: string) {
   const db = scoped(scope)
   const goal = await db.goal.findFirst({ where: { id: goalId } })
   if (!goal || goal.status !== 'active') return
@@ -1163,11 +1230,13 @@ async function afterTurn(scope: Scope, goalId: string) {
       where: { id: goal.id },
       data: { heldUntil: null, holdReason: null },
     })
+  // Keyed by the turn's end it follows (goalNoteMayGo reads it) and the measurement that decided
+  // it: a resume after a pause decides anew, whatever was cancelled before.
   await note(
     scope,
     goal,
     'relaunch',
-    String(goal.turnSeq),
+    `${goal.turnSeq}:${measurementId}`,
     goalRelaunchMessage({
       goalId: goal.id,
       outcome: contract.outcome,
@@ -1246,17 +1315,34 @@ export async function noteGoalTurnEnded(
     select: { id: true, contract: true },
   })
   if (!goal) return
-  // Each turn's end once, however often its events are noted.
-  const { count } = await db.goal.updateMany({
-    where: { id: goal.id, status: 'active', turnSeq: { lt: ended.seq } },
-    data: { turnSeq: ended.seq, turns: { increment: 1 } },
+  // No figure: progress is the person's to judge, so only the limits and the relaunch apply.
+  const person = contractOf(goal).recipe.kind === 'person'
+  // Each turn's end once, however often its events are noted, and its measurement kept with the
+  // claim: a restart in between leaves it pending, and the minute's job runs it (measureDueGoals).
+  const measurementId = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.goal.updateMany({
+      where: {
+        id: goal.id,
+        workspaceId: scope.workspaceId,
+        status: 'active',
+        turnSeq: { lt: ended.seq },
+      },
+      data: { turnSeq: ended.seq, turns: { increment: 1 } },
+    })
+    if (!count) return null
+    const row = await tx.goalMeasurement.create({
+      data: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        goalId: goal.id,
+        reason: 'turn',
+        turnSeq: ended.seq,
+        ...(person ? { status: NO_FIGURE, measuredAt: new Date() } : {}),
+      },
+    })
+    return row.id
   })
-  if (!count) return
-  if (contractOf(goal).recipe.kind === 'person') {
-    // No figure: progress is the person's to judge, so only the limits and the relaunch apply.
-    return afterTurn(scope, goal.id)
-  }
-  await measure(scope, goal.id, 'turn', ended.seq)
+  if (measurementId) await runMeasurement(scope, measurementId)
 }
 
 /** Whether a thread has a goal under way: the person's word then goes in order with its notes. */
@@ -1301,6 +1387,40 @@ export async function measureDueGoals(workspaceId?: string) {
     await finish({ organizationId: m.organizationId, workspaceId: m.workspaceId }, m.id, {
       error: 'The computer never answered the measurement',
     }).catch((error: unknown) => console.error(`goal measurement ${m.id}: ${String(error)}`))
+  // What a restart stopped halfway: an App's or a list's read never made (a command's waits for its
+  // computer, above), and measurements kept whose loop did not move on.
+  const unread = await prisma.goalMeasurement.findMany({
+    where: { ...where, status: 'pending', at: { lt: new Date(now.getTime() - 5 * 60_000) } },
+    select: {
+      id: true,
+      organizationId: true,
+      workspaceId: true,
+      goal: { select: { contract: true } },
+    },
+    take: 100,
+  })
+  for (const m of unread)
+    if (contractOf(m.goal).recipe.kind !== 'command')
+      await runMeasurement(
+        { organizationId: m.organizationId, workspaceId: m.workspaceId },
+        m.id,
+      ).catch((error: unknown) => console.error(`goal measurement ${m.id}: ${String(error)}`))
+  const unhandled = await prisma.goalMeasurement.findMany({
+    where: {
+      ...where,
+      status: { not: 'pending' },
+      handledAt: null,
+      at: { lt: new Date(now.getTime() - 2 * 60_000) },
+    },
+    select: { id: true, organizationId: true, workspaceId: true },
+    orderBy: { at: 'asc' },
+    take: 100,
+  })
+  for (const m of unhandled)
+    await afterMeasure(
+      { organizationId: m.organizationId, workspaceId: m.workspaceId },
+      m.id,
+    ).catch((error: unknown) => console.error(`goal measurement ${m.id}: ${String(error)}`))
   const goals = await prisma.goal.findMany({ where: { ...where, status: 'active' }, take: 200 })
   for (const goal of goals) {
     const scope = { organizationId: goal.organizationId, workspaceId: goal.workspaceId }

@@ -17,6 +17,7 @@ CREATE TABLE "Goal" (
     "endReason" TEXT,
     "decidedByMemberId" TEXT,
     "turnSeq" INTEGER NOT NULL DEFAULT 0,
+    "countedSeq" INTEGER NOT NULL DEFAULT 0,
     "turns" INTEGER NOT NULL DEFAULT 0,
     "stalledTurns" INTEGER NOT NULL DEFAULT 0,
     "best" DOUBLE PRECISION,
@@ -45,6 +46,7 @@ CREATE TABLE "GoalMeasurement" (
     "turnSeq" INTEGER,
     "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "measuredAt" TIMESTAMP(3),
+    "handledAt" TIMESTAMP(3),
 
     CONSTRAINT "GoalMeasurement_pkey" PRIMARY KEY ("id")
 );
