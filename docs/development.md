@@ -86,7 +86,7 @@ the dashboard's Worker serves it under `/docs` with the rewrites in `apps/web/ne
 what the code does: change them in the same pull request as a change they describe.
 
 Search engines should know the docs by their www.brigade.lol address, not Mintlify's: `docs.json`'s
-`seo.metatags.canonical` names www.brigade.lol, and the site's own `sitemap.xml` and `llms.txt` list the docs' pages
+`seo.metatags.canonical` is `https://www.brigade.lol/docs` (Mintlify appends each page's path without the `/docs` prefix, so the base must carry it), and the site's own `sitemap.xml` and `llms.txt` list the docs' pages
 from `docs.json`'s navigation (`apps/web/lib/docs-pages.ts`).
 
 ## Search engines and AI assistants
