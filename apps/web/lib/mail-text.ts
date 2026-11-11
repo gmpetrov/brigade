@@ -168,3 +168,40 @@ export function tokens(text: string): Token[] {
 }
 
 const link = (text: string, href: string): Token => ({ kind: 'link', text, href })
+
+/** A link longer than this shows as its site rather than whole. */
+const LINK_SHOWN_MAX = 48
+
+/**
+ * A link as a mail shows it: whole when short, else the site it leads to, since a newsletter's
+ * tracked links (hundreds of characters each) would bury its words. A tracking redirect that
+ * carries its destination in its path or query (awstrack.me/L0/https:%2F%2Fsite.com…) shows that
+ * destination's site. The link itself still opens the URL as it came.
+ */
+export function shownLink(url: string): string {
+  if (url.length <= LINK_SHOWN_MAX) return url
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return url
+  }
+  // Its destination, once or twice URL-encoded in it (the redirect's own host left out).
+  let inner: string | undefined
+  let rest = parsed.pathname + parsed.search
+  for (let i = 0; i < 3 && !inner; i++) {
+    inner = /https?:\/\/[^/?#&\s]+/i.exec(rest)?.[0]
+    try {
+      rest = decodeURIComponent(rest)
+    } catch {
+      break
+    }
+  }
+  let host = parsed.hostname
+  if (inner) {
+    try {
+      host = new URL(inner).hostname
+    } catch {}
+  }
+  return host.replace(/^www\./i, '')
+}

@@ -11,6 +11,7 @@ import {
   forwardSummary,
   type MailText,
   readMailText,
+  shownLink,
   tokens,
 } from '@/lib/mail-text'
 import { cn } from '@/lib/utils'
@@ -146,25 +147,29 @@ function shortDate(date: Date) {
 }
 
 function Words({ text, inline }: { text: string; inline?: boolean }) {
-  const parts = tokens(text).map((t, i) =>
-    t.kind === 'link' ? (
+  const parts = tokens(text).map((t, i) => {
+    if (t.kind === 'bold')
+      return (
+        <strong key={i} className="font-semibold">
+          {t.text}
+        </strong>
+      )
+    if (t.kind === 'text') return <Fragment key={i}>{t.text}</Fragment>
+    // A long web link shows as its site; the whole URL stays on hover and in what it opens.
+    const shown = t.href === t.text ? shownLink(t.text) : t.text
+    return (
       <a
         key={i}
         href={t.href}
         target="_blank"
         rel="noopener noreferrer"
+        title={shown === t.text ? undefined : t.href}
         className="text-primary underline-offset-4 hover:underline"
       >
-        {t.text}
+        {shown}
       </a>
-    ) : t.kind === 'bold' ? (
-      <strong key={i} className="font-semibold">
-        {t.text}
-      </strong>
-    ) : (
-      <Fragment key={i}>{t.text}</Fragment>
-    ),
-  )
+    )
+  })
   if (inline) return <>{parts}</>
   return (
     <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">{parts}</p>

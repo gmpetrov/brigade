@@ -13,10 +13,11 @@ import {
   type TriggerEmail,
   type TriggerEventMessage,
 } from '@brigade/contracts'
-import { ChevronRight, Mail, Reply, Zap } from 'lucide-react'
+import { ChevronDown, ChevronRight, Mail, Reply, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { MessageAttachments } from '@/components/attachments'
+import { MailTextView } from '@/components/mail-body'
 import { ProviderLogo } from '@/components/provider-logo'
 import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
@@ -107,16 +108,64 @@ function Facts({ rows }: { rows: [string, ReactNode, boolean?][] }) {
   )
 }
 
-/** An email's own words, with what it quotes folded under a chip. */
+/** How tall an email's words show in a thread before the rest folds under Show more. */
+const FOLDED_HEIGHT = 320
+
+/**
+ * An email's own words as the Inbox shows them (paragraphs joined, long links as their site),
+ * folded to their first lines when long, as a newsletter is, with what it quotes under a chip.
+ */
 function Body({ body, className }: { body: string; className?: string }) {
   const { text, quoted } = splitQuoted(body)
   const [open, setOpen] = useState(false)
+  const [unfolded, setUnfolded] = useState(false)
+  // Fold only when there is clearly more to show than a few lines.
+  const [long, setLong] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const words = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = words.current
+    if (!el) return
+    const measure = () => setLong(el.scrollHeight > FOLDED_HEIGHT + 80)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [text])
+  const folded = long && !unfolded
   return (
-    <div className={cn('flex flex-col items-start gap-2', className)}>
+    <div ref={box} className={cn('flex flex-col items-start gap-2', className)}>
       {text && (
-        <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
-          {text}
-        </p>
+        <div
+          ref={words}
+          className={cn('w-full', folded && 'overflow-hidden')}
+          style={
+            folded
+              ? {
+                  maxHeight: FOLDED_HEIGHT,
+                  maskImage: 'linear-gradient(to bottom, black 70%, transparent)',
+                }
+              : undefined
+          }
+        >
+          <MailTextView text={text} />
+        </div>
+      )}
+      {long && (
+        <button
+          type="button"
+          aria-expanded={unfolded}
+          onClick={() => {
+            setUnfolded(!unfolded)
+            // Folding an email read far down brings its start back into view.
+            if (unfolded && box.current && box.current.getBoundingClientRect().top < 0)
+              box.current.scrollIntoView({ block: 'start' })
+          }}
+          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          {unfolded ? 'Show less' : 'Show more'}
+          <ChevronDown className={cn('size-3.5', unfolded && 'rotate-180')} aria-hidden />
+        </button>
       )}
       {quoted &&
         (open ? (
@@ -214,7 +263,7 @@ export function ReceivedEmailCard({
                   {m.sent && ' · sent'}
                   {m.at && ` · ${m.at.label}`}
                 </p>
-                <Body body={m.body} className="[&>p]:text-sm" />
+                <Body body={m.body} className="[&_p]:text-sm" />
               </div>
             ))}
           </Details>
