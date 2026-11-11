@@ -53,6 +53,9 @@ const jsonLd = {
       description,
       applicationCategory: 'BusinessApplication',
       applicationSubCategory: 'AI agents',
+      // Other open-source projects are named Brigade: say which one this is.
+      disambiguatingDescription:
+        'Brigade at brigade.lol (github.com/gmpetrov/brigade): AI teammates for support, marketing, sales and code that run on your own Claude or ChatGPT plan.',
       operatingSystem: 'macOS, Linux, Web',
       isAccessibleForFree: true,
       license: 'https://opensource.org/licenses/MIT',

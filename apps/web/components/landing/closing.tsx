@@ -166,7 +166,7 @@ export function Pricing() {
 export const FAQ: { q: string; a: string }[] = [
   {
     q: 'Do I need to know how to code?',
-    a: 'No. You describe a job in a message, the way you would to a new hire. For a task in a website or an app, take over a teammate\'s cloud computer and show it once.',
+    a: "No. You describe a job in a message, the way you would to a new hire. For a task in a website or an app, take over a teammate's cloud computer and show it once.",
   },
   {
     q: 'What does Brigade cost?',
@@ -186,7 +186,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Where do my passwords go?',
-    a: 'In your workspace\'s vault. When a teammate signs in to a website, Brigade types the login for it: the teammate never sees the password, and it never ends up in a thread.',
+    a: "In your workspace's vault. When a teammate signs in to a website, Brigade types the login for it: the teammate never sees the password, and it never ends up in a thread.",
   },
   {
     q: 'Is my data used to train AI models?',
@@ -198,7 +198,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Can my team see the work?',
-    a: 'Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing sits in one person\'s chat history.',
+    a: "Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing sits in one person's chat history.",
   },
   {
     q: 'Is it open source?',

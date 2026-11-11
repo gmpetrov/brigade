@@ -32,8 +32,8 @@ export default function Compare() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <p>
-        <strong>Brigade</strong> is {BRIGADE.what.charAt(0).toLowerCase() + BRIGADE.what.slice(1)} It
-        runs on the Claude or ChatGPT plan you already pay for: Brigade never bills you for AI
+        <strong>Brigade</strong> is {BRIGADE.what.charAt(0).toLowerCase() + BRIGADE.what.slice(1)}{' '}
+        It runs on the Claude or ChatGPT plan you already pay for: Brigade never bills you for AI
         usage. It is free on your own computer, and Brigade Cloud is $99 a month per workspace.
       </p>
       <p>What sets it apart is doing all six of these at once:</p>
@@ -49,8 +49,8 @@ export default function Compare() {
           ChatGPT login, so no second AI bill.
         </li>
         <li>
-          <strong>You stay in control:</strong> you choose what waits for your yes, and it all
-          lands in one list.
+          <strong>You stay in control:</strong> you choose what waits for your yes, and it all lands
+          in one list.
         </li>
         <li>
           <strong>Ready to use:</strong> hosted, on your phone with push notifications, with your

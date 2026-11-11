@@ -111,8 +111,7 @@ export default async function Comparison({ params }: Props) {
       <h2>Sources</h2>
       <p>
         What this page says about {x.name} comes from these pages, checked on {CHECKED}. Products
-        change: if something here is out of date, open an issue on{' '}
-        <a href={REPO_URL}>GitHub</a>.
+        change: if something here is out of date, open an issue on <a href={REPO_URL}>GitHub</a>.
       </p>
       <ul>
         {x.sources.map((s) => (

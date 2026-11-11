@@ -35,7 +35,8 @@ export const BRIGADE = {
     'For each teammate, you choose what it does on its own and what waits for your yes (an email, a Stripe change, shipping code). Every request lands in one Needs you list, also on your phone.',
   runs: 'Free on your own computer (Mac or Linux). Brigade Cloud gives teammates a computer of their own that keeps working when yours is off.',
   open: 'Yes, MIT. You can read every line and host it yourself.',
-  price: 'Free on your own computer. Cloud: $99 a month per workspace. AI usage is on your own plan.',
+  price:
+    'Free on your own computer. Cloud: $99 a month per workspace. AI usage is on your own plan.',
 }
 
 const row = (label: string, brigade: string, them: string): Row => ({ label, brigade, them })
@@ -51,16 +52,36 @@ export const COMPARISONS: Comparison[] = [
     answer:
       'OpenClaw is a powerful personal assistant that you install, run and fix yourself, and that lives in a chat app. Brigade is a team: each teammate has one job, its own Apps and memory, and every decision that needs you lands in one list. Since April 4, 2026, Claude subscription limits no longer cover third-party harnesses like OpenClaw (they draw on paid extra usage instead). Brigade starts the official Claude Code and Codex, signed in with your own accounts.',
     rows: [
-      row('What it is', BRIGADE.what, 'An open-source personal AI assistant that you install and run.'),
-      row('Jobs it covers', BRIGADE.jobs, 'A personal assistant: inbox, calendar, errands; one agent per persona.'),
+      row(
+        'What it is',
+        BRIGADE.what,
+        'An open-source personal AI assistant that you install and run.',
+      ),
+      row(
+        'Jobs it covers',
+        BRIGADE.jobs,
+        'A personal assistant: inbox, calendar, errands; one agent per persona.',
+      ),
       row(
         'Claude plan',
         'Works: Brigade runs the official Claude Code on your login.',
         'Since April 4, 2026, a Claude subscription no longer covers it: usage is billed as extra usage, or through an API key.',
       ),
-      row('Where you talk to it', 'Brigade’s own app (web, or installed on your phone with push notifications), and with Cloud an email address per teammate.', 'Chat apps such as WhatsApp, Telegram or Slack.'),
-      row('Decisions that need you', BRIGADE.control, 'Inside each chat; no shared list across agents.'),
-      row('Your team', 'Invite your team: threads, lists and files are shared.', 'Built for one person.'),
+      row(
+        'Where you talk to it',
+        'Brigade’s own app (web, or installed on your phone with push notifications), and with Cloud an email address per teammate.',
+        'Chat apps such as WhatsApp, Telegram or Slack.',
+      ),
+      row(
+        'Decisions that need you',
+        BRIGADE.control,
+        'Inside each chat; no shared list across agents.',
+      ),
+      row(
+        'Your team',
+        'Invite your team: threads, lists and files are shared.',
+        'Built for one person.',
+      ),
       row('Open source', BRIGADE.open, 'Yes.'),
     ],
     pickThem: [
@@ -96,11 +117,27 @@ export const COMPARISONS: Comparison[] = [
     answer:
       'Paperclip and Brigade share an idea: a company of agents, open source. Paperclip has you govern like a board (hires, budgets, pausing agents) on a server you run. Brigade is hosted or self-hosted, you approve the actions themselves (the email before it goes, the charge, the deploy), and your team works in the same threads.',
     rows: [
-      row('What it is', BRIGADE.what, 'An open-source framework that structures agents into a company, with an org chart, budgets and governance.'),
-      row('Agents it runs', 'The official Claude Code and Codex.', 'Bring your own: Claude Code, Codex, OpenClaw, Cursor and others through adapters.'),
-      row('How you stay in control', BRIGADE.control, 'As a board: approve hires, set per-agent budgets, pause agents, read the audit log.'),
+      row(
+        'What it is',
+        BRIGADE.what,
+        'An open-source framework that structures agents into a company, with an org chart, budgets and governance.',
+      ),
+      row(
+        'Agents it runs',
+        'The official Claude Code and Codex.',
+        'Bring your own: Claude Code, Codex, OpenClaw, Cursor and others through adapters.',
+      ),
+      row(
+        'How you stay in control',
+        BRIGADE.control,
+        'As a board: approve hires, set per-agent budgets, pause agents, read the audit log.',
+      ),
       row('Where it runs', BRIGADE.runs, 'Self-hosted; a hosted cloud was on a waitlist.'),
-      row('Apps', 'Built-in Apps (Gmail, GitHub, Stripe, Notion, Linear and more), any MCP server, and webhooks.', 'Through the agents you plug in.'),
+      row(
+        'Apps',
+        'Built-in Apps (Gmail, GitHub, Stripe, Notion, Linear and more), any MCP server, and webhooks.',
+        'Through the agents you plug in.',
+      ),
       row('Open source', BRIGADE.open, 'Yes, MIT.'),
     ],
     pickThem: [
@@ -115,7 +152,10 @@ export const COMPARISONS: Comparison[] = [
     sources: [
       { label: 'paperclip.ing', url: 'https://paperclip.ing/product/' },
       { label: 'Paperclip open source', url: 'https://paperclip.ing/product/open-source/' },
-      { label: 'Fast.io: Paperclip AI review 2026', url: 'https://fast.io/resources/paperclip-ai-review-2026/' },
+      {
+        label: 'Fast.io: Paperclip AI review 2026',
+        url: 'https://fast.io/resources/paperclip-ai-review-2026/',
+      },
     ],
   },
   {
@@ -128,11 +168,31 @@ export const COMPARISONS: Comparison[] = [
     answer:
       'Lindy is polished and hosted, but every task spends its credits, on top of any AI plan you already have, and its code is closed. Brigade runs the official Claude Code and Codex on your own Claude or ChatGPT plan, so there is no second AI bill, the same teammates also write and ship code, and the whole product is open source.',
     rows: [
-      row('What it is', BRIGADE.what, 'A hosted platform for AI agents and assistants for business workflows.'),
-      row('Jobs it covers', BRIGADE.jobs, 'Email, meetings, sales, support and other business workflows.'),
-      row('Who pays for AI', BRIGADE.bill, 'Lindy’s own credits, included in each plan, with top-ups.'),
-      row('Price', BRIGADE.price, 'Paid plans reported from about $30 per user per month (3,000 credits) up to about $200; check lindy.ai/pricing.'),
-      row('Code', 'Teammates write, test and ship code, with pull requests and previews.', 'Not its focus.'),
+      row(
+        'What it is',
+        BRIGADE.what,
+        'A hosted platform for AI agents and assistants for business workflows.',
+      ),
+      row(
+        'Jobs it covers',
+        BRIGADE.jobs,
+        'Email, meetings, sales, support and other business workflows.',
+      ),
+      row(
+        'Who pays for AI',
+        BRIGADE.bill,
+        'Lindy’s own credits, included in each plan, with top-ups.',
+      ),
+      row(
+        'Price',
+        BRIGADE.price,
+        'Paid plans reported from about $30 per user per month (3,000 credits) up to about $200; check lindy.ai/pricing.',
+      ),
+      row(
+        'Code',
+        'Teammates write, test and ship code, with pull requests and previews.',
+        'Not its focus.',
+      ),
       row('Open source', BRIGADE.open, 'No.'),
     ],
     pickThem: [
@@ -161,9 +221,21 @@ export const COMPARISONS: Comparison[] = [
       'Sintra gives you ready-made helpers with fixed roles and a monthly credit allowance. In Brigade you give each teammate the job, Apps and rules you want, it works on your own Claude or ChatGPT plan, it can also write code, and it asks you before it sends, charges or ships. Brigade is open source.',
     rows: [
       row('What it is', BRIGADE.what, 'A bundle of preset AI helpers with fixed roles.'),
-      row('Jobs it covers', BRIGADE.jobs, 'Marketing, social media, support, sales and other preset roles.'),
-      row('Who pays for AI', BRIGADE.bill, 'Sintra’s own credits: a monthly allowance (250 reported) that does not roll over.'),
-      row('Price', BRIGADE.price, 'Reported from about $39 to $97 a month, with promotional annual prices; check sintra.ai.'),
+      row(
+        'Jobs it covers',
+        BRIGADE.jobs,
+        'Marketing, social media, support, sales and other preset roles.',
+      ),
+      row(
+        'Who pays for AI',
+        BRIGADE.bill,
+        'Sintra’s own credits: a monthly allowance (250 reported) that does not roll over.',
+      ),
+      row(
+        'Price',
+        BRIGADE.price,
+        'Reported from about $39 to $97 a month, with promotional annual prices; check sintra.ai.',
+      ),
       row('Code', 'Teammates write, test and ship code, with pull requests and previews.', 'No.'),
       row('Open source', BRIGADE.open, 'No.'),
     ],
@@ -175,8 +247,14 @@ export const COMPARISONS: Comparison[] = [
     ],
     sources: [
       { label: 'sintra.ai', url: 'https://sintra.ai' },
-      { label: 'eesel: Sintra AI pricing 2026', url: 'https://www.eesel.ai/blog/sintra-ai-pricing' },
-      { label: 'Toolradar: Sintra AI pricing', url: 'https://toolradar.com/tools/sintra-ai/pricing' },
+      {
+        label: 'eesel: Sintra AI pricing 2026',
+        url: 'https://www.eesel.ai/blog/sintra-ai-pricing',
+      },
+      {
+        label: 'Toolradar: Sintra AI pricing',
+        url: 'https://toolradar.com/tools/sintra-ai/pricing',
+      },
     ],
   },
   {
@@ -190,10 +268,22 @@ export const COMPARISONS: Comparison[] = [
       'Polsia runs on its own and reports in the morning; you pay it a share of revenue on top of a subscription. Brigade works alongside you: teammates start on their own (an email, a failed payment, a schedule), and whatever you choose waits for your yes. It runs on your own Claude or ChatGPT plan, takes no share of revenue, and is open source.',
     rows: [
       row('What it is', BRIGADE.what, 'A hosted platform that operates a business autonomously.'),
-      row('How it works', 'In threads with you; teammates also start on their own from triggers and schedules.', 'An autonomous nightly cycle, with a morning report.'),
-      row('How you stay in control', BRIGADE.control, 'You read what it did in the morning report.'),
+      row(
+        'How it works',
+        'In threads with you; teammates also start on their own from triggers and schedules.',
+        'An autonomous nightly cycle, with a morning report.',
+      ),
+      row(
+        'How you stay in control',
+        BRIGADE.control,
+        'You read what it did in the morning report.',
+      ),
       row('Who pays for AI', BRIGADE.bill, 'Included in Polsia’s plan.'),
-      row('Price', BRIGADE.price, 'Most often reported at $49 a month plus 20% of revenue; changed several times in 2026.'),
+      row(
+        'Price',
+        BRIGADE.price,
+        'Most often reported at $49 a month plus 20% of revenue; changed several times in 2026.',
+      ),
       row('Open source', BRIGADE.open, 'No.'),
     ],
     pickThem: ['You want a business run for you with as little involvement as possible.'],
@@ -223,10 +313,22 @@ export const COMPARISONS: Comparison[] = [
     rows: [
       row('What it is', BRIGADE.what, 'An AI coding agent, one session at a time.'),
       row('Jobs it covers', BRIGADE.jobs, 'Code first; also general tasks on your computer.'),
-      row('Providers', 'Claude and ChatGPT plans side by side; a model per teammate.', 'One provider each.'),
+      row(
+        'Providers',
+        'Claude and ChatGPT plans side by side; a model per teammate.',
+        'One provider each.',
+      ),
       row('Decisions that need you', BRIGADE.control, 'Asked inside each session.'),
-      row('Starts on its own', 'Yes: triggers (an email, a webhook, a failed payment) and schedules.', 'Through each provider’s own automations, where it offers them.'),
-      row('Your team', 'Threads, lists, the library and memory are shared with your workspace.', 'One person’s sessions.'),
+      row(
+        'Starts on its own',
+        'Yes: triggers (an email, a webhook, a failed payment) and schedules.',
+        'Through each provider’s own automations, where it offers them.',
+      ),
+      row(
+        'Your team',
+        'Threads, lists, the library and memory are shared with your workspace.',
+        'One person’s sessions.',
+      ),
     ],
     pickThem: ['You code alone and one agent session at a time is all you need.'],
     pickBrigade: [
