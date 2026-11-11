@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { api, type Thread } from '@/lib/api'
+import { changeControl, useControlError } from '@/lib/control'
 import { savedReplies } from '@/lib/ticket-replies'
+
+/** A note written for a hand back the API refused, while the dashboard is open. */
+const notes = new Map<string, string>()
 
 /** While a member has the workspace computer for a thread: hand back. Takeover starts in the computer panel. */
 export function Takeover({
@@ -20,22 +24,23 @@ export function Takeover({
   /** Show the computer panel, when it is closed. */
   onOpenComputer?: () => void
 }) {
-  const [note, setNote] = useState('')
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
+  // Handing back hides this card at once: undone, it comes back with its note and why.
+  const [note, setNote] = useState(() => notes.get(thread.id) ?? '')
+  const error = useControlError(thread.id)
   const mine = thread.controlledByMemberId === memberId
 
-  async function act(fn: () => Promise<unknown>) {
-    setBusy(true)
-    setError(undefined)
-    try {
-      await fn()
-      onChange()
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
+  function handBack() {
+    notes.set(thread.id, note)
+    void changeControl(thread.id, null, () =>
+      api(`/threads/${thread.id}/handback`, { body: { note, replies: savedReplies() } }),
+    ).then(
+      () => {
+        notes.delete(thread.id)
+        onChange()
+      },
+      // Its error shows through useControlError.
+      () => undefined,
+    )
   }
 
   if (thread.computer.kind !== 'cloud') return null
@@ -71,9 +76,7 @@ export function Takeover({
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault()
-          void act(() =>
-            api(`/threads/${thread.id}/handback`, { body: { note, replies: savedReplies() } }),
-          )
+          handBack()
         }}
       >
         <Input
@@ -83,7 +86,7 @@ export function Takeover({
           aria-label="Note for the teammate"
           className="min-w-0 flex-[1_1_14rem]"
         />
-        <Button disabled={busy}>Hand back</Button>
+        <Button>Hand back</Button>
       </form>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </Card>
