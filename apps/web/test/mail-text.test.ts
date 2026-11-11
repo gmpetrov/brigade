@@ -1,7 +1,7 @@
 // A received mail's text as the Inbox shows it (lib/mail-text): paragraphs, forwards, links.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { forwardSummary, readMailText, tokens, unwrap } from '../lib/mail-text'
+import { forwardSummary, readMailText, shownLink, tokens, unwrap } from '../lib/mail-text'
 
 // Gmail's plain text of a forward, as it came in (cut at its width, blank lines kept).
 const FORWARD = `Test
@@ -128,4 +128,27 @@ test("a forward's summary takes the address when there is no name, and no date i
     subject: 'Bonjour',
     date: null,
   })
+})
+
+test('a long link shows as the site it leads to, a short one whole', () => {
+  // A newsletter's tracked link (Amazon SES), its destination encoded in its path.
+  assert.equal(
+    shownLink(
+      'https://ls833qgf.r.us-east-1.awstrack.me/L0/https:%2F%2Faiagentstore.ai%2FclickToSee%3Femail=riley%2540mails.brigade.lol%26target=https%253A%252F%252Faiagentstore.ai%252Fagent-teams/1/010001a1c946716a-05aeb78f/tH120hPZ=473',
+    ),
+    'aiagentstore.ai',
+  )
+  // Encoded twice, in a query.
+  assert.equal(
+    shownLink(
+      'https://click.example.com/track?u=https%253A%252F%252Fwww.shop.example%252Fitem%252F42&id=abcdefghijklmnop',
+    ),
+    'shop.example',
+  )
+  // Long with no destination in it: its own site.
+  assert.equal(
+    shownLink('https://www.example.com/a/very/long/path/that/goes/on/and/on/for/a/while'),
+    'example.com',
+  )
+  assert.equal(shownLink('https://example.com/pricing'), 'https://example.com/pricing')
 })
