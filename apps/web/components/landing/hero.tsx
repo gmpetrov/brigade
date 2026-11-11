@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { AuthLink } from './auth-link'
 import { Dancers } from './dancers'
-import { c, SIGN_IN, SIGN_UP } from './parts'
+import { REPO_URL } from '@/lib/github-proof'
+import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 import { SiteAnalytics } from './site-analytics'
 
 export function Header() {
@@ -16,6 +17,10 @@ export function Header() {
       <nav aria-label="Main">
         <a className={c('hide-m')} href="/#pricing">
           Pricing
+        </a>
+        <a className={c('hide-m')} href={REPO_URL}>
+          <Icon name="github" />
+          Star on GitHub
         </a>
         <AuthLink href={SIGN_IN}>Sign in</AuthLink>
         <AuthLink className={c('btn pri')} href={SIGN_UP}>
@@ -47,6 +52,10 @@ export function Hero() {
             <AuthLink className={c('btn pri lg')} href={SIGN_UP}>
               Sign up
             </AuthLink>
+            <a className={c('btn lg')} href={REPO_URL}>
+              <Icon name="github" />
+              Star on GitHub
+            </a>
           </div>
         </div>
       </div>
