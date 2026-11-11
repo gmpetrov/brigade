@@ -32,6 +32,10 @@
   <a href="https://demo.brigade.lol"><strong>Click around the live demo →</strong></a>
 </p>
 
+<p align="center">
+  <sub>If Brigade is useful to you, a ⭐ on this repo helps other founders find it.</sub>
+</p>
+
 <br/>
 
 # AI teammates that run your whole company
@@ -367,8 +371,8 @@ pnpm format       # Prettier
 
 ## Brigade is built by Brigade
 
-Most of the commits in this repository come from Brigade's own teammates, and a person approves every change
-before it goes in. Browse the [merged pull requests](https://github.com/gmpetrov/brigade/pulls?q=is%3Apr+is%3Amerged):
+Most of the commits in this repository come from Brigade's own teammates, and a person makes the calls that
+matter. Browse the [merged pull requests](https://github.com/gmpetrov/brigade/pulls?q=is%3Apr+is%3Amerged):
 the branches named `brigade/…` are theirs.
 
 <br/>
@@ -423,5 +427,5 @@ MIT &copy; 2026 Georges Petrov. See [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <sub>Open source under MIT. Built by a team of people and AI teammates, with every change approved by a person.</sub>
+  <sub>Open source under MIT. Built by a team of people and AI teammates, with a person making the calls.</sub>
 </p>
