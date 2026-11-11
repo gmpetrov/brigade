@@ -11,6 +11,7 @@ import { DesktopScreen } from '@/components/desktop-preview'
 import { useThreadPanel } from '@/components/thread-panel'
 import { isNarrow } from '@/lib/platform'
 import { useApi, type Teammate, type Thread, type ThreadSummary } from '@/lib/api'
+import { useControlled } from '@/lib/control'
 import { useLive } from '@/lib/use-live'
 
 const BUSY = new Set(['starting', 'running'])
@@ -41,7 +42,8 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
     void reloadBeside()
     void reloadThread()
   })
-  const t = here ? docked : thread.data?.id === controlId ? thread.data : undefined
+  // Taking control and handing it back show at once, while the API takes them.
+  const t = useControlled(here ? docked : thread.data?.id === controlId ? thread.data : undefined)
   // Closed, the conversation comes back from the screen's toolbar: a phone has no ⌘J.
   const reopen = panel.visible ? undefined : panel.toggle
 

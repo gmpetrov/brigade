@@ -147,6 +147,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { ThreadItemsCard } from '@/components/list-items'
+import { changeControl, inControlOrder, useControlled, useControlPending } from '@/lib/control'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
@@ -258,7 +259,10 @@ export function ThreadConversation({
   top?: ReactNode
 }) {
   const { me, projects } = useDashboard()
-  const thread = useApi<Thread>(`/threads/${id}`)
+  const fetched = useApi<Thread>(`/threads/${id}`)
+  // Taking control or handing it back shows here at once, while the API takes it.
+  const thread = { ...fetched, data: useControlled(fetched.data) }
+  const controlPending = useControlPending(id)
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
   // Since when its updates have not reached Brigade, as the thread and then the API say.
@@ -1737,22 +1741,33 @@ export function ThreadConversation({
                     onRetry={
                       t.mayPrompt && !t.controlledByMemberId ? () => call('/retry') : undefined
                     }
-                    onTicket={(requestId, answer) =>
-                      // Answering may hand control back: show the composer again.
-                      api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
-                        () => void thread.reload(),
-                      )
-                    }
+                    onTicket={(requestId, answer) => {
+                      const answering = () =>
+                        api(`/threads/${id}/tickets`, { body: { requestId, answer } })
+                      // Answered by the member in control, any answer hands back (src/decide.ts):
+                      // shown at once, and after a takeover still going, which it would overtake.
+                      const sent =
+                        t.controlledByMemberId === me.memberId
+                          ? changeControl(id, null, answering)
+                          : inControlOrder(id, answering)
+                      return sent.then(() => void thread.reload())
+                    }}
                     takeover={
                       t.computer.kind === 'cloud' &&
                       me.memberId &&
                       (!t.controlledByMemberId || t.controlledByMemberId === me.memberId)
                         ? {
                             mine: t.controlledByMemberId === me.memberId,
+                            pending: controlPending,
                             open: async () => {
-                              if (t.controlledByMemberId !== me.memberId)
-                                await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
+                              if (t.controlledByMemberId === me.memberId) return showComputer()
+                              // The computer opens at once, already in the member's hands.
+                              const taking = changeControl(id, me.memberId!, () =>
+                                api(`/threads/${id}/takeover`, { body: { interrupt: false } }),
+                              )
                               showComputer()
+                              await taking
+                              void thread.reload()
                             },
                           }
                         : undefined

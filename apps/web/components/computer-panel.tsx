@@ -32,6 +32,7 @@ import {
   type Thread,
   type ThreadSummary,
 } from '@/lib/api'
+import { changeControl, useControlError, useControlPending } from '@/lib/control'
 import { savedReplies } from '@/lib/ticket-replies'
 
 function Section({
@@ -229,34 +230,56 @@ export function TeammatePanel({
   )
 }
 
-/** Taking over the computer and handing it back, for the panel and the open computer. */
+/**
+ * Taking over the computer and handing it back, for the panel and the open computer: shown at
+ * once (lib/control.ts), the buttons held until the API has it.
+ */
 function useControl(thread: Thread, memberId: string, onChange: () => void) {
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
+  const [browserError, setBrowserError] = useState<string>()
+  // Undone, a change of control says why wherever the thread shows.
+  const controlError = useControlError(thread.id)
+  // Asked anywhere (the hand back card, a ticket), a change of control holds these too.
+  const pending = useControlPending(thread.id)
   const mine = !!memberId && thread.controlledByMemberId === memberId
 
   async function act(fn: () => Promise<unknown>) {
     setBusy(true)
-    setError(undefined)
+    setBrowserError(undefined)
     try {
       await fn()
       onChange()
     } catch (e) {
-      setError((e as Error).message)
+      setBrowserError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function control(to: string | null, request: () => Promise<unknown>) {
+    setBusy(true)
+    setBrowserError(undefined)
+    try {
+      await changeControl(thread.id, to, request)
+      onChange()
+    } catch {
+      // Its error is controlError.
     } finally {
       setBusy(false)
     }
   }
 
   return {
-    busy,
-    error,
+    busy: busy || pending,
+    error: browserError ?? controlError,
     mine,
     takeOver: () =>
-      void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt: false } })),
+      void control(memberId, () =>
+        api(`/threads/${thread.id}/takeover`, { body: { interrupt: false } }),
+      ),
     // No note from here: the thread's own hand back, below the conversation, takes one.
     handBack: () =>
-      void act(() =>
+      void control(null, () =>
         api(`/threads/${thread.id}/handback`, { body: { note: '', replies: savedReplies() } }),
       ),
     openBrowser: () =>

@@ -4077,6 +4077,8 @@ function OptionLabel({
 export type TicketTakeover = {
   /** This member already has control. */
   mine: boolean
+  /** A change of control goes now: answering, which hands back, waits for it. */
+  pending?: boolean
   /** Take control, unless already theirs, and show the desktop, where the teammate's browser is. */
   open: () => Promise<void>
 }
@@ -4119,7 +4121,11 @@ function BrowserAction({
       <div className="flex flex-wrap items-center gap-2">
         {takeover.mine ? (
           <>
-            <Button size="sm" onClick={() => onReply({ type: 'action', done: true })}>
+            <Button
+              size="sm"
+              disabled={takeover.pending}
+              onClick={() => onReply({ type: 'action', done: true })}
+            >
               Done, hand back
             </Button>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}>
