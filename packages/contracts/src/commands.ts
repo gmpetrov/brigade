@@ -1,3 +1,5 @@
+import { GOAL_ASK } from './goals.js'
+
 // Commands a person starts a message with, to say what they want back:
 // `/design a pricing page`, `/visual compare the two flows`, `/image a hero photo`. A command is a
 // verb (what to make), where a mention (`@`) names a thing. The message keeps
@@ -22,6 +24,11 @@ export const MESSAGE_COMMANDS = {
     ask: 'The person asked for an image (/image): make it with your image generation tool (generate_image, or your own image tool on Codex). The thread shows the image by itself: say what you made, without linking or embedding its file.',
     /** Shown only to someone with a Codex account: it makes the images. */
     needs: 'codex',
+  },
+  goal: {
+    label: 'Goal',
+    description: 'Work until a goal is reached, measured by Brigade: tests green, 10 demos booked…',
+    ask: GOAL_ASK,
   },
   teach: {
     label: 'Learn from demonstration',

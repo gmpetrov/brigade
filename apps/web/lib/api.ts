@@ -26,6 +26,7 @@ import type {
   PlaybookHomeLine,
   PlaybookPromotionPayload,
   ChiefDecisionView,
+  GoalView,
   PullReview,
   RunOutcome,
   ReviewPolicy,
@@ -633,6 +634,8 @@ export type ThreadChild = {
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {
+  /** Its latest goal (docs/goals.md), for its banner; null when it never had one. */
+  goal?: GoalView | null
   startedByMemberId: string
   othersMayPrompt: boolean
   /** Adds nothing to workspace memory; its summary is the starter's only. */

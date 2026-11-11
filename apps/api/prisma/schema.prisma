@@ -321,6 +321,7 @@ model Workspace {
   wakeups               Wakeup[]
   chiefDecisions        ChiefDecision[]
   chiefPasses           ChiefPass[]
+  goals                 Goal[]
   replyWatches          ReplyWatch[]
   heldCalls             HeldCall[]
   runnerCommands        RunnerCommand[]
@@ -771,6 +772,9 @@ model Session {
   /// teammate's access (src/chief-answers.ts).
   chiefWordSeq    Int?
 
+  /// Its goals (docs/goals.md): at most one proposed, active or paused at a time.
+  goals Goal[]
+
   @@index([workspaceId, createdAt])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([projectId, createdAt])
@@ -1010,6 +1014,92 @@ model ChiefPass {
 
   @@unique([memberId, workspaceId, day])
   @@index([status, createdAt])
+}
+
+enum GoalStatus {
+  /// The teammate proposed its contract (propose_goal): a person approves it, or not.
+  proposed
+  declined
+  /// Another proposal replaced it before anyone decided.
+  superseded
+  active
+  paused
+  /// The measurement confirmed it.
+  achieved
+  /// Over without being reached: endReason says why.
+  ended
+}
+
+/// A goal a teammate works toward until Brigade's measurement confirms it (docs/goals.md): its
+/// contract, approved by a person in one click, and where the loop stands.
+model Goal {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId          String
+  session            Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// The teammate that proposed it, and works on it.
+  teammateId         String
+  status             GoalStatus        @default(proposed)
+  /// GoalContract: outcome, deadline, target, recipe, permissions with their ids, budget, stallTurns.
+  contract           Json
+  /// Ids of its permissions a person withdrew.
+  revoked            Json              @default("[]")
+  approvedByMemberId String?
+  approvedAt         DateTime?
+  endedAt            DateTime?
+  /// GoalEndReason, once ended without being reached.
+  endReason          String?
+  /// Who stopped, paused or judged it last, when a person did.
+  decidedByMemberId  String?
+  /// The thread's last turn.completed event the loop took (its seq): each turn's end counts once.
+  turnSeq            Int               @default(0)
+  /// Turns ended since it was approved, and in a row without progress.
+  turns              Int               @default(0)
+  stalledTurns       Int               @default(0)
+  /// The best value measured so far: progress is a value better than it.
+  best               Float?
+  /// The next measurement on its own, between turns (recipes measured every so often).
+  nextMeasureAt      DateTime?
+  /// Its relaunches wait until then: the account's usage window is nearly spent.
+  heldUntil          DateTime?
+  holdReason         String?
+  /// When a measurement moving away from the target last woke the teammate.
+  driftWokeAt        DateTime?
+  /// Its summary, from goal_report once it is over: GoalReport.
+  report             Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  measurements       GoalMeasurement[]
+
+  @@index([sessionId, status])
+  @@index([status, nextMeasureAt])
+}
+
+/// One measurement of a goal by its recipe, never the teammate's word. A command's is pending until
+/// its computer answers (goal.measured).
+model GoalMeasurement {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  goalId         String
+  goal           Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  /// What asked for it: turn (a turn ended), periodic, start, done (the teammate declared it), person.
+  reason         String
+  /// pending, ok or failed.
+  status         String    @default("pending")
+  value          Float?
+  met            Boolean?
+  /// The end of a command's output, an App's error, or why it failed.
+  detail         String?
+  /// The turn's end it was for (turn.completed seq), when a turn ended.
+  turnSeq        Int?
+  at             DateTime  @default(now())
+  measuredAt     DateTime?
+
+  @@index([goalId, at])
+  @@index([status, at])
 }
 
 /// A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").

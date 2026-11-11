@@ -38,6 +38,7 @@ import { SpecParts } from './spec-parts.js'
 import { Connection } from './connection.js'
 import { describeProject } from './describe.js'
 import { codeFiles } from './code-files.js'
+import { measureGoal } from './goal-measure.js'
 import { findSource, readThreadFile, writeThreadFile } from './files.js'
 import { Folders, ThreadGone, type FolderName } from './folders.js'
 import { BackupStore } from './backup-store.js'
@@ -753,6 +754,11 @@ async function start() {
         return library.sync()
       case 'thread.note':
         return threads.noteFromOutside(message.sessionId, message.text)
+      case 'goal.measure':
+        // Not awaited: a test suite may take minutes, and the connection's other messages go on.
+        return void measureGoal(message)
+          .then((result) => connection.send(result))
+          .catch((error) => console.warn(`goal measurement failed: ${String(error)}`))
       case 'thread.deleted':
         await previews.stop(message.sessionId, 'The thread was deleted')
         await machineRuns?.forgetThread(message.sessionId)

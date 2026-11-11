@@ -8,6 +8,7 @@ import {
   type ReplyTo,
   RETRY_PROTOCOL,
   type ThreadAttachmentRef,
+  messageCommand,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { attachToThread, detach } from './attachments.js'
@@ -18,6 +19,7 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { refuseWhileDeleting } from './deletion-fence.js'
 import { describeError, hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
+import { goalCommandRefusal } from './goals.js'
 import { deleteThread } from './thread-delete.js'
 import { usableAccounts } from './routes/accounts.js'
 import {
@@ -129,6 +131,12 @@ export async function promptThread(
       }))
     )
       return 'paused'
+  }
+  // `/goal` (docs/goals.md): an older runner would hand its harness the leading `/goal`, which
+  // Claude Code and Codex take for their own command, outside Brigade's loop.
+  if (prompt.memberId && messageCommand(prompt.text)?.command === 'goal') {
+    const refused = await goalCommandRefusal(scope, thread.computer.id)
+    if (refused) throw new HTTPException(409, { message: refused })
   }
   const ids = prompt.teammateIds?.length ? prompt.teammateIds : [currentTeammate(thread).id]
   const responders = ids.map((id) => teammateIn(thread, id))

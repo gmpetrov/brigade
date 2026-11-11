@@ -21,6 +21,7 @@ import { dueChildren, outlastWakeup, reportHeld, settleOverdueChildren } from '.
 import { CHIEF_SOURCE, wakeupCommandId } from './chief-order.js'
 import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
+import { GOAL_SOURCE, goalOpenIn } from './goals.js'
 
 type WakeupOperation = Extract<
   ScheduleOperation,
@@ -159,7 +160,9 @@ export async function handleWakeup(
         `You already have ${pending.length} wake-ups pending in this thread, the most it holds. ` +
         'Cancel one (list_wakeups shows them) or wait for it.',
     }
-  if ((await firedInARow(db, session.id)) >= WAKEUPS_IN_A_ROW)
+  // A goal under way bounds itself (its budget, its deadline, its turns without progress): its
+  // teammate waits on the world with wake-ups for as long as it runs (docs/goals.md).
+  if (!(await goalOpenIn(session.id)) && (await firedInARow(db, session.id)) >= WAKEUPS_IN_A_ROW)
     return {
       error:
         `You woke yourself ${WAKEUPS_IN_A_ROW} times in a row in this thread with no word from a person. ` +
@@ -309,9 +312,11 @@ async function fire(wakeup: {
     scope,
     thread,
     {
-      // A report's and a reply's note is the message itself, and so is a merge's.
+      // A report's and a reply's note is the message itself, and so is a merge's and a goal's.
       text:
-        wakeup.kind === 'wakeup' && !wakeup.sourceId?.startsWith(MERGE_SOURCE)
+        wakeup.kind === 'wakeup' &&
+        !wakeup.sourceId?.startsWith(MERGE_SOURCE) &&
+        !wakeup.sourceId?.startsWith(GOAL_SOURCE)
           ? prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId))
           : wakeup.note,
       memberId: null,

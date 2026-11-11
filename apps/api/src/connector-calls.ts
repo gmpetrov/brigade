@@ -43,6 +43,7 @@ import { reviewOnCreate } from './reviews.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { onChiefsWord, UNDOABLE_WRITES } from './chief-answers.js'
 import { timeWhenSent } from './mail/gmail-outbound.js'
+import { goalCovers } from './goals.js'
 import {
   decideHeld,
   holdCall,
@@ -331,6 +332,26 @@ export async function handleConnectorCall(
             )
           : false)
     let overCap: string | undefined
+    // A goal's contract allows this write in advance (src/goals.ts, docs/goals.md): within its
+    // permission's cap and conditions it goes without asking; past them it asks as it would have.
+    // Never over a mailbox that waits for a person, Chief's word or the teammate's daily cap.
+    if (!playbook && asks && !approves && !chiefsWord && !cap && !resume) {
+      const goal = await goalCovers(
+        scope,
+        { id: session.id, parentId: session.parentId },
+        {
+          connectionId: connection.id,
+          operation: call.operation,
+          args: input.data,
+          teammateId: teammate.id,
+        },
+        () => authorisedFetch(db, scope, connection),
+      )
+      if (goal?.covered) {
+        asks = false
+        if (goal.checkedSha) checkedSha = goal.checkedSha
+      } else if (goal) overCap = goal.reason
+    }
     if (verdict?.level === 'auto' && !cap && !resume && !approves) {
       // On its own: it first takes its share of its action's caps, atomically; past one, it asks.
       const spec = playbook?.actions.find((a) => a.key === playbookActionKey)

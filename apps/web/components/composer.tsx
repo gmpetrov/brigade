@@ -30,7 +30,7 @@ import {
 import { Plugin, PluginKey, Selection, type EditorState } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
-import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
+import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes, Target } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
@@ -386,6 +386,7 @@ const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>
   visual: Shapes,
   design: Palette,
   image: ImageIcon,
+  goal: Target,
   teach: GraduationCap,
 }
 /** A command to pick: what to make, or a workspace skill to follow. */

@@ -8,7 +8,7 @@
 // waits to be read before it. The workspace's hub then keeps and sends these commands of one thread
 // one at a time (WorkspaceHub.dispatch), so its computer gets them in the order they were kept.
 import { randomUUID } from 'node:crypto'
-import { chiefAnswerNote, type ApiToRunner } from '@brigade/contracts'
+import { chiefAnswerNote, goalNote, type ApiToRunner, type GoalNoteKind } from '@brigade/contracts'
 import { prisma, type Prisma, type ScopedDb } from './db.js'
 
 type Tx = Prisma.TransactionClient
@@ -51,7 +51,11 @@ export async function questionClosed(
  * How a command bears on Chief's answers: the person's word (their message; taking the thread in
  * hand or handing it back), or an answer of Chief's (its wake-up's prompt), by its decision.
  */
-export type ChiefGate = { person: true } | { answer: string }
+export type ChiefGate =
+  | { person: true }
+  | { answer: string }
+  /** A goal's note (src/goals.ts): its start, a relaunch, a drift wake-up or its end. */
+  | { goal: string; kind: GoalNoteKind }
 
 export function chiefGateOf(message: ApiToRunner): ChiefGate | null {
   if (message.type === 'thread.takeover' || message.type === 'thread.handback')
@@ -59,8 +63,115 @@ export function chiefGateOf(message: ApiToRunner): ChiefGate | null {
   if (message.type !== 'thread.prompt') return null
   if (message.memberId) return { person: true }
   if (!message.commandId.startsWith(WAKEUP_COMMAND)) return null
+  const goal = goalNote(message.text)
+  if (goal) return { goal: goal.goalId, kind: goal.kind }
   const note = chiefAnswerNote(message.text)
   return note ? { answer: note.decisionId } : null
+}
+
+/** A goal's wake-ups, by sourceId (src/goals.ts): `goal:<goal>:<kind>:<key>`. */
+const GOAL_SOURCE = 'goal:'
+/** The goal notes a person's word withdraws while they have not gone: the loop's own prompts. */
+const WITHDRAWN = ['relaunch', 'drift']
+const withdrawnSource = (sourceId: string | null) =>
+  !!sourceId?.startsWith(GOAL_SOURCE) && WITHDRAWN.includes(sourceId.split(':')[2] ?? '')
+
+/**
+ * The person's word withdraws the goal's relaunches and drift wake-ups that have not gone to the
+ * computer: not kept yet (their wake-up is cancelled), or kept and not sent since (expired). Their
+ * turn's end measures the goal again and decides anew.
+ */
+export async function withdrawGoalNotes(
+  client: Client<'wakeup' | 'runnerCommand'>,
+  sessionId: string,
+) {
+  const tx = client as Pick<Tx, 'wakeup' | 'runnerCommand'>
+  let withdrawn = 0
+  const pending = await tx.wakeup.findMany({
+    where: { sessionId, status: 'pending', sourceId: { startsWith: GOAL_SOURCE } },
+    select: { id: true, sourceId: true },
+  })
+  for (const w of pending.filter((w) => withdrawnSource(w.sourceId))) {
+    const { count } = await tx.wakeup.updateMany({
+      where: { id: w.id, status: 'pending' },
+      data: { status: 'cancelled' },
+    })
+    withdrawn += count
+  }
+  const unsent = await tx.runnerCommand.findMany({
+    where: { sessionId, status: 'pending', sentAt: null, id: { startsWith: WAKEUP_COMMAND } },
+    select: { id: true },
+  })
+  if (!unsent.length) return withdrawn
+  const fired = await tx.wakeup.findMany({
+    where: {
+      sessionId,
+      id: { in: unsent.map((c) => c.id.slice(WAKEUP_COMMAND.length)) },
+      sourceId: { startsWith: GOAL_SOURCE },
+    },
+    select: { id: true, sourceId: true },
+  })
+  for (const w of fired.filter((w) => withdrawnSource(w.sourceId))) {
+    const { count } = await tx.runnerCommand.updateMany({
+      where: { id: wakeupCommandId(w.id), status: 'pending', sentAt: null },
+      data: { status: 'expired' },
+    })
+    withdrawn += count
+  }
+  return withdrawn
+}
+
+/**
+ * Whether a goal's note may be kept for the thread's computer now. Its start, a relaunch and a
+ * drift wake-up only while the goal is under way; its end only once it is over. A relaunch or a
+ * drift wake-up also only while nobody has the thread in hand and no word of the person's waits
+ * to be read, and a relaunch only while the thread is idle and no person wrote since it was
+ * decided: their turn's end decides anew. One that may not never goes, its wake-up cancelled.
+ */
+async function goalNoteMayGo(
+  tx: Tx,
+  computerId: string,
+  sessionId: string,
+  gate: { goal: string; kind: GoalNoteKind },
+  commandId: string,
+) {
+  const goal = await tx.goal.findFirst({
+    where: { id: gate.goal, sessionId },
+    select: { status: true },
+  })
+  const over = goal?.status === 'achieved' || goal?.status === 'ended'
+  let go = gate.kind === 'end' ? over : goal?.status === 'active'
+  const wakeupId = commandId.startsWith(WAKEUP_COMMAND)
+    ? commandId.slice(WAKEUP_COMMAND.length)
+    : null
+  if (go && (gate.kind === 'relaunch' || gate.kind === 'drift')) {
+    const thread = await tx.session.findFirst({
+      where: { id: sessionId },
+      select: { controlledByMemberId: true, status: true },
+    })
+    // A relaunch is decided at a turn's end, its seq the last part of its sourceId: a person's
+    // message after it has a turn of its own, whose end decides again.
+    const wakeup = wakeupId
+      ? await tx.wakeup.findFirst({ where: { id: wakeupId }, select: { sourceId: true } })
+      : null
+    const after = Number(wakeup?.sourceId?.split(':')[3] ?? 0) || 0
+    const [row] = await tx.$queryRaw<[{ count: bigint }]>`
+      SELECT count(*) FROM "SessionEvent"
+      WHERE "sessionId" = ${sessionId} AND type IN ('message.user', 'message.queued')
+        AND seq > ${after} AND data->>'memberId' IS NOT NULL`
+    const spoke = Number(row.count) > 0
+    go =
+      !!thread &&
+      !thread.controlledByMemberId &&
+      !(await personWordWaiting(tx, computerId, sessionId)) &&
+      (gate.kind === 'drift' || (thread.status === 'idle' && !spoke))
+  }
+  if (!go && wakeupId)
+    await tx.wakeup.updateMany({
+      where: { id: wakeupId, status: 'pending' },
+      data: { status: 'cancelled' },
+    })
+  return go
 }
 
 /**
@@ -226,7 +337,10 @@ export async function keepInOrder(
     if (await tx.runnerCommand.count({ where: { id: command.id } }))
       return { outcome: 'exists' as const, settled: 0 }
     let settled = 0
-    if ('answer' in gate) {
+    if ('goal' in gate) {
+      if (!(await goalNoteMayGo(tx, computerId, sessionId, gate, command.id)))
+        return { outcome: 'moot' as const, settled: 1 }
+    } else if ('answer' in gate) {
       const order = await answerMayGo(tx, computerId, sessionId, gate.answer)
       if (!order.go) return { outcome: 'moot' as const, settled: order.settled }
     } else {
@@ -234,7 +348,10 @@ export async function keepInOrder(
         where: { sessionId, status: 'pending' },
         data: { status: 'superseded' },
       })
-      settled = count + (await withdrawAnswers(tx, sessionId, null))
+      settled =
+        count +
+        (await withdrawAnswers(tx, sessionId, null)) +
+        (await withdrawGoalNotes(tx, sessionId))
     }
     const last = await tx.runnerCommand.findFirst({
       where: { computerId, sessionId, status: 'pending' },
