@@ -78,6 +78,9 @@
     }
   },
   "seo": {
-    "indexing": "navigable"
+    "indexing": "navigable",
+    "metatags": {
+      "canonical": "https://www.brigade.lol"
+    }
   }
 }

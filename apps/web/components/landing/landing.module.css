@@ -4920,6 +4920,39 @@ svg.i {
   text-decoration: underline;
 }
 
+/* A comparison's table (app/compare/[slug]): scrolls sideways on a narrow screen. */
+.cmp-scroll {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+.cmp {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.cmp th,
+.cmp td {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.cmp thead th {
+  font-weight: 700;
+  color: var(--foreground);
+}
+.cmp tbody th {
+  width: 22%;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.cmp td {
+  width: 39%;
+  color: var(--muted-foreground);
+}
+
 /* =================== /changelog =================== */
 .log {
   padding: 72px 0 96px;

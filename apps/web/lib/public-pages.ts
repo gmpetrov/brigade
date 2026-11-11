@@ -9,14 +9,17 @@ export const PUBLIC_PAGES = [
   '/subprocessors',
   '/legal',
   '/changelog',
+  '/compare',
 ] as const
 
 const pages = new Set<string>(PUBLIC_PAGES)
 
 // A release's page, /changelog/<day> (lib/changelog.ts), but not its feed.
 const RELEASE_PAGE = /^\/changelog\/\d{4}-\d{2}-\d{2}$/
+// A comparison's page, /compare/<slug> (lib/compare.ts).
+const COMPARE_PAGE = /^\/compare\/[a-z0-9-]+$/
 
 export const isPublicPage = (pathname: string) => {
   const path = pathname.replace(/\/+$/, '') || '/'
-  return pages.has(path) || RELEASE_PAGE.test(path)
+  return pages.has(path) || RELEASE_PAGE.test(path) || COMPARE_PAGE.test(path)
 }

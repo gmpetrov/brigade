@@ -85,6 +85,18 @@ The user docs at [www.brigade.lol/docs](https://www.brigade.lol/docs) are a Mint
 the dashboard's Worker serves it under `/docs` with the rewrites in `apps/web/next.config.ts`. The pages describe
 what the code does: change them in the same pull request as a change they describe.
 
+Search engines should know the docs by their www.brigade.lol address, not Mintlify's: `docs.json`'s
+`seo.metatags.canonical` names www.brigade.lol, and the site's own `sitemap.xml` and `llms.txt` list the docs' pages
+from `docs.json`'s navigation (`apps/web/lib/docs-pages.ts`).
+
+## Search engines and AI assistants
+
+What the site gives crawlers: `robots.txt` and `sitemap.xml` (`apps/web/app`), `llms.txt` (`apps/web/app/llms.txt`,
+a Markdown summary for AI assistants, with links to the docs and comparisons), JSON-LD on the landing (the product,
+the organization and the FAQ) and on each comparison (`apps/web/app/compare`, data in `apps/web/lib/compare.ts`, with
+a source and a date for every line about another product). After a deploy that changes public pages, run
+`node apps/web/scripts/indexnow.mjs` to have Bing and the other IndexNow engines crawl them again.
+
 ```bash
 pnpm docs                                    # http://localhost:3333, reloads as you edit
 pnpm --filter @brigade/docs check            # Mintlify's validation and broken links
