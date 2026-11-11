@@ -2,7 +2,7 @@
 // and assistants that read it, with links to the pages that say more. Built with the site.
 // Every claim here must hold in the code and docs, like the landing page's.
 import { COMPARISONS } from '@/lib/compare'
-import { DOCS_GROUPS, DOCS_URL, docsUrl } from '@/lib/docs-pages'
+import { DOCS_GROUPS, DOCS_URL } from '@/lib/docs-pages'
 import { REPO_URL } from '@/lib/github-proof'
 import { SITE_URL } from '@/lib/page-metadata'
 
@@ -44,7 +44,7 @@ const docsSection = () =>
   DOCS_GROUPS.map(
     (g) =>
       `### ${g.group}\n\n` +
-      g.pages.map((p) => `- [${DOCS_TITLES[p] ?? p}](${docsUrl(p)}.md)`).join('\n'),
+      g.pages.map((p) => `- [${DOCS_TITLES[p] ?? p}](${DOCS_URL}/${p}.md)`).join('\n'),
   ).join('\n\n')
 
 const body = () => `# Brigade
@@ -60,7 +60,7 @@ Website: ${SITE_URL}. Docs: ${DOCS_URL}. Source code: ${REPO_URL}. Live demo, no
 - What it is: an AI team for the whole company, not only a coding tool. Teammates answer customers, handle marketing, chase leads and write, test and ship code.
 - Runs on: the official Claude Code (on a Claude plan) and Codex (on a ChatGPT plan), signed in with the user's own accounts. A model per teammate. Several accounts of the same provider can be stacked: when one hits its limit, the teammate carries on with the next.
 - AI cost: Brigade never bills for AI usage; the work runs on the plan the user already pays for.
-- Control: for each teammate, the user chooses what it does on its own and what waits for a yes (sending an email, a change in Stripe, shipping code), which Apps it can reach, and daily caps. Requests land in one "Needs you" list, with push notifications on phone and computer.
+- Control: for each teammate, the user chooses which Apps it can reach (read only or read-write), whether its writes to Apps (an email through Gmail, a change in Stripe, a merge on GitHub) go on their own or wait for a yes, and daily caps. Mail a teammate sends from its own address to people outside the workspace waits for a yes by default. Requests land in one "Needs you" list, with push notifications on phone and computer. Commands, files and the browser on the teammate's own computer don't ask: what must not be touched stays off that computer.
 - Starts on its own: from triggers (an email, a webhook, an App event such as a failed payment) and schedules.
 - Apps: Gmail, Google Calendar, Drive, Docs and Sheets, GitHub, Stripe, Notion, Linear, Atlassian, PostHog, Mixpanel, Google Analytics, Search Console, Ahrefs, Cloudflare, Vercel, Neon, Supabase, Resend and more, plus any MCP server and custom webhooks. With Cloud, each teammate can have its own email address.
 - Teams: members share a workspace: threads, lists, the library of documents and memory.
@@ -69,7 +69,7 @@ Website: ${SITE_URL}. Docs: ${DOCS_URL}. Source code: ${REPO_URL}. Live demo, no
 
 ## Who it is for
 
-Founders and small teams who build with Claude Code or Codex and also run support, marketing and sales themselves; people who already pay for Claude Max or ChatGPT Pro and don't want a second AI bill; teams that want agents to start on their own but ask before they send, charge or ship.
+Founders and small teams who build with Claude Code or Codex and also run support, marketing and sales themselves; people who already pay for Claude Max or ChatGPT Pro and don't want a second AI bill; teams that want agents to start on their own, with chosen App actions waiting for a person's yes.
 
 ## Limits
 

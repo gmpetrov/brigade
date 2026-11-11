@@ -49,8 +49,8 @@ export default function Compare() {
           ChatGPT login, so no second AI bill.
         </li>
         <li>
-          <strong>You stay in control:</strong> you choose what waits for your yes, and it all lands
-          in one list.
+          <strong>You stay in control:</strong> you choose which App actions wait for your yes, and
+          they all land in one list.
         </li>
         <li>
           <strong>Ready to use:</strong> hosted, on your phone with push notifications, with your
