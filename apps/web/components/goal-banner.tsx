@@ -64,7 +64,9 @@ function recipeText(c: GoalContract, accounts: Record<string, string>) {
   if (r.kind === 'command')
     return (
       <>
-        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{r.command}</code>
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs break-all">
+          {r.command}
+        </code>
         {r.read === 'exit_code' ? ' passes' : ', its last number'}, after each turn
       </>
     )
@@ -127,9 +129,9 @@ function Curve({ points, target }: { points: GoalMeasurementView[]; target?: Goa
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-3 text-sm">
-      <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 flex-1">{children}</span>
+    <div className="flex flex-col gap-0.5 text-sm sm:flex-row sm:gap-3">
+      <span className="shrink-0 text-muted-foreground sm:w-28">{label}</span>
+      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{children}</span>
     </div>
   )
 }
@@ -229,7 +231,10 @@ export function GoalBanner({
   return (
     <section
       aria-label="Goal"
-      className={cn('mb-4 rounded-2xl border bg-card shadow-sm', proposed && 'border-primary/40')}
+      className={cn(
+        'mb-4 min-w-0 rounded-2xl border bg-card shadow-sm',
+        proposed && 'border-primary/40',
+      )}
     >
       <button
         type="button"
@@ -273,7 +278,7 @@ export function GoalBanner({
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
                   {measuring ? (
                     <span className="inline-flex items-center gap-1.5">
                       <ActivityIndicator className="size-3" label="Measuring" /> Measuring
@@ -314,14 +319,14 @@ export function GoalBanner({
               {proposed ? (
                 `${compact.format(c.budget.tokens)} tokens of your subscription, ${c.budget.hours} h at most`
               ) : (
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-primary/15">
                     <span
                       className="block h-full rounded-full bg-primary"
                       style={{ width: `${Math.round(budgetShare * 100)}%` }}
                     />
                   </span>
-                  <span className="tabular-nums">
+                  <span className="whitespace-nowrap tabular-nums">
                     {compact.format(goal.budget.used)} / {compact.format(goal.budget.tokens)} tokens
                   </span>
                   {goal.budget.endsAt && !over && (
