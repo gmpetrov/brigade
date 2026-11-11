@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { AppOperations } from './apps.js'
 import { ChiefOperations } from './chief-answers.js'
 import { ChildOperations } from './children.js'
+import { GoalOperations } from './goals.js'
 import { ListOperations } from './lists.js'
 import { PlaybookOperations } from './playbooks.js'
 import { ReviewOperations } from './reviews.js'
@@ -128,6 +129,7 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
   ...AppOperations,
   ...DoneOperations,
   ...ChiefOperations,
+  ...GoalOperations,
 ])
 export type ScheduleOperation = z.infer<typeof ScheduleOperation>
 

@@ -1,7 +1,18 @@
 import { addressOf } from '../mail/names.js'
 import { mayWrite, openToOthers } from '../account-sharing.js'
+import {
+  approveGoal,
+  declineGoal,
+  goalView,
+  judgeGoal,
+  pauseGoal,
+  resumeGoal,
+  revokePermission,
+  stopGoal,
+} from '../goals.js'
 import { randomUUID } from 'node:crypto'
 import {
+  JudgeGoal,
   ASIDE_PROTOCOL,
   SIDE_REPLY_PROTOCOL,
   clipReport,
@@ -731,7 +742,7 @@ export const threads = new Hono<AppEnv>()
     // This member's pin and later, for the thread's menu in its details.
     const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
     const hub = hubs.get(c.var.scope.workspaceId)
-    const [pin, later, presence, waitingSince, names, chiefDecisions, ticketsBelow] =
+    const [pin, later, presence, waitingSince, names, chiefDecisions, ticketsBelow, goal] =
       await Promise.all([
         c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
         c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
@@ -760,9 +771,15 @@ export const threads = new Hono<AppEnv>()
               orderBy: { createdAt: 'asc' },
             })
           : [],
+        // Its goal, for its banner (src/goals.ts).
+        goalView(c.var.db, c.var.scope, thread.id, {
+          act: mayWrite(thread, c.var.scope) || isAdmin(c.var.scope),
+          approve: mayWrite(thread, c.var.scope),
+        }),
       ])
     return c.json({
       ...thread,
+      goal,
       // Whether it is there, for everyone in the thread: /computers lists only the member's own.
       computer: {
         ...thread.computer,
@@ -2081,6 +2098,49 @@ export const threads = new Hono<AppEnv>()
   .delete('/:id/later', async (c) => {
     const { scope, db } = c.var
     await setLater(db, scope, await loadThread(db, c.req.param('id')), false)
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Its goal (docs/goals.md, src/goals.ts). Approving or resuming one lets its teammate act on the
+   * thread's accounts, so only who may write in it does; pausing, stopping and withdrawing a
+   * permission only hold it back, so an admin may too.
+   */
+  .post('/:id/goal/:goalId/:action{approve|decline|pause|resume|stop}', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    const action = c.req.param('action') as 'approve' | 'decline' | 'pause' | 'resume' | 'stop'
+    if (action === 'approve' || action === 'resume') {
+      if (!mayWrite(thread, scope))
+        throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+    } else mayChange(scope, thread)
+    const goalId = c.req.param('goalId')
+    const act = {
+      approve: approveGoal,
+      decline: declineGoal,
+      pause: pauseGoal,
+      resume: resumeGoal,
+      stop: stopGoal,
+    }[action]
+    await act(db, scope, thread, goalId)
+    return c.json({ ok: true })
+  })
+
+  .post('/:id/goal/:goalId/judge', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (!mayWrite(thread, scope))
+      throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+    const { met } = await parseBody(c.req.raw, JudgeGoal)
+    await judgeGoal(db, scope, thread, c.req.param('goalId'), met)
+    return c.json({ ok: true })
+  })
+
+  .delete('/:id/goal/:goalId/permissions/:permissionId', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    await revokePermission(db, scope, thread, c.req.param('goalId'), c.req.param('permissionId'))
     return c.json({ ok: true })
   })
 

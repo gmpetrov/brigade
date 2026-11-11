@@ -22,7 +22,7 @@
       },
       {
         "group": "Teammates",
-        "pages": ["teammates", "threads", "needs-you", "ai-accounts"]
+        "pages": ["teammates", "threads", "goals", "needs-you", "ai-accounts"]
       },
       {
         "group": "Organize work",

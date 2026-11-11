@@ -622,6 +622,7 @@ export type SessionWhereInput = {
   chiefDecisions?: Prisma.ChiefDecisionListRelationFilter
   chiefDecision?: Prisma.XOR<Prisma.ChiefDecisionNullableScalarRelationFilter, Prisma.ChiefDecisionWhereInput> | null
   chiefPass?: Prisma.XOR<Prisma.ChiefPassNullableScalarRelationFilter, Prisma.ChiefPassWhereInput> | null
+  goals?: Prisma.GoalListRelationFilter
 }
 
 export type SessionOrderByWithRelationInput = {
@@ -720,6 +721,7 @@ export type SessionOrderByWithRelationInput = {
   chiefDecisions?: Prisma.ChiefDecisionOrderByRelationAggregateInput
   chiefDecision?: Prisma.ChiefDecisionOrderByWithRelationInput
   chiefPass?: Prisma.ChiefPassOrderByWithRelationInput
+  goals?: Prisma.GoalOrderByRelationAggregateInput
 }
 
 export type SessionWhereUniqueInput = Prisma.AtLeast<{
@@ -821,6 +823,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   chiefDecisions?: Prisma.ChiefDecisionListRelationFilter
   chiefDecision?: Prisma.XOR<Prisma.ChiefDecisionNullableScalarRelationFilter, Prisma.ChiefDecisionWhereInput> | null
   chiefPass?: Prisma.XOR<Prisma.ChiefPassNullableScalarRelationFilter, Prisma.ChiefPassWhereInput> | null
+  goals?: Prisma.GoalListRelationFilter
 }, "id" | "taskId" | "chiefDecisionId" | "chiefPassId">
 
 export type SessionOrderByWithAggregationInput = {
@@ -1017,6 +1020,7 @@ export type SessionCreateInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateInput = {
@@ -1101,6 +1105,7 @@ export type SessionUncheckedCreateInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUpdateInput = {
@@ -1185,6 +1190,7 @@ export type SessionUpdateInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateInput = {
@@ -1269,6 +1275,7 @@ export type SessionUncheckedUpdateInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateManyInput = {
@@ -2107,6 +2114,20 @@ export type SessionUncheckedUpdateOneWithoutChiefPassNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutChiefPassInput, Prisma.SessionUpdateWithoutChiefPassInput>, Prisma.SessionUncheckedUpdateWithoutChiefPassInput>
 }
 
+export type SessionCreateNestedOneWithoutGoalsInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutGoalsInput, Prisma.SessionUncheckedCreateWithoutGoalsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutGoalsInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutGoalsNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutGoalsInput, Prisma.SessionUncheckedCreateWithoutGoalsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutGoalsInput
+  upsert?: Prisma.SessionUpsertWithoutGoalsInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutGoalsInput, Prisma.SessionUpdateWithoutGoalsInput>, Prisma.SessionUncheckedUpdateWithoutGoalsInput>
+}
+
 export type SessionCreateNestedOneWithoutWakeupsInput = {
   create?: Prisma.XOR<Prisma.SessionCreateWithoutWakeupsInput, Prisma.SessionUncheckedCreateWithoutWakeupsInput>
   connectOrCreate?: Prisma.SessionCreateOrConnectWithoutWakeupsInput
@@ -2728,6 +2749,7 @@ export type SessionCreateWithoutStartedByInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutStartedByInput = {
@@ -2811,6 +2833,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedByInput = {
@@ -2975,6 +2998,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutWorkspaceInput = {
@@ -3058,6 +3082,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWorkspaceInput = {
@@ -3167,6 +3192,7 @@ export type SessionCreateWithoutComputerInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutComputerInput = {
@@ -3250,6 +3276,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutComputerInput = {
@@ -3359,6 +3386,7 @@ export type SessionCreateWithoutTeammateInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTeammateInput = {
@@ -3442,6 +3470,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammateInput = {
@@ -3551,6 +3580,7 @@ export type SessionCreateWithoutReadsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReadsInput = {
@@ -3634,6 +3664,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReadsInput = {
@@ -3733,6 +3764,7 @@ export type SessionUpdateWithoutReadsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReadsInput = {
@@ -3816,6 +3848,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutPinsInput = {
@@ -3899,6 +3932,7 @@ export type SessionCreateWithoutPinsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPinsInput = {
@@ -3982,6 +4016,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPinsInput = {
@@ -4081,6 +4116,7 @@ export type SessionUpdateWithoutPinsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPinsInput = {
@@ -4164,6 +4200,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutLatersInput = {
@@ -4247,6 +4284,7 @@ export type SessionCreateWithoutLatersInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutLatersInput = {
@@ -4330,6 +4368,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutLatersInput = {
@@ -4429,6 +4468,7 @@ export type SessionUpdateWithoutLatersInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutLatersInput = {
@@ -4512,6 +4552,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutChildrenInput = {
@@ -4595,6 +4636,7 @@ export type SessionCreateWithoutChildrenInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutChildrenInput = {
@@ -4678,6 +4720,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutChildrenInput = {
@@ -4766,6 +4809,7 @@ export type SessionCreateWithoutParentInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutParentInput = {
@@ -4849,6 +4893,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutParentInput = {
@@ -4942,6 +4987,7 @@ export type SessionCreateWithoutStartedThreadsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutStartedThreadsInput = {
@@ -5025,6 +5071,7 @@ export type SessionUncheckedCreateWithoutStartedThreadsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedThreadsInput = {
@@ -5113,6 +5160,7 @@ export type SessionCreateWithoutStartedFromInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutStartedFromInput = {
@@ -5196,6 +5244,7 @@ export type SessionUncheckedCreateWithoutStartedFromInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedFromInput = {
@@ -5300,6 +5349,7 @@ export type SessionUpdateWithoutChildrenInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutChildrenInput = {
@@ -5383,6 +5433,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutParentInput = {
@@ -5493,6 +5544,7 @@ export type SessionUpdateWithoutStartedThreadsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutStartedThreadsInput = {
@@ -5576,6 +5628,7 @@ export type SessionUncheckedUpdateWithoutStartedThreadsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutStartedFromInput = {
@@ -5675,6 +5728,7 @@ export type SessionCreateWithoutTaskInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTaskInput = {
@@ -5758,6 +5812,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTaskInput = {
@@ -5857,6 +5912,7 @@ export type SessionUpdateWithoutTaskInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTaskInput = {
@@ -5940,6 +5996,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutReportingSchedulesInput = {
@@ -6023,6 +6080,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
@@ -6106,6 +6164,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReportingSchedulesInput = {
@@ -6194,6 +6253,7 @@ export type SessionCreateWithoutScheduleInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutScheduleInput = {
@@ -6277,6 +6337,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutScheduleInput = {
@@ -6381,6 +6442,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
@@ -6464,6 +6526,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutScheduleInput = {
@@ -6563,6 +6626,7 @@ export type SessionCreateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutChiefDecisionsInput = {
@@ -6646,6 +6710,7 @@ export type SessionUncheckedCreateWithoutChiefDecisionsInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutChiefDecisionsInput = {
@@ -6734,6 +6799,7 @@ export type SessionCreateWithoutChiefDecisionInput = {
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutChiefDecisionInput = {
@@ -6817,6 +6883,7 @@ export type SessionUncheckedCreateWithoutChiefDecisionInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutChiefDecisionInput = {
@@ -6916,6 +6983,7 @@ export type SessionUpdateWithoutChiefDecisionsInput = {
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutChiefDecisionsInput = {
@@ -6999,6 +7067,7 @@ export type SessionUncheckedUpdateWithoutChiefDecisionsInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithoutChiefDecisionInput = {
@@ -7093,6 +7162,7 @@ export type SessionUpdateWithoutChiefDecisionInput = {
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutChiefDecisionInput = {
@@ -7176,6 +7246,7 @@ export type SessionUncheckedUpdateWithoutChiefDecisionInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutChiefPassInput = {
@@ -7259,6 +7330,7 @@ export type SessionCreateWithoutChiefPassInput = {
   listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutChiefPassInput = {
@@ -7342,6 +7414,7 @@ export type SessionUncheckedCreateWithoutChiefPassInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutChiefPassInput = {
@@ -7441,6 +7514,7 @@ export type SessionUpdateWithoutChiefPassInput = {
   listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutChiefPassInput = {
@@ -7491,6 +7565,359 @@ export type SessionUncheckedUpdateWithoutChiefPassInput = {
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
   chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutSessionNestedInput
+  startedThreads?: Prisma.SessionUncheckedUpdateManyWithoutStartedFromNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
+  eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
+  listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionCreateWithoutGoalsInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  askedByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  conversationKey?: string | null
+  archivedAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneSummary?: string | null
+  doneByType?: $Enums.ActorType | null
+  doneById?: string | null
+  choicesDismissedSeq?: number | null
+  lastSeq?: number
+  coldSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  chiefWordSeq?: number | null
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  parent?: Prisma.SessionCreateNestedOneWithoutChildrenInput
+  children?: Prisma.SessionCreateNestedManyWithoutParentInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
+  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterCreateNestedManyWithoutSessionInput
+  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
+  startedFrom?: Prisma.SessionCreateNestedOneWithoutStartedThreadsInput
+  startedThreads?: Prisma.SessionCreateNestedManyWithoutStartedFromInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleCreateNestedManyWithoutParentSessionInput
+  playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkCreateNestedManyWithoutSessionInput
+  eventVolume?: Prisma.ThreadEventVolumeCreateNestedOneWithoutSessionInput
+  listItems?: Prisma.ListItemThreadCreateNestedManyWithoutSessionInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
+  chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
+  chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+}
+
+export type SessionUncheckedCreateWithoutGoalsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  askedByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentId?: string | null
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  triggerId?: string | null
+  conversationKey?: string | null
+  scheduleId?: string | null
+  archivedAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneSummary?: string | null
+  doneByType?: $Enums.ActorType | null
+  doneById?: string | null
+  choicesDismissedSeq?: number | null
+  lastSeq?: number
+  coldSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  taskId?: string | null
+  startedFromId?: string | null
+  projectId?: string | null
+  playbookRunId?: string | null
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  chiefDecisionId?: string | null
+  chiefPassId?: string | null
+  chiefWordSeq?: number | null
+  children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutSessionInput
+  startedThreads?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedFromInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
+  coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
+  eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
+  listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutGoalsInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutGoalsInput, Prisma.SessionUncheckedCreateWithoutGoalsInput>
+}
+
+export type SessionUpsertWithoutGoalsInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutGoalsInput, Prisma.SessionUncheckedUpdateWithoutGoalsInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutGoalsInput, Prisma.SessionUncheckedCreateWithoutGoalsInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutGoalsInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutGoalsInput, Prisma.SessionUncheckedUpdateWithoutGoalsInput>
+}
+
+export type SessionUpdateWithoutGoalsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  parent?: Prisma.SessionUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.SessionUpdateManyWithoutParentNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
+  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUpdateManyWithoutSessionNestedInput
+  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
+  startedFrom?: Prisma.SessionUpdateOneWithoutStartedThreadsNestedInput
+  startedThreads?: Prisma.SessionUpdateManyWithoutStartedFromNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUpdateManyWithoutParentSessionNestedInput
+  playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
+  coldChunks?: Prisma.ColdEventChunkUpdateManyWithoutSessionNestedInput
+  eventVolume?: Prisma.ThreadEventVolumeUpdateOneWithoutSessionNestedInput
+  listItems?: Prisma.ListItemThreadUpdateManyWithoutSessionNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
+  chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
+  chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutGoalsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  coldSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefDecisionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefPassId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chiefWordSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -7607,6 +8034,7 @@ export type SessionCreateWithoutWakeupsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutWakeupsInput = {
@@ -7690,6 +8118,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWakeupsInput = {
@@ -7789,6 +8218,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutWakeupsInput = {
@@ -7872,6 +8302,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutReplyWatchesInput = {
@@ -7955,6 +8386,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReplyWatchesInput = {
@@ -8038,6 +8470,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReplyWatchesInput = {
@@ -8137,6 +8570,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
@@ -8220,6 +8654,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTeammatesInput = {
@@ -8303,6 +8738,7 @@ export type SessionCreateWithoutTeammatesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTeammatesInput = {
@@ -8386,6 +8822,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammatesInput = {
@@ -8485,6 +8922,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTeammatesInput = {
@@ -8568,6 +9006,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutEventsInput = {
@@ -8651,6 +9090,7 @@ export type SessionCreateWithoutEventsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutEventsInput = {
@@ -8734,6 +9174,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutEventsInput = {
@@ -8833,6 +9274,7 @@ export type SessionUpdateWithoutEventsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutEventsInput = {
@@ -8916,6 +9358,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutColdChunksInput = {
@@ -8999,6 +9442,7 @@ export type SessionCreateWithoutColdChunksInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutColdChunksInput = {
@@ -9082,6 +9526,7 @@ export type SessionUncheckedCreateWithoutColdChunksInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutColdChunksInput = {
@@ -9181,6 +9626,7 @@ export type SessionUpdateWithoutColdChunksInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutColdChunksInput = {
@@ -9264,6 +9710,7 @@ export type SessionUncheckedUpdateWithoutColdChunksInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutEventVolumeInput = {
@@ -9347,6 +9794,7 @@ export type SessionCreateWithoutEventVolumeInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutEventVolumeInput = {
@@ -9430,6 +9878,7 @@ export type SessionUncheckedCreateWithoutEventVolumeInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutEventVolumeInput = {
@@ -9529,6 +9978,7 @@ export type SessionUpdateWithoutEventVolumeInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutEventVolumeInput = {
@@ -9612,6 +10062,7 @@ export type SessionUncheckedUpdateWithoutEventVolumeInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTokenUsageInput = {
@@ -9695,6 +10146,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTokenUsageInput = {
@@ -9778,6 +10230,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTokenUsageInput = {
@@ -9877,6 +10330,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTokenUsageInput = {
@@ -9960,6 +10414,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAccountInput = {
@@ -10043,6 +10498,7 @@ export type SessionCreateWithoutAccountInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutAccountInput = {
@@ -10126,6 +10582,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAccountInput = {
@@ -10235,6 +10692,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPullRequestsInput = {
@@ -10318,6 +10776,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPullRequestsInput = {
@@ -10406,6 +10865,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReviewsOfInput = {
@@ -10489,6 +10949,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReviewsOfInput = {
@@ -10588,6 +11049,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPullRequestsInput = {
@@ -10671,6 +11133,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithoutReviewsOfInput = {
@@ -10765,6 +11228,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReviewsOfInput = {
@@ -10848,6 +11312,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutCommentsInput = {
@@ -10931,6 +11396,7 @@ export type SessionCreateWithoutCommentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutCommentsInput = {
@@ -11014,6 +11480,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutCommentsInput = {
@@ -11113,6 +11580,7 @@ export type SessionUpdateWithoutCommentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutCommentsInput = {
@@ -11196,6 +11664,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutConnectionCallsInput = {
@@ -11279,6 +11748,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutConnectionCallsInput = {
@@ -11362,6 +11832,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutConnectionCallsInput = {
@@ -11461,6 +11932,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
@@ -11544,6 +12016,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTriggerInput = {
@@ -11627,6 +12100,7 @@ export type SessionCreateWithoutTriggerInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTriggerInput = {
@@ -11710,6 +12184,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTriggerInput = {
@@ -11819,6 +12294,7 @@ export type SessionCreateWithoutTicketsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTicketsInput = {
@@ -11902,6 +12378,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTicketsInput = {
@@ -12001,6 +12478,7 @@ export type SessionUpdateWithoutTicketsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTicketsInput = {
@@ -12084,6 +12562,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutDocumentsInput = {
@@ -12167,6 +12646,7 @@ export type SessionCreateWithoutDocumentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutDocumentsInput = {
@@ -12250,6 +12730,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutDocumentsInput = {
@@ -12349,6 +12830,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutDocumentsInput = {
@@ -12432,6 +12914,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutListItemsInput = {
@@ -12515,6 +12998,7 @@ export type SessionCreateWithoutListItemsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutListItemsInput = {
@@ -12598,6 +13082,7 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedCreateNestedManyWithoutSessionInput
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutListItemsInput = {
@@ -12697,6 +13182,7 @@ export type SessionUpdateWithoutListItemsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutListItemsInput = {
@@ -12780,6 +13266,7 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   coldChunks?: Prisma.ColdEventChunkUncheckedUpdateManyWithoutSessionNestedInput
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutSentAttachmentsInput = {
@@ -12863,6 +13350,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
@@ -12946,6 +13434,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutSentAttachmentsInput = {
@@ -13045,6 +13534,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
@@ -13128,6 +13618,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAttachmentsInput = {
@@ -13211,6 +13702,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutAttachmentsInput = {
@@ -13294,6 +13786,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAttachmentsInput = {
@@ -13393,6 +13886,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutAttachmentsInput = {
@@ -13476,6 +13970,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutProjectInput = {
@@ -13559,6 +14054,7 @@ export type SessionCreateWithoutProjectInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutProjectInput = {
@@ -13642,6 +14138,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutProjectInput = {
@@ -13751,6 +14248,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
@@ -13834,6 +14332,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutRootOfPlaybookRunInput = {
@@ -13922,6 +14421,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPlaybookRunInput = {
@@ -14005,6 +14505,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPlaybookRunInput = {
@@ -14109,6 +14610,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
@@ -14192,6 +14694,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutPlaybookRunInput = {
@@ -14291,6 +14794,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
@@ -14374,6 +14878,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPlaybookDryRunsInput = {
@@ -14473,6 +14978,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
@@ -14556,6 +15062,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutFollowersInput = {
@@ -14639,6 +15146,7 @@ export type SessionCreateWithoutFollowersInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutFollowersInput = {
@@ -14722,6 +15230,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutFollowersInput = {
@@ -14810,6 +15319,7 @@ export type SessionCreateWithoutFollowingInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutFollowingInput = {
@@ -14893,6 +15403,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutFollowingInput = {
@@ -14992,6 +15503,7 @@ export type SessionUpdateWithoutFollowersInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutFollowersInput = {
@@ -15075,6 +15587,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithoutFollowingInput = {
@@ -15169,6 +15682,7 @@ export type SessionUpdateWithoutFollowingInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutFollowingInput = {
@@ -15252,6 +15766,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutMailAliasesInput = {
@@ -15335,6 +15850,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutMailAliasesInput = {
@@ -15418,6 +15934,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutMailAliasesInput = {
@@ -15517,6 +16034,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutMailAliasesInput = {
@@ -15600,6 +16118,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutMailMessagesInput = {
@@ -15683,6 +16202,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutMailMessagesInput = {
@@ -15766,6 +16286,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutMailMessagesInput = {
@@ -15865,6 +16386,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutMailMessagesInput = {
@@ -15948,6 +16470,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutHeldCallsInput = {
@@ -16031,6 +16554,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutHeldCallsInput = {
@@ -16114,6 +16638,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutHeldCallsInput = {
@@ -16213,6 +16738,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutHeldCallsInput = {
@@ -16296,6 +16822,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutRunnerCommandsInput = {
@@ -16379,6 +16906,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
@@ -16462,6 +16990,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutRunnerCommandsInput = {
@@ -16561,6 +17090,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
@@ -16644,6 +17174,7 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutFolderBackupsInput = {
@@ -16727,6 +17258,7 @@ export type SessionCreateWithoutFolderBackupsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutSessionInput
   chiefDecision?: Prisma.ChiefDecisionCreateNestedOneWithoutChildInput
   chiefPass?: Prisma.ChiefPassCreateNestedOneWithoutThreadInput
+  goals?: Prisma.GoalCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutFolderBackupsInput = {
@@ -16810,6 +17342,7 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedCreateNestedOneWithoutSessionInput
   listItems?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutSessionInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutSessionInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutFolderBackupsInput = {
@@ -16909,6 +17442,7 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
@@ -16992,6 +17526,7 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateManyStartedByInput = {
@@ -17126,6 +17661,7 @@ export type SessionUpdateWithoutStartedByInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutStartedByInput = {
@@ -17209,6 +17745,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutStartedByInput = {
@@ -17394,6 +17931,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutWorkspaceInput = {
@@ -17477,6 +18015,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -17662,6 +18201,7 @@ export type SessionUpdateWithoutComputerInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutComputerInput = {
@@ -17745,6 +18285,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutComputerInput = {
@@ -17930,6 +18471,7 @@ export type SessionUpdateWithoutTeammateInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTeammateInput = {
@@ -18013,6 +18555,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTeammateInput = {
@@ -18249,6 +18792,7 @@ export type SessionUpdateWithoutParentInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutParentInput = {
@@ -18332,6 +18876,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutParentInput = {
@@ -18466,6 +19011,7 @@ export type SessionUpdateWithoutStartedFromInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutStartedFromInput = {
@@ -18549,6 +19095,7 @@ export type SessionUncheckedUpdateWithoutStartedFromInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutStartedFromInput = {
@@ -18734,6 +19281,7 @@ export type SessionUpdateWithoutScheduleInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutScheduleInput = {
@@ -18817,6 +19365,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutScheduleInput = {
@@ -19002,6 +19551,7 @@ export type SessionUpdateWithoutAccountInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutAccountInput = {
@@ -19085,6 +19635,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutAccountInput = {
@@ -19270,6 +19821,7 @@ export type SessionUpdateWithoutTriggerInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTriggerInput = {
@@ -19353,6 +19905,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTriggerInput = {
@@ -19538,6 +20091,7 @@ export type SessionUpdateWithoutProjectInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutProjectInput = {
@@ -19621,6 +20175,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutProjectInput = {
@@ -19806,6 +20361,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutSessionNestedInput
   chiefDecision?: Prisma.ChiefDecisionUpdateOneWithoutChildNestedInput
   chiefPass?: Prisma.ChiefPassUpdateOneWithoutThreadNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
@@ -19889,6 +20445,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   eventVolume?: Prisma.ThreadEventVolumeUncheckedUpdateOneWithoutSessionNestedInput
   listItems?: Prisma.ListItemThreadUncheckedUpdateManyWithoutSessionNestedInput
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutSessionNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
@@ -19978,6 +20535,7 @@ export type SessionCountOutputType = {
   coldChunks: number
   listItems: number
   chiefDecisions: number
+  goals: number
 }
 
 export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -20011,6 +20569,7 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   coldChunks?: boolean | SessionCountOutputTypeCountColdChunksArgs
   listItems?: boolean | SessionCountOutputTypeCountListItemsArgs
   chiefDecisions?: boolean | SessionCountOutputTypeCountChiefDecisionsArgs
+  goals?: boolean | SessionCountOutputTypeCountGoalsArgs
 }
 
 /**
@@ -20233,6 +20792,13 @@ export type SessionCountOutputTypeCountChiefDecisionsArgs<ExtArgs extends runtim
   where?: Prisma.ChiefDecisionWhereInput
 }
 
+/**
+ * SessionCountOutputType without action
+ */
+export type SessionCountOutputTypeCountGoalsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GoalWhereInput
+}
+
 
 export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -20330,6 +20896,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   chiefDecisions?: boolean | Prisma.Session$chiefDecisionsArgs<ExtArgs>
   chiefDecision?: boolean | Prisma.Session$chiefDecisionArgs<ExtArgs>
   chiefPass?: boolean | Prisma.Session$chiefPassArgs<ExtArgs>
+  goals?: boolean | Prisma.Session$goalsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["session"]>
 
@@ -20565,6 +21132,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   chiefDecisions?: boolean | Prisma.Session$chiefDecisionsArgs<ExtArgs>
   chiefDecision?: boolean | Prisma.Session$chiefDecisionArgs<ExtArgs>
   chiefPass?: boolean | Prisma.Session$chiefPassArgs<ExtArgs>
+  goals?: boolean | Prisma.Session$goalsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -20703,6 +21271,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     chiefDecisions: Prisma.$ChiefDecisionPayload<ExtArgs>[]
     chiefDecision: Prisma.$ChiefDecisionPayload<ExtArgs> | null
     chiefPass: Prisma.$ChiefPassPayload<ExtArgs> | null
+    /**
+     * Its goals (docs/goals.md): at most one proposed, active or paused at a time.
+     */
+    goals: Prisma.$GoalPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -21310,6 +21882,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   chiefDecisions<T extends Prisma.Session$chiefDecisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$chiefDecisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ChiefDecisionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   chiefDecision<T extends Prisma.Session$chiefDecisionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$chiefDecisionArgs<ExtArgs>>): Prisma.Prisma__ChiefDecisionClient<runtime.Types.Result.GetResult<Prisma.$ChiefDecisionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   chiefPass<T extends Prisma.Session$chiefPassArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$chiefPassArgs<ExtArgs>>): Prisma.Prisma__ChiefPassClient<runtime.Types.Result.GetResult<Prisma.$ChiefPassPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  goals<T extends Prisma.Session$goalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$goalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -22734,6 +23307,30 @@ export type Session$chiefPassArgs<ExtArgs extends runtime.Types.Extensions.Inter
    */
   include?: Prisma.ChiefPassInclude<ExtArgs> | null
   where?: Prisma.ChiefPassWhereInput
+}
+
+/**
+ * Session.goals
+ */
+export type Session$goalsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Goal
+   */
+  select?: Prisma.GoalSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Goal
+   */
+  omit?: Prisma.GoalOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GoalInclude<ExtArgs> | null
+  where?: Prisma.GoalWhereInput
+  orderBy?: Prisma.GoalOrderByWithRelationInput | Prisma.GoalOrderByWithRelationInput[]
+  cursor?: Prisma.GoalWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GoalScalarFieldEnum | Prisma.GoalScalarFieldEnum[]
 }
 
 /**

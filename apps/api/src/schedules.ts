@@ -22,6 +22,7 @@ import { handleChildCall, isChildOperation } from './children.js'
 import { fileIdea } from './playbook-ideas.js'
 import { handleStartedThreadCall, isStartedThreadOperation } from './started-threads.js'
 import { onChiefsWord } from './chief-answers.js'
+import { handleGoalCall, isGoalOperation } from './goals.js'
 import { handleChiefCall } from './chief-pass.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
 import { triageRun } from './playbook-autonomy.js'
@@ -556,6 +557,11 @@ export async function handleScheduleCall(
   // And Chief's calls (src/chief-pass.ts): its daily pass for a person, and their rules.
   if (isChiefOperation(op)) {
     const output = await handleChiefCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And goals (docs/goals.md): a contract proposed, where one stands, and its summary.
+  if (isGoalOperation(op)) {
+    const output = await handleGoalCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And declaring the work asked here delivered (docs/board.md), refused while anything is open.

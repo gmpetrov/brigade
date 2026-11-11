@@ -35,6 +35,9 @@ export const THREAD_TOOLS = [
   'playbook_report',
   'complete_item',
   'complete_thread',
+  // A goal's contract and summary are the thread's (docs/goals.md).
+  'propose_goal',
+  'goal_report',
   // What it waits on and what wakes it: child threads, wake-ups and reviews, whose news comes
   // back to the thread, not to the sub-agent that asked.
   'start_child',

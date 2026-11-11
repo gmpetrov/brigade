@@ -145,6 +145,19 @@ export const ChiefPassStatus = {
 export type ChiefPassStatus = (typeof ChiefPassStatus)[keyof typeof ChiefPassStatus]
 
 
+export const GoalStatus = {
+  proposed: 'proposed',
+  declined: 'declined',
+  superseded: 'superseded',
+  active: 'active',
+  paused: 'paused',
+  achieved: 'achieved',
+  ended: 'ended'
+} as const
+
+export type GoalStatus = (typeof GoalStatus)[keyof typeof GoalStatus]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',

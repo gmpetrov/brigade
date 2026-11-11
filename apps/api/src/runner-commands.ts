@@ -10,6 +10,7 @@ import { OUTBOX_PROTOCOL, type ApiToRunner } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { chiefGateOf, chiefOpenIn, keepForPass, keepInOrder, passOfCommand } from './chief-order.js'
 import { prisma, scoped } from './db.js'
+import { goalOpenIn } from './goals.js'
 import { noteFailure } from './ops/failures.js'
 import { movedOf } from './thread-spec.js'
 
@@ -100,7 +101,14 @@ export async function keepCommand(
   const pass = passOfCommand(message.commandId)
   try {
     if (pass) return await keepForPass(row, pass)
-    if (gate && sessionId && ('answer' in gate || (await chiefOpenIn(sessionId))))
+    if (
+      gate &&
+      sessionId &&
+      ('answer' in gate ||
+        'goal' in gate ||
+        (await chiefOpenIn(sessionId)) ||
+        (await goalOpenIn(sessionId)))
+    )
       return await keepInOrder({ ...row, sessionId }, gate, (tx, createdAt) =>
         tx.runnerCommand.create({ data: { ...row, createdAt } }),
       )

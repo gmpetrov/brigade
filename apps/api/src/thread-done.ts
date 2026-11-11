@@ -266,6 +266,21 @@ export async function completeThread(
     where: { sessionId: session.id },
     _max: { seq: true },
   })
+  // A goal under way (docs/goals.md) is done when its measurement says so, never on the
+  // teammate's word: its turn's end is measured, and Brigade tells it where the goal stands.
+  const goal = await db.goal.findFirst({
+    where: { sessionId: session.id, status: { in: ['active', 'paused'] } },
+    select: { status: true },
+  })
+  if (goal)
+    return {
+      error:
+        goal.status === 'paused'
+          ? 'The goal of this thread is paused, not reached: it is not done. Say in your reply where it stands; the person resumes or stops it.'
+          : "Not done yet: this thread works toward a goal, which is done only once Brigade's measurement confirms it. " +
+            'Its recipe measures it as your turn ends, and you are told the result: if it is reached, you then write its ' +
+            'summary (goal_report) and declare the thread done.',
+    }
   // A merge or close Brigade missed (a repository renamed meanwhile) is known before it refuses.
   await refreshOpenPulls(db, scope, session.id)
   const open = await openWork(db, session.id)

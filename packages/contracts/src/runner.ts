@@ -397,6 +397,19 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     type: z.literal('events.waiting'),
     threads: z.array(z.object({ sessionId: z.string(), since: z.iso.datetime() })).max(1000),
   }),
+  /**
+   * A goal's command measurement is done (GOAL_PROTOCOL, goal.measure): its exit code (null when it
+   * could not run or timed out) and the end of what it printed. Sent once; the API gives up on one
+   * that never comes.
+   */
+  z.object({
+    type: z.literal('goal.measured'),
+    measureId: z.string(),
+    sessionId: z.string(),
+    exitCode: z.number().int().nullable(),
+    output: z.string().max(8_000),
+    error: z.string().max(2_000).optional(),
+  }),
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
   /**
@@ -957,6 +970,19 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
+  /**
+   * Measure a goal (GOAL_PROTOCOL, docs/goals.md): run its contract's command in the thread's working
+   * folder of `teammateId`, as that teammate, at most `timeoutSeconds`; answered with goal.measured.
+   * Not a turn: the teammate does not see it.
+   */
+  z.object({
+    type: z.literal('goal.measure'),
+    measureId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    command: z.string().min(1).max(2_000),
+    timeoutSeconds: z.number().int().min(10).max(1_800),
+  }),
   /**
    * Something happened in the thread outside a turn (NOTE_PROTOCOL), shown as a raw
    * event from THREAD_NOTE_SOURCE, e.g. its pull

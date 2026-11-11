@@ -185,6 +185,18 @@ export type ChiefDecision = Prisma.ChiefDecisionModel
  */
 export type ChiefPass = Prisma.ChiefPassModel
 /**
+ * Model Goal
+ * A goal a teammate works toward until Brigade's measurement confirms it (docs/goals.md): its
+ * contract, approved by a person in one click, and where the loop stands.
+ */
+export type Goal = Prisma.GoalModel
+/**
+ * Model GoalMeasurement
+ * One measurement of a goal by its recipe, never the teammate's word. A command's is pending until
+ * its computer answers (goal.measured).
+ */
+export type GoalMeasurement = Prisma.GoalMeasurementModel
+/**
  * Model Wakeup
  * A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
  * The API's minute tick fires it into the same thread, with the conversation so far.

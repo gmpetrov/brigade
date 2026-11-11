@@ -36,6 +36,7 @@ import { reopenThread } from '../thread-done.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from '../library-calls.js'
 import { endLogin, loginById, loginsOnComputer, updateLogin } from '../logins.js'
 import { noteMailLeft } from '../mail/outcomes.js'
+import { noteGoalTurnEnded, noteMeasured } from '../goals.js'
 import { movesOn, onReleased } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import { noteDryRunEvents } from '../playbook-dry-runs.js'
@@ -155,6 +156,12 @@ async function handle(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
     )
 
   if (message.type === 'events') return storeAll(hub, conn, message.events)
+
+  // A goal's command measurement, run on the computer (src/goals.ts).
+  if (message.type === 'goal.measured')
+    return noteMeasured(runner, message).catch((error) =>
+      console.error(`goal measurement from ${runner.computerId} failed`, error),
+    )
 
   if (message.type === 'account.login.prompt' || message.type === 'account.login.done')
     return noteLogin(hub, conn, message)
@@ -675,6 +682,10 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       void movesOn(conn.computerId, session.id).catch(console.error)
     // Not awaited: a merge under way may call GitHub and prompt the author.
     void noteTurnsEnded(session, fresh).catch(console.error)
+    // A goal under way (src/goals.ts): its turn's end is measured, and the loop moves on. Not awaited.
+    void noteGoalTurnEnded(session, fresh).catch((error: unknown) =>
+      console.warn(`thread ${session.id}: goal: ${String(error)}`),
+    )
     // A turn that ended with the thread idle may have left mail without a reply or a word on it:
     // it is asked once what it did with it (src/mail/outcomes.ts). Not awaited.
     void noteMailLeft(

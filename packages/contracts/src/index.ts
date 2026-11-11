@@ -17,6 +17,7 @@ export * from './dictation.js'
 export * from './email.js'
 export * from './errors.js'
 export * from './features.js'
+export * from './goals.js'
 export * from './inbox.js'
 export * from './events.js'
 export * from './handback.js'
@@ -126,8 +127,10 @@ export * from './usage.js'
  * 53: Chief for the person (CHIEF_PASS_PROTOCOL, docs/chief-answers.md): its daily pass threads (the
  *     spec's `pass`, with chief_answer, chief_retry and chief_report as schedule.call operations), the
  *     person's rules in teammates' instructions (the spec's `rules`), and chief_rules.
+ * 54: goals (GOAL_PROTOCOL, docs/goals.md): `/goal` rewritten into words, propose_goal, goal_status and
+ *     goal_report as schedule.call operations, and a goal's command measurement (goal.measure, goal.measured).
  */
-export const PROTOCOL_VERSION = 53
+export const PROTOCOL_VERSION = 54
 /**
  * Runners from this version on run Chief's daily pass (ThreadSpec.pass) with its tools. The API
  * starts no pass on an older one: what waits on the person waits, as before.

@@ -1656,3 +1656,10 @@ export async function handleListCall(
     throw error
   }
 }
+
+/** A list file's lines (docs/goals.md, a goal measured by a list): how many, and how many ticked. */
+export async function listTally(db: ScopedDb, scope: Scope, path: string) {
+  const row = await listFile(db, { path })
+  const list = parseList(await storedText(scope, row))
+  return { total: list.lines.length, ticked: list.lines.filter((l) => l.done).length }
+}

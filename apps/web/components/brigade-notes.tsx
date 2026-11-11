@@ -12,6 +12,7 @@ import {
   fromStartedThreadBrief,
   fromTaskBrief,
   fromThreadComment,
+  goalNote,
   handOffParts,
   mentionsToText,
   resolveConflictsNote,
@@ -29,6 +30,7 @@ import {
   Info,
   ListTodo,
   MessageSquare,
+  Target,
   Zap,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -55,6 +57,13 @@ export type BrigadeNote = {
   files?: { id: string; name: string }[]
 }
 
+const GOAL_LABELS = {
+  start: 'Goal approved: the teammate starts',
+  relaunch: 'Goal not reached yet: the teammate keeps going',
+  drift: 'Goal: the measurement moved away from the target',
+  end: 'Goal over: the teammate writes its summary',
+} as const
+
 /**
  * What a message is, when Brigade wrote it rather than a person (fromBrigade: no member
  * sent it, as for a thread a schedule or a trigger started); null for a person's message.
@@ -78,6 +87,14 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
     }
   if (isChiefPassBrief(text))
     return { icon: Crown, label: 'What waited on you, as Chief read it', body: text }
+  // A goal's notes (docs/goals.md): its start, a relaunch, a wake-up on its measurement, its end.
+  const goal = goalNote(text)
+  if (goal)
+    return {
+      icon: Target,
+      label: GOAL_LABELS[goal.kind],
+      body: goal.body,
+    }
   const run = scheduledRunNote(text)
   if (run)
     return {

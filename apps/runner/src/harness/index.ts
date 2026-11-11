@@ -119,6 +119,7 @@ import {
   connectorTools,
   credentialTools,
   doneTools,
+  goalTools,
   imageTools,
   libraryTools,
   machineTools,
@@ -414,6 +415,13 @@ function createAgent(
         ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
         // Elsewhere, a teammate may install one from the chat.
         ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
+        // Goals (docs/goals.md): proposed in a thread a person started, at the top; a sub-thread reads
+        // where its parent's stands.
+        ...(startedByPerson(spec)
+          ? goalTools(callSchedule, { top: true })
+          : spec.parent && !spec.playbook
+            ? goalTools(callSchedule, { top: false })
+            : {}),
         // Declaring the thread done, in a thread a person talks to: a child reports, a playbook decides.
         // A schedule's run ends with its turn.
         ...doneTools(callSchedule, {

@@ -45,6 +45,7 @@ import {
   type ConnectorGrant,
   type DesignPersonEdit,
   type ScheduleOperation,
+  GoalContractInput,
 } from '@brigade/contracts'
 import { ComputerUseError, type RequestOptions } from '../computer-use.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
@@ -3984,3 +3985,185 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
     }),
   }
 }
+
+/** The contract propose_goal takes (GoalContractInput), described for the model. */
+const GOAL_CONTRACT_SCHEMA: JSONSchema7 = {
+  type: 'object',
+  properties: {
+    outcome: {
+      type: 'string',
+      description: 'The result expected, in the person\'s language, in a line: "10 demos booked"',
+    },
+    deadline: {
+      type: 'string',
+      description:
+        'When the result is due, ISO 8601 with its offset ("2026-11-14T18:00:00+01:00"). Leave it out for a work goal with no date: the budget\'s hours bound it.',
+    },
+    target: {
+      type: 'object',
+      description:
+        "Where the measurement must land. Required, except for a command's exit code (it must exit 0) and the person's judgment.",
+      properties: {
+        comparison: { type: 'string', enum: ['at_least', 'at_most'] },
+        value: { type: 'number' },
+        unit: {
+          type: 'string',
+          description:
+            'What the value counts, in the person\'s language: "demos", "€ MRR", "position"',
+        },
+      },
+      required: ['comparison', 'value'],
+    },
+    recipe: {
+      type: 'object',
+      description:
+        'How Brigade measures it, never you. kind command: a shell command run in your working folder on this computer, as you (read exit_code: reached when it exits 0; last_number: the last number it prints). ' +
+        'kind app: a read operation of an App account you were granted (list_apps gives its connectionId; operation as its tool names it without the account suffix, input fixed), with read.path (dotted, with indexes, into its answer) and read.op value | count (the length of a list there) | sum (of read.field across a list); measured every everyMinutes (15 or more) and after each turn. ' +
+        'kind list: a list file of the library (path): its ticked lines. kind person: no figure is possible; the person judges at the deadline or before.',
+      properties: {
+        kind: { type: 'string', enum: ['command', 'app', 'list', 'person'] },
+        command: { type: 'string' },
+        read: {
+          description: 'command: "exit_code" or "last_number". app: { path, op, field }.',
+        },
+        timeoutMinutes: { type: 'number', description: 'command: at most 30, 10 by default' },
+        everyMinutes: {
+          type: 'number',
+          description: 'app, list or command: also measured this often, at least 15',
+        },
+        connectionId: { type: 'string' },
+        operation: { type: 'string' },
+        input: { type: 'object' },
+        path: { type: 'string', description: "list: the list file's library path" },
+      },
+      required: ['kind'],
+    },
+    permissions: {
+      type: 'array',
+      description:
+        'Writes allowed in advance: each one precise operation of one App account with a cap a day, never a category. They go without asking within it; past the cap or outside the list, a write asks as usual. Ask only for what the goal needs.',
+      items: {
+        type: 'object',
+        properties: {
+          connectionId: { type: 'string' },
+          operation: {
+            type: 'string',
+            description: 'As its tool names it without the account suffix: gmail_send',
+          },
+          label: {
+            type: 'string',
+            description: 'In the person\'s language: "Gmail: send, 20 a day"',
+          },
+          perDay: { type: 'number', description: 'At most this many calls in 24 hours' },
+          onlyWhen: {
+            type: 'array',
+            description:
+              'Only when each argument is one of its values: [{ argument: "subreddit", oneOf: ["a", "b"] }]',
+            items: {
+              type: 'object',
+              properties: {
+                argument: { type: 'string' },
+                oneOf: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['argument', 'oneOf'],
+            },
+          },
+          afterChecks: {
+            type: 'boolean',
+            description: 'A merge only once every required check of its pull request passed',
+          },
+        },
+        required: ['connectionId', 'operation', 'label', 'perDay'],
+      },
+    },
+    budget: {
+      type: 'object',
+      description:
+        "The person's subscription it may spend, sub-threads included, in tokens as Usage counts them (input with the cache, and output; a busy hour of work is often several million), and the longest it runs, in hours. It must never use up the quota their other threads need.",
+      properties: { tokens: { type: 'number' }, hours: { type: 'number' } },
+      required: ['tokens', 'hours'],
+    },
+    stallTurns: {
+      type: 'number',
+      description: 'Turns in a row without progress before it stops (6 by default)',
+    },
+  },
+  required: ['outcome', 'recipe', 'budget'],
+}
+
+/**
+ * Goals (docs/goals.md): the contract a `/goal` becomes, where it stands, and its summary once
+ * over. In a thread a person started, at the top; a sub-thread working on one of its levers reads
+ * where it stands. Through the schedule calls, which the API checks.
+ */
+export function goalTools(call: ScheduleCaller, options: { top: boolean }): Record<string, Tool> {
+  const status = tool({
+    description:
+      "Where this thread's goal stands, as Brigade measures it: its status, the latest measurements, the budget spent, the deadline, turns without progress, and each permission's use today. Use it to see which levers move the measurement.",
+    inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+    execute: (input, { toolCallId }) =>
+      call({ operation: { name: 'goal_status' }, toolCallId, toolName: 'goal_status', input }),
+  })
+  if (!options.top) return { goal_status: status }
+  return {
+    propose_goal: tool({
+      description:
+        'Propose the contract of the goal the person set with /goal, for them to approve or correct in one click. Brigade then keeps you working until its measurement confirms it, its deadline or budget runs out, or nothing moves. Call it again to replace a proposal nobody decided yet.',
+      inputSchema: jsonSchema<{ contract: GoalContractInput }>({
+        type: 'object',
+        properties: { contract: GOAL_CONTRACT_SCHEMA },
+        required: ['contract'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        // Checked here, so the teammate reads what to fix rather than a schema error.
+        const contract = GoalContractInput.safeParse(input.contract)
+        if (!contract.success)
+          throw new Error(
+            `The contract is not complete: ${contract.error.issues
+              .map((i) => `${i.path.join('.') || 'contract'}: ${i.message}`)
+              .join('; ')}`,
+          )
+        return call({
+          operation: { name: 'propose_goal', contract: contract.data },
+          toolCallId,
+          toolName: 'propose_goal',
+          input,
+        }).catch((error: unknown) => {
+          if (errorMessage(error).includes('could not read this call'))
+            throw new Error(GOALS_UNKNOWN)
+          throw error
+        })
+      },
+    }),
+    goal_status: status,
+    goal_report: tool({
+      description:
+        'Once Brigade says the goal is over: its summary, once. The final measurement and where it ended in `summary`, what moved the measurement in `worked`, what did nothing in `didNotWork`, a line each.',
+      inputSchema: jsonSchema<{ summary: string; worked?: string[]; didNotWork?: string[] }>({
+        type: 'object',
+        properties: {
+          summary: { type: 'string' },
+          worked: { type: 'array', items: { type: 'string' } },
+          didNotWork: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['summary'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'goal_report',
+            summary: input.summary,
+            worked: input.worked ?? [],
+            didNotWork: input.didNotWork ?? [],
+          },
+          toolCallId,
+          toolName: 'goal_report',
+          input,
+        }),
+    }),
+  }
+}
+
+/** What propose_goal says on an API from before goals. */
+const GOALS_UNKNOWN =
+  "Brigade's server does not have goals yet: it is older than this computer's runner. Tell the person, and work on what they asked as a usual request."

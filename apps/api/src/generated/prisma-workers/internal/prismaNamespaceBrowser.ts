@@ -77,6 +77,8 @@ export const ModelName = {
   Schedule: 'Schedule',
   ChiefDecision: 'ChiefDecision',
   ChiefPass: 'ChiefPass',
+  Goal: 'Goal',
+  GoalMeasurement: 'GoalMeasurement',
   Wakeup: 'Wakeup',
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
@@ -624,6 +626,56 @@ export const ChiefPassScalarFieldEnum = {
 } as const
 
 export type ChiefPassScalarFieldEnum = (typeof ChiefPassScalarFieldEnum)[keyof typeof ChiefPassScalarFieldEnum]
+
+
+export const GoalScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  status: 'status',
+  contract: 'contract',
+  revoked: 'revoked',
+  approvedByMemberId: 'approvedByMemberId',
+  approvedAt: 'approvedAt',
+  endedAt: 'endedAt',
+  endReason: 'endReason',
+  decidedByMemberId: 'decidedByMemberId',
+  turnSeq: 'turnSeq',
+  countedSeq: 'countedSeq',
+  turns: 'turns',
+  stalledTurns: 'stalledTurns',
+  best: 'best',
+  nextMeasureAt: 'nextMeasureAt',
+  heldUntil: 'heldUntil',
+  holdReason: 'holdReason',
+  driftWokeAt: 'driftWokeAt',
+  report: 'report',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GoalScalarFieldEnum = (typeof GoalScalarFieldEnum)[keyof typeof GoalScalarFieldEnum]
+
+
+export const GoalMeasurementScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  goalId: 'goalId',
+  reason: 'reason',
+  status: 'status',
+  value: 'value',
+  met: 'met',
+  detail: 'detail',
+  turnSeq: 'turnSeq',
+  at: 'at',
+  measuredAt: 'measuredAt',
+  handledAt: 'handledAt'
+} as const
+
+export type GoalMeasurementScalarFieldEnum = (typeof GoalMeasurementScalarFieldEnum)[keyof typeof GoalMeasurementScalarFieldEnum]
 
 
 export const WakeupScalarFieldEnum = {

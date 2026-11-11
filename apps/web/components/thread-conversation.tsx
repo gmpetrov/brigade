@@ -146,6 +146,7 @@ import {
   type Thread,
   type Ticket,
 } from '@/lib/api'
+import { GoalBanner } from '@/components/goal-banner'
 import { ThreadItemsCard } from '@/components/list-items'
 import { changeControl, inControlOrder, useControlled, useControlPending } from '@/lib/control'
 import { useChangesCount } from '@/lib/code-changes'
@@ -1591,6 +1592,7 @@ export function ThreadConversation({
                 reportDueAt={t.mayPrompt ? t.reportDueAt : null}
               />
             )}
+            <GoalBanner threadId={t.id} goal={t.goal} onChange={reload} />
             <ThreadItemsCard threadId={t.id} />
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
