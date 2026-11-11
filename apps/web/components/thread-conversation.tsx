@@ -147,7 +147,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { ThreadItemsCard } from '@/components/list-items'
-import { changeControl, useControlled, useControlPending } from '@/lib/control'
+import { changeControl, inControlOrder, useControlled, useControlPending } from '@/lib/control'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
@@ -1741,12 +1741,17 @@ export function ThreadConversation({
                     onRetry={
                       t.mayPrompt && !t.controlledByMemberId ? () => call('/retry') : undefined
                     }
-                    onTicket={(requestId, answer) =>
-                      // Answering may hand control back: show the composer again.
-                      api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
-                        () => void thread.reload(),
-                      )
-                    }
+                    onTicket={(requestId, answer) => {
+                      const answering = () =>
+                        api(`/threads/${id}/tickets`, { body: { requestId, answer } })
+                      // Answered by the member in control, any answer hands back (src/decide.ts):
+                      // shown at once, and after a takeover still going, which it would overtake.
+                      const sent =
+                        t.controlledByMemberId === me.memberId
+                          ? changeControl(id, null, answering)
+                          : inControlOrder(id, answering)
+                      return sent.then(() => void thread.reload())
+                    }}
                     takeover={
                       t.computer.kind === 'cloud' &&
                       me.memberId &&

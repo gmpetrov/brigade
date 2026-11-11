@@ -55,22 +55,36 @@ export async function changeControl(
   const change: Change = { to, settled: false, stale: new WeakSet(), shown: new WeakMap() }
   changes.set(threadId, change)
   errors.delete(threadId)
-  const going = (inFlight.get(threadId) ?? Promise.resolve()).catch(() => undefined).then(request)
-  inFlight.set(threadId, going)
-  changed()
   try {
-    await going
+    await inControlOrder(threadId, request)
     change.settled = true
   } catch (e) {
     // A later change of this thread's is its own.
     if (changes.get(threadId) === change) {
       changes.delete(threadId)
       errors.set(threadId, (e as Error).message)
+      changed()
     }
     throw e
+  }
+}
+
+/**
+ * A request that may change the thread's control without saying so (answering a ticket hands
+ * back, src/decide.ts): sent once any change of control asked before it is through, and holding
+ * the next ones meanwhile.
+ */
+export async function inControlOrder<T>(threadId: string, request: () => Promise<T>) {
+  const going = (inFlight.get(threadId) ?? Promise.resolve()).catch(() => undefined).then(request)
+  inFlight.set(threadId, going)
+  changed()
+  try {
+    return await going
   } finally {
-    if (inFlight.get(threadId) === going) inFlight.delete(threadId)
-    changed()
+    if (inFlight.get(threadId) === going) {
+      inFlight.delete(threadId)
+      changed()
+    }
   }
 }
 

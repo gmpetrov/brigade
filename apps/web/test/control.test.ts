@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { changeControl, controlPending, shownThread } from '../lib/control'
+import { changeControl, controlPending, inControlOrder, shownThread } from '../lib/control'
 
 const thread = (id: string, controlledByMemberId: string | null = null) => ({
   id,
@@ -105,4 +105,24 @@ test('a refused takeover does not stop the change asked after it', async () => {
   await assert.rejects(taking)
   await handing
   assert.deepEqual(sent, ['handback'])
+})
+
+test('a ticket answered while a takeover still goes is sent after it', async () => {
+  const api = deferred()
+  const sent: string[] = []
+  const taking = changeControl('t8', 'ada', async () => {
+    await api.request()
+    sent.push('takeover')
+  })
+  // Can't do it, on the browser ticket: any answer of the member in control hands back.
+  const answering = inControlOrder('t8', async () => {
+    sent.push('ticket')
+    return 'answered'
+  })
+  assert.equal(controlPending('t8'), true)
+  api.answer()
+  await taking
+  assert.equal(await answering, 'answered')
+  assert.deepEqual(sent, ['takeover', 'ticket'])
+  assert.equal(controlPending('t8'), false)
 })
