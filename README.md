@@ -50,6 +50,10 @@ with a new hire.
 
 **Hand off the work. Keep the decisions.**
 
+Brigade is open source (MIT): free on your own computer (macOS or Linux), or on Brigade Cloud for a computer that
+keeps working when yours is off. Think of it as an open-source alternative to AI-employee apps like Lindy or
+Sintra, built on the official Claude Code and Codex instead of a second AI bill.
+
 |        | Step                 | Example                                                                                   |
 | ------ | -------------------- | ----------------------------------------------------------------------------------------- |
 | **01** | Create a teammate    | _Sam, support. Gmail and your Notion help center. Opus 5.5, on your Claude Max plan._     |
@@ -112,8 +116,8 @@ with a new hire.
 
 - ✅ You build your product with **Claude Code or Codex** and run support, marketing and sales **on your own**
 - ✅ You have **several agent sessions open** and lose track of which one does what
-- ✅ You want agents that **start on their own** (a failed payment, a new issue, a customer's email) but **ask before
-  they send, charge or ship**
+- ✅ You want agents that **start on their own** (a failed payment, a new issue, a customer's email), with the App
+  actions you choose (an email, a change in Stripe, a merge) **waiting for your yes**
 - ✅ You already pay for **Claude Max or ChatGPT Pro** and don't want a second bill for AI usage
 - ✅ You want to answer your teammates **from your phone**
 - ✅ You want to **read every line** of the software that holds your passwords and your customers' email
@@ -377,6 +381,23 @@ the branches named `brigade/…` are theirs.
 
 <br/>
 
+## Alternatives and comparisons
+
+How Brigade compares with the tools people weigh it against, with sources and where Brigade is weaker:
+
+- [Brigade vs OpenClaw](https://www.brigade.lol/compare/openclaw): a personal assistant you run yourself, versus a
+  team of teammates with jobs
+- [Brigade vs Paperclip](https://www.brigade.lol/compare/paperclip): governing agents as a board, versus approving
+  the actions themselves
+- [Brigade vs Lindy](https://www.brigade.lol/compare/lindy) and [vs Sintra](https://www.brigade.lol/compare/sintra):
+  credits on a second bill, versus your own Claude or ChatGPT plan
+- [Brigade vs Polsia](https://www.brigade.lol/compare/polsia): a company run overnight for a share of revenue, versus
+  teammates that work with you
+- [Brigade vs Claude Code and Codex alone](https://www.brigade.lol/compare/claude-code): your own sessions, versus the
+  same agents run as a team
+
+<br/>
+
 ## FAQ
 
 **Do I need to know how to code?**
@@ -403,6 +424,11 @@ never sees the password.
 
 Not by us. The work runs on the AI plan you bring, so your data goes only to the provider you picked, under the
 terms of your plan.
+
+**Is this the same Brigade as other projects with that name?**
+
+No. This is Brigade at [brigade.lol](https://www.brigade.lol), whose code is this repository. Other open-source
+projects share the name (such as spinabot/brigade or escoffier-labs/brigade) and are unrelated.
 
 **Can my team see the work?**
 
