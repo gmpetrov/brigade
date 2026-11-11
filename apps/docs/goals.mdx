@@ -1,0 +1,53 @@
+---
+title: 'Goals'
+description: 'Have a teammate work until a goal is reached, measured by Brigade rather than by its own word.'
+---
+
+Start a message with **/goal** and say what you want reached: "tests green on the new API", "10 demos booked
+by Friday", "+100 GitHub stars today". The teammate keeps working until Brigade's measurement says the goal is
+reached, or until its deadline, its budget or its progress says to stop.
+
+## The contract
+
+The teammate first turns your goal into a contract and shows it at the top of the thread:
+
+- **Result and deadline**: what you expect, and by when.
+- **Target**: where the measurement must land, such as at least 10.
+- **Measured by**: a command such as your tests, a read of an [App](/apps) the teammate already has (Stripe,
+  PostHog, GitHub, Search Console, Google Calendar…), the ticked lines of a [list](/lists), or, when no figure
+  is possible, your own judgment at the deadline.
+- **Allowed**: the writes it may make without asking you, each one precise action with a cap, such as "Gmail:
+  send, 20 a day". Anything past the cap or outside the list asks you as usual.
+- **Budget**: how much of your Claude or Codex subscription it may spend, sub-threads included, and the longest
+  it runs.
+
+Choose **Approve and start**, or write what to change and the teammate proposes it again. Nothing starts
+before you approve.
+
+## How it runs
+
+- **Brigade measures, not the teammate.** At the end of each turn, and every so often for an App or a list,
+  Brigade runs the contract's measurement. The goal is reached only when the measurement says so; the
+  teammate cannot declare it done before.
+- **It keeps going.** When a turn ends with nothing open and the goal not reached, Brigade prompts the teammate
+  again with the latest measurement and what remains.
+- **It waits like any thread.** While a ticket, a sub-thread, a review, a pull request or a wake-up is open, the
+  thread sleeps. If the measurement moves away from the target meanwhile, the teammate is woken to adjust.
+- **It stops on its own** at the deadline, when the budget is spent, or when nothing moves for several turns
+  in a row, and the teammate writes a summary: the final measurement, what worked and what did nothing.
+- **It leaves room for your other threads.** When your subscription's usage window is nearly spent, the goal
+  waits for it to reset.
+- **Your message comes first.** A message you send cancels the next automatic prompt that has not gone yet.
+
+## The banner
+
+The banner at the top of the thread shows the measurement and its curve, the target, the deadline, the budget
+spent and what is allowed, with each permission's use today. From it you can **Pause**, **Resume**, **Stop**,
+or withdraw a permission at any time: its writes ask you again at once.
+
+## What a goal never does
+
+Whatever the contract says, a teammate working toward a goal follows each platform's rules, never uses fake
+accounts or poses as an ordinary user to promote something, never fabricates stars, votes or reviews, says it
+is an AI when it talks with people, and leaves to you, in your own words, the posts where AI text is not
+allowed.

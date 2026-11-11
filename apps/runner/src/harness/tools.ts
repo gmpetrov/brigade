@@ -4114,7 +4114,7 @@ export function goalTools(call: ScheduleCaller, options: { top: boolean }): Reco
         properties: { contract: GOAL_CONTRACT_SCHEMA },
         required: ['contract'],
       }),
-      execute: (input, { toolCallId }) => {
+      execute: async (input, { toolCallId }) => {
         // Checked here, so the teammate reads what to fix rather than a schema error.
         const contract = GoalContractInput.safeParse(input.contract)
         if (!contract.success)
