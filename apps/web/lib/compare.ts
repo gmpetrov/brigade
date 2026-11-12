@@ -6,13 +6,20 @@
 
 export const CHECKED = 'November 11, 2026'
 
-export type Row = { label: string; brigade: string; them: string }
+/** How the other product fares on a row, beside Brigade's check: yes, partly, or no. */
+export type Mark = 'yes' | 'partly' | 'no'
+/** A row of the side-by-side table. With a mark, Brigade's cell gets a check and theirs the mark. */
+export type Row = { label: string; brigade: string; them: string; mark?: Mark }
+/** The other product's logo: a file in public/compare, or a harness's mark (components/harness-logo). */
+export type Logo = { src: string } | { harness: 'claude_code' | 'codex' }
 export type Source = { label: string; url: string }
 
 export type Comparison = {
   slug: string
   /** The other product, as its makers write it. */
   name: string
+  /** Its logo (its site's own icon), or one per product when the page compares two. */
+  logos: Logo[]
   /** One line for the index and the page's description. */
   oneLiner: string
   /** What the other product is, in its own terms. */
@@ -39,12 +46,18 @@ export const BRIGADE = {
     'Free on your own computer. Cloud: $99 a month per workspace. AI usage is on your own plan.',
 }
 
-const row = (label: string, brigade: string, them: string): Row => ({ label, brigade, them })
+const row = (label: string, brigade: string, them: string, mark?: Mark): Row => ({
+  label,
+  brigade,
+  them,
+  mark,
+})
 
 export const COMPARISONS: Comparison[] = [
   {
     slug: 'openclaw',
     name: 'OpenClaw',
+    logos: [{ src: '/compare/openclaw.svg' }],
     oneLiner:
       'An open-source personal assistant you install and run yourself, versus a team of teammates with jobs that runs on your Claude or ChatGPT plan.',
     about:
@@ -66,6 +79,7 @@ export const COMPARISONS: Comparison[] = [
         'Claude plan',
         'Works: Brigade runs the official Claude Code on your login.',
         'Since April 4, 2026, a Claude subscription no longer covers it: usage is billed as extra usage, or through an API key.',
+        'no',
       ),
       row(
         'Where you talk to it',
@@ -76,13 +90,15 @@ export const COMPARISONS: Comparison[] = [
         'Decisions that need you',
         BRIGADE.control,
         'Inside each chat; no shared list across agents.',
+        'no',
       ),
       row(
         'Your team',
         'Invite your team: threads, lists and files are shared.',
         'Built for one person.',
+        'no',
       ),
-      row('Open source', BRIGADE.open, 'Yes.'),
+      row('Open source', BRIGADE.open, 'Yes.', 'yes'),
     ],
     pickThem: [
       'You want one personal assistant inside WhatsApp or Telegram.',
@@ -110,6 +126,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'paperclip',
     name: 'Paperclip',
+    logos: [{ src: '/compare/paperclip.svg' }],
     oneLiner:
       'An open-source framework that organizes agents into a company you govern as a board, versus hosted teammates whose App actions can wait for your yes.',
     about:
@@ -131,14 +148,21 @@ export const COMPARISONS: Comparison[] = [
         'How you stay in control',
         BRIGADE.control,
         'As a board: approve hires, set per-agent budgets, pause agents, read the audit log.',
+        'partly',
       ),
-      row('Where it runs', BRIGADE.runs, 'Self-hosted; a hosted cloud was on a waitlist.'),
+      row(
+        'Where it runs',
+        BRIGADE.runs,
+        'Self-hosted; a hosted cloud was on a waitlist.',
+        'partly',
+      ),
       row(
         'Apps',
         'Built-in Apps (Gmail, GitHub, Stripe, Notion, Linear and more), any MCP server, and webhooks.',
         'Through the agents you plug in.',
+        'partly',
       ),
-      row('Open source', BRIGADE.open, 'Yes, MIT.'),
+      row('Open source', BRIGADE.open, 'Yes, MIT.', 'yes'),
     ],
     pickThem: [
       'You want to plug in many agent runtimes, not only Claude Code and Codex.',
@@ -161,6 +185,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'lindy',
     name: 'Lindy',
+    logos: [{ src: '/compare/lindy.png' }],
     oneLiner:
       'A hosted agent platform billed in credits, versus open-source teammates that run on the Claude or ChatGPT plan you already pay for.',
     about:
@@ -182,6 +207,7 @@ export const COMPARISONS: Comparison[] = [
         'Who pays for AI',
         BRIGADE.bill,
         'Lindy’s own credits, included in each plan, with top-ups.',
+        'no',
       ),
       row(
         'Price',
@@ -192,8 +218,9 @@ export const COMPARISONS: Comparison[] = [
         'Code',
         'Teammates write, test and ship code, with pull requests and previews.',
         'Not its focus.',
+        'no',
       ),
-      row('Open source', BRIGADE.open, 'No.'),
+      row('Open source', BRIGADE.open, 'No.', 'no'),
     ],
     pickThem: [
       'You want a no-setup hosted assistant and do not use Claude or ChatGPT plans.',
@@ -213,6 +240,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'sintra',
     name: 'Sintra',
+    logos: [{ src: '/compare/sintra.png' }],
     oneLiner:
       'A bundle of preset AI helpers on monthly credits, versus teammates you shape, that use your own Claude or ChatGPT plan and can wait for your yes.',
     about:
@@ -230,14 +258,20 @@ export const COMPARISONS: Comparison[] = [
         'Who pays for AI',
         BRIGADE.bill,
         'Sintra’s own credits: a monthly allowance (250 reported) that does not roll over.',
+        'no',
       ),
       row(
         'Price',
         BRIGADE.price,
         'Reported from about $39 to $97 a month, with promotional annual prices; check sintra.ai.',
       ),
-      row('Code', 'Teammates write, test and ship code, with pull requests and previews.', 'No.'),
-      row('Open source', BRIGADE.open, 'No.'),
+      row(
+        'Code',
+        'Teammates write, test and ship code, with pull requests and previews.',
+        'No.',
+        'no',
+      ),
+      row('Open source', BRIGADE.open, 'No.', 'no'),
     ],
     pickThem: ['You want preset helpers for social media and marketing, with nothing to set up.'],
     pickBrigade: [
@@ -260,6 +294,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'polsia',
     name: 'Polsia',
+    logos: [{ src: '/compare/polsia.png' }],
     oneLiner:
       'An autonomous platform that runs a company overnight for a share of revenue, versus teammates that work with you and keep you in the decisions.',
     about:
@@ -277,14 +312,16 @@ export const COMPARISONS: Comparison[] = [
         'How you stay in control',
         BRIGADE.control,
         'You read what it did in the morning report.',
+        'no',
       ),
       row('Who pays for AI', BRIGADE.bill, 'Included in Polsia’s plan.'),
       row(
         'Price',
         BRIGADE.price,
         'Most often reported at $49 a month plus 20% of revenue; changed several times in 2026.',
+        'no',
       ),
-      row('Open source', BRIGADE.open, 'No.'),
+      row('Open source', BRIGADE.open, 'No.', 'no'),
     ],
     pickThem: ['You want a business run for you with as little involvement as possible.'],
     pickBrigade: [
@@ -304,6 +341,7 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: 'claude-code',
     name: 'Claude Code and Codex alone',
+    logos: [{ harness: 'claude_code' }, { harness: 'codex' }],
     oneLiner:
       'Coding agents you run yourself, versus the same Claude Code and Codex run as a team with jobs, Apps, shared memory and one list of decisions.',
     about:
@@ -317,17 +355,20 @@ export const COMPARISONS: Comparison[] = [
         'Providers',
         'Claude and ChatGPT plans side by side; a model per teammate.',
         'One provider each.',
+        'partly',
       ),
-      row('Decisions that need you', BRIGADE.control, 'Asked inside each session.'),
+      row('Decisions that need you', BRIGADE.control, 'Asked inside each session.', 'partly'),
       row(
         'Starts on its own',
         'Yes: triggers (an email, a webhook, a failed payment) and schedules.',
         'Through each provider’s own automations, where it offers them.',
+        'partly',
       ),
       row(
         'Your team',
         'Threads, lists, the library and memory are shared with your workspace.',
         'Built around one person’s own sessions.',
+        'no',
       ),
     ],
     pickThem: ['You code alone, and your own Claude Code or Codex sessions are all you need.'],
@@ -341,13 +382,6 @@ export const COMPARISONS: Comparison[] = [
       { label: 'Codex', url: 'https://openai.com/codex/' },
     ],
   },
-]
-
-/** Where Brigade is weaker, said the same on every page: a fair page is one people trust. */
-export const BRIGADE_LIMITS = [
-  'On the free plan, teammates work only while your computer is on. Brigade Cloud gives them one that stays on.',
-  'Teammates run Claude Code or Codex; other harnesses and models are not supported yet.',
-  'You talk to teammates in Brigade’s app and by email, not in WhatsApp or Telegram.',
 ]
 
 export const findComparison = (slug: string) => COMPARISONS.find((x) => x.slug === slug)

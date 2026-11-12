@@ -1,8 +1,15 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArticlePage } from '@/components/landing/legal'
-import { c } from '@/components/landing/parts'
-import { BRIGADE_LIMITS, CHECKED, COMPARISONS, findComparison } from '@/lib/compare'
+import {
+  CompareClose,
+  CompareCta,
+  ComparePage,
+  Logos,
+  LogoTile,
+  MarkIcon,
+} from '@/components/landing/compare'
+import { c, Icon } from '@/components/landing/parts'
+import { CHECKED, COMPARISONS, findComparison } from '@/lib/compare'
 import { REPO_URL } from '@/lib/github-proof'
 import { pageMetadata, SITE_URL } from '@/lib/page-metadata'
 
@@ -42,86 +49,131 @@ export default async function Comparison({ params }: Props) {
     })),
   }
   return (
-    <ArticlePage
-      eyebrow={
-        <>
-          <Link href="/compare">Comparisons</Link> · Checked {CHECKED}
-        </>
-      }
-      title={heading(x.name)}
-    >
+    <ComparePage>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
-      <p>{x.answer}</p>
+      <header className={c('vs-hero')}>
+        <p className={c('vs-eyebrow')}>
+          <Link href="/compare">Comparisons</Link> · Checked {CHECKED}
+        </p>
+        <div className={c('vs-pair')} aria-hidden="true">
+          <LogoTile logo="brigade" />
+          <span>vs</span>
+          <Logos logos={x.logos} />
+        </div>
+        <h1>{heading(x.name)}</h1>
+        <p className={c('lead vs-answer')}>{x.answer}</p>
+        <CompareCta />
+      </header>
 
-      <h2>What {x.name} is</h2>
-      <p>{x.about}</p>
-
-      <h2>Side by side</h2>
-      <div className={c('cmp-scroll')}>
-        <table className={c('cmp')}>
-          <thead>
-            <tr>
-              <th scope="col" />
-              <th scope="col">Brigade</th>
-              <th scope="col">{x.name}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {x.rows.map((r) => (
-              <tr key={r.label}>
-                <th scope="row">{r.label}</th>
-                <td>{r.brigade}</td>
-                <td>{r.them}</td>
+      <section className={c('vs-sec')} aria-labelledby="side-by-side">
+        <h2 id="side-by-side">Side by side</h2>
+        <div className={c('vs-scroll')}>
+          <table className={c('vs-table')}>
+            <thead>
+              <tr>
+                <th scope="col">
+                  <span className={c('sr-only')}>Feature</span>
+                </th>
+                <th scope="col" className={c('vs-us')}>
+                  <span className={c('vs-col')}>
+                    <LogoTile logo="brigade" size="sm" />
+                    Brigade
+                  </span>
+                </th>
+                <th scope="col">
+                  <span className={c('vs-col')}>
+                    <Logos logos={x.logos} size="sm" />
+                    {x.name}
+                  </span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {x.rows.map((r) => (
+                <tr key={r.label}>
+                  <th scope="row">{r.label}</th>
+                  <td className={c('vs-us')}>
+                    <span className={c('vs-cell')}>
+                      {r.mark && <MarkIcon mark="yes" />}
+                      <span>{r.brigade}</span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className={c('vs-cell')}>
+                      {r.mark && <MarkIcon mark={r.mark} />}
+                      <span>{r.them}</span>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <h2>Pick {x.name} if</h2>
-      <ul>
-        {x.pickThem.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      <section className={c('vs-sec')} aria-labelledby="which">
+        <h2 id="which">Which one is for you</h2>
+        <div className={c('vs-picks')}>
+          <div className={c('vs-pick us')}>
+            <h3>
+              <LogoTile logo="brigade" size="sm" />
+              Pick Brigade if
+            </h3>
+            <ul>
+              {x.pickBrigade.map((line) => (
+                <li key={line}>
+                  <Icon name="check" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className={c('vs-pick')}>
+            <h3>
+              <Logos logos={x.logos} size="sm" />
+              Pick {x.name} if
+            </h3>
+            <ul>
+              {x.pickThem.map((line) => (
+                <li key={line}>
+                  <Icon name="minus" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
-      <h2>Pick Brigade if</h2>
-      <ul>
-        {x.pickBrigade.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      <section className={c('vs-sec vs-about')} aria-labelledby="about">
+        <h2 id="about">What {x.name} is</h2>
+        <p>{x.about}</p>
+      </section>
 
-      <h2>Where Brigade is weaker</h2>
-      <ul>
-        {BRIGADE_LIMITS.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      <CompareClose title={`Meet your AI team`} />
 
-      <h2>Try it</h2>
-      <p>
-        Click around the <a href="https://demo.brigade.lol">live demo</a> (no sign-up), read the{' '}
-        <a href="/docs">docs</a>, or read the code on <a href={REPO_URL}>GitHub</a>.
-      </p>
-
-      <h2>Sources</h2>
-      <p>
-        What this page says about {x.name} comes from these pages, checked on {CHECKED}. Products
-        change: if something here is out of date, open an issue on <a href={REPO_URL}>GitHub</a>.
-      </p>
-      <ul>
-        {x.sources.map((s) => (
-          <li key={s.url}>
-            <a href={s.url} rel="nofollow">
-              {s.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </ArticlePage>
+      <details className={c('vs-sources')}>
+        <summary>
+          Sources, checked on {CHECKED}
+          <Icon name="arrow" />
+        </summary>
+        <p>
+          What this page says about {x.name} comes from these pages. Products change: if something
+          here is out of date, open an issue on <a href={REPO_URL}>GitHub</a>.
+        </p>
+        <ul>
+          {x.sources.map((s) => (
+            <li key={s.url}>
+              <a href={s.url} rel="nofollow">
+                {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </ComparePage>
   )
 }

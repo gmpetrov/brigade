@@ -16,6 +16,8 @@ export function c(names: string) {
 // Lucide's paths, drawn at 24×24 with the landing's own stroke (svg.i).
 const paths = {
   check: <path d="M20 6 9 17l-5-5" />,
+  x: <path d="M18 6 6 18M6 6l12 12" />,
+  minus: <path d="M5 12h14" />,
   mail: (
     <>
       <rect width="20" height="16" x="2" y="4" rx="2" />
