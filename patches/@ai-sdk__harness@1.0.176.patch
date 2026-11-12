@@ -1,5 +1,5 @@
 diff --git a/dist/agent/index.js b/dist/agent/index.js
-index 0384125..da26f66 100644
+index 038412507fee769dadbb0f26f0e549d37393b204..67f02f830c39e095dd98d5b2c329a51bb4e997a8 100644
 --- a/dist/agent/index.js
 +++ b/dist/agent/index.js
 @@ -1745,6 +1745,21 @@ function runPrompt(input) {
@@ -75,3 +75,35 @@ index 0384125..da26f66 100644
  						deferredPauseFinishStep = value;
  						continue;
  					}
+@@ -3389,7 +3421,30 @@ function bootstrapMarkerPath({ recipe, identity, stateDirectory }) {
+ * recipe (resumed from snapshot, reused across sessions, or applied by
+ * an earlier process) this is a single fast read.
+ */
+-async function applyBootstrapRecipe({ session, recipe, identity, stateDirectory, abortSignal }) {
++// Brigade: the installs under way, by marker. Two turns starting together on one computer (two
++// threads opened a minute apart on a new member's Mac) each ran the recipe's pnpm install into the
++// same folder, and one failed on the other's half-renamed packages (ERR_PNPM_ENOTEMPTY). One runs at
++// a time per folder: the next one waits for it, then finds its marker and installs nothing.
++const bootstrapsUnderWay = /* @__PURE__ */ new Map();
++async function applyBootstrapRecipe(input) {
++	const key = bootstrapMarkerPath(input);
++	const before = bootstrapsUnderWay.get(key);
++	const mine = (before ?? Promise.resolve()).catch(() => void 0).then(() => applyBootstrapRecipeAlone(input));
++	const settled = mine.catch(() => void 0);
++	bootstrapsUnderWay.set(key, settled);
++	settled.then(() => {
++		if (bootstrapsUnderWay.get(key) === settled) bootstrapsUnderWay.delete(key);
++	});
++	if (!input.abortSignal) return mine;
++	// A turn stopped while it waits stops waiting; the install it waited behind goes on.
++	input.abortSignal.throwIfAborted();
++	let onAbort;
++	return Promise.race([mine, new Promise((_, reject) => {
++		onAbort = () => reject(input.abortSignal.reason);
++		input.abortSignal.addEventListener("abort", onAbort, { once: true });
++	})]).finally(() => input.abortSignal.removeEventListener("abort", onAbort));
++}
++async function applyBootstrapRecipeAlone({ session, recipe, identity, stateDirectory, abortSignal }) {
+ 	const markerPath = bootstrapMarkerPath({
+ 		recipe,
+ 		identity,
