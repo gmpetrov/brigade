@@ -124,6 +124,66 @@ export const COMPARISONS: Comparison[] = [
     ],
   },
   {
+    slug: 'grok-bot',
+    name: 'Grok Bot',
+    logos: [{ src: '/compare/grok-bot.png' }],
+    oneLiner:
+      'xAI’s AI teammates, locked to Grok models and a Grok subscription, versus teammates that run Claude Code and Codex on the Claude or ChatGPT plan you already pay for.',
+    about:
+      'Grok Bot is xAI’s product for AI teammates. Each Bot has a job and its own cloud computer, signs in to your tools, works in Slack, Microsoft Teams and video calls, runs routines and can be taught a task by watching it done once. It came out of beta as Grok Bot 1.0 on November 2, 2026, and is sold with Grok’s Premium, Super and Ultra plans.',
+    answer:
+      'Grok Bot and Brigade share an idea: AI teammates with jobs, a computer of their own and a memory of how your team works. The difference is the AI underneath. Grok Bot is locked to xAI’s Grok models and sold as a Grok subscription. Brigade runs the official Claude Code and Codex, so your teammates work with Anthropic’s and OpenAI’s models, on the Claude or ChatGPT plan you already pay for, they write and ship code, and the whole product is open source.',
+    rows: [
+      row(
+        'What it is',
+        BRIGADE.what,
+        'xAI’s AI teammates, each with its own cloud computer, working in Slack, Teams and video calls.',
+      ),
+      row(
+        'AI models',
+        'Claude through Claude Code and GPT through Codex, side by side; a model per teammate.',
+        'xAI’s Grok models only.',
+        'no',
+      ),
+      row(
+        'Who pays for AI',
+        BRIGADE.bill,
+        'A Grok subscription with weekly usage included; extra usage billed by token.',
+        'no',
+      ),
+      row(
+        'Price',
+        BRIGADE.price,
+        '$30, $100 or $200 a month (Premium, Super, Ultra); Teams and Enterprise through sales.',
+      ),
+      row(
+        'Code',
+        'Teammates write, test and ship code, with pull requests and previews.',
+        'Through GitHub and by coordinating coding agents; not its focus.',
+        'partly',
+      ),
+      row(
+        'Where you talk to it',
+        'Brigade’s own app (web, or installed on your phone with push notifications), and with Cloud an email address per teammate.',
+        'Its desktop and iOS apps, Slack, Microsoft Teams, and Google Meet, Zoom or Teams calls.',
+      ),
+      row('Open source', BRIGADE.open, 'No.', 'no'),
+    ],
+    pickThem: [
+      'You already pay for Grok and want your AI teammates inside Slack, Teams and your calls.',
+    ],
+    pickBrigade: [
+      'You want Claude and GPT, not just Grok, with the model you choose for each teammate.',
+      'You already pay for Claude Max or ChatGPT Pro and do not want another AI subscription.',
+      'You want teammates that write, test and ship your code, with previews to try it.',
+      'You want to read the code, or host it yourself.',
+    ],
+    sources: [
+      { label: 'x.ai/bot', url: 'https://x.ai/bot' },
+      { label: 'xAI: Introducing Grok Bot 1.0', url: 'https://x.ai/news/grok-bot-1-0' },
+    ],
+  },
+  {
     slug: 'paperclip',
     name: 'Paperclip',
     logos: [{ src: '/compare/paperclip.svg' }],
