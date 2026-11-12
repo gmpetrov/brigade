@@ -12,7 +12,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { AccountCard, machineName } from '@/components/account-card'
 import { HarnessLogo } from '@/components/harness-logo'
 import { StatusBadge } from '@/components/status-badge'
@@ -83,6 +83,19 @@ export default function Onboarding() {
   const [adding, setAdding] = useState<boolean>()
   // Who just made their project answers onboarding's questions next, once.
   const [asking, setAsking] = useState(false)
+  // A form sent and not answered yet: a second Enter or click meanwhile sends nothing. Not
+  // `<form action>`: React runs an action as a transition and shows its `busy` only once it
+  // ends, so the button stayed enabled and each click made another organization.
+  const sending = useRef(false)
+  const onSubmit =
+    (send: (form: FormData) => Promise<void>) => (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (sending.current) return
+      sending.current = true
+      void send(new FormData(event.currentTarget)).finally(() => {
+        sending.current = false
+      })
+    }
 
   const reload = useCallback(
     () =>
@@ -144,6 +157,9 @@ export default function Onboarding() {
       setAsking(next?.onboardingAnswers === null)
     } catch (e) {
       setError((e as Error).message)
+      // An organization made before a later step failed is the one to go on with: shown
+      // again, this form would make another.
+      await reload()
     }
     setBusy(false)
   }
@@ -201,7 +217,7 @@ export default function Onboarding() {
         )}
         <Card>
           <CardContent>
-            <form action={createProject} className="flex flex-col gap-5">
+            <form onSubmit={onSubmit(createProject)} className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Project name</Label>
                 <Input id="name" name="name" placeholder="Acme" required autoFocus />
@@ -245,7 +261,7 @@ export default function Onboarding() {
       >
         <Card>
           <CardContent>
-            <form action={createWorkspace} className="flex flex-col gap-5">
+            <form onSubmit={onSubmit(createWorkspace)} className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Workspace name</Label>
                 <Input id="name" name="name" placeholder="Customer support" required />
