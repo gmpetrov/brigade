@@ -1,5 +1,11 @@
 import Link from 'next/link'
-import { CompareClose, CompareCta, ComparePage, Logos } from '@/components/landing/compare'
+import {
+  CompareClose,
+  CompareCta,
+  CompareEyebrow,
+  ComparePage,
+  Logos,
+} from '@/components/landing/compare'
 import { c, Icon, type IconName } from '@/components/landing/parts'
 import { BRIGADE, CHECKED, COMPARISONS } from '@/lib/compare'
 import { pageMetadata, SITE_URL } from '@/lib/page-metadata'
@@ -63,7 +69,7 @@ export default function Compare() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <header className={c('vs-hero')}>
-        <p className={c('vs-eyebrow')}>Comparisons · Checked {CHECKED}</p>
+        <CompareEyebrow checked={CHECKED} />
         <h1>How Brigade compares</h1>
         <p className={c('lead vs-answer')}>
           <strong>Brigade</strong> is {BRIGADE.what.charAt(0).toLowerCase() + BRIGADE.what.slice(1)}{' '}

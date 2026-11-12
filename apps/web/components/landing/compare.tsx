@@ -1,14 +1,12 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { HarnessLogo } from '@/components/harness-logo'
 import { Footer } from '@/components/landing/closing'
 import { Header } from '@/components/landing/hero'
-import { REPO_URL } from '@/lib/github-proof'
 import type { Logo, Mark } from '@/lib/compare'
 import { AuthLink } from './auth-link'
 import { c, Icon, SIGN_UP } from './parts'
-
-export const DEMO_URL = 'https://demo.brigade.lol'
 
 /** A comparison page (app/compare) in the landing's header and footer. */
 export function ComparePage({ children }: { children: ReactNode }) {
@@ -61,22 +59,35 @@ export function MarkIcon({ mark }: { mark: Mark }) {
   )
 }
 
-/** The page's ways in: the live demo first, then sign-up and the code. */
-export function CompareCta() {
+/** The page's one way in: sign-up. */
+export function CompareCta({ label = 'Sign up free' }: { label?: string }) {
   return (
     <div className={c('cta-row vs-cta')}>
-      <a className={c('btn pri lg')} href={DEMO_URL}>
-        Try the live demo
+      <AuthLink className={c('btn pri lg')} href={SIGN_UP}>
+        {label}
         <Icon name="arrow" />
-      </a>
-      <AuthLink className={c('btn lg')} href={SIGN_UP}>
-        Sign up free
       </AuthLink>
-      <a className={c('btn ghost lg')} href={REPO_URL}>
-        <Icon name="github" />
-        GitHub
-      </a>
     </div>
+  )
+}
+
+/** Above the title: the way back to every comparison, and the day the facts were checked. */
+export function CompareEyebrow({ checked, back }: { checked: string; back?: boolean }) {
+  return (
+    <p className={c('vs-eyebrow')}>
+      {back ? (
+        <Link className={c('vs-chip link')} href="/compare">
+          <Icon name="arrow" />
+          All comparisons
+        </Link>
+      ) : (
+        <span className={c('vs-chip')}>Comparisons</span>
+      )}
+      <span className={c('vs-checked')}>
+        <Icon name="clock" />
+        Checked {checked}
+      </span>
+    </p>
   )
 }
 
@@ -87,8 +98,8 @@ export function CompareClose({ title }: { title: string }) {
       <LogoTile logo="brigade" />
       <h2>{title}</h2>
       <p>
-        Click around the real dashboard with no sign-up, or start free on your own computer. Brigade
-        runs on the Claude or ChatGPT plan you already pay for.
+        Start free on your own computer. Brigade runs on the Claude or ChatGPT plan you already pay
+        for.
       </p>
       <CompareCta />
     </section>

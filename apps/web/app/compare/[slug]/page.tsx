@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import {
   CompareClose,
   CompareCta,
+  CompareEyebrow,
   ComparePage,
   Logos,
   LogoTile,
@@ -55,9 +55,7 @@ export default async function Comparison({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <header className={c('vs-hero')}>
-        <p className={c('vs-eyebrow')}>
-          <Link href="/compare">Comparisons</Link> · Checked {CHECKED}
-        </p>
+        <CompareEyebrow checked={CHECKED} back />
         <div className={c('vs-pair')} aria-hidden="true">
           <LogoTile logo="brigade" />
           <span>vs</span>
@@ -65,7 +63,7 @@ export default async function Comparison({ params }: Props) {
         </div>
         <h1>{heading(x.name)}</h1>
         <p className={c('lead vs-answer')}>{x.answer}</p>
-        <CompareCta />
+        <CompareCta label="Start now" />
       </header>
 
       <section className={c('vs-sec')} aria-labelledby="side-by-side">
@@ -139,7 +137,7 @@ export default async function Comparison({ params }: Props) {
             <ul>
               {x.pickThem.map((line) => (
                 <li key={line}>
-                  <Icon name="minus" />
+                  <Icon name="x" />
                   {line}
                 </li>
               ))}
@@ -153,7 +151,7 @@ export default async function Comparison({ params }: Props) {
         <p>{x.about}</p>
       </section>
 
-      <CompareClose title={`Meet your AI team`} />
+      <CompareClose title="Meet your AI teammates" />
 
       <details className={c('vs-sources')}>
         <summary>
