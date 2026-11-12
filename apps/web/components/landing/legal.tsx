@@ -14,7 +14,7 @@ export function LegalPage({ title, children }: { title: string; children: ReactN
   )
 }
 
-/** A page of text (legal pages, comparisons) in the landing's header and footer. */
+/** A page of text (legal pages) in the landing's header and footer. */
 export function ArticlePage({
   eyebrow,
   title,
