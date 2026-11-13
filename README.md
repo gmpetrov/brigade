@@ -383,10 +383,24 @@ the branches named `brigade/…` are theirs.
 
 ## Alternatives and comparisons
 
-How Brigade compares with the tools people weigh it against, with sources and where Brigade is weaker:
+How Brigade compares with the tools people weigh it against, with sources:
 
-- [Brigade vs OpenClaw](https://www.brigade.lol/compare/openclaw): a personal assistant you run yourself, versus a
-  team of teammates with jobs
+- [Brigade vs Rakazo](https://www.brigade.lol/compare/rakazo): its own agent loop on API keys and metered computer hours,
+  versus the official Claude Code and Codex on your own plans
+- [Brigade vs OpenClaw](https://www.brigade.lol/compare/openclaw) and
+  [vs Hermes Agent](https://www.brigade.lol/compare/hermes-agent): a personal agent you run yourself, versus a team of
+  teammates with jobs
+- [Brigade vs Grok Bot](https://www.brigade.lol/compare/grok-bot): AI teammates locked to Grok, versus Claude Code and
+  Codex on the plans you already pay for
+- [Brigade vs Claude Duet](https://www.brigade.lol/compare/claude-duet),
+  [vs OpenAI dots](https://www.brigade.lol/compare/dots), [vs Meta Muse](https://www.brigade.lol/compare/muse),
+  [vs Instinct](https://www.brigade.lol/compare/instinct) and [vs Hark](https://www.brigade.lol/compare/hark): one
+  personal agent per person, versus a team for your company
+- [Brigade vs Claude Cowork](https://www.brigade.lol/compare/claude-cowork): Claude on one person's files and tools,
+  versus teammates with jobs and one list of decisions
+- [Brigade vs Manus](https://www.brigade.lol/compare/manus) and
+  [vs Relevance AI](https://www.brigade.lol/compare/relevance-ai): agents billed in credits, versus your own Claude or
+  ChatGPT plan
 - [Brigade vs Paperclip](https://www.brigade.lol/compare/paperclip): governing agents as a board, versus approving
   the actions themselves
 - [Brigade vs Lindy](https://www.brigade.lol/compare/lindy) and [vs Sintra](https://www.brigade.lol/compare/sintra):
