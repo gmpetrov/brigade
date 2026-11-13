@@ -17,6 +17,7 @@ import {
 import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
 import { editMemory, saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
+import { SAMPLE_TOOL_MANIFEST, SAMPLE_TOOL_PAGE, SAMPLE_VISUALS } from './seed-tool.js'
 import { sealSecret } from '../src/vault.js'
 import { LONG_THREAD_TITLE, longThreadEvents } from './seed-long-thread.js'
 import { seedPlaybooks } from './seed-playbooks.js'
@@ -1117,6 +1118,25 @@ export async function seedWorkspace(
   await file(
     'Data/customers.csv',
     'name,email,plan,seats,mrr\nGlobex,ops@globex.test,pro,18,342\nInitech,it@initech.test,business,40,1560\nUmbrella,billing@umbrella.test,pro,7,133\nHooli,team@hooli.test,business,95,3705\n',
+  )
+  // A tool (docs/tools.md) Maya made in the newsletter's thread: a review board for the visuals.
+  for (const [name, svg] of Object.entries(SAMPLE_VISUALS))
+    await file(`Projects/Fall launch/visuals/${name}`, svg, asMaya)
+  const fromNewsletter = { sessionId: newsletter.id }
+  const reviewTool = 'Projects/Fall launch/visual-review.tool'
+  await saveLibraryFile(
+    db,
+    scope,
+    asMaya,
+    { path: `${reviewTool}/tool.json`, bytes: new TextEncoder().encode(SAMPLE_TOOL_MANIFEST) },
+    fromNewsletter,
+  )
+  await saveLibraryFile(
+    db,
+    scope,
+    asMaya,
+    { path: `${reviewTool}/index.html`, bytes: new TextEncoder().encode(SAMPLE_TOOL_PAGE) },
+    fromNewsletter,
   )
   // A restricted folder: only teammates with a grant reach it.
   const finance = await prisma.libraryFolder.create({

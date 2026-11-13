@@ -173,6 +173,12 @@ const encodePath = (path: string) => path.split('/').map(encodeURIComponent).joi
 // Opening a tool
 // ---------------------------------------------------------------------------
 
+/** A new row's workspace: its own columns, not the member's (scoped() stamps them on the rest). */
+const inWorkspace = (scope: Scope) => ({
+  organizationId: scope.organizationId,
+  workspaceId: scope.workspaceId,
+})
+
 const admin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
 
 type AccountRow = {
@@ -341,7 +347,7 @@ export async function attachToolAccount(
   }
   await db.toolAccount.upsert({
     where: { toolId_connectionId: { toolId: tool.entry.id, connectionId: connection.id } },
-    create: { toolId: tool.entry.id, connectionId: connection.id, ...data },
+    create: { ...inWorkspace(scope), toolId: tool.entry.id, connectionId: connection.id, ...data },
     update: data,
   })
   await audit({
@@ -492,7 +498,7 @@ export async function toolState(
         message: `A tool keeps at most ${TOOL_STATE_KEYS_MAX} keys for each person, and as many shared`,
       })
     return db.toolState.create({
-      data: { toolId: tool.entry.id, owner, key: request.key, value, ...by },
+      data: { ...inWorkspace(scope), toolId: tool.entry.id, owner, key: request.key, value, ...by },
     })
   }
   if (request.version === 0) {

@@ -699,6 +699,15 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   folder, then a `library.call` registers it (by name, so saving again updates it), which needs write access to
   that folder and is audited as the teammate; the workspace's first is the default. "Ask a teammate" in that
   panel drafts that thread.
+- **Tools** (`apps/api/src/tools.ts`, `@brigade/contracts` `tool.ts`, design in `docs/tools.md`), behind the `tools`
+  feature. A tool is a library folder named `<name>.tool` with `index.html` and `tool.json` (the library folders it
+  reads, the Apps it calls, the public hosts its script fetches): a small web app people work in. It is served like a
+  design, from the sandbox origin under a signed address of its own (`/t/<token>/`), with a bridge script that gives the
+  page `window.brigade`; the dashboard answers it by `postMessage` with the person's session. Its state is `ToolState`
+  rows (shared, or a member's own; conditional writes over a version), not library files. App accounts are attached to
+  it (`ToolAccount`) by those who may give them; calls go through the same operations as teammates', for members who
+  may use the account, only while the tool's files hash as when it was attached, and a write only once the person
+  confirmed it in the dashboard's dialog.
 - **Memory** (design in `docs/memory.md`) is four kinds of Markdown `Document` with no bucket object: workspace
   (`workspace.md`), project (`projects/<id>.md`), teammate (`teammates/<id>.md`) and thread summaries
   (`threads/<id>.md`). A memory file is in layers: the lines before its first `## ` heading are its core, which every
