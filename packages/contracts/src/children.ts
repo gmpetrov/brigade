@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { ATTACHMENTS_PER_MESSAGE } from './attachments.js'
 
 /** Children a thread may have at work at once. */
-export const CHILDREN_AT_WORK = 5
+export const CHILDREN_AT_WORK = 10
 /** How long a parent waits for its awaited children by default, then hears what is done. */
 export const CHILD_WAIT_MINUTES = 24 * 60
 /** The longest a parent may choose to wait. */
