@@ -2131,6 +2131,7 @@ export class HarnessThread {
         listFiles: (folder) => listAs(resolvePath(this.workDir, folder), this.runAs),
         renderDesign: (folder, options) =>
           renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
+        tools: this.spec.tools,
       },
       async (request) => {
         const result = await checkout({

@@ -1,8 +1,8 @@
 // The preview's one address: /api (requests and WebSockets) to the API, the
 // rest to Next. One origin means one preview token, and the dashboard's
 // session cookie is first-party to its API. Designs' pages are the API's too: the
-// preview has no sandbox host of its own (DESIGN_URL is its address), so /v/<token>/…
-// and a shared design's /s/<token>/… go there, while /s/<token> is Next's page.
+// preview has no sandbox host of its own (DESIGN_URL is its address), so /v/<token>/…,
+// a tool's /t/<token>/… and a shared design's /s/<token>/… go there, while /s/<token> is Next's page.
 import http from 'node:http'
 import net from 'node:net'
 
@@ -10,7 +10,7 @@ const PORT = Number(process.env.PORT ?? 3000)
 const API_PORT = Number(process.env.API_PORT ?? 3001)
 const WEB_PORT = Number(process.env.WEB_PORT ?? 3002)
 
-const DESIGN_PAGE = /^\/(v\/[^/?#]+\/|s\/[^/?#]+\/)/
+const DESIGN_PAGE = /^\/(v\/[^/?#]+\/|s\/[^/?#]+\/|t\/[^/?#]+\/)/
 const target = (url = '/') =>
   url === '/api' || url.startsWith('/api/') || DESIGN_PAGE.test(url) ? API_PORT : WEB_PORT
 

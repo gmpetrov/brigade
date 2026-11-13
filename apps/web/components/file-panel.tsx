@@ -10,6 +10,7 @@
 import {
   designFolderOf,
   designOptionsOf,
+  toolFolderOf,
   type DesignWhere,
   type ThreadFile,
 } from '@brigade/contracts'
@@ -29,6 +30,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { CodeFile, editableFile } from '@/components/code-file'
 import { DesignPanel } from '@/components/design-view'
+import { useDashboard } from '@/components/dashboard'
+import { ToolPanel } from '@/components/tool-view'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { FilePreview, PdfView } from '@/components/file-preview'
 import { Markdown } from '@/components/markdown'
@@ -65,9 +68,16 @@ type FilePanelProps = {
   onClose: () => void
 }
 
-/** A library design's folder ("acme/pricing.design") shows as the design; anything else as a file. */
+/**
+ * A library design's folder ("acme/pricing.design") shows as the design, a tool's
+ * ("acme/review.tool") as the tool, for people who have tools; anything else as a file.
+ */
 export function FilePanel(props: FilePanelProps) {
+  const { me } = useDashboard()
   const folder = props.path.trim().replace(/\/+$/, '')
+  const tools = me.features?.includes('tools') ?? false
+  if (tools && !folder.startsWith('/') && toolFolderOf(folder) === folder)
+    return <ToolPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
   if (!folder.startsWith('/') && designFolderOf(folder) === folder)
     return designOptionsOf(folder) ? (
       <OptionPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
@@ -162,6 +172,10 @@ function ThreadFilePanel({
   const [file, setFile] = useState<ThreadFile>()
   /** A file of a library design: the design shows instead. */
   const [design, setDesign] = useState<string>()
+  /** A file of a library tool: the tool shows instead, for people who have tools. */
+  const [tool, setTool] = useState<string>()
+  const { me } = useDashboard()
+  const tools = me.features?.includes('tools') ?? false
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -191,6 +205,8 @@ function ThreadFilePanel({
     api<ThreadFile>(`/threads/${threadId}/file?${query}`).then(
       (f) => {
         if (!live) return
+        const toolFolder = f.source === 'library' && tools ? toolFolderOf(f.path) : undefined
+        if (toolFolder && f.contentType !== 'text/markdown') return setTool(toolFolder)
         const folder = f.source === 'library' ? designFolderOf(f.path) : undefined
         // A library file opens in the file panel (components/document-panel.tsx), as from the
         // library: a document to edit, a text file, a preview. A design's own files show as the
@@ -218,6 +234,7 @@ function ThreadFilePanel({
   }, [threadId, path, teammateId])
 
   if (design) return <DesignPanel folder={design} threadId={threadId} onClose={onClose} />
+  if (tool) return <ToolPanel folder={tool} threadId={threadId} onClose={onClose} />
 
   const shown = file?.path ?? path
   const slash = shown.lastIndexOf('/')

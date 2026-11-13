@@ -38,6 +38,13 @@ export const FEATURES = {
       'the pass only recommends, and teammates still ask.',
     default: false,
   },
+  tools: {
+    description:
+      'Tools (docs/tools.md): small web apps teammates make and save in the library, which people ' +
+      'open beside a page or a thread. A tool lists library folders, keeps state, calls App ' +
+      'accounts attached to it and sends messages to its thread. Being tried by the team first.',
+    default: false,
+  },
 } as const satisfies Record<string, { description: string; default: boolean }>
 
 export type Feature = keyof typeof FEATURES

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { DesignGallery } from '@/components/design-gallery'
+import { ToolGallery } from '@/components/tool-gallery'
 import { DesignSystemsBar } from '@/components/design-systems'
 import { MemoryCard } from '@/components/memory-card'
 import { useDocumentPanel } from '@/components/document-panel'
@@ -47,7 +48,7 @@ export default function LibraryPage() {
   )
 }
 
-type Tab = 'files' | 'designs' | 'memory' | 'trash'
+type Tab = 'files' | 'designs' | 'tools' | 'memory' | 'trash'
 
 function LibraryView() {
   const params = useSearchParams()
@@ -79,6 +80,9 @@ function LibraryView() {
   const folder = params.get('folder') ?? ''
   const focus = params.get('file') ?? undefined
   const focusDesign = params.get('design') ?? undefined
+  const focusTool = params.get('tool') ?? undefined
+  // Tools (docs/tools.md), for people who have them.
+  const tools = me.data?.features?.includes('tools') ?? false
   const setFolder = useCallback(
     (path: string) => {
       setCreating(null)
@@ -89,7 +93,7 @@ function LibraryView() {
     [router],
   )
   useEffect(() => {
-    const asked = focus || focusDesign ? 'files' : params.get('tab')
+    const asked = focus || focusDesign || focusTool ? 'files' : params.get('tab')
     // Design systems were a tab of their own: they open beside the designs now.
     if (asked === 'design-systems') {
       setTab('designs')
@@ -97,11 +101,11 @@ function LibraryView() {
       setQuery('')
       return
     }
-    const tabs: Tab[] = ['files', 'designs', 'memory', 'trash']
+    const tabs: Tab[] = ['files', 'designs', 'tools', 'memory', 'trash']
     if (!tabs.includes(asked as Tab)) return
     setTab(asked as Tab)
     setQuery('')
-  }, [focus, focusDesign, params])
+  }, [focus, focusDesign, focusTool, params])
 
   async function upload(list: { file: File; path: string }[]) {
     if (list.length === 0) return
@@ -233,6 +237,7 @@ function LibraryView() {
               <TabsTrigger value="files">Files</TabsTrigger>
               <TabsTrigger value="memory">Memory</TabsTrigger>
               <TabsTrigger value="designs">Designs</TabsTrigger>
+              {tools && <TabsTrigger value="tools">Tools</TabsTrigger>}
               <TabsTrigger value="trash">Trash</TabsTrigger>
             </TabsList>
             {tab === 'files' && <LibraryViewSwitch view={view} className="ml-auto shrink-0" />}
@@ -244,6 +249,7 @@ function LibraryView() {
               setFolder={setFolder}
               focus={focus}
               focusDesign={focusDesign}
+              focusTool={focusTool}
               reload={tree.reload}
               upload={upload}
               teammates={teammates.data}
@@ -263,6 +269,11 @@ function LibraryView() {
             />
             <DesignGallery tree={tree.data} />
           </TabsContent>
+          {tools && (
+            <TabsContent value="tools" className="flex flex-col gap-4 pt-2">
+              <ToolGallery tree={tree.data} />
+            </TabsContent>
+          )}
           <TabsContent value="memory" className="flex flex-col gap-4 pt-2">
             <Memory overview={memory.data} reload={memory.reload} />
           </TabsContent>

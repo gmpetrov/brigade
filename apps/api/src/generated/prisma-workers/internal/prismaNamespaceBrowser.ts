@@ -116,6 +116,8 @@ export const ModelName = {
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
   LibraryShare: 'LibraryShare',
+  ToolState: 'ToolState',
+  ToolAccount: 'ToolAccount',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   WorkspaceCleanup: 'WorkspaceCleanup',
@@ -1305,6 +1307,40 @@ export const LibraryShareScalarFieldEnum = {
 } as const
 
 export type LibraryShareScalarFieldEnum = (typeof LibraryShareScalarFieldEnum)[keyof typeof LibraryShareScalarFieldEnum]
+
+
+export const ToolStateScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  toolId: 'toolId',
+  owner: 'owner',
+  key: 'key',
+  value: 'value',
+  version: 'version',
+  deletedAt: 'deletedAt',
+  updatedByMemberId: 'updatedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ToolStateScalarFieldEnum = (typeof ToolStateScalarFieldEnum)[keyof typeof ToolStateScalarFieldEnum]
+
+
+export const ToolAccountScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  toolId: 'toolId',
+  connectionId: 'connectionId',
+  access: 'access',
+  codeHash: 'codeHash',
+  attachedByMemberId: 'attachedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ToolAccountScalarFieldEnum = (typeof ToolAccountScalarFieldEnum)[keyof typeof ToolAccountScalarFieldEnum]
 
 
 export const DocumentAssetScalarFieldEnum = {

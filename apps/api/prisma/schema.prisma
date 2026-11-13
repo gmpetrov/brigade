@@ -340,6 +340,8 @@ model Workspace {
   threadPins            ThreadPin[]
   documentPins          DocumentPin[]
   libraryShares         LibraryShare[]
+  toolStates            ToolState[]
+  toolAccounts          ToolAccount[]
   listPins              ListPin[]
   sidebarOrders         SidebarOrder[]
   threadLaters          ThreadLater[]
@@ -1640,6 +1642,7 @@ model Connection {
   updatedAt         DateTime         @updatedAt
   grants            Grant[]
   calls             ConnectionCall[]
+  toolAccounts      ToolAccount[]
   replyWatches      ReplyWatch[]
   triggers          Trigger[]
   subscriptions     Subscription[]
@@ -1999,6 +2002,8 @@ model Document {
   pins               DocumentPin[]
   /// Its public link, while it has one.
   share              LibraryShare?
+  toolStates         ToolState[]
+  toolAccounts       ToolAccount[]
   /// The members who pinned it, as a list, in their sidebar.
   listPins           ListPin[]
 
@@ -2288,6 +2293,56 @@ model LibraryShare {
   createdByMemberId String?
   createdAt         DateTime  @default(now())
 
+  @@index([workspaceId])
+}
+
+/// State a tool keeps (docs/tools.md): a key's JSON value, for everyone who opens the tool
+/// (`owner` "shared") or for one member (`owner` their member id). Keyed by the tool's
+/// `index.html` document, so it follows the tool when it moves; gone with it.
+model ToolState {
+  id                String    @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  toolId            String
+  tool              Document  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  /// "shared", or the member whose own state it is. No relation: removed members' rows stay with the tool.
+  owner             String
+  key               String
+  value             Json
+  /// Goes up by one on each write: a tool writes over the version it read (src/tools.ts).
+  version           Int       @default(1)
+  /// Deleted: the row stays as a tombstone with its version, so an older write never lands.
+  deletedAt         DateTime?
+  /// No relation: kept once they leave.
+  updatedByMemberId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([toolId, owner, key])
+  @@index([workspaceId])
+}
+
+/// An App account attached to a tool (docs/tools.md): the tool's page may call its operations,
+/// through the dashboard, for people allowed to use the account. `codeHash` is the tool's files
+/// when it was attached: once they change, its calls wait until a person allows it again.
+model ToolAccount {
+  id                 String     @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  toolId             String
+  tool               Document   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  connectionId       String
+  connection         Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  access             GrantScope
+  codeHash           String
+  /// No relation: kept once they leave.
+  attachedByMemberId String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@unique([toolId, connectionId])
   @@index([workspaceId])
 }
 

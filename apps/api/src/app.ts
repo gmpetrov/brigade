@@ -29,6 +29,8 @@ import { inbox } from './routes/inbox.js'
 import { dictation } from './routes/dictation.js'
 import { credentials } from './routes/credentials.js'
 import { designs, designSystems } from './routes/designs.js'
+import { tools } from './routes/tools.js'
+import { toolPages } from './tools.js'
 import { security } from './routes/security.js'
 import { skills } from './routes/skills.js'
 import { gitProxy } from './routes/git.js'
@@ -240,6 +242,7 @@ app.route('/api/board', boardRoutes)
 app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)
+app.route('/api/tools', tools)
 app.route('/api/attachments', attachments)
 app.route('/api/uploads', uploads)
 app.route('/api/repositories', repositories)
@@ -269,6 +272,8 @@ app.route('/github/webhook', githubWebhook)
 app.route('/desktop', desktopProxy)
 // Designs' pages, on the sandbox origin (DESIGN_URL). Their addresses are signed and short-lived.
 app.route('/v', designFiles)
+// Tools' pages, on the sandbox origin (DESIGN_URL), as designs': signed, short-lived addresses.
+app.route('/t', toolPages)
 // Shared designs' pages, on the sandbox origin, for as long as their public link is on.
 app.route('/s', sharedDesignFiles)
 // The collab server's calls: documents people edit together. Verified by COLLAB_SECRET.

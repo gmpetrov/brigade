@@ -9,6 +9,8 @@ import {
   designName,
   designOptionsOf,
   folderAccessFor,
+  toolFolderOf,
+  toolName,
   type FolderAccess,
   type FolderRule,
   type LibraryAccess,
@@ -32,6 +34,7 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
+  Wrench,
 } from 'lucide-react'
 import {
   useEffect,
@@ -42,8 +45,9 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { timeAgo } from '@/components/dashboard'
+import { timeAgo, useDashboard } from '@/components/dashboard'
 import { DesignPanel } from '@/components/design-view'
+import { ToolPanel } from '@/components/tool-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { PUBLIC_LINK } from '@/components/share-button'
 import { ActorName, size } from '@/components/library-history'
@@ -140,6 +144,7 @@ export function LibraryBrowser({
   home = '',
   focus,
   focusDesign,
+  focusTool,
   reload,
   upload,
   teammates,
@@ -158,6 +163,8 @@ export function LibraryBrowser({
   focus?: string
   /** A design asked for by the address (its folder): opened beside the page. */
   focusDesign?: string
+  /** A tool asked for by the address (its folder): opened beside the page. */
+  focusTool?: string
   reload: () => Promise<void>
   upload: (files: Upload[]) => Promise<void>
   teammates: Teammate[] | undefined
@@ -170,6 +177,12 @@ export function LibraryBrowser({
   const documents = useDocumentPanel()
   /** The design open beside the page: its folder. */
   const [design, setDesign] = useState<string>()
+  /** The tool open beside the page: its folder. */
+  const [tool, setTool] = useState<string>()
+  const { me } = useDashboard()
+  /** Tools (docs/tools.md) show as tools for people who have them; as folders for the others. */
+  const tools = me.features?.includes('tools') ?? false
+  const isTool = (path: string) => tools && toolFolderOf(path) === path
   const [renaming, setRenaming] = useState<string>()
   const [access, setAccess] = useState<string>()
   const [error, setError] = useState<string>()
@@ -198,7 +211,7 @@ export function LibraryBrowser({
     .filter((f) => parentOf(f.path) === folder)
     .sort((a, b) => a.path.localeCompare(b.path))
   const entries = recent
-    ? recentIn(tree, folder, folders)
+    ? recentIn(tree, folder, folders, tools)
     : [
         ...subfolders.map((f) => ({ kind: 'folder' as const, folder: f })),
         ...files.map((f) => ({ kind: 'file' as const, file: f })),
@@ -217,6 +230,12 @@ export function LibraryBrowser({
     if (!focus || !tree) return
     const file = tree.files.find((f) => f.id === focus)
     if (!file) return
+    const inTool = tools ? toolFolderOf(file.path) : undefined
+    if (inTool && file.contentType !== 'text/markdown') {
+      setFolder(parentOf(inTool))
+      openTool(inTool)
+      return
+    }
     const inDesign = designFolderOf(file.path)
     if (inDesign) {
       setFolder(parentOf(inDesign))
@@ -237,6 +256,17 @@ export function LibraryBrowser({
     openDesign(focusDesign)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
   }, [focusDesign, loaded])
+  useEffect(() => {
+    if (!focusTool || !tree || !tools) return
+    setFolder(parentOf(focusTool))
+    openTool(focusTool)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
+  }, [focusTool, loaded, tools])
+  // A tool whose page went away closes.
+  const toolGone = !!tool && !!tree && !tree.files.some((f) => f.path === `${tool}/index.html`)
+  useEffect(() => {
+    if (toolGone) setTool(undefined)
+  }, [toolGone])
   // A design whose files all went away closes.
   const designFiles = design ? tree?.files.filter((f) => f.path.startsWith(`${design}/`)) : []
   useEffect(() => {
@@ -246,12 +276,20 @@ export function LibraryBrowser({
   // Any file opens in the file panel (components/document-panel.tsx), beside whatever page shows.
   function open(file: LibraryFile, show: 'file' | 'history' = 'file') {
     setDesign(undefined)
+    setTool(undefined)
     documents.open(libraryDocument(file), { history: show === 'history' })
   }
 
   function openDesign(path: string) {
     documents.close()
+    setTool(undefined)
     setDesign(path)
+  }
+
+  function openTool(path: string) {
+    documents.close()
+    setDesign(undefined)
+    setTool(path)
   }
 
   async function act(work: () => Promise<unknown>) {
@@ -318,10 +356,11 @@ export function LibraryBrowser({
     const inside = tree.files.filter((file) => file.path.startsWith(`${f.path}/`)).length
     const guarded = f.restricted || f.grants.length > 0
     const isDesign = designFolderOf(f.path) === f.path
+    const toolRow = isTool(f.path)
     // The options offered for a design: one row, opening them side by side.
-    const set = isDesign ? [] : optionsIn(tree.files, f.path)
+    const set = isDesign || toolRow ? [] : optionsIn(tree.files, f.path)
     const isSet = set.length > 0
-    const Icon = isDesign || isSet ? Palette : guarded ? FolderLock : Folder
+    const Icon = toolRow ? Wrench : isDesign || isSet ? Palette : guarded ? FolderLock : Folder
     return (
       <div key={f.path}>
         <div
@@ -342,20 +381,29 @@ export function LibraryBrowser({
           <button
             type="button"
             onClick={() =>
-              isDesign ? openDesign(f.path) : isSet ? openDesign(set[0]!) : setFolder(f.path)
+              toolRow
+                ? openTool(f.path)
+                : isDesign
+                  ? openDesign(f.path)
+                  : isSet
+                    ? openDesign(set[0]!)
+                    : setFolder(f.path)
             }
             className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
           >
             <span className="truncate text-sm font-semibold hover:underline">
-              {isDesign
-                ? designName(f.path)
-                : isSet
-                  ? nameOf(f.path).slice(0, -DESIGN_OPTIONS_SUFFIX.length)
-                  : nameOf(f.path)}
+              {toolRow
+                ? toolName(f.path)
+                : isDesign
+                  ? designName(f.path)
+                  : isSet
+                    ? nameOf(f.path).slice(0, -DESIGN_OPTIONS_SUFFIX.length)
+                    : nameOf(f.path)}
             </span>
             <span className="text-xs text-muted-foreground">
               {flat && `${parentOf(f.path) || 'Library'} · `}
               {isDesign && 'Design · '}
+              {toolRow && 'Tool · '}
               {isDesign &&
                 tree.files.some((file) => file.shared && file.path === `${f.path}/index.html`) &&
                 `${PUBLIC_LINK} · `}
@@ -364,7 +412,7 @@ export function LibraryBrowser({
                 : inside === 0
                   ? 'Empty'
                   : `${inside} file${inside === 1 ? '' : 's'}`}
-              {(isDesign || isSet) && updatedIn(tree.files, f.path)}
+              {(isDesign || isSet || toolRow) && updatedIn(tree.files, f.path)}
             </span>
           </button>
           {f.restricted ? (
@@ -373,6 +421,12 @@ export function LibraryBrowser({
             f.grants.length > 0 && <Badge variant="secondary">Custom access</Badge>
           )}
           <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
+            {toolRow && (
+              <DropdownMenuItem onSelect={() => openTool(f.path)}>
+                <Wrench aria-hidden />
+                Open tool
+              </DropdownMenuItem>
+            )}
             {(isDesign || isSet) && (
               <DropdownMenuItem onSelect={() => openDesign(isSet ? set[0]! : f.path)}>
                 <Palette aria-hidden />
@@ -381,7 +435,7 @@ export function LibraryBrowser({
             )}
             <DropdownMenuItem onSelect={() => setFolder(f.path)}>
               <Folder aria-hidden />
-              {isDesign || isSet ? 'Its files' : 'Open'}
+              {isDesign || isSet || toolRow ? 'Its files' : 'Open'}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setRenaming(`folder:${f.path}`)}>
               <Pencil aria-hidden />
@@ -654,6 +708,7 @@ export function LibraryBrowser({
             : {})}
         />
       )}
+      {tool && <ToolPanel folder={tool} libraryLink={false} onClose={() => setTool(undefined)} />}
       {access !== undefined && (
         <FolderAccessDialog
           path={access}
@@ -746,12 +801,19 @@ function recentIn(
   tree: LibraryTree | undefined,
   folder: string,
   folders: Map<string, LibraryFolder>,
+  tools = false,
 ): Entry[] {
   const under = folder ? `${folder}/` : ''
   const designs = new Map<string, string>()
   const entries: (Entry & { at: string })[] = []
   for (const file of tree?.files ?? []) {
     if (!file.path.startsWith(under)) continue
+    // A tool counts as one entry too, for people who have tools.
+    const tool = tools ? toolFolderOf(file.path) : undefined
+    if (tool && tool.startsWith(under) && tool !== folder) {
+      if ((designs.get(tool) ?? '') < file.updatedAt) designs.set(tool, file.updatedAt)
+      continue
+    }
     const design = designFolderOf(file.path)
     if (design && design.startsWith(under) && design !== folder) {
       const options = designOptionsOf(design)

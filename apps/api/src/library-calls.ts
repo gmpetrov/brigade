@@ -26,7 +26,8 @@ import {
   tidyMemory,
 } from './library.js'
 import { proposeSkill } from './skills.js'
-import { actingTeammate } from './thread-spec.js'
+import { actingTeammate, shownAccounts } from './thread-spec.js'
+import { toolStateFor } from './tools.js'
 import { claimUpload, discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
@@ -147,6 +148,18 @@ export async function handleLibraryCall(
     return access === 'none'
       ? fail(`${teammate.name} has no access to that folder of the library.`)
       : done(await personEdits(db, session, op.path))
+  if (op.name === 'tool_state') {
+    if (access === 'none')
+      return fail(`${teammate.name} has no access to that folder of the library.`)
+    // The shared keys, and the own keys of the person the thread works for, if one.
+    const { person } = await shownAccounts(db, session)
+    try {
+      return done(await toolStateFor(db, scope, op.path, person))
+    } catch (error) {
+      if (error instanceof HTTPException) return fail(error.message)
+      throw error
+    }
+  }
   const refusal = saveRefusal(teammate.name, access, op.path)
   if (refusal) return fail(refusal)
   const actor = { type: 'teammate' as const, id: teammate.id }

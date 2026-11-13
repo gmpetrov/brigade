@@ -11,6 +11,8 @@ import type { AddressInfo } from 'node:net'
 import { basename, extname, join, resolve, sep } from 'node:path'
 import {
   addToHead,
+  TOOL_MANIFEST,
+  toolBridgeScript,
   BOARD_HEIGHT_MAX,
   DESIGN_ENTRY,
   DESIGN_KNOBS,
@@ -86,6 +88,7 @@ const TYPES: Record<string, string> = {
  */
 async function serve(folder: string, style: string) {
   const root = resolve(folder)
+  const tool = existsSync(join(root, TOOL_MANIFEST))
   const server = createServer((req, res) => {
     void (async () => {
       const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname)
@@ -95,6 +98,9 @@ async function serve(folder: string, style: string) {
       const type = TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream'
       if (style && type.startsWith('text/html'))
         body = addToHead(body.toString('utf8'), `<style data-brigade-knobs>${style}</style>`)
+      // A tool's pages get the bridge, as opened outside Brigade: \`brigade.inBrigade\` is false.
+      if (tool && type.startsWith('text/html'))
+        body = addToHead(body.toString('utf8'), toolBridgeScript(), { first: true })
       res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store' }).end(body)
     })().catch(() =>
       // Chrome asks for a favicon on its own: not the design's mistake.
