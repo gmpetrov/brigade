@@ -9,7 +9,7 @@ import {
   MarkIcon,
 } from '@/components/landing/compare'
 import { c, Icon } from '@/components/landing/parts'
-import { CHECKED, COMPARISONS, findComparison } from '@/lib/compare'
+import { checkedOn, COMPARISONS, findComparison } from '@/lib/compare'
 import { REPO_URL } from '@/lib/github-proof'
 import { pageMetadata, SITE_URL } from '@/lib/page-metadata'
 
@@ -55,7 +55,7 @@ export default async function Comparison({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <header className={c('vs-hero')}>
-        <CompareEyebrow checked={CHECKED} back />
+        <CompareEyebrow checked={checkedOn(x)} back />
         <div className={c('vs-pair')} aria-hidden="true">
           <LogoTile logo="brigade" />
           <span>vs</span>
@@ -155,7 +155,7 @@ export default async function Comparison({ params }: Props) {
 
       <details className={c('vs-sources')}>
         <summary>
-          Sources, checked on {CHECKED}
+          Sources, checked on {checkedOn(x)}
           <Icon name="arrow" />
         </summary>
         <p>

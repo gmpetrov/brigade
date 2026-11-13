@@ -15,7 +15,7 @@ export const revalidate = false
 
 const title = 'Brigade alternatives and comparisons'
 const description =
-  'How Brigade compares with OpenClaw, Grok Bot, Paperclip, Lindy, Sintra, Polsia, and Claude Code or Codex on their own: what each does, who pays for the AI, and when to pick which.'
+  'How Brigade compares with Rakazo, Grok Bot, OpenClaw, Hermes Agent, Claude Cowork, Manus, OpenAI dots, Meta Muse and other AI agents: what each does, who pays for the AI, and when to pick which.'
 
 export const metadata = pageMetadata('/compare', `${title} · Brigade`, description)
 
