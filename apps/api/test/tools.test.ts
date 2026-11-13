@@ -558,4 +558,40 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     assert.ok(read.truncated)
     assert.ok(JSON.stringify(read).length <= 1_100_000)
   })
+
+  test('a page counts bytes, and holds when values grow as it is read', async () => {
+    // 40,000 CJK characters: within the 100,000-character limit, 120 KB of UTF-8 each.
+    const wide = '漢'.repeat(40_000)
+    const key = (i: number) => `wide:${String(i).padStart(2, '0')}`
+    for (let i = 0; i < 20; i++)
+      await post('/state', { op: 'set', path: TOOL, shared: true, key: key(i), value: 'a' })
+    const bytesOf = (entries: { value: unknown }[]) =>
+      entries.reduce((n, e) => n + Buffer.byteLength(JSON.stringify(e.value)), 0)
+    // Another person makes every value large right after the listing's first statement: what it
+    // returns must still be what it measured.
+    const raw = prisma.$queryRaw.bind(prisma)
+    let grow = true
+    ;(prisma as { $queryRaw: unknown }).$queryRaw = async (...args: Parameters<typeof raw>) => {
+      const result = await raw(...args)
+      if (grow) {
+        grow = false
+        await prisma.toolState.updateMany({
+          where: { organizationId: org, key: { startsWith: 'wide:' } },
+          data: { value: wide },
+        })
+      }
+      return result
+    }
+    try {
+      const page = await post('/state', { op: 'list', path: TOOL, shared: true, prefix: 'wide:' })
+      assert.equal(grow, false, 'the values grew during the listing')
+      const entries = page.body.result.entries as { value: unknown }[]
+      assert.ok(bytesOf(entries) <= 1_000_000, `a page of ${bytesOf(entries)} bytes`)
+    } finally {
+      ;(prisma as { $queryRaw: unknown }).$queryRaw = raw
+    }
+    const now = await post('/state', { op: 'list', path: TOOL, shared: true, prefix: 'wide:' })
+    assert.ok(now.body.result.next, 'large values need more than one page')
+    assert.ok(bytesOf(now.body.result.entries) <= 1_000_000)
+  })
 })

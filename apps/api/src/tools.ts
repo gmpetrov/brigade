@@ -468,8 +468,9 @@ const TOOL_STATE_PAGE_KEYS = 500
 const TOOL_STATE_ROWS_MAX = TOOL_STATE_KEYS_MAX * 5
 
 /**
- * One page of an owner's live keys, in key order, after `after`: their sizes are read first, and
- * values only for as many keys as fit in `bytes` (at least one), so no listing holds more.
+ * One page of an owner's live keys, in key order, after `after`: as many as fit in `bytes` of
+ * values (at least one), decided in one statement, so what it measures is what it returns (two
+ * reads could see another writer's larger values in between).
  */
 async function statePage(
   scope: Scope,
@@ -477,27 +478,39 @@ async function statePage(
   owner: string,
   options: { prefix?: string; after?: string; bytes: number },
 ) {
-  const sizes = await prisma.$queryRaw<{ key: string; size: number }[]>`
-    SELECT "key", octet_length("value"::text)::int AS "size" FROM "ToolState"
-    WHERE "workspaceId" = ${scope.workspaceId} AND "toolId" = ${toolId} AND "owner" = ${owner}
-      AND "deletedAt" IS NULL
-      AND starts_with("key", ${options.prefix ?? ''})
-      AND "key" COLLATE "C" > ${options.after ?? ''}
-    ORDER BY "key" COLLATE "C" LIMIT ${TOOL_STATE_PAGE_KEYS + 1}`
-  const keys: string[] = []
-  let used = 0
-  for (const { key, size } of sizes.slice(0, TOOL_STATE_PAGE_KEYS)) {
-    if (keys.length > 0 && used + size > options.bytes) break
-    keys.push(key)
-    used += size
-  }
-  const rows = keys.length
-    ? await scoped(scope).toolState.findMany({
-        where: { toolId, owner, key: { in: keys }, deletedAt: null },
-      })
-    : []
-  rows.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-  return { rows, next: keys.length < sizes.length ? keys.at(-1) : undefined }
+  const found = await prisma.$queryRaw<
+    {
+      key: string
+      value: unknown
+      version: number
+      updatedAt: Date
+      deletedAt: Date | null
+      total: bigint
+    }[]
+  >`
+    WITH page AS (
+      SELECT "key", "value", "version", "updatedAt", "deletedAt",
+        octet_length("value"::text) AS "size"
+      FROM "ToolState"
+      WHERE "workspaceId" = ${scope.workspaceId} AND "toolId" = ${toolId} AND "owner" = ${owner}
+        AND "deletedAt" IS NULL
+        AND starts_with("key", ${options.prefix ?? ''})
+        AND "key" COLLATE "C" > ${options.after ?? ''}
+      ORDER BY "key" COLLATE "C"
+      LIMIT ${TOOL_STATE_PAGE_KEYS + 1}
+    ), summed AS (
+      SELECT *,
+        row_number() OVER (ORDER BY "key" COLLATE "C") AS "n",
+        sum("size") OVER (ORDER BY "key" COLLATE "C") AS "running",
+        count(*) OVER () AS "total"
+      FROM page
+    )
+    SELECT "key", "value", "version", "updatedAt", "deletedAt", "total" FROM summed
+    WHERE "n" <= ${TOOL_STATE_PAGE_KEYS} AND ("n" = 1 OR "running" <= ${options.bytes})
+    ORDER BY "key" COLLATE "C"`
+  const total = Number(found[0]?.total ?? 0)
+  const rows = found.map(({ total: _, ...row }) => row)
+  return { rows, next: rows.length < total ? rows.at(-1)?.key : undefined }
 }
 
 /** Read or write a tool's state. A viewer reads the shared keys and keeps their own, as people do. */
