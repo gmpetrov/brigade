@@ -521,7 +521,13 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
         (
           await post(
             '/state',
-            { op: 'set', path: TOOL, shared: false, key: `big:${String(i).padStart(2, '0')}`, value: big },
+            {
+              op: 'set',
+              path: TOOL,
+              shared: false,
+              key: `big:${String(i).padStart(2, '0')}`,
+              value: big,
+            },
             'bob',
           )
         ).status,

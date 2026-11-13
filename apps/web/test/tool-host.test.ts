@@ -2,7 +2,15 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ToolAccount, ToolView } from '@brigade/contracts'
 import { ApiError } from '../lib/api'
-import { accountFor, answer, bridgeRequest, toolMessage, type ToolConfirm } from '../lib/tool-host'
+import {
+  accountFor,
+  answer,
+  bridgeRequest,
+  connectPort,
+  isBye,
+  toolMessage,
+  type ToolConfirm,
+} from '../lib/tool-host'
 
 // The dashboard's side of a tool's bridge (lib/tool-host.ts): what a tool's page asks, checked,
 // sent to the API, and confirmed by the person before a write or a message goes.
@@ -19,6 +27,7 @@ const account = (over: Partial<ToolAccount> = {}): ToolAccount => ({
 })
 const view = (accounts: ToolAccount[] = [account()]): ToolView => ({
   url: 'https://designs.example/t/x/index.html',
+  bridgeKey: 'k3y',
   folder: 'Film/review.tool',
   manifest: { title: 'Review' },
   toolId: 'doc1',
@@ -142,7 +151,7 @@ test('a message to the thread goes as the person, said to come from the tool, on
 test('state and files go to the API for this tool, whatever path the page names', async () => {
   const h = host()
   await answer(h.host, ask('state.set', { shared: true, key: 'k', value: [1], version: 2 }))
-  await answer(h.host, ask('state.list', { shared: false, prefix: 'clip:' }))
+  await answer(h.host, ask('state.list', { shared: false, prefix: 'clip:', after: 'clip:9' }))
   await answer(h.host, ask('files.list', { folder: 'Film/clips', path: 'Other/evil.tool' }))
   assert.deepEqual(h.calls, [
     {
@@ -151,8 +160,34 @@ test('state and files go to the API for this tool, whatever path the page names'
     },
     {
       path: '/tools/state',
-      body: { op: 'list', path: 'Film/review.tool', shared: false, prefix: 'clip:' },
+      body: {
+        op: 'list',
+        path: 'Film/review.tool',
+        shared: false,
+        prefix: 'clip:',
+        after: 'clip:9',
+      },
     },
     { path: '/tools/files', body: { path: 'Film/review.tool', folder: 'Film/clips' } },
   ])
+})
+
+test("a page opens its channel only with its address's key, and one port", () => {
+  const { port1, port2 } = new MessageChannel()
+  try {
+    const connect = { source: 'brigade-tool', type: 'connect', key: 'k3y' }
+    assert.equal(connectPort(connect, [port2], 'k3y'), port2)
+    // Another document the frame went to does not know it.
+    assert.equal(connectPort({ ...connect, key: 'guess' }, [port2], 'k3y'), null)
+    assert.equal(connectPort({ ...connect, key: undefined }, [port2], 'k3y'), null)
+    assert.equal(connectPort(connect, [], 'k3y'), null)
+    assert.equal(connectPort(connect, [port1, port2], 'k3y'), null)
+    assert.equal(connectPort(connect, [port2], ''), null, 'never without a key')
+    assert.equal(connectPort({ ...connect, type: 'call' }, [port2], 'k3y'), null)
+    assert.ok(isBye({ source: 'brigade-tool', type: 'bye' }))
+    assert.ok(!isBye({ source: 'brigade-tool', id: 'c1', method: 'me' }))
+  } finally {
+    port1.close()
+    port2.close()
+  }
 })

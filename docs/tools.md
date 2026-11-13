@@ -47,7 +47,7 @@ The sandbox host adds a script first in the head of a tool's pages (`toolBridgeS
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `me()`                                    | The viewer: `{ memberId, name }`.                                                                             |
 | `files.list(folder)`                      | The files of a folder `reads` lists, each with a `url` on the sandbox host (a few hours).                     |
-| `state.get/list/set/delete`               | The viewer's own keys.                                                                                        |
+| `state.get/list/set/delete`               | The viewer's own keys; `list(prefix, { after })` gives `{ entries, next }`, about 1 MB of values a page.      |
 | `shared.get/list/set/delete`              | Keys shared by everyone who opens the tool; `set(key, value, { version })` writes over the version read only. |
 | `apps.list()`, `apps.operations(account)` | The attached accounts, and an account's operations with their input schemas.                                  |
 | `apps.call(account, operation, input)`    | Calls an operation (named as the teammate's own tool for it); an account by kind or id.                       |
@@ -56,11 +56,16 @@ The sandbox host adds a script first in the head of a tool's pages (`toolBridgeS
 Each returns a Promise and rejects with an `Error` whose `code` says why when it matters
 (`conflict`, `declined`, `tool_changed`, `not_usable`, `no_account`, `no_thread`, `app_error`).
 
-The page talks only to the dashboard around it, by `postMessage`: its origin is opaque, it has no
-cookies, and its CSP lets it call nothing of the API (`toolCsp`). The dashboard
-(`components/tool-view.tsx`, `lib/tool-host.ts`) takes a message only from the tool's own frame
-(by its window), checks it again, makes the call with the person's session (`/api/tools/*`), and
-answers the frame it came from.
+The page talks only to the dashboard around it: its origin is opaque, it has no cookies, and its
+CSP lets it call nothing of the API (`toolCsp`). As it runs, the bridge opens a `MessageChannel` of
+its document's own and sends the dashboard one end, with the key the host wrote into the script for
+the tool's address (`bridgeKey`, which the dashboard gets with the view). A frame keeps its window
+when it navigates, so a check on the window alone would let a site the tool links to inherit the
+bridge: without the key, no channel opens. Calls and answers go over that channel only, so an answer
+never reaches a document that replaced the page; the page says `bye` as it goes, and what it was
+waiting for (a question to the person included) is dropped. The dashboard
+(`components/tool-view.tsx`, `lib/tool-host.ts`) checks each call again and makes it with the
+person's session (`/api/tools/*`).
 
 ## Decisions
 
@@ -73,8 +78,11 @@ answers the frame it came from.
   saving one file overwrite each other. `ToolState` keeps a key's JSON per tool (by its
   `index.html` document, so it follows the tool when it moves) and per owner: `shared`, or a
   member. A write over a version is one conditional statement; a key that changed meanwhile answers
-  409 with what is there now. Up to 100 KB a value and 2000 keys an owner. Viewers keep their own
-  state and read the shared; they change nothing everyone sees.
+  409 with what is there now. A deleted key stays as a tombstone, one version on, so a write over
+  a version read before it was deleted (and made again) is refused too. Up to 100 KB a value and
+  2000 keys an owner. A listing reads the values' sizes first and only as many values as fit in
+  about 1 MB (a page, with `next`): an API isolate has 128 MB in all. Viewers keep their own state
+  and read the shared; they change nothing everyone sees.
 - **Apps through operations, not a proxy.** A tool calls an attached account's operations by name,
   the same catalog teammates use (`grantOperations`, `connectors`, `mcpOperation`), never a URL with
   a token added. Brigade knows which operations write, and no credential ever reaches the page.
@@ -88,7 +96,12 @@ answers the frame it came from.
   attached the account saw: its calls are refused (`tool_changed`) until a member who may attach the
   account allows the tool again. This is the guard against a tool's script being changed to send an
   account's data elsewhere: a sandboxed page can always load an image from anywhere, so the CSP is
-  not one.
+  not one. So that the hash is the code that runs, scripts come only from the tool's own address
+  (`script-src` its `/t/<token>/` path, and scripts written in its pages): no script from a CDN,
+  which can change without the tool changing, no `eval`, no script from a `blob:` or `data:`
+  address. Library files it reads, under the same path, are never served as a script type (with
+  `nosniff`, a browser refuses to run them). A tool's own code can still build a script from text
+  it fetched on purpose: that is in the hashed code, for the person allowing it to see.
 - **Writes and messages wait for the person.** A write needs a `read_write` attachment and the
   person's confirmation in the dashboard's own dialog (`confirmed`, which only the dashboard sends:
   the page cannot reach the API). A message to the thread too. Reads go without asking: what the

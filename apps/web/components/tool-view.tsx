@@ -108,9 +108,7 @@ export function ToolPanel({
   waiting.current = asking
   const confirm = useCallback(
     (what: ToolConfirm, channel: number) =>
-      new Promise<boolean>((resolve) =>
-        setAsking((list) => [...list, { what, resolve, channel }]),
-      ),
+      new Promise<boolean>((resolve) => setAsking((list) => [...list, { what, resolve, channel }])),
     [],
   )
 

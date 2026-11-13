@@ -489,8 +489,10 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       'keeps state, calls App accounts and writes to its thread. A design is for looking at; a tool is for doing.',
     '## The folder',
     `Make it in a folder on this computer with \`${TOOL_ENTRY}\` and \`${TOOL_MANIFEST}\` at its top, and its scripts, ` +
-      'styles and assets beside them, linked by relative paths. Libraries and fonts from public CDNs are fine ' +
-      '(jsdelivr, unpkg, esm.sh, cdnjs, Google Fonts). Keep it one screen that fills the frame and works from 360px wide.',
+      'styles and assets beside them, linked by relative paths. Its scripts run only from its own files or written in ' +
+      'its pages: copy a library it needs into the folder (download its built file), never a `<script>` from a CDN, and ' +
+      'no `eval`. Stylesheets, fonts and images may come from public CDNs (Google Fonts, jsdelivr). Keep it one screen ' +
+      'that fills the frame and works from 360px wide.',
     `\`${TOOL_MANIFEST}\`:\n\n` +
       '```json\n' +
       '{\n' +
@@ -517,7 +519,8 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       '// url loads in <video src>, <img src> or fetch(): good for a few hours, list again for fresh ones\n' +
       'await brigade.state.get("ratings")                   // this person\'s own: { key, value, version, updatedAt }\n' +
       'await brigade.state.set("ratings", { "a.mp4": 5 })    // last write wins\n' +
-      'await brigade.state.list("clip:")                    // every key starting so\n' +
+      'await brigade.state.list("clip:")                    // { entries, next }: keys starting so, about 1 MB a page\n' +
+      'await brigade.state.list("clip:", { after: next })   // the next page\n' +
       'await brigade.state.delete("ratings")\n' +
       'await brigade.shared.get("decisions")                // the same, shared by everyone who opens the tool\n' +
       'await brigade.shared.set("decisions", next, { version })  // only over the version read; else rejects with code "conflict"\n' +
