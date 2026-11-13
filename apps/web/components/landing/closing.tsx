@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
 import { AuthLink } from './auth-link'
+import { FEATURED_ON } from './featured-on'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 import { Pebble } from './pebble'
 import { OPERATOR } from './operator'
@@ -255,7 +256,8 @@ export function FinalCall() {
 /**
  * Directories Brigade is listed on, shown on the landing page only: There's An AI For That
  * verifies its listing by finding this exact link on www.brigade.lol/ and on no other page,
- * so keep its href as they gave it and keep it out of the shared footer.
+ * so keep its href as they gave it and keep it out of the shared footer. The others
+ * (featured-on.ts) follow it in one quiet line of text.
  */
 function Featured() {
   return (
@@ -272,6 +274,27 @@ function Featured() {
           alt="Featured on There's An AI For That"
         />
       </a>
+      {FEATURED_ON.length > 0 && (
+        <ul className={c('foot-links')} aria-label="Also featured on">
+          {FEATURED_ON.map((d) => (
+            <li key={d.href}>
+              {d.badge ? (
+                <a className={c('foot-badge')} href={d.href} title={d.name}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- the directory's own badge, served by it */}
+                  <img
+                    src={d.badge.src}
+                    alt={d.badge.alt}
+                    width={d.badge.width}
+                    height={d.badge.height}
+                  />
+                </a>
+              ) : (
+                <a href={d.href}>{d.name}</a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
