@@ -451,7 +451,7 @@ const DESIGN_CSP = [
   "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'",
   `connect-src 'self' data: blob: ${STATIC_HOSTS.join(' ')}`,
   "form-action 'none'",
-  `frame-ancestors ${env.WEB_URL.join(' ')}`,
+  `frame-ancestors ${[...env.WEB_URL, ...env.SANDBOX_FRAME_ANCESTORS].join(' ')}`,
 ].join('; ')
 
 /** The file a design's address asks for, under `prefix`: its parts in the folder, or null. */
