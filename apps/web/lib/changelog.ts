@@ -29,6 +29,115 @@ export type ChangelogRelease = {
 
 export const RELEASES: ChangelogRelease[] = [
   {
+    slug: '2026-11-13',
+    version: '0.5.0',
+    title: 'Goals, one file panel and Vercel',
+    summary:
+      'Type /goal and a teammate keeps working until Brigade measures that the goal is reached. Every library file opens in one panel, documents open at once, and Vercel joins the built-in Apps. Threads open the moment you click them, and mailbox rules can keep mail in the Inbox.',
+    sections: [
+      {
+        heading: 'Highlights',
+        items: [
+          {
+            title: 'Goals',
+            text: 'Type /goal and what you want reached. The teammate proposes how Brigade will measure it (a command, a figure from an App, the ticked lines of a list, or your own judgment), the target, a deadline, a budget and what it may do without asking. Once you approve, Brigade keeps it working until the measurement says the goal is reached, and a banner shows its progress with Pause, Resume and Stop.',
+            prs: [828, 831],
+          },
+          {
+            title: 'One file panel',
+            text: 'Every library file opens in the document panel, from the Library, search, a thread or a mention: Markdown in the live editor, other text as text, the rest as a preview, with History, Share and Download. Documents open at once, say nothing while they save and warn only when offline, the path starts at the top of the library, and a minimized document folds into a round button under Preview.',
+            prs: [790, 792, 795, 791, 787, 793, 813],
+          },
+          {
+            title: 'Vercel',
+            text: 'Vercel is a built-in App: add it from Add an App and sign in with Vercel.',
+            prs: [809],
+          },
+          {
+            title: 'Mailbox rules',
+            text: 'Edit a mailbox rule in place, and give a rule Nobody as its teammate to keep the mail it matches in the Inbox for a person.',
+            prs: [799, 800],
+          },
+        ],
+      },
+      {
+        heading: 'Improvements',
+        items: [
+          {
+            title: 'A faster thread',
+            text: 'A thread opens from the sidebar the moment you click it, even while others work, showing its end first. Take control and Hand back change at once, and on an iPhone, Back shows the page as you left it.',
+            prs: [807, 811, 826, 797],
+          },
+          {
+            title: 'Wake-ups in sub-threads',
+            text: 'A sub-thread can set a wake-up to check on something later, and reports once it has.',
+            prs: [820],
+          },
+          {
+            title: 'Choices',
+            text: 'A choices card is a compact list of soft tiles with numbered marks, and has a field to answer in your own words.',
+            prs: [802, 803, 804, 805, 806],
+          },
+          {
+            title: 'Emails in threads',
+            text: 'A long email folds under Show more, and long links, in the Inbox too, show as the site they lead to.',
+            prs: [825],
+          },
+          {
+            title: 'Models',
+            text: 'Claude Fable 5.2 joins the teammate model list, and runners move to Claude Code 2.1.319 and Codex 0.167.0.',
+            prs: [821, 794],
+          },
+          {
+            title: 'Pebbles',
+            text: 'Each teammate’s pebble takes a shape of its own, drawn from the teammate, in the colours of Brigade’s cover.',
+            prs: [819, 818],
+          },
+          {
+            title: 'Demo and comparisons',
+            text: 'The demo on the landing page has a fifth walkthrough that works through a list, and plays in Safari. Comparison pages set Brigade beside OpenClaw, Grok Bot, Lindy and others.',
+            prs: [801, 808, 810, 823, 832],
+          },
+        ],
+      },
+      {
+        heading: 'Security',
+        items: [
+          {
+            title: 'Browser hardening',
+            text: 'A strict Content Security Policy, a check against cross-site requests on writes, and signing out clears what the browser kept, so no draft reaches the next person to sign in.',
+            prs: [814],
+          },
+        ],
+      },
+      {
+        heading: 'Fixes',
+        items: [
+          {
+            title: 'Phones',
+            text: 'The Board stays within the screen on a phone.',
+            prs: [796],
+          },
+          {
+            title: 'Videos',
+            text: 'A video or sound in a thread keeps playing after its link expires.',
+            prs: [817],
+          },
+          {
+            title: 'Teammates’ tools',
+            text: 'A teammate’s first message in a new Claude Code process waits until Brigade’s tools are connected, so it no longer finds them missing.',
+            prs: [815],
+          },
+          {
+            title: 'First run',
+            text: 'Clicking twice during onboarding no longer makes a second organization, and two turns starting together on a new computer no longer make one fail.',
+            prs: [833],
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: '2026-11-08',
     version: '0.4.0',
     title: 'Asides, Today and a faster thread',
