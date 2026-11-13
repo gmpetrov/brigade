@@ -259,6 +259,11 @@ export const ThreadSpec = z.object({
    * there (run_on_machine). Older APIs leave it out: none, as before.
    */
   machine: z.boolean().default(false),
+  /**
+   * The thread's starter has Tools (the tools feature, docs/tools.md): its teammates may make
+   * them. Older APIs leave it out: none.
+   */
+  tools: z.boolean().default(false),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
@@ -670,6 +675,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       z.object({ name: z.literal('design_edits'), path: LibraryPath }),
       /** Propose a skill, or a change to one: it waits for a person's approval in a ticket. */
       z.object({ name: z.literal('skill_proposal'), proposal: SkillProposal }),
+      /**
+       * A tool's state (docs/tools.md): its shared keys, and those of the person the thread works
+       * for. Read only.
+       */
+      z.object({ name: z.literal('tool_state'), path: LibraryPath }),
     ]),
   }),
   /**

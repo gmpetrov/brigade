@@ -403,20 +403,21 @@ export async function designZip(db: ScopedDb, scope: Scope, path: string) {
 /** Largest design the API zips. */
 const ZIP_MAX = 100 * 1024 * 1024
 
-const designHost = new URL(env.DESIGN_URL).host
+export const designHost = new URL(env.DESIGN_URL).host
 /** The sandbox origin is its own host only when it differs from the API's. */
-const separateHost = designHost !== new URL(env.API_URL).host
+export const separateHost = designHost !== new URL(env.API_URL).host
 if (!separateHost)
   console.warn(
     `Designs are served from the API's own host (${designHost}). Set DESIGN_URL to another host that points at this API, ideally on another domain.`,
   )
 
-/** On the sandbox host, only designs answer: nothing else of the API is reachable there. */
+/** On the sandbox host, only designs and tools answer: nothing else of the API is reachable there. */
 export const sandboxHostOnlyDesigns: MiddlewareHandler = async (c, next) => {
   if (
     separateHost &&
     c.req.header('host') === designHost &&
     !c.req.path.startsWith('/v/') &&
+    !c.req.path.startsWith('/t/') &&
     !c.req.path.startsWith('/s/')
   )
     return c.text('Not found', 404)
@@ -427,7 +428,7 @@ export const sandboxHostOnlyDesigns: MiddlewareHandler = async (c, next) => {
  * Public CDNs of static files a design's script may fetch from: to inline fonts
  * and images when the viewer captures the page. Nothing there acts for anyone.
  */
-const STATIC_HOSTS = [
+export const STATIC_HOSTS = [
   'https://fonts.googleapis.com',
   'https://fonts.gstatic.com',
   'https://cdn.jsdelivr.net',
@@ -454,7 +455,7 @@ const DESIGN_CSP = [
 ].join('; ')
 
 /** The file a design's address asks for, under `prefix`: its parts in the folder, or null. */
-function askedFile(path: string, prefix: string) {
+export function askedFile(path: string, prefix: string) {
   let rest: string[]
   try {
     rest = path.slice(prefix.length).split('/').map(decodeURIComponent)

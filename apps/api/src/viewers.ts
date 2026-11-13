@@ -20,6 +20,8 @@ const OWN_WRITES: [string, RegExp][] = [
   ['DELETE', /^\/api\/lists\/[^/]+\/pin$/],
   ['PUT', /^\/api\/me\/(sidebar-order|suggestions)$/],
   ['POST', /^\/api\/home\/dismiss$/],
+  // Opening a tool and what its page reads; their own state (shared state: src/tools.ts refuses).
+  ['POST', /^\/api\/tools\/(view|files|state)$/],
   ['PUT', /^\/api\/notifications\/preset$/],
   ['POST', /^\/api\/notifications\/(devices|devices\/remove|test)$/],
 ]

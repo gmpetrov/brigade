@@ -431,6 +431,20 @@ export type LibraryFolderGrant = Prisma.LibraryFolderGrantModel
  */
 export type LibraryShare = Prisma.LibraryShareModel
 /**
+ * Model ToolState
+ * State a tool keeps (docs/tools.md): a key's JSON value, for everyone who opens the tool
+ * (`owner` "shared") or for one member (`owner` their member id). Keyed by the tool's
+ * `index.html` document, so it follows the tool when it moves; gone with it.
+ */
+export type ToolState = Prisma.ToolStateModel
+/**
+ * Model ToolAccount
+ * An App account attached to a tool (docs/tools.md): the tool's page may call its operations,
+ * through the dashboard, for people allowed to use the account. `codeHash` is the tool's files
+ * when it was attached: once they change, its calls wait until a person allows it again.
+ */
+export type ToolAccount = Prisma.ToolAccountModel
+/**
  * Model DocumentAsset
  * A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes
  * are in the bucket under <organization>/<workspace>/assets/<id>; the document refers to it as

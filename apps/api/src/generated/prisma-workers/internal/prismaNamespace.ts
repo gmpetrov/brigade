@@ -462,6 +462,8 @@ export const ModelName = {
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
   LibraryShare: 'LibraryShare',
+  ToolState: 'ToolState',
+  ToolAccount: 'ToolAccount',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   WorkspaceCleanup: 'WorkspaceCleanup',
@@ -520,7 +522,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "toolState" | "toolAccount" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5334,6 +5336,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ToolState: {
+      payload: Prisma.$ToolStatePayload<ExtArgs>
+      fields: Prisma.ToolStateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ToolStateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ToolStateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        findFirst: {
+          args: Prisma.ToolStateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ToolStateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        findMany: {
+          args: Prisma.ToolStateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>[]
+        }
+        create: {
+          args: Prisma.ToolStateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        createMany: {
+          args: Prisma.ToolStateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ToolStateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>[]
+        }
+        delete: {
+          args: Prisma.ToolStateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        update: {
+          args: Prisma.ToolStateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        deleteMany: {
+          args: Prisma.ToolStateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ToolStateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ToolStateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>[]
+        }
+        upsert: {
+          args: Prisma.ToolStateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolStatePayload>
+        }
+        aggregate: {
+          args: Prisma.ToolStateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateToolState>
+        }
+        groupBy: {
+          args: Prisma.ToolStateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ToolStateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ToolStateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ToolStateCountAggregateOutputType> | number
+        }
+      }
+    }
+    ToolAccount: {
+      payload: Prisma.$ToolAccountPayload<ExtArgs>
+      fields: Prisma.ToolAccountFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ToolAccountFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ToolAccountFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        findFirst: {
+          args: Prisma.ToolAccountFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ToolAccountFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        findMany: {
+          args: Prisma.ToolAccountFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>[]
+        }
+        create: {
+          args: Prisma.ToolAccountCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        createMany: {
+          args: Prisma.ToolAccountCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ToolAccountCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>[]
+        }
+        delete: {
+          args: Prisma.ToolAccountDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        update: {
+          args: Prisma.ToolAccountUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        deleteMany: {
+          args: Prisma.ToolAccountDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ToolAccountUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ToolAccountUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>[]
+        }
+        upsert: {
+          args: Prisma.ToolAccountUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ToolAccountPayload>
+        }
+        aggregate: {
+          args: Prisma.ToolAccountAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateToolAccount>
+        }
+        groupBy: {
+          args: Prisma.ToolAccountGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ToolAccountGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ToolAccountCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ToolAccountCountAggregateOutputType> | number
+        }
+      }
+    }
     DocumentAsset: {
       payload: Prisma.$DocumentAssetPayload<ExtArgs>
       fields: Prisma.DocumentAssetFieldRefs
@@ -9685,6 +9835,39 @@ export const LibraryShareScalarFieldEnum = {
 export type LibraryShareScalarFieldEnum = (typeof LibraryShareScalarFieldEnum)[keyof typeof LibraryShareScalarFieldEnum]
 
 
+export const ToolStateScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  toolId: 'toolId',
+  owner: 'owner',
+  key: 'key',
+  value: 'value',
+  version: 'version',
+  updatedByMemberId: 'updatedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ToolStateScalarFieldEnum = (typeof ToolStateScalarFieldEnum)[keyof typeof ToolStateScalarFieldEnum]
+
+
+export const ToolAccountScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  toolId: 'toolId',
+  connectionId: 'connectionId',
+  access: 'access',
+  codeHash: 'codeHash',
+  attachedByMemberId: 'attachedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ToolAccountScalarFieldEnum = (typeof ToolAccountScalarFieldEnum)[keyof typeof ToolAccountScalarFieldEnum]
+
+
 export const DocumentAssetScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -11514,6 +11697,8 @@ export type GlobalOmitConfig = {
   libraryFolder?: Prisma.LibraryFolderOmit
   libraryFolderGrant?: Prisma.LibraryFolderGrantOmit
   libraryShare?: Prisma.LibraryShareOmit
+  toolState?: Prisma.ToolStateOmit
+  toolAccount?: Prisma.ToolAccountOmit
   documentAsset?: Prisma.DocumentAssetOmit
   bucketCleanup?: Prisma.BucketCleanupOmit
   workspaceCleanup?: Prisma.WorkspaceCleanupOmit

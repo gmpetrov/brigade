@@ -15,6 +15,9 @@ import {
   DESIGN_SYSTEM_PREVIEW,
   DESIGN_SYSTEM_README,
   DESIGN_SYSTEM_TOKENS,
+  TOOL_ENTRY,
+  TOOL_MANIFEST,
+  TOOL_SUFFIX,
   PROPOSE_TEAM_TOOL,
   BUILTIN_SKILL_PREFIX,
   builtinSkillDescription,
@@ -140,6 +143,7 @@ export function instructions(
     spec.rules && rules(spec.rules),
     spec.chiefAnswers && spec.teammate.kind !== 'chief' && CHIEF_ANSWERS,
     designs(spec),
+    toolsSection(spec),
     projectDocuments(spec),
     spec.git && code(spec),
     PREVIEWS,
@@ -458,6 +462,102 @@ function designs(spec: ThreadSpec) {
   ].join('\n\n')
 }
 
+/** Tools (docs/tools.md): for teammates who can save to the library, where the thread's starter has them. */
+const canMakeTools = (spec: ThreadSpec) => spec.tools && canSaveToLibrary(spec)
+
+const TOOLS_SKILL = `${BUILTIN_SKILL_PREFIX}tools`
+
+/** Tools: when to make one, here; how, in `brigade-tools`. */
+function toolsSection(spec: ThreadSpec) {
+  if (!canMakeTools(spec)) return ''
+  return [
+    '## Tools',
+    'When people need to work with something rather than look at it (a dashboard for a campaign, a board to review and ' +
+      'approve generated clips, a tracker, a form that feeds a thread), make a tool: a small web app saved in the library, ' +
+      'which people open beside a page or a thread. It reads library folders, keeps state, calls App accounts people ' +
+      `attach to it and sends messages to its thread. Read the \`${TOOLS_SKILL}\` skill before you make or change one.`,
+  ].join('\n\n')
+}
+
+/** Making tools: Brigade's skill for them. */
+function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
+  if (!canMakeTools(spec)) return []
+  const instructions = [
+    '# Tools',
+    'A tool is a small web app in the library: a dashboard, a review board, a tracker, a form. People open it beside a ' +
+      'page or a thread and work in it. Unlike a design, it works: through `window.brigade` it lists library folders, ' +
+      'keeps state, calls App accounts and writes to its thread. A design is for looking at; a tool is for doing.',
+    '## The folder',
+    `Make it in a folder on this computer with \`${TOOL_ENTRY}\` and \`${TOOL_MANIFEST}\` at its top, and its scripts, ` +
+      'styles and assets beside them, linked by relative paths. Libraries and fonts from public CDNs are fine ' +
+      '(jsdelivr, unpkg, esm.sh, cdnjs, Google Fonts). Keep it one screen that fills the frame and works from 360px wide.',
+    `\`${TOOL_MANIFEST}\`:\n\n` +
+      '```json\n' +
+      '{\n' +
+      '  "title": "Clip review",\n' +
+      '  "description": "Watch the generated clips, approve or reject each, and send the picks to the thread.",\n' +
+      '  "reads": ["Projects/Film/clips"],\n' +
+      '  "apps": [{ "kind": "github", "access": "read", "why": "Lists the open pull requests" }],\n' +
+      '  "hosts": ["https://api.coingecko.com"]\n' +
+      '}\n' +
+      '```\n\n' +
+      '- `reads`: library folders it lists and loads (its own folder always). Nothing else of the library reaches it.\n' +
+      "- `apps`: Apps it calls, by kind (`github`, `posthog`, `stripe`, `gmail`, a custom server's prefix…). `access` " +
+      'is `read` (default) or `read_write` when it changes things there. A person attaches an account of each from the ' +
+      "tool's Accounts button; until then, and again after each save that changes the tool, its calls are refused.\n" +
+      '- `hosts`: public APIs its script calls directly with `fetch`, needing no account. Anything else it calls goes ' +
+      'through `window.brigade`.',
+    '## window.brigade',
+    'Brigade adds it to every page of the tool. Each call returns a Promise and may reject with an `Error` (its ' +
+      '`code` says why when it matters). Opened outside Brigade (as `check_design` renders it), `brigade.inBrigade` ' +
+      'is false and every call rejects: show sample data then, so the screenshots show the real layout.\n\n' +
+      '```js\n' +
+      'await brigade.me()                                   // { memberId, name }\n' +
+      'await brigade.files.list("Projects/Film/clips")      // [{ path, name, contentType, size, updatedAt, url }]\n' +
+      '// url loads in <video src>, <img src> or fetch(): good for a few hours, list again for fresh ones\n' +
+      'await brigade.state.get("ratings")                   // this person\'s own: { key, value, version, updatedAt }\n' +
+      'await brigade.state.set("ratings", { "a.mp4": 5 })    // last write wins\n' +
+      'await brigade.state.list("clip:")                    // every key starting so\n' +
+      'await brigade.state.delete("ratings")\n' +
+      'await brigade.shared.get("decisions")                // the same, shared by everyone who opens the tool\n' +
+      'await brigade.shared.set("decisions", next, { version })  // only over the version read; else rejects with code "conflict"\n' +
+      'await brigade.apps.list()                            // [{ connectionId, kind, app, account, access, usable, changed }]\n' +
+      'await brigade.apps.operations("github")              // [{ name, description, write, inputSchema }]\n' +
+      'await brigade.apps.call("github", "github_list_pull_requests", { repository: "acme/web" })\n' +
+      'await brigade.thread.send("Approved: a.mp4, c.mp4. Rejected: b.mp4.")\n' +
+      '```\n\n' +
+      '- Keys hold JSON up to 100 KB each, up to 2000 keys a person and 2000 shared. Keep what each person does ' +
+      '(ratings, notes, their picks) in `state`, and what the team decides together in `shared`, written with the ' +
+      'version it read so two people never overwrite each other.\n' +
+      '- `apps.call` takes an account by its kind or `connectionId`, and an operation by the same name as your own tool for it ' +
+      '(`github_list_pull_requests`); `apps.operations` lists them with their input schemas. Its result is what the App ' +
+      'returned. A write (an operation that changes something) needs `"access": "read_write"` and Brigade asks the person ' +
+      'to confirm each one in its own dialog: call writes only from a click.\n' +
+      '- `thread.send` writes in the thread that saved the tool last, as the person, once they confirm. Use it to hand ' +
+      'work back ("send my picks"): it is how you learn what they did. You can also read a tool\'s state yourself with ' +
+      '`read_tool_state`.\n' +
+      '- Show a quiet message when an account is missing or not usable (`apps.list`: `usable` false is a personal ' +
+      'account of someone else; `changed` true waits for someone to allow the tool again).',
+    '## Saving',
+    'Check it with `check_design` on the folder (it renders like a design: screenshots and the errors its page logged), ' +
+      `open the screenshots and fix what is off. Then save it with \`save_tool\` to a library path ending in \`${TOOL_SUFFIX}\`, ` +
+      'next to the work it belongs to, and name it in your reply by the `mention` `save_tool` returns: it opens the ' +
+      'tool beside the thread. Saving again replaces it; the library keeps earlier versions. ' +
+      `Before you change a saved tool, copy its files from \`${libraryDir}/<path>/\` over your working copy.`,
+  ].join('\n\n')
+  return [
+    {
+      name: TOOLS_SKILL,
+      description:
+        'Make, change, check and save a tool: a small web app in the library (a dashboard, a review board, a tracker) ' +
+        'that lists library folders, keeps state, calls App accounts and writes to its thread. Read before any tool work.',
+      instructions,
+      files: [],
+      refs: [],
+    },
+  ]
+}
+
 /** Whether an admin turned one of Brigade's own skills off for the workspace. */
 const builtinOff = (spec: ThreadSpec, name: string) => (spec.builtinSkillsOff ?? []).includes(name)
 
@@ -622,6 +722,7 @@ const skills = (spec: ThreadSpec) =>
  */
 export const builtinSkills = (spec: ThreadSpec, libraryDir: string): ThreadSkill[] => [
   ...designSkills(spec, libraryDir),
+  ...toolSkills(spec, libraryDir),
   ...librarySkills(spec),
   PREVIEW_SKILL,
   TEACH_SKILL,
