@@ -341,7 +341,7 @@ export async function attachToolAccount(
   }
   await db.toolAccount.upsert({
     where: { toolId_connectionId: { toolId: tool.entry.id, connectionId: connection.id } },
-    create: { ...scope, toolId: tool.entry.id, connectionId: connection.id, ...data },
+    create: { toolId: tool.entry.id, connectionId: connection.id, ...data },
     update: data,
   })
   await audit({
@@ -492,7 +492,7 @@ export async function toolState(
         message: `A tool keeps at most ${TOOL_STATE_KEYS_MAX} keys for each person, and as many shared`,
       })
     return db.toolState.create({
-      data: { ...scope, toolId: tool.entry.id, owner, key: request.key, value, ...by },
+      data: { toolId: tool.entry.id, owner, key: request.key, value, ...by },
     })
   }
   if (request.version === 0) {
