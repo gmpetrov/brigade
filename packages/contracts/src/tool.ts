@@ -91,6 +91,8 @@ export type ToolAccount = {
 export type ToolView = {
   /** Its page on the sandbox origin, good for a few hours. */
   url: string
+  /** The key its page's bridge connects with (lib/tool-host.ts): only that page knows it. */
+  bridgeKey: string
   folder: string
   manifest: ToolManifest | null
   /** The tool's id: its `index.html`'s. State and attached accounts stay with it when it moves. */
@@ -136,6 +138,8 @@ export const ToolStateRequest = z.discriminatedUnion('op', [
     path: LibraryPath,
     shared: z.boolean(),
     prefix: z.string().max(TOOL_STATE_KEY_MAX).optional(),
+    /** The next page: the `next` the last one gave. */
+    after: z.string().max(TOOL_STATE_KEY_MAX).optional(),
   }),
   z.object({
     op: z.literal('set'),
@@ -240,52 +244,65 @@ export type ToolBridgeRequest = z.infer<typeof ToolBridgeRequest>
 export const TOOL_MESSAGE_MAX = 20_000
 
 // The script the sandbox host adds first to a tool's pages (docs/tools.md): it
-// gives the page `window.brigade`, whose calls go to the dashboard around it by
-// postMessage, since the page's origin is opaque and it reaches nothing of the
-// API itself. The dashboard checks each call, makes it with the person's
-// session, asks the person before any that changes something, and answers.
-// Messages it sends carry `source: 'brigade-tool'`; it reads only answers from
-// its parent with `source: 'brigade-host'`. Outside Brigade (the page opened on
-// its own), every call fails saying so, and `brigade.inBrigade` is false.
+// gives the page `window.brigade`, whose calls go to the dashboard around it,
+// since the page's origin is opaque and it reaches nothing of the API itself.
+// The dashboard checks each call, makes it with the person's session, asks the
+// person before any that changes something, and answers.
 //
-// Plain JavaScript in a string: it runs in the tool's page, not here. The runner's check_design
-// adds it too, so a tool renders there as when opened outside Brigade.
-
+// The calls go over a MessageChannel of this document's own: the script opens it
+// as it runs, sending the dashboard one end with `connect` and the key the host
+// wrote into the script for this tool's address. A frame keeps its window when it
+// navigates, so a page the tool's frame goes to next (a link to another site)
+// would pass any check on the window: without the key it opens no channel, and
+// answers to this document's calls go to its port, gone with it. As the page
+// goes, it says so (`bye`): what it asked and waits for is dropped.
+// Outside Brigade (the page opened on its own, or rendered by check_design),
+// every call fails saying so, and `brigade.inBrigade` is false.
+//
 const SOURCE = String.raw`(function () {
   if (window.brigade) return
-  var framed = window.parent !== window
+  var script = document.currentScript
+  var key = (script && script.getAttribute('data-key')) || ''
+  var framed = window.parent !== window && !!key
   var pending = {}
   var next = 1
+  var port = null
+  if (framed) {
+    var channel = new MessageChannel()
+    port = channel.port1
+    port.onmessage = function (event) {
+      var m = event.data
+      if (!m || m.source !== 'brigade-host' || typeof m.id !== 'string' || !pending[m.id]) return
+      var p = pending[m.id]
+      delete pending[m.id]
+      if (m.ok) return p.resolve(m.result)
+      var error = new Error(m.error || 'The call failed')
+      if (m.code) error.code = m.code
+      p.reject(error)
+    }
+    window.parent.postMessage({ source: 'brigade-tool', type: 'connect', key: key }, '*', [
+      channel.port2,
+    ])
+    window.addEventListener('pagehide', function () {
+      port.postMessage({ source: 'brigade-tool', type: 'bye' })
+    })
+  }
   var call = function (method, params) {
     if (!framed)
       return Promise.reject(new Error('Open this tool in Brigade to use brigade.' + method))
     return new Promise(function (resolve, reject) {
       var id = 'c' + next++
       pending[id] = { resolve: resolve, reject: reject }
-      window.parent.postMessage(
-        { source: 'brigade-tool', id: id, method: method, params: params || {} },
-        '*',
-      )
+      port.postMessage({ source: 'brigade-tool', id: id, method: method, params: params || {} })
     })
   }
-  window.addEventListener('message', function (event) {
-    if (event.source !== window.parent) return
-    var m = event.data
-    if (!m || m.source !== 'brigade-host' || typeof m.id !== 'string' || !pending[m.id]) return
-    var p = pending[m.id]
-    delete pending[m.id]
-    if (m.ok) return p.resolve(m.result)
-    var error = new Error(m.error || 'The call failed')
-    if (m.code) error.code = m.code
-    p.reject(error)
-  })
   var state = function (shared) {
     return {
       get: function (key) {
         return call('state.get', { shared: shared, key: key })
       },
-      list: function (prefix) {
-        return call('state.list', { shared: shared, prefix: prefix })
+      list: function (prefix, options) {
+        return call('state.list', { shared: shared, prefix: prefix, after: options && options.after })
       },
       set: function (key, value, options) {
         return call('state.set', {
@@ -332,4 +349,9 @@ const SOURCE = String.raw`(function () {
 })()`
 
 /** The bridge, as a script tag for the start of a tool page's head. */
-export const toolBridgeScript = () => `<script data-brigade-tool-bridge>${SOURCE}</script>`
+/**
+ * The bridge, as a script tag for the start of a tool page's head, with the key of the tool's
+ * address (none outside Brigade: it connects nowhere).
+ */
+export const toolBridgeScript = (key = '') =>
+  `<script data-brigade-tool-bridge${key ? ` data-key="${key.replace(/[^\w-]/g, '')}"` : ''}>${SOURCE}</script>`

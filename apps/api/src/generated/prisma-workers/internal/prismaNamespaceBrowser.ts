@@ -1318,6 +1318,7 @@ export const ToolStateScalarFieldEnum = {
   key: 'key',
   value: 'value',
   version: 'version',
+  deletedAt: 'deletedAt',
   updatedByMemberId: 'updatedByMemberId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

@@ -44,6 +44,7 @@ export type ToolStateMinAggregateOutputType = {
   owner: string | null
   key: string | null
   version: number | null
+  deletedAt: Date | null
   updatedByMemberId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -57,6 +58,7 @@ export type ToolStateMaxAggregateOutputType = {
   owner: string | null
   key: string | null
   version: number | null
+  deletedAt: Date | null
   updatedByMemberId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -71,6 +73,7 @@ export type ToolStateCountAggregateOutputType = {
   key: number
   value: number
   version: number
+  deletedAt: number
   updatedByMemberId: number
   createdAt: number
   updatedAt: number
@@ -94,6 +97,7 @@ export type ToolStateMinAggregateInputType = {
   owner?: true
   key?: true
   version?: true
+  deletedAt?: true
   updatedByMemberId?: true
   createdAt?: true
   updatedAt?: true
@@ -107,6 +111,7 @@ export type ToolStateMaxAggregateInputType = {
   owner?: true
   key?: true
   version?: true
+  deletedAt?: true
   updatedByMemberId?: true
   createdAt?: true
   updatedAt?: true
@@ -121,6 +126,7 @@ export type ToolStateCountAggregateInputType = {
   key?: true
   value?: true
   version?: true
+  deletedAt?: true
   updatedByMemberId?: true
   createdAt?: true
   updatedAt?: true
@@ -222,6 +228,7 @@ export type ToolStateGroupByOutputType = {
   key: string
   value: runtime.JsonValue
   version: number
+  deletedAt: Date | null
   updatedByMemberId: string | null
   createdAt: Date
   updatedAt: Date
@@ -259,6 +266,7 @@ export type ToolStateWhereInput = {
   key?: Prisma.StringFilter<"ToolState"> | string
   value?: Prisma.JsonFilter<"ToolState">
   version?: Prisma.IntFilter<"ToolState"> | number
+  deletedAt?: Prisma.DateTimeNullableFilter<"ToolState"> | Date | string | null
   updatedByMemberId?: Prisma.StringNullableFilter<"ToolState"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
@@ -275,6 +283,7 @@ export type ToolStateOrderByWithRelationInput = {
   key?: Prisma.SortOrder
   value?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -295,6 +304,7 @@ export type ToolStateWhereUniqueInput = Prisma.AtLeast<{
   key?: Prisma.StringFilter<"ToolState"> | string
   value?: Prisma.JsonFilter<"ToolState">
   version?: Prisma.IntFilter<"ToolState"> | number
+  deletedAt?: Prisma.DateTimeNullableFilter<"ToolState"> | Date | string | null
   updatedByMemberId?: Prisma.StringNullableFilter<"ToolState"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
@@ -311,6 +321,7 @@ export type ToolStateOrderByWithAggregationInput = {
   key?: Prisma.SortOrder
   value?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -333,6 +344,7 @@ export type ToolStateScalarWhereWithAggregatesInput = {
   key?: Prisma.StringWithAggregatesFilter<"ToolState"> | string
   value?: Prisma.JsonWithAggregatesFilter<"ToolState">
   version?: Prisma.IntWithAggregatesFilter<"ToolState"> | number
+  deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ToolState"> | Date | string | null
   updatedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"ToolState"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ToolState"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ToolState"> | Date | string
@@ -345,6 +357,7 @@ export type ToolStateCreateInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -361,6 +374,7 @@ export type ToolStateUncheckedCreateInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -373,6 +387,7 @@ export type ToolStateUpdateInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -389,6 +404,7 @@ export type ToolStateUncheckedUpdateInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -403,6 +419,7 @@ export type ToolStateCreateManyInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -415,6 +432,7 @@ export type ToolStateUpdateManyMutationInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -429,6 +447,7 @@ export type ToolStateUncheckedUpdateManyInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -459,6 +478,7 @@ export type ToolStateCountOrderByAggregateInput = {
   key?: Prisma.SortOrder
   value?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
   updatedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -476,6 +496,7 @@ export type ToolStateMaxOrderByAggregateInput = {
   owner?: Prisma.SortOrder
   key?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
   updatedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -489,6 +510,7 @@ export type ToolStateMinOrderByAggregateInput = {
   owner?: Prisma.SortOrder
   key?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
   updatedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -589,6 +611,7 @@ export type ToolStateCreateWithoutWorkspaceInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -603,6 +626,7 @@ export type ToolStateUncheckedCreateWithoutWorkspaceInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -646,6 +670,7 @@ export type ToolStateScalarWhereInput = {
   key?: Prisma.StringFilter<"ToolState"> | string
   value?: Prisma.JsonFilter<"ToolState">
   version?: Prisma.IntFilter<"ToolState"> | number
+  deletedAt?: Prisma.DateTimeNullableFilter<"ToolState"> | Date | string | null
   updatedByMemberId?: Prisma.StringNullableFilter<"ToolState"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ToolState"> | Date | string
@@ -658,6 +683,7 @@ export type ToolStateCreateWithoutToolInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -672,6 +698,7 @@ export type ToolStateUncheckedCreateWithoutToolInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -711,6 +738,7 @@ export type ToolStateCreateManyWorkspaceInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -723,6 +751,7 @@ export type ToolStateUpdateWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -737,6 +766,7 @@ export type ToolStateUncheckedUpdateWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -750,6 +780,7 @@ export type ToolStateUncheckedUpdateManyWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -763,6 +794,7 @@ export type ToolStateCreateManyToolInput = {
   key: string
   value: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: number
+  deletedAt?: Date | string | null
   updatedByMemberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -775,6 +807,7 @@ export type ToolStateUpdateWithoutToolInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -789,6 +822,7 @@ export type ToolStateUncheckedUpdateWithoutToolInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -802,6 +836,7 @@ export type ToolStateUncheckedUpdateManyWithoutToolInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -818,6 +853,7 @@ export type ToolStateSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   key?: boolean
   value?: boolean
   version?: boolean
+  deletedAt?: boolean
   updatedByMemberId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -834,6 +870,7 @@ export type ToolStateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   key?: boolean
   value?: boolean
   version?: boolean
+  deletedAt?: boolean
   updatedByMemberId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -850,6 +887,7 @@ export type ToolStateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   key?: boolean
   value?: boolean
   version?: boolean
+  deletedAt?: boolean
   updatedByMemberId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -866,12 +904,13 @@ export type ToolStateSelectScalar = {
   key?: boolean
   value?: boolean
   version?: boolean
+  deletedAt?: boolean
   updatedByMemberId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ToolStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "toolId" | "owner" | "key" | "value" | "version" | "updatedByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["toolState"]>
+export type ToolStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "toolId" | "owner" | "key" | "value" | "version" | "deletedAt" | "updatedByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["toolState"]>
 export type ToolStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   tool?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -906,6 +945,10 @@ export type $ToolStatePayload<ExtArgs extends runtime.Types.Extensions.InternalA
      * Goes up by one on each write: a tool writes over the version it read (src/tools.ts).
      */
     version: number
+    /**
+     * Deleted: the row stays as a tombstone with its version, so an older write never lands.
+     */
+    deletedAt: Date | null
     /**
      * No relation: kept once they leave.
      */
@@ -1345,6 +1388,7 @@ export interface ToolStateFieldRefs {
   readonly key: Prisma.FieldRef<"ToolState", 'String'>
   readonly value: Prisma.FieldRef<"ToolState", 'Json'>
   readonly version: Prisma.FieldRef<"ToolState", 'Int'>
+  readonly deletedAt: Prisma.FieldRef<"ToolState", 'DateTime'>
   readonly updatedByMemberId: Prisma.FieldRef<"ToolState", 'String'>
   readonly createdAt: Prisma.FieldRef<"ToolState", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ToolState", 'DateTime'>

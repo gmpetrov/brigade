@@ -31,6 +31,27 @@ export type ToolHost = {
   confirm: (what: ToolConfirm) => Promise<boolean>
 }
 
+/**
+ * The channel a tool's page opens (`connect`, with the key of its address and one end of a
+ * MessageChannel), if this message is that and the key is the view's: only the page served under
+ * the view's address knows it, not another document its frame went to since.
+ */
+export function connectPort(
+  data: unknown,
+  ports: readonly MessagePort[],
+  key: string,
+): MessagePort | null {
+  const m = data as { source?: unknown; type?: unknown; key?: unknown } | null
+  if (!m || m.source !== 'brigade-tool' || m.type !== 'connect') return null
+  if (!key || m.key !== key || ports.length !== 1) return null
+  return ports[0]!
+}
+
+/** The page says it goes: its channel closes, and what it waits for is dropped. */
+export const isBye = (data: unknown) =>
+  (data as { source?: unknown; type?: unknown } | null)?.source === 'brigade-tool' &&
+  (data as { type?: unknown }).type === 'bye'
+
 /** A message the page sent, if it is a call of the bridge. */
 export function bridgeRequest(data: unknown): ToolBridgeRequest | null {
   const parsed = ToolBridgeRequest.safeParse(data)
@@ -95,12 +116,14 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const op = request.method.slice('state.'.length)
       const version = typeof p.version === 'number' ? p.version : undefined
       const prefix = text(p.prefix)
+      const after = text(p.after)
       const body = {
         op,
         path,
         shared: bool(p.shared),
         ...(op !== 'list' ? { key: text(p.key) ?? '' } : {}),
         ...(op === 'list' && prefix ? { prefix } : {}),
+        ...(op === 'list' && after ? { after } : {}),
         ...(op === 'set' ? { value: p.value ?? null } : {}),
         ...(version !== undefined && (op === 'set' || op === 'delete') ? { version } : {}),
       }

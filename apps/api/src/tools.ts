@@ -43,7 +43,7 @@ import {
   type ConnectorKind,
   type Operation,
 } from './connectors/types.js'
-import { Prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { askedFile, designHost, separateHost, STATIC_HOSTS } from './designs.js'
 import { readLibraryFile } from './library.js'
 import { fileKey } from './library-objects.js'
@@ -164,6 +164,14 @@ export function readToolToken(token: string): ViewClaim | null {
   }
 }
 
+/**
+ * The key the bridge of a page under this address connects with (`toolBridgeScript`): written into
+ * the page, and given to the dashboard with the view. Another document in the tool's frame (a site
+ * a link went to) does not know it.
+ */
+export const bridgeKey = (token: string) =>
+  b64url(createHmac('sha256', `tool-bridge:${env.BETTER_AUTH_SECRET}`).update(token).digest())
+
 /** Library files a tool reads are under this, in its address: `/t/<token>/_library/<path>`. */
 export const TOOL_LIBRARY_PREFIX = '_library'
 
@@ -274,6 +282,7 @@ export async function openToolView(
   const taken = new Set(attached.map((a) => a.connectionId))
   return {
     url: `${env.DESIGN_URL}/t/${token}/${TOOL_ENTRY}`,
+    bridgeKey: bridgeKey(token),
     folder: tool.folder,
     manifest: tool.manifest,
     toolId: tool.entry.id,
@@ -427,9 +436,12 @@ const entryOf = (row: {
   value: unknown
   version: number
   updatedAt: Date
+  deletedAt: Date | null
 }): ToolStateEntry => ({
   key: row.key,
-  value: row.value,
+  // A deleted key keeps its row and version (a tombstone): a write over a version read before it
+  // was deleted and made again never lands on the new one.
+  value: row.deletedAt ? null : row.value,
   version: row.version,
   updatedAt: row.updatedAt.toISOString(),
 })
@@ -449,12 +461,51 @@ const conflict = (current: ToolStateEntry) =>
 const isUnique = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
 
+/** Most bytes of values one listing reads, and most keys: an API isolate has 128 MB in all. */
+export const TOOL_STATE_PAGE_BYTES = 1_000_000
+const TOOL_STATE_PAGE_KEYS = 500
+/** Rows an owner keeps, tombstones included: keys deleted and not made again count until then. */
+const TOOL_STATE_ROWS_MAX = TOOL_STATE_KEYS_MAX * 5
+
+/**
+ * One page of an owner's live keys, in key order, after `after`: their sizes are read first, and
+ * values only for as many keys as fit in `bytes` (at least one), so no listing holds more.
+ */
+async function statePage(
+  scope: Scope,
+  toolId: string,
+  owner: string,
+  options: { prefix?: string; after?: string; bytes: number },
+) {
+  const sizes = await prisma.$queryRaw<{ key: string; size: number }[]>`
+    SELECT "key", octet_length("value"::text)::int AS "size" FROM "ToolState"
+    WHERE "workspaceId" = ${scope.workspaceId} AND "toolId" = ${toolId} AND "owner" = ${owner}
+      AND "deletedAt" IS NULL
+      AND starts_with("key", ${options.prefix ?? ''})
+      AND "key" COLLATE "C" > ${options.after ?? ''}
+    ORDER BY "key" COLLATE "C" LIMIT ${TOOL_STATE_PAGE_KEYS + 1}`
+  const keys: string[] = []
+  let used = 0
+  for (const { key, size } of sizes.slice(0, TOOL_STATE_PAGE_KEYS)) {
+    if (keys.length > 0 && used + size > options.bytes) break
+    keys.push(key)
+    used += size
+  }
+  const rows = keys.length
+    ? await scoped(scope).toolState.findMany({
+        where: { toolId, owner, key: { in: keys }, deletedAt: null },
+      })
+    : []
+  rows.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+  return { rows, next: keys.length < sizes.length ? keys.at(-1) : undefined }
+}
+
 /** Read or write a tool's state. A viewer reads the shared keys and keeps their own, as people do. */
 export async function toolState(
   db: ScopedDb,
   scope: WorkspaceScope,
   request: ToolStateRequest,
-): Promise<ToolStateEntry | ToolStateEntry[] | null> {
+): Promise<ToolStateEntry | { entries: ToolStateEntry[]; next?: string } | null> {
   const tool = await toolAt(db, scope, request.path)
   const owner = ownerOf(request.shared, scope.memberId)
   const where = { toolId: tool.entry.id, owner }
@@ -464,22 +515,26 @@ export async function toolState(
   }
   if (request.op === 'get') return current(request.key)
   if (request.op === 'list') {
-    const rows = await db.toolState.findMany({
-      where: { ...where, ...(request.prefix ? { key: { startsWith: request.prefix } } : {}) },
-      orderBy: { key: 'asc' },
-      take: TOOL_STATE_KEYS_MAX,
+    const page = await statePage(scope, tool.entry.id, owner, {
+      ...(request.prefix ? { prefix: request.prefix } : {}),
+      ...(request.after ? { after: request.after } : {}),
+      bytes: TOOL_STATE_PAGE_BYTES,
     })
-    return rows.map(entryOf)
+    return { entries: page.rows.map(entryOf), ...(page.next ? { next: page.next } : {}) }
   }
   if (request.shared && scope.role === 'viewer')
     throw new HTTPException(403, { message: 'Viewers cannot change what everyone sees' })
+  const by = { updatedByMemberId: scope.memberId }
   if (request.op === 'delete') {
-    const gone = await db.toolState.deleteMany({
+    // A tombstone: the key's row stays, one version on, so a write over an older version fails.
+    const gone = await db.toolState.updateMany({
       where: {
         ...where,
         key: request.key,
+        deletedAt: null,
         ...(request.version !== undefined ? { version: request.version } : {}),
       },
+      data: { deletedAt: new Date(), version: { increment: 1 }, ...by },
     })
     if (gone.count === 0 && request.version !== undefined)
       throw conflict(await current(request.key))
@@ -491,17 +546,25 @@ export async function toolState(
     throw new HTTPException(413, {
       message: `A value takes at most ${TOOL_STATE_VALUE_MAX} characters of JSON`,
     })
-  const by = { updatedByMemberId: scope.memberId }
-  const create = async () => {
-    if ((await db.toolState.count({ where })) >= TOOL_STATE_KEYS_MAX)
+  const write = { value, version: { increment: 1 }, deletedAt: null, ...by }
+  const room = async () => {
+    const [live, rows] = await Promise.all([
+      db.toolState.count({ where: { ...where, deletedAt: null } }),
+      db.toolState.count({ where }),
+    ])
+    if (live >= TOOL_STATE_KEYS_MAX || rows >= TOOL_STATE_ROWS_MAX)
       throw new HTTPException(413, {
         message: `A tool keeps at most ${TOOL_STATE_KEYS_MAX} keys for each person, and as many shared`,
       })
+  }
+  const create = async () => {
+    await room()
     return db.toolState.create({
       data: { ...inWorkspace(scope), toolId: tool.entry.id, owner, key: request.key, value, ...by },
     })
   }
   if (request.version === 0) {
+    // Only a key that never was: a deleted one has a version of its own.
     try {
       return entryOf(await create())
     } catch (error) {
@@ -511,33 +574,42 @@ export async function toolState(
   }
   if (request.version !== undefined) {
     // Decided as it applies: only over the version the tool read.
+    if (request.version > 0) {
+      const tomb = await db.toolState.findFirst({
+        where: { ...where, key: request.key, deletedAt: { not: null } },
+        select: { id: true },
+      })
+      if (tomb) await room()
+    }
     const updated = await db.toolState.updateMany({
       where: { ...where, key: request.key, version: request.version },
-      data: { value, version: { increment: 1 }, ...by },
+      data: write,
     })
     if (updated.count === 0) throw conflict(await current(request.key))
     return current(request.key)
   }
-  // Whatever is there: over it, or new.
-  const over = await db.toolState.updateMany({
+  // Whatever is there: over it (a tombstone made live again), or new.
+  const existing = await db.toolState.findFirst({
     where: { ...where, key: request.key },
-    data: { value, version: { increment: 1 }, ...by },
+    select: { deletedAt: true },
   })
+  if (existing?.deletedAt) await room()
+  const over = await db.toolState.updateMany({ where: { ...where, key: request.key }, data: write })
   if (over.count > 0) return current(request.key)
   try {
     return entryOf(await create())
   } catch (error) {
     // Made meanwhile: write over it.
     if (!isUnique(error)) throw error
-    await db.toolState.updateMany({
-      where: { ...where, key: request.key },
-      data: { value, version: { increment: 1 }, ...by },
-    })
+    await db.toolState.updateMany({ where: { ...where, key: request.key }, data: write })
     return current(request.key)
   }
 }
 
-/** A tool's state as its thread's teammate reads it: the shared keys, and one member's own. */
+/**
+ * A tool's state as its thread's teammate reads it: the shared keys, and one member's own, as many
+ * as fit in a budget (`truncated` when some did not: the tool shows the rest).
+ */
 export async function toolStateFor(
   db: ScopedDb,
   scope: Scope,
@@ -545,17 +617,18 @@ export async function toolStateFor(
   memberId: string | null,
 ) {
   const tool = await toolAt(db, scope, path)
-  const rows = await db.toolState.findMany({
-    where: {
-      toolId: tool.entry.id,
-      owner: { in: ['shared', ...(memberId ? [memberId] : [])] },
-    },
-    orderBy: [{ owner: 'asc' }, { key: 'asc' }],
-    take: TOOL_STATE_KEYS_MAX * 2,
-  })
-  const of = (owner: string) =>
-    Object.fromEntries(rows.filter((r) => r.owner === owner).map((r) => [r.key, r.value]))
-  return { folder: tool.folder, shared: of('shared'), ...(memberId ? { own: of(memberId) } : {}) }
+  const owners = ['shared', ...(memberId ? [memberId] : [])]
+  const bytes = Math.floor(TOOL_STATE_PAGE_BYTES / owners.length)
+  const pages = await Promise.all(
+    owners.map((owner) => statePage(scope, tool.entry.id, owner, { bytes })),
+  )
+  const of = (i: number) => Object.fromEntries(pages[i]!.rows.map((r) => [r.key, r.value]))
+  return {
+    folder: tool.folder,
+    shared: of(0),
+    ...(memberId ? { own: of(1) } : {}),
+    ...(pages.some((p) => p.next) ? { truncated: true } : {}),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -768,18 +841,29 @@ export async function callToolOperation(
 
 /**
  * What a tool page may do: what a design's may (src/designs.ts), and call the public APIs its
- * manifest lists. Its calls to Apps go through the dashboard, never from here.
+ * manifest lists. Its calls to Apps go through the dashboard, never from here. Its scripts come
+ * only from its own folder under this address (`scripts`), or are written in its pages: the code
+ * that runs is the files whose hash an attached account was allowed with (codeHashOf). No script
+ * from a CDN, which can change without the tool changing; no eval, no script made from data.
+ * Stylesheets, fonts and images still load from anywhere.
  */
-export const toolCsp = (hosts: readonly string[] = []) =>
+export const toolCsp = (hosts: readonly string[] = [], scripts = "'none'") =>
   [
     'sandbox allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads',
-    "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'",
+    "default-src 'self' https: data: blob: 'unsafe-inline'",
+    `script-src ${scripts} 'unsafe-inline'`,
     `connect-src 'self' data: blob: ${[...STATIC_HOSTS, ...hosts].join(' ')}`,
     "form-action 'none'",
     `frame-ancestors ${env.WEB_URL.join(' ')}`,
   ].join('; ')
 
 const MEDIA = /^(audio|video)\//
+
+/**
+ * Types a browser runs as code (a script, a module, a worker, WebAssembly): a library file a tool
+ * reads is never one of them, since it can change without the tool changing.
+ */
+const RUNNABLE = /javascript|ecmascript|wasm|jscript|livescript/i
 
 /** A library file a tool reads: as the library serves it, never as a page that runs script. */
 async function serveLibraryFile(c: Context, scope: Scope, row: Row) {
@@ -792,7 +876,8 @@ async function serveLibraryFile(c: Context, scope: Scope, row: Row) {
     return c.redirect(signed.url, 302)
   }
   return serveObject(c, key, {
-    'content-type': row.contentType,
+    // With nosniff, a browser refuses to run text/plain as a script.
+    'content-type': RUNNABLE.test(row.contentType) ? 'text/plain; charset=utf-8' : row.contentType,
     'content-disposition': disposition,
     // An HTML or SVG file here is shown, never run.
     'content-security-policy': 'sandbox',
@@ -803,10 +888,17 @@ async function serveLibraryFile(c: Context, scope: Scope, row: Row) {
   })
 }
 
+/**
+ * Where a tool page's scripts may come from: its own address, by path. A CSP path ending in `/`
+ * matches everything under it, `_library/` too, whose files are never served as scripts.
+ */
+const toolScripts = (token: string) => `${env.DESIGN_URL}/t/${token}/`
+
 /** A tool's files under `/t/<token>/`, and the library files it reads under `_library/`. */
 export const toolPages = new Hono().get('/:token/*', async (c) => {
   if (separateHost && c.req.header('host') !== designHost) return c.text('Not found', 404)
-  const claim = readToolToken(c.req.param('token'))
+  const token = c.req.param('token')
+  const claim = readToolToken(token)
   if (!claim) return c.text('This link has expired. Open the tool again.', 410)
   const rest = askedFile(c.req.path, `/t/${c.req.param('token')}/`)
   if (!rest) return c.text('Not found', 404)
@@ -827,7 +919,8 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
     'content-type': row.contentType.startsWith('text/')
       ? `${row.contentType}; charset=utf-8`
       : row.contentType,
-    'content-security-policy': toolCsp(manifest?.hosts),
+    // Scripts from the tool's own files only: not the _library files beside them under this address.
+    'content-security-policy': toolCsp(manifest?.hosts, toolScripts(token)),
     'x-content-type-options': 'nosniff',
     // The address carries the token: never sent on to the sites a tool loads from.
     'referrer-policy': 'no-referrer',
@@ -839,7 +932,7 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   if (!html) return serveObject(c, fileKey(scope, row), headers)
   const page = addToHead(
     new TextDecoder().decode(await readLibraryFile(scope, row)),
-    toolBridgeScript(),
+    toolBridgeScript(bridgeKey(token)),
     { first: true },
   )
   return c.body(new TextEncoder().encode(page), 200, headers)

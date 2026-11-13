@@ -41,14 +41,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { api } from '@/lib/api'
-import { answer, bridgeRequest, type ToolConfirm } from '@/lib/tool-host'
+import { answer, bridgeRequest, connectPort, isBye, type ToolConfirm } from '@/lib/tool-host'
 import { cn } from '@/lib/utils'
 
 /** The frame's permissions: as a design's, its CSP the same (src/tools.ts on the API). */
 const SANDBOX =
   'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads'
 
-type Asking = { what: ToolConfirm; resolve: (yes: boolean) => void }
+type Asking = { what: ToolConfirm; resolve: (yes: boolean) => void; channel: number }
 
 export function ToolPanel({
   folder,
@@ -107,8 +107,10 @@ export function ToolPanel({
   const waiting = useRef<Asking[]>([])
   waiting.current = asking
   const confirm = useCallback(
-    (what: ToolConfirm) =>
-      new Promise<boolean>((resolve) => setAsking((list) => [...list, { what, resolve }])),
+    (what: ToolConfirm, channel: number) =>
+      new Promise<boolean>((resolve) =>
+        setAsking((list) => [...list, { what, resolve, channel }]),
+      ),
     [],
   )
 
@@ -116,31 +118,61 @@ export function ToolPanel({
   const target_ = useRef(target)
   target_.current = target
 
+  // The page's channel (lib/tool-host.ts connectPort): one at a time, numbered. Its calls are
+  // answered on it only while it is the current one; a page that goes, or a new one, drops what
+  // the last one waits for, its questions to the person included.
+  const channel = useRef<{ port: MessagePort; id: number } | null>(null)
+  const opened = useRef(0)
+  const drop = useCallback((id: number) => {
+    const gone = waiting.current.filter((a) => a.channel === id)
+    for (const a of gone) a.resolve(false)
+    if (gone.length) setAsking((list) => list.filter((a) => a.channel !== id))
+  }, [])
+  const close = useCallback(() => {
+    const was = channel.current
+    if (!was) return
+    channel.current = null
+    was.port.close()
+    drop(was.id)
+  }, [drop])
+
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      // Only the tool's own frame: its origin is opaque, so by the window it comes from.
+      // Only the tool's own frame, and only the page that knows its address's key.
       if (!frame.current || e.source !== frame.current.contentWindow) return
-      const request = bridgeRequest(e.data)
       const shown = current.current
-      if (!request || !shown) return
-      const source = e.source as Window
-      void answer(
-        {
-          view: shown,
-          threadId: target_.current,
-          me: { memberId: me.memberId, name: me.user.name },
-          api: (path, body) => api(path, { body }),
-          confirm,
-        },
-        request,
-      ).then((reply) => {
-        // Still the same page: a reply never goes to one that replaced it.
-        if (frame.current?.contentWindow === source) source.postMessage(reply, '*')
-      })
+      const port = shown && connectPort(e.data, e.ports, shown.bridgeKey)
+      if (!port) return
+      close()
+      const id = ++opened.current
+      channel.current = { port, id }
+      port.onmessage = (event) => {
+        if (channel.current?.id !== id) return
+        if (isBye(event.data)) return close()
+        const request = bridgeRequest(event.data)
+        const view = current.current
+        if (!request || !view) return
+        void answer(
+          {
+            view,
+            threadId: target_.current,
+            me: { memberId: me.memberId, name: me.user.name },
+            api: (path, body) => api(path, { body }),
+            confirm: (what) => confirm(what, id),
+          },
+          request,
+        ).then((reply) => {
+          // Still the same page: a reply never goes to one that replaced it.
+          if (channel.current?.id === id) port.postMessage(reply)
+        })
+      }
     }
     window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [confirm, me.memberId, me.user.name])
+    return () => {
+      window.removeEventListener('message', onMessage)
+      close()
+    }
+  }, [confirm, close, me.memberId, me.user.name])
 
   // Closing the panel answers what was still waiting: no.
   useEffect(

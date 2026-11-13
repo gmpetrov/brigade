@@ -8,6 +8,7 @@ CREATE TABLE "ToolState" (
     "key" TEXT NOT NULL,
     "value" JSONB NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
+    "deletedAt" TIMESTAMP(3),
     "updatedByMemberId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
