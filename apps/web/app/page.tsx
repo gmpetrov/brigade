@@ -113,7 +113,7 @@ export default function Landing() {
         <Faq />
         <FinalCall />
       </main>
-      <Footer />
+      <Footer featured />
       <PauseOffscreen />
     </div>
   )
