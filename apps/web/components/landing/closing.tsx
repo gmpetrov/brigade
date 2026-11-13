@@ -252,7 +252,32 @@ export function FinalCall() {
   )
 }
 
-export function Footer() {
+/**
+ * Directories Brigade is listed on, shown on the landing page only: There's An AI For That
+ * verifies its listing by finding this exact link on www.brigade.lol/ and on no other page,
+ * so keep its href as they gave it and keep it out of the shared footer.
+ */
+function Featured() {
+  return (
+    <div className={c('wrap foot-featured')}>
+      <a
+        href="https://theresanaiforthat.com/ai/brigade/?ref=featured&v=915251"
+        target="_blank"
+        rel="nofollow"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- TAAFT's own badge, served by them */}
+        <img
+          width="300"
+          src="https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"
+          alt="Featured on There's An AI For That"
+        />
+      </a>
+    </div>
+  )
+}
+
+/** The page's footer; `featured` adds the directory badges, on the landing page only. */
+export function Footer({ featured = false }: { featured?: boolean }) {
   return (
     <footer className={c('foot')}>
       <div className={c('wrap')}>
@@ -273,6 +298,7 @@ export function Footer() {
           <span>© 2026</span>
         </nav>
       </div>
+      {featured && <Featured />}
       {/* The name, as large as the page is wide, cut by the bottom edge. */}
       <div className={c('foot-name')} aria-hidden="true" data-anim>
         <span>Brigade</span>

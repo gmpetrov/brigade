@@ -2106,6 +2106,18 @@ svg.i {
   white-space: nowrap;
 }
 
+.foot-featured {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 32px;
+}
+.foot-featured img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 .foot-name {
   height: 0.62em;
   overflow: hidden;
