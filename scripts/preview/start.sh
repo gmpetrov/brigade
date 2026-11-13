@@ -12,6 +12,9 @@ URL=${URL%/}
 # The thread shows a preview in a frame on another site: over HTTPS, its session cookie must allow that.
 CROSS_SITE_COOKIES=false
 [[ $URL == https://* ]] && CROSS_SITE_COOKIES=true
+# Brigade's preview pane shows this dashboard in a frame: designs' and tools' frames inside it
+# load only where every page above them may frame them (SANDBOX_FRAME_ANCESTORS, src/config.ts).
+SANDBOX_FRAME_ANCESTORS=${SANDBOX_FRAME_ANCESTORS:-https://www.brigade.lol,https://brigade.lol,http://localhost:*}
 
 trap 'exit' INT TERM
 trap 'kill 0' EXIT
@@ -22,7 +25,7 @@ if [[ ${STRIPE_SECRET_KEY:-} == sk_test_* || ${STRIPE_SECRET_KEY:-} == rk_test_*
   (cd "$REPO/apps/api" && WEB_URL=$URL node scripts/stripe-setup.mjs) || echo "Stripe setup failed: billing may not work"
 fi
 
-(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES PASSWORD_SIGN_IN=true \
+(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL SANDBOX_FRAME_ANCESTORS=$SANDBOX_FRAME_ANCESTORS CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES PASSWORD_SIGN_IN=true \
   "${PNPM[@]}" dev) &
 
 # Turbopack sometimes panics and exits: start Next again when it does.

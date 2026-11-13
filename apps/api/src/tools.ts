@@ -867,7 +867,7 @@ export const toolCsp = (hosts: readonly string[] = [], scripts = "'none'") =>
     `script-src ${scripts} 'unsafe-inline'`,
     `connect-src 'self' data: blob: ${[...STATIC_HOSTS, ...hosts].join(' ')}`,
     "form-action 'none'",
-    `frame-ancestors ${env.WEB_URL.join(' ')}`,
+    `frame-ancestors ${[...env.WEB_URL, ...env.SANDBOX_FRAME_ANCESTORS].join(' ')}`,
   ].join('; ')
 
 const MEDIA = /^(audio|video)\//

@@ -85,6 +85,21 @@ const Env = z.object({
    */
   DESIGN_URL: z.preprocess((v) => v || undefined, z.url().optional()),
   /**
+   * Origins that may show the dashboard in a frame, and so be above a design's or a tool's frame,
+   * comma-separated: a preview's dashboard is itself shown in Brigade's preview pane, and a frame's
+   * page loads only where every page above it is allowed. Unset in production, where the dashboard
+   * is never framed.
+   */
+  SANDBOX_FRAME_ANCESTORS: z
+    .string()
+    .default('')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean),
+    ),
+  /**
    * The previews' own site (apps/preview-gateway, a Cloudflare Worker), e.g.
    * https://brigade.surf: each preview at https://<id>.brigade.surf, which carries the
    * provider's token itself. Safari, and every browser on an iPhone, drops the provider's

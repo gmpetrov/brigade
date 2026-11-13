@@ -12,6 +12,9 @@ URL=${BRIGADE_PREVIEW_URL:-http://localhost:$PORT}
 URL=${URL%/}
 CROSS_SITE_COOKIES=false
 [[ $URL == https://* ]] && CROSS_SITE_COOKIES=true
+# Brigade's preview pane shows this dashboard in a frame: designs' and tools' frames inside it
+# load only where every page above them may frame them (SANDBOX_FRAME_ANCESTORS, src/config.ts).
+SANDBOX_FRAME_ANCESTORS=${SANDBOX_FRAME_ANCESTORS:-https://www.brigade.lol,https://brigade.lol,http://localhost:*}
 
 trap 'exit' INT TERM
 trap 'kill 0' EXIT
@@ -27,7 +30,7 @@ if [ "$(cat "$DATA/built" 2>/dev/null)" != "$STAMP" ]; then
 fi
 
 # Node itself, not through pnpm: each pnpm in between is another resident Node.
-(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES \
+(cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL SANDBOX_FRAME_ANCESTORS=$SANDBOX_FRAME_ANCESTORS CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES \
   exec node --env-file-if-exists=.env dist/index.js) &
 (cd "$REPO/apps/web" && NEXT_PUBLIC_API_URL=$URL exec node node_modules/next/dist/bin/next start --port "$WEB_PORT") &
 
