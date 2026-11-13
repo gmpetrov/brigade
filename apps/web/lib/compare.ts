@@ -198,7 +198,7 @@ export const COMPARISONS: Comparison[] = [
     about:
       'Rakazo is an open-source (Apache-2.0) platform for AI bots that each take on a job, such as sorting email or researching sales prospects, with a computer, Apps, memory, routines and approvals. You reach them from its web, desktop, iOS and Android apps or from chat apps. Its bots run on Rakazo’s own agent loop (Pi) with the model you connect. You can host it yourself, or use Rakazo Cloud (in beta), whose plans cost $15, $49 or $99 a month with 25, 100 or 200 computer hours.',
     answer:
-      'Rakazo and Brigade share an idea: open-source AI teammates with jobs, a computer and memory. The difference is what does the work. Rakazo runs its own agent loop on the server, with models paid through API keys or a ChatGPT plan; its own docs say Anthropic’s rules don’t let it use a Claude subscription, so Claude means paying per token. Brigade starts the official Claude Code and Codex, signed in with your own Claude or ChatGPT plan, so the Claude Max you already pay for does the work. And Brigade Cloud is one flat price for an always-on computer, where Rakazo’s hosted plans stop work on the computer once the month’s hours are used up.',
+      'Rakazo and Brigade share an idea: open-source AI teammates with jobs, a computer and memory. The difference is what does the work. Rakazo runs its own agent loop on the server, with models paid through API keys or a ChatGPT plan; its own docs say Anthropic’s rules don’t let it use a Claude subscription, so Claude means paying per token. Brigade starts the official Claude Code and Codex, signed in with your own Claude or ChatGPT plan, so the Claude Max you already pay for does the work. And Brigade Cloud is one flat price with no allowance of computer hours, where Rakazo’s hosted plans stop work on the computer once the month’s hours are used up.',
     rows: [
       row(
         'What it is',
@@ -229,7 +229,7 @@ export const COMPARISONS: Comparison[] = [
       ),
       row(
         'Computer time',
-        'Brigade Cloud’s computer stays on all month, with no allowance of hours.',
+        'No allowance of hours on Brigade Cloud: its computer sleeps when idle and wakes on the next message, routine or trigger.',
         'Counted in hours; once a month’s hours are used up, work that needs the computer stops until you upgrade or the plan renews.',
         'partly',
       ),
@@ -253,7 +253,7 @@ export const COMPARISONS: Comparison[] = [
     pickBrigade: [
       'You pay for Claude Max or Pro and want your teammates to work on it, through the official Claude Code.',
       'You want teammates that are the coding agents Anthropic and OpenAI build, not a separate agent loop.',
-      'You want one flat price for a computer that stays on, not a monthly allowance of hours.',
+      'You want one flat price for the cloud computer, with no monthly allowance of hours.',
       'You want every decision that needs you in one Needs you list, shared with your team.',
     ],
     sources: [
@@ -286,9 +286,9 @@ export const COMPARISONS: Comparison[] = [
     oneLiner:
       'An open-source personal agent you install and run, which a Claude plan covers only through extra usage, versus a team that runs the official Claude Code and Codex on the plans you already pay for.',
     about:
-      'Hermes Agent is Nous Research’s open-source (MIT) agent, “the agent that grows with you”: it writes skills from experience, keeps a memory of you across sessions, runs scheduled jobs, and talks to you from Telegram, Discord, Slack, WhatsApp, Signal or email while it works on your machine, a server or a cloud sandbox. It works with any model, from Nous Portal and OpenRouter to local ones, and Nous sells hosted plans from $20 a month.',
+      'Hermes Agent is Nous Research’s open-source (MIT) agent, “the agent that grows with you”: it writes skills from experience, keeps a memory of you across sessions, runs scheduled jobs, and talks to you from Telegram, Discord, Slack, WhatsApp, Signal or email while it works on your machine, a server or a cloud sandbox. Profiles run several separate agents side by side, each with its own memory, skills and chat bot. It works with any model, from Nous Portal and OpenRouter to local ones, and Nous sells hosted plans from $20 a month.',
     answer:
-      'Hermes Agent is a strong personal agent that you install, configure and run yourself: one agent, one memory. Brigade is a team: each teammate has one job, its own Apps and memory, every decision that needs you lands in one list, and your team works in the same threads. The AI bill differs too: Hermes’s own docs say a Claude Max login draws only on purchased extra usage, and Claude Pro can’t be used at all. Brigade starts the official Claude Code and Codex, signed in with your own accounts, so your plan’s included usage does the work.',
+      'Hermes Agent is a strong agent that you install, configure and run yourself, and its profiles let you run several separate agents, each with its own memory. Brigade is a team that works together: each teammate has one job and its own Apps, they share the workspace’s memory, every decision that needs you lands in one list, and your colleagues work in the same threads. The AI bill differs too: Hermes’s own docs say a Claude Max login draws only on purchased extra usage, and Claude Pro can’t be used at all. Brigade starts the official Claude Code and Codex, signed in with your own accounts, so your plan’s included usage does the work.',
     rows: [
       row(
         'What it is',
@@ -326,7 +326,7 @@ export const COMPARISONS: Comparison[] = [
       row(
         'Your team',
         'Invite your team: threads, lists and files are shared.',
-        'One agent, one memory; Hermes Business (price on request) shares a hosted deployment across a team.',
+        'Separate agents through profiles, each with its own memory; Hermes Business (price on request) shares a hosted deployment across a team.',
         'partly',
       ),
       row('Open source', BRIGADE.open, 'Yes, MIT.', 'yes'),
@@ -337,7 +337,7 @@ export const COMPARISONS: Comparison[] = [
       'You enjoy installing and tuning your own setup.',
     ],
     pickBrigade: [
-      'You want several teammates with clear jobs (support, marketing, sales, code) instead of one agent.',
+      'You want teammates with clear jobs (support, marketing, sales, code) that share one memory, one list of decisions and their threads with your colleagues.',
       'You want the Claude Pro or Max plan you already pay for to do the work, without extra usage.',
       'You want an email or a Stripe change to wait for your yes, from one list on your phone.',
       'Your team needs to see and share the work.',
@@ -348,6 +348,10 @@ export const COMPARISONS: Comparison[] = [
       {
         label: 'Hermes Agent docs: providers and subscriptions',
         url: 'https://hermes-agent.nousresearch.com/docs/integrations/providers',
+      },
+      {
+        label: 'Hermes Agent docs: profiles',
+        url: 'https://hermes-agent.nousresearch.com/docs/user-guide/profiles',
       },
       {
         label: 'Hermes Agent docs: security and approvals',
@@ -859,7 +863,7 @@ export const COMPARISONS: Comparison[] = [
       row(
         'Who pays for AI',
         BRIGADE.bill,
-        'Manus credits; with Flex you can bring an API key for the model, but its computer and other tools still use credits.',
+        'Manus credits; with Flex your own API key pays for the model, but the Cloud Computer, images, video and web hosting still use credits.',
         'no',
       ),
       row(
