@@ -18,6 +18,7 @@ import {
   actArgs,
   actEntry,
   desktopTools,
+  macAppInput,
   macDesktopExec,
   pickWindow,
   snapshotArgs,
@@ -1241,4 +1242,88 @@ test('when what was read before is gone (a sheet the action closed), the app is 
     compact: true,
     timeout_ms: 8000,
   })
+})
+
+test('on a Mac, a key for an app goes to its process, and text into its one focused field', async () => {
+  const { exec, calls } = fakeExec((args) =>
+    args[0] === 'find'
+      ? envelope({
+          matches: [
+            // AppKit marks a list's cells focused too: only a field that takes text counts.
+            { role: 'cell', ref_id: '@s9:e1', states: ['focused'] },
+            { role: 'textfield', ref_id: '@s9:e2', states: ['focused'] },
+          ],
+        })
+      : envelope({ disposition: { delivery: 'delivered_verified' } }),
+  )
+  const input = macAppInput({ exec, where: 'mac' })
+  assert.deepEqual(await input.press('TextEdit', 'cmd+b'), { delivery: 'delivered_verified' })
+  assert.deepEqual(await input.type('TextEdit', 'Bonjour 👋'), { delivery: 'delivered_verified' })
+  assert.deepEqual(
+    calls.map((c) => c.args),
+    [
+      ['press', '--app', 'TextEdit', 'cmd+b'],
+      ['find', '--app', 'TextEdit', '--state', 'focused'],
+      ['type', '@s9:e2', '--stdin'],
+    ],
+  )
+  assert.equal(calls[2]!.stdin, 'Bonjour 👋')
+})
+
+test('text for an app with no single focused field is not typed', async () => {
+  for (const matches of [
+    [],
+    [
+      { role: 'textfield', ref_id: '@s9:e1', states: ['focused'] },
+      { role: 'textfield', ref_id: '@s9:e2', states: ['focused'] },
+    ],
+  ]) {
+    const { exec, calls } = fakeExec(() => envelope({ matches }))
+    await assert.rejects(
+      macAppInput({ exec, where: 'mac' }).type('TextEdit', 'x'),
+      /nothing was typed/,
+    )
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      ['find'],
+    )
+  }
+})
+
+test('after an action, the app a default snapshot read is read again, even with another in front now', async () => {
+  // Cody's case (review of #856): computer_snapshot({}) on TextEdit, then Finder comes forward.
+  let front = 'TextEdit'
+  let id = 0
+  const snapshot = (app = front) => ({
+    app,
+    snapshot_id: `s${++id}`,
+    tree: {
+      role: 'window',
+      name: app,
+      children: [{ role: 'button', name: 'Button', ref_id: `@s${id}:e1` }],
+    },
+  })
+  const { exec, calls } = fakeExec((args) => {
+    const entries = entriesOf(args)
+    if (!entries) return envelope(snapshot())
+    return envelope({
+      results: entries.map((entry) => ({
+        command: entry.command,
+        ok: true,
+        data:
+          entry.command === 'snapshot'
+            ? snapshot(entry.args.app)
+            : { disposition: { delivery: 'delivered_verified' } },
+      })),
+    })
+  })
+  const tools = desktopTools({ exec, where: 'mac' })
+  const before = (await tools.computer_snapshot!.execute!({}, options())) as Record<string, any>
+  front = 'Finder'
+  const result = (await tools.computer_act!.execute!(
+    { ref: `@${before.snapshot}:e1`, action: 'click' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.after.app, 'TextEdit')
+  assert.equal(entriesOf(calls.at(-1)!.args)!.at(-1)!.args.app, 'TextEdit')
 })

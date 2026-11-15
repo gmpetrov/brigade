@@ -53,6 +53,7 @@ import {
   GoalContractInput,
 } from '@brigade/contracts'
 import { ComputerUseError, type RequestOptions } from '../computer-use.js'
+import type { AppInput } from './desktop-tools.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
 import type { Arrivals, Cut } from './arrivals.js'
 import { answerText, errorMessage } from './events.js'
@@ -3852,8 +3853,7 @@ const point = {
 
 const APP_FOR_KEYS = {
   type: 'string',
-  description:
-    'The app it is meant for, by the name computer_apps lists or its bundle id: brought to the front first',
+  description: 'The app it is for, by the name computer_apps lists (it must be running)',
 } as const
 
 /**
@@ -3861,34 +3861,36 @@ const APP_FOR_KEYS = {
  * opening apps and reading their interface. For what nothing else reaches:
  * the shell, a CLI or an app's own tools come first.
  */
-export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
+export function computerUseTools(
+  computer: ComputerUse,
+  /** Input for a named app, straight to its process (desktop-tools.ts's macAppInput). */
+  appInput?: AppInput,
+): Record<string, Tool> {
   const act =
     (method: string) =>
     (input: object, { abortSignal }: { abortSignal?: AbortSignal }) =>
       computer.request(method, input as Record<string, unknown>, abortSignal)
   /**
-   * Keys and text go to the app in front, whatever it is: Brigade.app itself came back to the
-   * front between two calls once, and a shortcut meant for TextEdit went elsewhere. With an app
-   * named, it is brought to the front first and nothing is sent unless it is there; either way,
-   * the answer names the app that got them.
+   * Keys and text without an app go to the one in front, whatever it is: Brigade.app itself came
+   * back to the front between two calls once, and a shortcut meant for TextEdit went elsewhere.
+   * The answer names the app that was in front as they were sent. With an app named, they go to
+   * that app's own process instead (appInput), so nothing that comes to the front meanwhile gets
+   * them.
    */
-  const frontFor = async (app: string | undefined, signal?: AbortSignal) => {
-    if (app) {
-      const opened = (await computer.request('open_app', { app }, signal)) as {
-        name?: string
-        active?: boolean
-      }
-      if (opened.active === false)
-        throw new Error(
-          `${opened.name ?? app} did not come to the front, so nothing was sent. Look at the screen ` +
-            '(a dialog of another app may hold the focus), then try again.',
-        )
-      return opened.name ?? app
-    }
+  const inFront = async (signal?: AbortSignal) => {
     const { apps } = (await computer.request('apps', {}, signal)) as {
       apps?: { name?: string; active?: boolean }[]
     }
     return apps?.find((running) => running.active)?.name ?? 'unknown'
+  }
+  const named = (app: string | undefined) => {
+    if (!app) return
+    if (!appInput)
+      throw new Error(
+        'Keys for a named app need agent-desktop, which this runner does not have: leave app out to send ' +
+          'them to the app in front (bring it there with computer_open_app and check it with computer_apps).',
+      )
+    return appInput
   }
   return {
     computer_screenshot: tool({
@@ -3998,10 +4000,10 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
     }),
     computer_type: tool({
       description:
-        'Type text into whatever has the keyboard focus in an app (click the field first); a newline ' +
-        'presses Return. Name the app: it is brought to the front first, and nothing is typed if it ' +
-        'does not come. The answer says which app it went to. computer_act (type, set_value) types ' +
-        'into a ref without taking the keyboard: it comes first. ' +
+        'Type text where the keyboard focus is (focus the field first). Name the app: the text goes into ' +
+        'the field that has its focus, even when another app comes to the front meanwhile, and the app ' +
+        'stays where it is. Without one, it goes to the app in front, which the answer names (front), ' +
+        'and a newline presses Return. computer_act (type, set_value) on a ref comes first. ' +
         ABOUT_COMPUTER,
       inputSchema: jsonSchema<{ text: string; app?: string }>({
         type: 'object',
@@ -4009,16 +4011,19 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
         required: ['text'],
       }),
       execute: async (input, { abortSignal }) => {
-        const to = await frontFor(input.app, abortSignal)
+        const target = named(input.app)
+        if (target && input.app)
+          return { to: input.app, ...(await target.type(input.app, input.text, abortSignal)) }
+        const front = await inFront(abortSignal)
         await computer.request('type', { text: input.text }, abortSignal)
-        return { ok: true, to }
+        return { ok: true, front }
       },
     }),
     computer_key: tool({
       description:
-        'Press a key or a shortcut in an app: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". ' +
-        'Name the app: it is brought to the front first, and no key is pressed if it does not come. ' +
-        'The answer says which app it went to. ' +
+        'Press a key or a shortcut: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". Name the ' +
+        'app it is for: it goes to that app, even when another comes to the front meanwhile, and the app ' +
+        'stays where it is. Without one, it goes to the app in front, which the answer names (front). ' +
         ABOUT_COMPUTER,
       inputSchema: jsonSchema<{ key: string; app?: string }>({
         type: 'object',
@@ -4029,9 +4034,12 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
         required: ['key'],
       }),
       execute: async (input, { abortSignal }) => {
-        const to = await frontFor(input.app, abortSignal)
+        const target = named(input.app)
+        if (target && input.app)
+          return { to: input.app, ...(await target.press(input.app, input.key, abortSignal)) }
+        const front = await inFront(abortSignal)
         await computer.request('key', { key: input.key }, abortSignal)
-        return { ok: true, to }
+        return { ok: true, front }
       },
     }),
     computer_apps: tool({

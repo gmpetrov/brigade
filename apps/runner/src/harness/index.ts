@@ -149,7 +149,7 @@ import {
   type ScheduleCaller,
   widgetGuideTool,
 } from './tools.js'
-import { desktopTools, macDesktopExec, type Desktop } from './desktop-tools.js'
+import { desktopTools, macAppInput, macDesktopExec, type Desktop } from './desktop-tools.js'
 
 export type {
   ConnectorCaller,
@@ -445,7 +445,9 @@ function createAgent(
             })
           : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
-        ...(computer ? computerUseTools(computer) : {}),
+        ...(computer
+          ? computerUseTools(computer, desktop?.where === 'mac' ? macAppInput(desktop) : undefined)
+          : {}),
         // Apps read and used by accessibility refs: on a Mac beside the tools above, on a cloud
         // computer in the teammate's own browser window.
         ...(desktop ? desktopTools(desktop) : {}),

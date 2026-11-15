@@ -436,7 +436,16 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
       // Rooted on a region: all of it, as asked (up to the size limit).
       ...(read.root ? { children: Number.POSITIVE_INFINITY } : {}),
     })
-    if (typeof data.snapshot_id === 'string') reads.set(data.snapshot_id, read)
+    // The app it actually read, not only what was asked: one read by default (the app in front)
+    // is read again after an action even when another app has come to the front since.
+    if (typeof data.snapshot_id === 'string')
+      reads.set(data.snapshot_id, {
+        ...read,
+        // On a cloud computer the window picked in the browser says it already.
+        ...(where === 'mac' && !read.app && typeof data.app === 'string' && data.app
+          ? { app: data.app }
+          : {}),
+      })
     return {
       app: data.app,
       snapshot: data.snapshot_id,
@@ -839,6 +848,52 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
     })
   return tools
 }
+
+/** Keys and text delivered to one app's own process, whatever is in front (computer_key, computer_type). */
+export type AppInput = {
+  press: (app: string, key: string, signal?: AbortSignal) => Promise<{ delivery?: string }>
+  type: (app: string, text: string, signal?: AbortSignal) => Promise<{ delivery?: string }>
+}
+
+/**
+ * On a Mac, a key or text for a named app goes to that app's process (agent-desktop's `press
+ * --app`, and `type` into the element that has its keyboard focus), not to whatever is in front:
+ * bringing the app forward, then sending, let another app come in between (the person, Brigade.app,
+ * a parallel call) and get the input. The app is not brought to the front.
+ */
+export function macAppInput(desktop: Desktop): AppInput {
+  const delivery = (data: Record<string, unknown>) => {
+    const disposition = data.disposition as { delivery?: string } | undefined
+    return disposition?.delivery ? { delivery: disposition.delivery } : {}
+  }
+  const call = (args: string[], options: { stdin?: string; signal?: AbortSignal | undefined }) =>
+    desktopCall(desktop.exec, args, {
+      ...(options.stdin !== undefined ? { stdin: options.stdin } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    }).catch((error: unknown) => explain(error, desktop.where))
+  return {
+    press: async (app, key, signal) =>
+      delivery(await call(['press', '--app', app, key], { signal })),
+    type: async (app, text, signal) => {
+      // The field with the keyboard focus: only one that takes text counts, since AppKit marks
+      // the cells of a list focused too.
+      const found = await call(['find', '--app', app, '--state', 'focused'], { signal })
+      const fields = (Array.isArray(found.matches) ? (found.matches as DesktopNode[]) : []).filter(
+        (match) => match.ref_id && TEXT_ROLES.has(match.role ?? ''),
+      )
+      if (fields.length !== 1)
+        throw new Error(
+          fields.length
+            ? `${fields.length} fields of ${app} say they have the keyboard focus, so nothing was typed: type into one by its ref (computer_act).`
+            : `No field of ${app} has the keyboard focus, so nothing was typed: focus one first, or type into it by its ref (computer_act).`,
+        )
+      return delivery(await call(['type', fields[0]!.ref_id!, '--stdin'], { stdin: text, signal }))
+    },
+  }
+}
+
+/** Roles of an element that takes typed text. */
+const TEXT_ROLES = new Set(['textfield', 'textarea', 'searchfield', 'combobox', 'securetextfield'])
 
 /** How long one agent-desktop command may run through Brigade Computer Use, in seconds. */
 const MAC_TIMEOUT = 90

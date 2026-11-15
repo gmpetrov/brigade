@@ -60,8 +60,11 @@ Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teamma
 so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a terminal, and talks to it over a
 token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
 (no Esc shortcut); Stop ends computer use for that turn. `computer_key` and `computer_type` take the app they are
-meant for: the runner brings it to the front (`open_app`) and sends nothing unless it is there, since keys go to
-whatever is in front; their answer names the app that got them.
+for, and then go to that app's own process through agent-desktop (`macAppInput`): a key with `press --app`, which
+doesn't bring the app forward, text with `type` into its one focused field that takes text (`find --state focused`;
+AppKit marks a list's cells focused too), and nothing when there is none or several. Bringing the app forward and
+then sending let another app (the person, Brigade.app, a parallel call) come to the front in between and get them.
+Without an app they go to the app in front, as before, and the answer names it (`front`).
 
 Commands in a teammate's own shell don't get those permissions: macOS asks the app responsible for a process, the
 one that started it, and for the runner's commands that is Brigade.app, which holds neither. `computer_run` has the
@@ -96,7 +99,7 @@ them when the snapshot is rooted on it), and cut at 15 KB. The tools are in
 `computer_act` takes one action or `steps`, done in order. Actions without text go in agent-desktop's `batch`, one
 process for many, stopping at the first refusal; text (`type`, `set_value`) never goes in a batch, whose JSON is on
 the command line, but through stdin one action at a time. After acting it reads again what the ref's snapshot read
-(its app, window, surface; not as a skeleton), in the same batch after 300 ms, or the menu, sheet or alert the last
+(its app, the one it actually read when none was named, window and surface; not as a skeleton), in the same batch after 300 ms, or the menu, sheet or alert the last
 action opened, and answers with it in `after`: the new refs, without another call. A ref from a snapshot the tool
 didn't take in this turn gets no `after`, and the answer says to take one.
 
