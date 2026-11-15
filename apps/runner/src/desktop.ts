@@ -142,6 +142,16 @@ let keyboardTurn: Promise<unknown> = Promise.resolve()
 export function teammateKeyboard(user: string): Keyboard {
   const script = `
 command -v xdotool >/dev/null || exit 127
+# The rest of a text: into the window its first piece went to, only while it has the focus. Never
+# brought back to the front, should someone have clicked elsewhere, even in another of its windows.
+if [ "$2" = type-rest ]; then
+  echo "$3" | grep -Eq '^[0-9]{1,12}$' || exit 2
+  if [ "$(xdotool getactivewindow 2>/dev/null)" != "$3" ]; then
+    echo "Another window took the focus while typing, so the rest was not typed" >&2
+    exit 4
+  fi
+  exec xdotool type --clearmodifiers --delay 8 --file -
+fi
 # A window that goes while xdotool lists them makes it fail: asked again.
 for T in 1 2 3; do
   L=$(xdotool search --onlyvisible --class "^brigade-$1\\$" 2>/dev/null) && [ -n "$L" ] && break
@@ -152,17 +162,19 @@ W=""
 for w in $L; do [ "$w" = "$A" ] && W=$w; done
 [ -n "$W" ] || W=$(printf '%s\\n' $L | tail -n 1)
 [ -n "$W" ] || { echo "Your browser has no window on the desktop" >&2; exit 3; }
-# The rest of a text: never brought back to the front, should someone have clicked elsewhere.
-[ "$W" = "$A" ] || [ "$2" = type-rest ] || xdotool windowactivate --sync "$W" >/dev/null 2>&1 || true
+[ "$W" = "$A" ] || xdotool windowactivate --sync "$W" >/dev/null 2>&1 || true
 # Only into this teammate's window: checked last, right before the input.
 if [ "$(xdotool getactivewindow 2>/dev/null)" != "$W" ]; then
   echo "Your browser window could not be brought to the front of the desktop (another window has the focus), so nothing was typed" >&2
   exit 4
 fi
-if [ "$2" != key ]; then exec xdotool type --clearmodifiers --delay 8 --file -; fi
-exec xdotool key --clearmodifiers -- "$3"`
+# Which window it went to: the rest of a text goes there only.
+echo "window $W"
+if [ "$2" = type ]; then exec xdotool type --clearmodifiers --delay 8 --file - >/dev/null; fi
+exec xdotool key --clearmodifiers -- "$3" >/dev/null`
+  /** Resolves to the window it went to (the script's "window <id>"). */
   const run = (args: string[], stdin: string, signal?: AbortSignal) =>
-    new Promise<void>((resolve, reject) => {
+    new Promise<string | undefined>((resolve, reject) => {
       // Interrupted already (while its browser started, or its turn waited): nothing is sent.
       if (signal?.aborted) return reject(new Error('aborted'))
       const child = spawn(
@@ -185,9 +197,13 @@ exec xdotool key --clearmodifiers -- "$3"`
           user,
           ...args,
         ],
-        { cwd: '/', stdio: ['pipe', 'ignore', 'pipe'] },
+        { cwd: '/', stdio: ['pipe', 'pipe', 'pipe'] },
       )
+      let out = ''
       let err = ''
+      child.stdout.on('data', (chunk: Buffer) => {
+        if (out.length < 2000) out += chunk.toString('utf8')
+      })
       const timer = setTimeout(() => child.kill('SIGKILL'), 60_000)
       const abort = () => child.kill('SIGTERM')
       signal?.addEventListener('abort', abort, { once: true })
@@ -199,7 +215,7 @@ exec xdotool key --clearmodifiers -- "$3"`
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)
         if (signal?.aborted) return reject(new Error('aborted'))
-        if (code === 0) return resolve()
+        if (code === 0) return resolve(/^window (\d+)$/m.exec(out)?.[1])
         reject(
           new Error(
             code === 127
@@ -221,13 +237,15 @@ exec xdotool key --clearmodifiers -- "$3"`
     type: (text, signal) =>
       inTurn(async () => {
         const characters = [...text]
-        for (let at = 0; at < characters.length; at += TYPE_CHUNK)
-          await run(
-            [at ? 'type-rest' : 'type'],
-            characters.slice(at, at + TYPE_CHUNK).join(''),
-            signal,
-          )
+        let window: string | undefined
+        for (let at = 0; at < characters.length; at += TYPE_CHUNK) {
+          const piece = characters.slice(at, at + TYPE_CHUNK).join('')
+          if (!at) window = await run(['type'], piece, signal)
+          else if (!window)
+            throw new Error('The window typed into is unknown, so the rest was not typed')
+          else await run(['type-rest', window], piece, signal)
+        }
       }),
-    key: (combo, signal) => inTurn(() => run(['key', combo], '', signal)),
+    key: (combo, signal) => inTurn(async () => void (await run(['key', combo], '', signal))),
   }
 }

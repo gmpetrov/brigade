@@ -620,12 +620,12 @@ async function stubbedDesktop() {
     'xdotool',
     [
       `case "$1" in`,
-      `  search) case "$*" in *brigade-bt-a*) echo 100 ;; *brigade-bt-b*) echo 200 ;; esac ;;`,
+      `  search) case "$*" in *brigade-bt-a*) echo 100 ;; *brigade-bt-b*) echo 200 ;; *brigade-bt-c*) echo 100; echo 101 ;; esac ;;`,
       `  getactivewindow) cat "${active}" ;;`,
       `  windowactivate) [ "$(cat "${dir}/refuse" 2>/dev/null)" = 1 ] && exit 1; echo "$3" >"${active}" ;;`,
       `  type) T=$(cat); echo "type $(cat "${active}") $T" >>"${log}"`,
       // Someone clicks another window after the first piece.
-      `    [ -f "${dir}/steal" ] && echo 999 >"${active}"; true ;;`,
+      `    [ -f "${dir}/steal" ] && cat "${dir}/steal" >"${active}"; true ;;`,
       `  key) echo "key $(cat "${active}") $4" >>"${log}" ;;`,
       `esac`,
     ].join('\n'),
@@ -671,12 +671,15 @@ test('on a cloud computer, typing stops once another window takes the focus', as
   const { teammateKeyboard } = await import('../src/desktop.js')
   const desk = await stubbedDesktop()
   try {
-    writeFileSync(join(desk.dir, 'steal'), '')
-    await assert.rejects(
-      teammateKeyboard('bt-a').type('y'.repeat(70)),
-      /could not be brought|another window/,
-    )
+    writeFileSync(join(desk.dir, 'steal'), '999\n')
+    await assert.rejects(teammateKeyboard('bt-a').type('y'.repeat(70)), /took the focus/)
     assert.deepEqual(desk.lines(), [`type 100 ${'y'.repeat(32)}`])
+    // Another of the teammate's own windows takes it (someone clicked there): the rest isn't
+    // typed there either.
+    writeFileSync(join(desk.dir, 'active'), '100\n')
+    writeFileSync(join(desk.dir, 'steal'), '101\n')
+    await assert.rejects(teammateKeyboard('bt-c').type('z'.repeat(40)), /took the focus/)
+    assert.deepEqual(desk.lines().slice(1), [`type 100 ${'z'.repeat(32)}`])
   } finally {
     desk.done()
   }
