@@ -64,7 +64,8 @@ jobs:
           # The executable the Tauri app's login item starts.
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST")" = brigade-desktop ]
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$PLIST")" = ai.brigade.desktop ]
-          [ "$(/usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$PLIST")" = true ]
+          # A regular Mac app, in the Dock: no LSUIElement (menu-bar only) any more.
+          ! /usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$PLIST" 2>/dev/null
           /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$PLIST"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$PLIST" | grep -qx brigade
           HELPER="$APP/Contents/Resources/Brigade Computer Use.app"
