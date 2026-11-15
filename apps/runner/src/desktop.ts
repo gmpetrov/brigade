@@ -57,6 +57,8 @@ export function teammateDesktopExec(user: string, binary: string | undefined): D
   return (args, options = {}) =>
     new Promise<string>((resolve, reject) => {
       if (!binary) return reject(new Error('agent-desktop is missing from this runner'))
+      // Interrupted already (while its browser started): nothing is run.
+      if (options.signal?.aborted) return reject(new Error('aborted'))
       const dir = teammateBusDir(user)
       const child = spawn(
         'sudo',
@@ -113,18 +115,29 @@ export function teammateDesktopExec(user: string, binary: string | undefined): D
       })
       child.stdin.on('error', () => undefined)
       child.stdin.end(options.stdin ?? '')
-      if (options.signal?.aborted) abort()
     })
 }
 
 /** Whether the helper started the teammate's own session bus (with its browser). */
 export const teammateBusStarted = (user: string) => existsSync(teammateBusDir(user))
 
+/** Text typed in pieces this long, the browser window checked to have the focus before each. */
+const TYPE_CHUNK = 32
+
+/** One keyboard at a time on the desktop, whichever teammate types: see teammateKeyboard. */
+let keyboardTurn: Promise<unknown> = Promise.resolve()
+
 /**
  * The desktop's keyboard into the teammate's browser window, as the teammate (xdotool): for what
  * agent-desktop can't type or press there. The window is the teammate's browser's (its class,
  * brigade-<user>, from the helper's `browser`): the one in front if it is, else its topmost one,
  * brought to the front first, since keys go to the window that has the focus.
+ *
+ * Keys reach whatever window has the focus, which may be another teammate's browser or the one a
+ * person uses: so nothing is sent unless the window in front is this teammate's, checked right
+ * before each piece of text and each key, and the runner's keyboard calls go one at a time, so
+ * that another teammate's can't bring its own window forward in between. A person who clicks
+ * elsewhere meanwhile stops the typing at the next piece: the window isn't taken back from them.
  */
 export function teammateKeyboard(user: string): Keyboard {
   const script = `
@@ -139,11 +152,19 @@ W=""
 for w in $L; do [ "$w" = "$A" ] && W=$w; done
 [ -n "$W" ] || W=$(printf '%s\\n' $L | tail -n 1)
 [ -n "$W" ] || { echo "Your browser has no window on the desktop" >&2; exit 3; }
-[ "$W" = "$A" ] || xdotool windowactivate --sync "$W" >/dev/null 2>&1 || true
-if [ "$2" = type ]; then exec xdotool type --clearmodifiers --delay 8 --file -; fi
+# The rest of a text: never brought back to the front, should someone have clicked elsewhere.
+[ "$W" = "$A" ] || [ "$2" = type-rest ] || xdotool windowactivate --sync "$W" >/dev/null 2>&1 || true
+# Only into this teammate's window: checked last, right before the input.
+if [ "$(xdotool getactivewindow 2>/dev/null)" != "$W" ]; then
+  echo "Your browser window could not be brought to the front of the desktop (another window has the focus), so nothing was typed" >&2
+  exit 4
+fi
+if [ "$2" != key ]; then exec xdotool type --clearmodifiers --delay 8 --file -; fi
 exec xdotool key --clearmodifiers -- "$3"`
   const run = (args: string[], stdin: string, signal?: AbortSignal) =>
     new Promise<void>((resolve, reject) => {
+      // Interrupted already (while its browser started, or its turn waited): nothing is sent.
+      if (signal?.aborted) return reject(new Error('aborted'))
       const child = spawn(
         'sudo',
         [
@@ -190,8 +211,23 @@ exec xdotool key --clearmodifiers -- "$3"`
       child.stdin.on('error', () => undefined)
       child.stdin.end(stdin)
     })
+  /** After the calls before it, whichever teammate made them; it fails on its own. */
+  const inTurn = <T>(work: () => Promise<T>) => {
+    const done = keyboardTurn.then(work, work)
+    keyboardTurn = done.catch(() => undefined)
+    return done
+  }
   return {
-    type: (text, signal) => run(['type'], text, signal),
-    key: (combo, signal) => run(['key', combo], '', signal),
+    type: (text, signal) =>
+      inTurn(async () => {
+        const characters = [...text]
+        for (let at = 0; at < characters.length; at += TYPE_CHUNK)
+          await run(
+            [at ? 'type-rest' : 'type'],
+            characters.slice(at, at + TYPE_CHUNK).join(''),
+            signal,
+          )
+      }),
+    key: (combo, signal) => inTurn(() => run(['key', combo], '', signal)),
   }
 }

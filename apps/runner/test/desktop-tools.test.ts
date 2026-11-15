@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { test } from 'node:test'
 import {
   agentDesktopBinary,
@@ -597,5 +598,113 @@ test("on a Mac, agent-desktop is on a command's PATH, unless the person has thei
     assert.equal(existsSync(join(shims, 'agent-desktop')), false)
   } finally {
     rmSync(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * The cloud keyboard against stubs: sudo runs the script here, and xdotool keeps which window is
+ * active in a file. Each teammate's browser window is 1<n> (bt-a: 100, bt-b: 200).
+ */
+async function stubbedDesktop() {
+  const { mkdtempSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const dir = mkdtempSync(join(tmpdir(), 'keyboard-'))
+  const log = join(dir, 'log')
+  const active = join(dir, 'active')
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(dir, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  // sudo -n -u <user> -- env -i VAR=... sh -c <script> sh <args>: the script, with the stubs.
+  stub('sudo', `while [ "$1" != sh ]; do shift; done; shift; PATH="${dir}:$PATH" exec /bin/sh "$@"`)
+  stub(
+    'xdotool',
+    [
+      `case "$1" in`,
+      `  search) case "$*" in *brigade-bt-a*) echo 100 ;; *brigade-bt-b*) echo 200 ;; esac ;;`,
+      `  getactivewindow) cat "${active}" ;;`,
+      `  windowactivate) [ "$(cat "${dir}/refuse" 2>/dev/null)" = 1 ] && exit 1; echo "$3" >"${active}" ;;`,
+      `  type) T=$(cat); echo "type $(cat "${active}") $T" >>"${log}"`,
+      // Someone clicks another window after the first piece.
+      `    [ -f "${dir}/steal" ] && echo 999 >"${active}"; true ;;`,
+      `  key) echo "key $(cat "${active}") $4" >>"${log}" ;;`,
+      `esac`,
+    ].join('\n'),
+  )
+  writeFileSync(active, '999\n')
+  const previous = process.env.PATH
+  process.env.PATH = `${dir}:${previous}`
+  return {
+    dir,
+    lines: () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : []),
+    done: () => {
+      process.env.PATH = previous
+      rmSync(dir, { recursive: true, force: true })
+    },
+  }
+}
+
+test("on a cloud computer, the keyboard goes only into the teammate's own window, or nowhere", async () => {
+  const { teammateKeyboard } = await import('../src/desktop.js')
+  const desk = await stubbedDesktop()
+  try {
+    // Another window has the focus and won't give it: nothing typed.
+    writeFileSync(join(desk.dir, 'refuse'), '1')
+    await assert.rejects(teammateKeyboard('bt-a').type('private-text'), /could not be brought/)
+    await assert.rejects(teammateKeyboard('bt-a').key('Return'), /could not be brought/)
+    assert.deepEqual(desk.lines(), [])
+    // It comes to the front: typed there, in pieces.
+    writeFileSync(join(desk.dir, 'refuse'), '0')
+    const text = 'x'.repeat(40) + 'é'
+    await teammateKeyboard('bt-a').type(text)
+    await teammateKeyboard('bt-a').key('ctrl+l')
+    assert.deepEqual(desk.lines(), [
+      `type 100 ${'x'.repeat(32)}`,
+      `type 100 ${'x'.repeat(8)}é`,
+      'key 100 ctrl+l',
+    ])
+  } finally {
+    desk.done()
+  }
+})
+
+test('on a cloud computer, typing stops once another window takes the focus', async () => {
+  const { teammateKeyboard } = await import('../src/desktop.js')
+  const desk = await stubbedDesktop()
+  try {
+    writeFileSync(join(desk.dir, 'steal'), '')
+    await assert.rejects(
+      teammateKeyboard('bt-a').type('y'.repeat(70)),
+      /could not be brought|another window/,
+    )
+    assert.deepEqual(desk.lines(), [`type 100 ${'y'.repeat(32)}`])
+  } finally {
+    desk.done()
+  }
+})
+
+test('on a cloud computer, an interrupted call sends nothing, and two teammates type one after the other', async () => {
+  const { teammateKeyboard } = await import('../src/desktop.js')
+  const desk = await stubbedDesktop()
+  try {
+    await assert.rejects(teammateKeyboard('bt-a').key('Return', AbortSignal.abort()), /aborted/)
+    await assert.rejects(teammateKeyboard('bt-a').type('secret', AbortSignal.abort()), /aborted/)
+    assert.deepEqual(desk.lines(), [])
+    await Promise.all([
+      teammateKeyboard('bt-a').type('a'.repeat(100)),
+      teammateKeyboard('bt-b').type('b'.repeat(100)),
+    ])
+    const lines = desk.lines()
+    assert.equal(lines.length, 8)
+    // Each one's pieces together, each into its own window.
+    assert.ok(
+      lines.slice(0, 4).every((l) => /^type 100 a+$/.test(l)),
+      lines.join('\n'),
+    )
+    assert.ok(
+      lines.slice(4).every((l) => /^type 200 b+$/.test(l)),
+      lines.join('\n'),
+    )
+  } finally {
+    desk.done()
   }
 })
