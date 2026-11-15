@@ -7,6 +7,8 @@ import {
   CalendarClock,
   ChartColumn,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   GitPullRequest,
   Inbox,
@@ -121,6 +123,7 @@ import { setLiveWorkspace } from '@/lib/live-socket'
 import { setThreadsShownScope } from '@/lib/use-thread-events'
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { useDesktopFrame } from '@/lib/desktop-frame'
+import { useHistoryNav } from '@/lib/history-nav'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
@@ -493,6 +496,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     the app keeps a band above the page instead. */}
                 {frame === 'mac' && (
                   <div className="flex h-[3.25rem] items-center justify-end gap-2 pl-[4.75rem] group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:pl-0">
+                    <HistoryButtons mac={mac} />
                     <RoundButton
                       label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
                       onClick={() => setSearching(true)}
@@ -883,6 +887,39 @@ function RoundButton({
         {children}
       </button>
     </Hint>
+  )
+}
+
+/** Back and forward beside the traffic lights: the app's window has no browser buttons. */
+function HistoryButtons({ mac }: { mac: boolean }) {
+  const history = useHistoryNav()
+  const arrow =
+    'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-sidebar-ring flex size-8 items-center justify-center rounded-md outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-40 [&>svg]:size-4'
+  return (
+    <div className="mr-auto flex items-center gap-0.5 group-data-[collapsible=icon]:hidden">
+      <Hint label={`Back (${mac ? '⌘[' : 'Alt+←'})`}>
+        <button
+          type="button"
+          aria-label="Back"
+          disabled={!history.canGoBack}
+          onClick={history.back}
+          className={arrow}
+        >
+          <ChevronLeft />
+        </button>
+      </Hint>
+      <Hint label={`Forward (${mac ? '⌘]' : 'Alt+→'})`}>
+        <button
+          type="button"
+          aria-label="Forward"
+          disabled={!history.canGoForward}
+          onClick={history.forward}
+          className={arrow}
+        >
+          <ChevronRight />
+        </button>
+      </Hint>
+    </div>
   )
 }
 
