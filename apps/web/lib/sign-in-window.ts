@@ -1,9 +1,21 @@
+import { desktopBridge } from './desktop-bridge'
+
 /**
  * A provider's sign-in in a tab of its own. Providers refuse to load in a
  * frame (Cloudflare, Google), so the page that asked stays where it is and the
  * sign-in comes back to /app/connections?popup=1, which closes the tab.
  */
 export const SIGN_IN_RETURN = '/app/connections?popup=1'
+
+/**
+ * Where the sign-in comes back to. In Brigade.app, the tab is the browser's (the app hands it
+ * there): its return page carries a one-time value back to the app (`&desktop=`, then
+ * brigade://signed-in), which tells the page that waits.
+ */
+async function signInReturn() {
+  const app = desktopBridge()?.providerSignIn
+  return app ? `${SIGN_IN_RETURN}&desktop=${encodeURIComponent(await app.start())}` : SIGN_IN_RETURN
+}
 
 /**
  * Open the tab on the click, so it is not blocked, then send it to the
@@ -19,7 +31,7 @@ export async function openSignIn(address: (returnTo?: string) => Promise<string>
     return false
   }
   try {
-    tab.location.href = await address(SIGN_IN_RETURN)
+    tab.location.href = await address(await signInReturn())
     return true
   } catch (error) {
     tab.close()
@@ -43,10 +55,26 @@ export function tellSignIn(result: SignInResult) {
   channel.close()
 }
 
-/** Listen for the sign-in tab's result; returns the cleanup. */
+/** Listen for the sign-in tab's result; returns the cleanup. In Brigade.app, it comes from the
+ * app, back from the browser. */
 export function onSignIn(listener: (result: SignInResult) => void) {
-  if (typeof BroadcastChannel === 'undefined') return () => {}
+  const fromApp = desktopBridge()?.providerSignIn.onResult(listener) ?? (() => {})
+  if (typeof BroadcastChannel === 'undefined') return fromApp
   const channel = new BroadcastChannel(CHANNEL)
   channel.onmessage = (event: MessageEvent<SignInResult>) => listener(event.data)
-  return () => channel.close()
+  return () => {
+    channel.close()
+    fromApp()
+  }
+}
+
+/**
+ * The link the sign-in's return page opens when Brigade.app started it (`desktop`, its
+ * one-time value): the app checks the value and tells its page.
+ */
+export function desktopSignedInLink(desktop: string, result: SignInResult) {
+  const query = new URLSearchParams({ nonce: desktop })
+  if (result.connected) query.set('connected', result.connected)
+  if (result.error) query.set('error', result.error)
+  return `brigade://signed-in?${query}`
 }

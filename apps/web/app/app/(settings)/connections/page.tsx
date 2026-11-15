@@ -5,7 +5,7 @@ import { CircleCheck, ShieldCheck } from 'lucide-react'
 import { AppSheet } from '@/components/app-sheet'
 import { ConnectApps, type Open } from '@/components/connect-apps'
 import { useApi, type ConnectionsResponse, type Trigger, type TriggerCatalog } from '@/lib/api'
-import { tellSignIn } from '@/lib/sign-in-window'
+import { desktopSignedInLink, tellSignIn } from '@/lib/sign-in-window'
 
 /** Why an account was not connected, from the error a provider's redirect brought back. */
 const CONNECT_ERRORS: Record<string, string> = {
@@ -35,17 +35,35 @@ function Apps() {
   const params = useSearchParams()
   // Back from a provider in the sign-in tab: the page that opened it shows the account.
   if (params.get('popup'))
-    return <SignedIn connected={params.get('connected')} error={params.get('error')} />
+    return (
+      <SignedIn
+        connected={params.get('connected')}
+        error={params.get('error')}
+        desktop={params.get('desktop')}
+      />
+    )
   return <AppsList />
 }
 
 /** The sign-in tab's last page: closes itself, or says to. */
-function SignedIn({ connected, error }: { connected: string | null; error: string | null }) {
+function SignedIn({
+  connected,
+  error,
+  desktop,
+}: {
+  connected: string | null
+  error: string | null
+  /** Started in Brigade.app, which waits for the result: its one-time value. */
+  desktop: string | null
+}) {
   useEffect(() => {
+    const result = { ...(connected ? { connected } : {}), ...(error ? { error } : {}) }
+    // Back to Brigade.app, whose page waits: the browser tab stays, saying so.
+    if (desktop) return void (window.location.href = desktopSignedInLink(desktop, result))
     // The page that opened the tab learns which account signed in, before the tab closes.
-    tellSignIn({ ...(connected ? { connected } : {}), ...(error ? { error } : {}) })
+    tellSignIn(result)
     if (!error) window.close()
-  }, [connected, error])
+  }, [connected, error, desktop])
   return (
     <div className="flex flex-col gap-2 py-16 text-center">
       <p className="font-semibold">{error ? 'The account was not connected.' : 'Connected.'}</p>

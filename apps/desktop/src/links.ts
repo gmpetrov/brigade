@@ -8,12 +8,27 @@ import { alert, confirm } from './dialogs.js'
 import { runnerSupported } from './runner.js'
 import * as setup from './setup.js'
 import { parseLink } from './link.js'
+import { takeProviderSignIn } from './provider-sign-in.js'
 import { updateSettings } from './settings.js'
+import { bringUp, dashboardWindow } from './windows.js'
 
 export async function openLink(raw: string) {
   const link = parseLink(raw)
   if (!link) return
   if (link.kind === 'signIn') return capture.signedIn(link.code)
+  if (link.kind === 'providerSignedIn') {
+    if (!takeProviderSignIn(link.nonce)) return
+    const result = {
+      ...(link.connected && { connected: link.connected }),
+      ...(link.error && { error: link.error }),
+    }
+    // Back to the page that waits: the dashboard window, or the new thread window.
+    for (const window of [dashboardWindow(), capture.captureWindow()])
+      window?.webContents.send('brigade:provider-signed-in', result)
+    const front = dashboardWindow()
+    if (front) bringUp(front)
+    return
+  }
   if (!runnerSupported())
     return alert(
       "Teammates can't run on this computer yet",

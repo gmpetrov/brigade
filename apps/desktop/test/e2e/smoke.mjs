@@ -8,9 +8,11 @@ import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright-core'
 
-const out = new URL('../../release/out/', import.meta.url).pathname
+// fileURLToPath, not .pathname: on Windows that would be /D:/….
+const out = fileURLToPath(new URL('../../release/out/', import.meta.url))
 function executable() {
   if (process.argv[2]) return process.argv[2]
   const dir = readdirSync(out).find((d) => d.endsWith('-unpacked') || d.startsWith('mac'))
@@ -121,6 +123,25 @@ try {
     ),
   )
   check('main has no draft', () => assert.equal(refused, 'refused'))
+
+  // An App's sign-in, done in the browser, comes back to the page that waits: once, and only
+  // with the one-time value the app gave it.
+  const nonce = await main.evaluate(() => {
+    window.results = []
+    window.brigadeDesktop.providerSignIn.onResult((r) => window.results.push(r))
+    return window.brigadeDesktop.providerSignIn.start()
+  })
+  const signedIn = (value) =>
+    app.evaluate(
+      ({ app }, url) => app.emit('second-instance', {}, [url]),
+      `brigade://signed-in?nonce=${value}&connected=conn_1`,
+    )
+  await signedIn('forged')
+  await signedIn(nonce)
+  await signedIn(nonce)
+  await main.waitForTimeout(500)
+  const results = await main.evaluate(() => window.results)
+  check('provider sign-in comes back', () => assert.deepEqual(results, [{ connected: 'conn_1' }]))
 
   // Another site loaded in a window by the app itself still gets no bridge.
   await app.evaluate(({ BrowserWindow }, url) => {

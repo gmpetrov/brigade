@@ -39,3 +39,20 @@ test('turns away what it should not follow', () => {
   )
   assert.ok(link?.kind === 'connect' && link.dashboard === undefined)
 })
+
+test('reads the return of a provider sign-in', () => {
+  assert.deepEqual(parseLink('brigade://signed-in?nonce=n1&connected=conn_1'), {
+    kind: 'providerSignedIn',
+    nonce: 'n1',
+    connected: 'conn_1',
+  })
+  assert.deepEqual(parseLink('brigade://signed-in?nonce=n1&error=access_denied'), {
+    kind: 'providerSignedIn',
+    nonce: 'n1',
+    error: 'access_denied',
+  })
+  assert.equal(parseLink('brigade://signed-in?connected=conn_1'), undefined)
+  // Nothing but an id comes through.
+  const odd = parseLink('brigade://signed-in?nonce=n1&connected=%3Cscript%3E')
+  assert.ok(odd?.kind === 'providerSignedIn' && odd.connected === undefined)
+})

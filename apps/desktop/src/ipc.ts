@@ -3,6 +3,7 @@
 // site; the draft's captures only from the new thread window.
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import * as capture from './capture.js'
+import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
 import { kindOf, type WindowKind } from './windows.js'
 
@@ -59,6 +60,11 @@ export function registerBridge() {
     const kind = from(event)
     if (!kind) throw new Error('Not allowed.')
     await capture.startSignIn(kind)
+  })
+
+  ipcMain.handle('brigade:provider-sign-in:start', (event) => {
+    if (!from(event)) throw new Error('Not allowed.')
+    return startProviderSignIn()
   })
 
   // What needs the member, on the Dock icon (macOS) or the launcher's (Linux).

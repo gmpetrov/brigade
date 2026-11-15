@@ -8,27 +8,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { MouseEvent } from 'react'
+import { desktopBridge } from '@/lib/desktop-bridge'
 
 type Internals = { __TAURI_INTERNALS__?: unknown }
 
-/** apps/desktop/src/preload.ts. */
-type Bridge = {
-  info: { window: 'main' | 'capture'; platform: string; version: string; bridge: number }
-  captures: {
-    list: () => Promise<string[]>
-    read: (name: string) => Promise<Uint8Array>
-    remove: (name: string) => Promise<void>
-    clear: () => Promise<void>
-    hide: () => Promise<void>
-    onAdded: (handle: (name: string) => void) => () => void
-    onShown: (handle: () => void) => () => void
-  }
-  signInWithBrowser: () => Promise<void>
-  setBadge: (count: number) => void
-}
-
-const bridge = () =>
-  typeof window === 'undefined' ? undefined : (window as { brigadeDesktop?: Bridge }).brigadeDesktop
+const bridge = desktopBridge
 
 const tauri = () => typeof window !== 'undefined' && !!(window as Internals).__TAURI_INTERNALS__
 

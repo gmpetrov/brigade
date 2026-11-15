@@ -31,4 +31,11 @@ if (info)
     },
     signInWithBrowser: () => ipcRenderer.invoke('brigade:sign-in'),
     setBadge: (count: number) => ipcRenderer.send('brigade:badge', count),
+    providerSignIn: {
+      start: () => ipcRenderer.invoke('brigade:provider-sign-in:start'),
+      onResult: (handle: (result: { connected?: string; error?: string }) => void) =>
+        listen('brigade:provider-signed-in', (result) =>
+          handle(result as { connected?: string; error?: string }),
+        ),
+    },
   })
