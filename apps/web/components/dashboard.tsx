@@ -490,21 +490,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Sidebar collapsible="icon">
               <SidebarResizer width={sidebarWidth} onWidth={setSidebarWidth} />
               <SidebarHeader data-window-drag className={cn(frame === 'mac' && 'pt-0')}>
-                {/* Brigade.app on macOS, with no title bar: the traffic lights at the start of
-                    this row, search and new thread across from them (lib/desktop-frame.ts).
-                    Folded to the rail, the row keeps the lights' room above the icons. Narrower,
-                    the app keeps a band above the page instead. */}
+                {/* Brigade.app on macOS, with no title bar: this row is the traffic lights' and the
+                    window controls' beside them (WindowControls); search and new thread sit
+                    beside the workspace's name, as on the web (lib/desktop-frame.ts). Folded to
+                    the rail, the rail starts below the band instead (app/globals.css). */}
                 {frame === 'mac' && (
-                  <div className="flex h-[3.25rem] items-center justify-end gap-2 pl-[4.75rem] group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:pl-0">
-                    <HistoryButtons mac={mac} />
-                    <RoundButton
-                      label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
-                      onClick={() => setSearching(true)}
-                    >
-                      <Search />
-                    </RoundButton>
-                    <NewThreadButton />
-                  </div>
+                  <div aria-hidden className="h-[3.25rem] group-data-[collapsible=icon]:hidden" />
                 )}
                 <SidebarMenu>
                   <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:block">
@@ -531,17 +522,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         }
                       />
                     </DropdownMenu>
-                    {frame !== 'mac' && (
-                      <>
-                        <RoundButton
-                          label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
-                          onClick={() => setSearching(true)}
-                        >
-                          <Search />
-                        </RoundButton>
-                        <NewThreadButton />
-                      </>
-                    )}
+                    <RoundButton
+                      label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
+                      onClick={() => setSearching(true)}
+                    >
+                      <Search />
+                    </RoundButton>
+                    <NewThreadButton />
                   </SidebarMenuItem>
                 </SidebarMenu>
                 {/* Folded: the same two as icons of the rail. */}
@@ -776,6 +763,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Sidebar>
 
             <Inset>{children}</Inset>
+            {frame === 'mac' && <WindowControls mac={mac} />}
           </SidebarProvider>
           <SearchDialog open={searching} onOpenChange={setSearching} />
           <ShortcutsDialog />
@@ -890,13 +878,21 @@ function RoundButton({
   )
 }
 
-/** Back and forward beside the traffic lights: the app's window has no browser buttons. */
-function HistoryButtons({ mac }: { mac: boolean }) {
+/**
+ * Brigade.app on macOS, beside the traffic lights, as Claude's app has them: the sidebar's toggle,
+ * back and forward. Always in the same place, the sidebar open or folded: the app's window has
+ * no browser buttons. Fixed over the top band, which still moves the window around them.
+ */
+function WindowControls({ mac }: { mac: boolean }) {
   const history = useHistoryNav()
   const arrow =
-    'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-sidebar-ring flex size-8 items-center justify-center rounded-md outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-40 [&>svg]:size-4'
+    'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-sidebar-ring flex size-7 items-center justify-center rounded-md outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-40 [&>svg]:size-4'
   return (
-    <div className="mr-auto flex items-center gap-0.5 group-data-[collapsible=icon]:hidden">
+    <div
+      data-window-drag
+      className="fixed top-0 left-0 z-30 flex h-[3.25rem] items-center gap-0.5 pl-[4.75rem]"
+    >
+      <SidebarToggle className="ml-0 size-7" />
       <Hint label={`Back (${mac ? '⌘[' : 'Alt+←'})`}>
         <button
           type="button"
@@ -1046,6 +1042,7 @@ function Inset({ children }: { children: ReactNode }) {
       {/* A computer's screen, and the Inbox, take the whole page, edge to edge. */}
       <div
         data-bleed={computerPage ? '' : undefined}
+        data-page-band={computerPage ? undefined : ''}
         className={cn(
           computerPage || inboxPage
             ? 'w-full min-w-0'

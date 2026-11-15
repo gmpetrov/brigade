@@ -1609,11 +1609,31 @@ html[data-desktop-frame]
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
-/* With the sidebar folded to its rail, the traffic lights reach past the rail, so the thread's
- * sidebar toggle steps aside from them. */
+/* The sidebar's toggle sits beside the traffic lights there (WindowControls in
+ * components/dashboard.tsx): the thread's own would be a second one. */
+html[data-desktop-frame='mac'] .pill-toggle {
+  display: none;
+}
+/* Folded to its rail, the sidebar starts below a band across the top of the window, where the
+ * traffic lights and the window controls sit: wider than the rail, they would reach past it. */
+html[data-desktop-frame='mac'] .peer[data-state='collapsed'] > [data-slot='sidebar-container'] {
+  top: 3.25rem;
+  height: calc(100svh - 3.25rem);
+}
+/* …and a page starts below that band, out from under the controls. A thread's own bar is
+ * already that band. */
 html[data-desktop-frame='mac']
   .peer[data-state='collapsed']
   ~ [data-slot='sidebar-inset']
-  .pill-toggle {
-  left: 2rem;
+  [data-page-band] {
+  padding-top: 3.25rem;
+}
+/* The Inbox, the window's height, keeps to what is left below the band. */
+@media (min-width: 64rem) {
+  html[data-desktop-frame='mac']
+    .peer[data-state='collapsed']
+    ~ [data-slot='sidebar-inset']
+    [data-inbox] {
+    height: calc(100dvh - 3.25rem);
+  }
 }
