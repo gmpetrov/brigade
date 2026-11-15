@@ -82,6 +82,9 @@ jobs:
 
       - name: Build, sign and notarize
         env:
+          # electron-builder skips signing (and so notarization) in a pull request's build unless
+          # told otherwise: the trial build must sign as a release does.
+          CSC_FOR_PULL_REQUEST: 'true'
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
