@@ -19,9 +19,19 @@ name: Release Brigade.app
 on:
   push:
     tags: ['desktop-v*']
+  # A pull request that changes how the release is built gets the macOS app built, signed and
+  # notarized as a release does, with nothing published: a release found the helper's signature
+  # broken only once it was tagged.
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-release.yml'
+      - 'apps/desktop/electron-builder.config.cjs'
+      - 'apps/desktop/scripts/**'
+      - 'apps/desktop/build/**'
+      - 'apps/computer-use-macos/scripts/**'
 
 concurrency:
-  group: desktop-release
+  group: desktop-release-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'tag' }}
   cancel-in-progress: false
 
 permissions:
@@ -37,6 +47,8 @@ jobs:
       - name: Version from the tag
         run: |
           VERSION="${GITHUB_REF_NAME#desktop-v}"
+          # A pull request's trial build.
+          [ "$GITHUB_EVENT_NAME" != pull_request ] || VERSION="0.0.${{ github.event.pull_request.number }}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           cd apps/desktop && npm pkg set version="$VERSION"
 
@@ -78,8 +90,16 @@ jobs:
         run: |
           export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
           printf '%s' "$APPLE_API_KEY_CONTENT" > "$APPLE_API_KEY"
-          apps/desktop/scripts/build.sh
+          set -o pipefail
+          apps/desktop/scripts/build.sh 2>&1 | tee "$RUNNER_TEMP/build.log"
           rm "$APPLE_API_KEY"
+
+      # Teammates can't read a job's log, but they can read its annotations.
+      - name: Errors as annotations
+        if: failure()
+        run: |
+          grep -E '⨯|Error|error:|"message"|"path"|"statusSummary"' "$RUNNER_TEMP/build.log" 2>/dev/null |
+            grep -v '^\s*at ' | sort -u | head -30 | sed 's/^/::error ::/' || true
 
       - name: Check the app
         working-directory: apps/desktop/release/out
@@ -92,7 +112,7 @@ jobs:
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")" = brigade-desktop ]
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION" ]
           # The helper keeps its own signature, which its permissions are tied to.
-          codesign --verify --strict "$APP/Contents/Resources/Brigade Computer Use.app"
+          codesign --verify --strict --verbose=2 "$APP/Contents/Resources/Brigade Computer Use.app"
           codesign -dvv "$APP/Contents/Resources/Brigade Computer Use.app" 2>&1 | grep -q '^Authority=Developer ID Application'
 
       - name: The Tauri apps' update
@@ -128,6 +148,7 @@ jobs:
             apps/desktop/release/out/latest.json
 
   windows:
+    if: github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 40
     defaults:
@@ -158,6 +179,7 @@ jobs:
             apps/desktop/release/out/latest.yml
 
   linux:
+    if: github.event_name == 'push'
     # The oldest Ubuntu GitHub runs: an AppImage runs on systems as new as or newer than its build's.
     runs-on: ubuntu-22.04
     timeout-minutes: 40
@@ -183,6 +205,7 @@ jobs:
             apps/desktop/release/out/latest-linux.yml
 
   publish:
+    if: github.event_name == 'push'
     needs: [mac, windows, linux]
     runs-on: ubuntu-latest
     steps:

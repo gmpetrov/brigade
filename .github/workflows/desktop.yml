@@ -67,7 +67,12 @@ jobs:
           [ "$(/usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$PLIST")" = true ]
           /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$PLIST"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$PLIST" | grep -qx brigade
-          [ -x "$APP/Contents/Resources/Brigade Computer Use.app/Contents/MacOS/brigade-computer-use" ]
+          HELPER="$APP/Contents/Resources/Brigade Computer Use.app"
+          [ -x "$HELPER/Contents/MacOS/brigade-computer-use" ]
+          # The helper as its own script signed it: packaging must not touch it (a universal
+          # merge once broke its signature, which notarization refused).
+          codesign --verify --strict --verbose=2 "$HELPER"
+          diff -r "$HELPER" "../../../computer-use-macos/build/Brigade Computer Use.app"
           lipo -archs "$APP/Contents/MacOS/brigade-desktop" | tr ' ' '\n' | sort | tr '\n' ' ' | grep -q 'arm64 x86_64'
           ls Brigade.dmg *-mac.zip latest-mac.yml
 
