@@ -3,6 +3,7 @@
 // site; the draft's captures only from the new thread window.
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import * as capture from './capture.js'
+import { findAgain, openFind } from './find.js'
 import * as notifications from './notifications.js'
 import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
@@ -78,6 +79,13 @@ export function registerBridge() {
     const hex = (value: unknown): value is string =>
       typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
     if (hex(color) && hex(symbolColor)) setFrameColors({ color, symbolColor })
+  })
+
+  // ⌘F in the dashboard's page, which left it alone (preload.ts): the find bar (find.ts).
+  ipcMain.on('brigade:find', (event, what: unknown) => {
+    if (from(event) !== 'main') return
+    if (what === 'open') void openFind()
+    else if (what === 'next' || what === 'previous') void findAgain(what === 'next')
   })
 
   // macOS: the page has no room for the traffic lights (too narrow for its sidebar).

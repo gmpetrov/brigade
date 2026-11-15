@@ -11,6 +11,7 @@ import * as autostart from './autostart.js'
 import * as capture from './capture.js'
 import { ctx } from './context.js'
 import { Helper } from './helper.js'
+import * as find from './find.js'
 import { registerBridge } from './ipc.js'
 import { handleQuit } from './lifecycle.js'
 import { openLink } from './links.js'
@@ -90,6 +91,7 @@ function start() {
 
   setUpSession()
   registerBridge()
+  find.registerFind()
   setup.registerSetup()
   handleLinks(link)
   setAppMenu()
@@ -104,7 +106,7 @@ function start() {
   // The smoke test (test/e2e/smoke.mjs) reaches the app's parts from Playwright.
   if (process.env.BRIGADE_DESKTOP_TEST === '1')
     Object.assign(globalThis, {
-      brigadeTest: { capture, setup, showDashboard, dashboardWindow, notifications, ctx },
+      brigadeTest: { capture, setup, showDashboard, dashboardWindow, notifications, find, ctx },
     })
 
   ready = true

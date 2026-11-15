@@ -8,6 +8,9 @@ system tray on Windows and Linux) and:
   (`src/runner.ts`, `src/workspaces.ts`);
 - shows the dashboard in a window of its own (`src/windows.ts`), and a small new thread window,
   the dashboard's `/app/capture`, from a global shortcut (`src/capture.ts`);
+- finds in the dashboard's page with ⌘F (Ctrl+F on Windows and Linux), ⌘G and ⇧⌘G (F3): a bar
+  over its top right, in a view of its own so it never finds its own field (`src/find.ts`,
+  `page/find.html`); a code editor that has its own search keeps the key;
 - on macOS, takes screenshots for that window and lets teammates use the Mac's apps through
   Brigade Computer Use.app (`apps/computer-use-macos`), which it ships inside;
 - walks a new member through what is missing (`src/setup.ts`, `page/setup.html`), opens at login

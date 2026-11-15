@@ -17,4 +17,5 @@ await Promise.all([
   // Preloads run sandboxed: only `electron` can be required there.
   build({ ...common, entryPoints: ['src/preload.ts'], outfile: 'dist/preload.js' }),
   build({ ...common, entryPoints: ['src/setup-preload.ts'], outfile: 'dist/setup-preload.js' }),
+  build({ ...common, entryPoints: ['src/find-preload.ts'], outfile: 'dist/find-preload.js' }),
 ])

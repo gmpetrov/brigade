@@ -16,6 +16,7 @@ import * as autostart from './autostart.js'
 import * as capture from './capture.js'
 import { ctx } from './context.js'
 import { confirm } from './dialogs.js'
+import { findAgain, openFind } from './find.js'
 import { showLogs } from './logs.js'
 import { label, runnerSupported } from './runner.js'
 import { dashboard, loadSettings, updateSettings } from './settings.js'
@@ -308,6 +309,27 @@ export function setAppMenu() {
           { role: 'paste' },
           { role: 'pasteAndMatchStyle' },
           { role: 'selectAll' },
+          { type: 'separator' },
+          // The keys reach the page first, which opens the bar unless it uses them itself
+          // (preload.ts): shown here, not taken from it.
+          {
+            label: 'Find…',
+            accelerator: 'Command+F',
+            registerAccelerator: false,
+            click: () => void openFind(),
+          },
+          {
+            label: 'Find Next',
+            accelerator: 'Command+G',
+            registerAccelerator: false,
+            click: () => void findAgain(true),
+          },
+          {
+            label: 'Find Previous',
+            accelerator: 'Shift+Command+G',
+            registerAccelerator: false,
+            click: () => void findAgain(false),
+          },
         ],
       },
       {

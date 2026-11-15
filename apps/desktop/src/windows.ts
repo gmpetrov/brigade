@@ -16,6 +16,7 @@ import {
 } from 'electron'
 import { ctx } from './context.js'
 import { confirm } from './dialogs.js'
+import { attachFind, placeFind, setFindTheme } from './find.js'
 import { dashboard, loadSettings, onDashboard, updateSettings } from './settings.js'
 
 export type WindowKind = 'main' | 'capture'
@@ -201,7 +202,9 @@ function layout() {
   if (!window || !view) return
   const [width = 0, height = 0] = window.getContentSize()
   const top = band()
-  view.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) })
+  const bounds = { x: 0, y: top, width, height: Math.max(0, height - top) }
+  view.setBounds(bounds)
+  placeFind(bounds)
   markBand(window)
 }
 
@@ -240,8 +243,15 @@ export function setFrameColors(colors: { color: string; symbolColor: string }) {
   const window = dashboardWindow()
   if (!window) return
   window.setBackgroundColor(colors.color)
+  setFindTheme(dark(colors.color))
   if (dashboardFrame() === 'overlay')
     window.setTitleBarOverlay({ ...colors, height: OVERLAY_HEIGHT })
+}
+
+/** Whether a #rrggbb background is dark: the find bar follows it. */
+export function dark(color: string) {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
+  return 0.299 * r + 0.587 * g + 0.114 * b < 128
 }
 
 /** macOS: the page is too narrow for its sidebar, so the traffic lights get a band above it. */
@@ -368,6 +378,8 @@ export function showDashboard(url = dashboard()) {
   narrow = false
   fullscreen = false
   window.contentView.addChildView(page)
+  // Over the dashboard: the find bar (⌘F), hidden until asked.
+  attachFind(window, page.webContents)
   layout()
   window.on('resize', layout)
   // The window's own page: the band, nothing to follow.

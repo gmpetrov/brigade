@@ -1,0 +1,116 @@
+/* The find bar (find.html), in the dashboard's colors: dark by default, light with .light. */
+:root {
+  --card: #232327;
+  --border: rgb(255 255 255 / 0.1);
+  --field: rgb(255 255 255 / 0.06);
+  --text: #e4e4e7;
+  --muted: #8e8e96;
+  --hover: rgb(255 255 255 / 0.08);
+  --ring: #3b82f6;
+  --shadow: 0 6px 20px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
+}
+:root.light {
+  --card: #ffffff;
+  --border: rgb(0 0 0 / 0.1);
+  --field: rgb(0 0 0 / 0.04);
+  --text: #18181b;
+  --muted: #71717a;
+  --hover: rgb(0 0 0 / 0.06);
+  --shadow: 0 6px 20px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  color-scheme: light;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font:
+    13px/1.2 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+  color: var(--text);
+  user-select: none;
+}
+.card {
+  position: absolute;
+  inset: 8px 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  margin-right: 4px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: var(--field);
+}
+.field:focus-within {
+  border-color: var(--ring);
+}
+input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+input::placeholder {
+  color: var(--muted);
+}
+#count {
+  flex: none;
+  margin-left: 8px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+}
+button:hover:not(:disabled) {
+  background: var(--hover);
+}
+button:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+}
+button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

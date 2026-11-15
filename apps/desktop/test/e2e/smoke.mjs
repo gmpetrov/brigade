@@ -196,6 +196,24 @@ try {
   )
   check('main has no draft', () => assert.equal(refused, 'refused'))
 
+  // ⌘F (Ctrl+F) in the dashboard opens the find bar over it, which finds as the person types and
+  // closes on Esc (find.ts).
+  const findShown = () => app.evaluate(() => globalThis.brigadeTest.find.findOpen())
+  await main.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f')
+  const opened = await waitFor(findShown, 5_000).catch(() => false)
+  check('find bar opens', () => assert.equal(opened, true))
+  const bar = await waitFor(async () => app.windows().find((w) => w.url().endsWith('find.html')))
+  await bar.waitForLoadState('load')
+  await bar.fill('#text', 'out')
+  const count = await waitFor(
+    () => bar.evaluate(() => document.getElementById('count').textContent),
+    5_000,
+  ).catch(() => '')
+  check('find bar finds in the page', () => assert.equal(count, '1/1'))
+  await bar.keyboard.press('Escape')
+  const closed = await waitFor(async () => !(await findShown()), 5_000).catch(() => false)
+  check('find bar closes', () => assert.equal(closed, true))
+
   // An App's sign-in, done in the browser, comes back to the page that waits: once, and only
   // with the one-time value the app gave it.
   const nonce = await main.evaluate(() => {
