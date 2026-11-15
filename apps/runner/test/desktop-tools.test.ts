@@ -623,10 +623,11 @@ async function stubbedDesktop() {
       `  search) case "$*" in *brigade-bt-a*) echo 100 ;; *brigade-bt-b*) echo 200 ;; *brigade-bt-c*) echo 100; echo 101 ;; esac ;;`,
       `  getactivewindow) cat "${active}" ;;`,
       `  windowactivate) [ "$(cat "${dir}/refuse" 2>/dev/null)" = 1 ] && exit 1; echo "$3" >"${active}" ;;`,
-      `  type) T=$(cat); echo "type $(cat "${active}") $T" >>"${log}"`,
+      // type --window <id> …: what Chrome gets only while <id> has the focus; logged under <id>.
+      `  type) T=$(cat); [ "$2" = --window ] || exit 9; echo "type $3 $T" >>"${log}"`,
       // Someone clicks another window after the first piece.
       `    [ -f "${dir}/steal" ] && cat "${dir}/steal" >"${active}"; true ;;`,
-      `  key) echo "key $(cat "${active}") $4" >>"${log}" ;;`,
+      `  key) [ "$2" = --window ] || exit 9; echo "key $3 $5" >>"${log}" ;;`,
       `esac`,
     ].join('\n'),
   )
@@ -680,6 +681,12 @@ test('on a cloud computer, typing stops once another window takes the focus', as
     writeFileSync(join(desk.dir, 'steal'), '101\n')
     await assert.rejects(teammateKeyboard('bt-c').type('z'.repeat(40)), /took the focus/)
     assert.deepEqual(desk.lines().slice(1), [`type 100 ${'z'.repeat(32)}`])
+    // Focus taken in the middle of a piece: its keys are still sent to the teammate's window only,
+    // and the call says the field may miss some of them.
+    writeFileSync(join(desk.dir, 'active'), '100\n')
+    writeFileSync(join(desk.dir, 'steal'), '200\n')
+    await assert.rejects(teammateKeyboard('bt-a').type('private-password'), /may miss some/)
+    assert.deepEqual(desk.lines().slice(2), ['type 100 private-password'])
   } finally {
     desk.done()
   }

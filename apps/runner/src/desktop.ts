@@ -133,15 +133,31 @@ let keyboardTurn: Promise<unknown> = Promise.resolve()
  * brigade-<user>, from the helper's `browser`): the one in front if it is, else its topmost one,
  * brought to the front first, since keys go to the window that has the focus.
  *
- * Keys reach whatever window has the focus, which may be another teammate's browser or the one a
- * person uses: so nothing is sent unless the window in front is this teammate's, checked right
- * before each piece of text and each key, and the runner's keyboard calls go one at a time, so
- * that another teammate's can't bring its own window forward in between. A person who clicks
- * elsewhere meanwhile stops the typing at the next piece: the window isn't taken back from them.
+ * Keys go to that window only, as events sent to it, never through the desktop's keyboard, which
+ * types into whatever window has the focus (another teammate's browser, or one a person uses).
+ * Chrome takes them only while its window has the focus: nothing is sent unless it is in front,
+ * checked before each piece of text and each key and after it, and the runner's keyboard calls go
+ * one at a time, so that another teammate's can't bring its own window forward in between. A
+ * person who clicks elsewhere meanwhile stops the typing: the window isn't taken back from them.
  */
 export function teammateKeyboard(user: string): Keyboard {
   const script = `
 command -v xdotool >/dev/null || exit 127
+# <type|key>: into window $W only, as events sent to it (--window): never into another window,
+# whichever has the focus meanwhile. Chrome takes them only while that window has the focus, so a
+# window that lost it meanwhile is said: the field may miss some of the text.
+send() {
+  if [ "$1" = type ]; then
+    xdotool type --window "$W" --delay 8 --file - >/dev/null || exit 1
+  else
+    xdotool key --window "$W" -- "$KEY" >/dev/null || exit 1
+  fi
+  if [ "$(xdotool getactivewindow 2>/dev/null)" != "$W" ]; then
+    echo "Another window took the focus while typing: nothing went to it, but the field may miss some of the text, so check it" >&2
+    exit 5
+  fi
+}
+KEY=\${3:-}
 # The rest of a text: into the window its first piece went to, only while it has the focus. Never
 # brought back to the front, should someone have clicked elsewhere, even in another of its windows.
 if [ "$2" = type-rest ]; then
@@ -150,7 +166,9 @@ if [ "$2" = type-rest ]; then
     echo "Another window took the focus while typing, so the rest was not typed" >&2
     exit 4
   fi
-  exec xdotool type --clearmodifiers --delay 8 --file -
+  W=$3
+  send type
+  exit 0
 fi
 # A window that goes while xdotool lists them makes it fail: asked again.
 for T in 1 2 3; do
@@ -170,8 +188,7 @@ if [ "$(xdotool getactivewindow 2>/dev/null)" != "$W" ]; then
 fi
 # Which window it went to: the rest of a text goes there only.
 echo "window $W"
-if [ "$2" = type ]; then exec xdotool type --clearmodifiers --delay 8 --file - >/dev/null; fi
-exec xdotool key --clearmodifiers -- "$3" >/dev/null`
+if [ "$2" = type ]; then send type; else send key; fi`
   /** Resolves to the window it went to (the script's "window <id>"). */
   const run = (args: string[], stdin: string, signal?: AbortSignal) =>
     new Promise<string | undefined>((resolve, reject) => {
