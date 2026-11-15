@@ -32,6 +32,33 @@ if "color_scheme2" not in theme:
         json.dump(prefs, f)
     os.replace(path + ".brigade", path)
 '
+# <user>: the address of the teammate's own accessibility bus, which carries only its own apps, for
+# agent-desktop run as the teammate (the runner's desktop.ts): a session bus of its own in
+# /run/brigade-a11y/<user>, where D-Bus starts the accessibility bus on the first ask. Started with
+# its browser, in the browser's cgroup, so it stops with it. Prints nothing when it can't: the
+# browser starts as before, and only computer use on it goes without.
+a11y() {
+  D="/run/brigade-a11y/$1"
+  install -d -m 755 /run/brigade-a11y
+  install -d -o "$1" -g "$1" -m 700 "$D"
+  as_bus() {
+    (cd / && runuser -u "$AU" -- env -i HOME="/home/$AU" USER="$AU" LOGNAME="$AU" PATH=/usr/bin:/bin \\
+      LANG=C.UTF-8 XDG_RUNTIME_DIR="$D" DBUS_SESSION_BUS_ADDRESS="unix:path=$D/session" "$@")
+  }
+  AU=$1
+  if ! as_bus timeout 5 dbus-send --session --print-reply --dest=org.freedesktop.DBus / \\
+    org.freedesktop.DBus.GetId >/dev/null 2>&1; then
+    rm -f "$D/session"
+    as_bus setsid -f dbus-daemon --session --nofork --address="unix:path=$D/session" \\
+      >/dev/null 2>&1 </dev/null || return 0
+    I=0
+    while [ ! -S "$D/session" ] && [ $I -lt 20 ]; do sleep 0.25; I=$((I + 1)); done
+  fi
+  A=$(as_bus timeout 10 dbus-send --session --print-reply=literal --dest=org.a11y.Bus /org/a11y/bus \\
+    org.a11y.Bus.GetAddress 2>/dev/null | tr -d ' \\n') || return 0
+  echo "$A" | grep -Eq "^unix:path=$D/[A-Za-z0-9/_.-]+(,guid=[0-9a-f]+)?\$" && echo "$A"
+  return 0
+}
 
 case "\${1:-}" in
   ensure-user) # <user>: a Linux user with a private home
@@ -91,12 +118,17 @@ case "\${1:-}" in
       runuser -u "$2" -- python3 -I -c "$CHROME_DARK" "/home/$2/.browser/Default/Preferences" \\
         2>/dev/null || true
     fi
+    # On its own accessibility bus, which agent-desktop reads (computer use on the browser's own
+    # interface). Chrome turns its pages' accessibility on only once something reads them.
+    A11Y=$(a11y "$2" 2>/dev/null || true)
     cd /
     # Chrome's output goes to ~/.browser.log, written as the teammate, so the runner can
     # say why it did not start. A stopped computer cuts Chrome off: no "Restore pages?"
     # bubble after that, since the tabs it would restore belong to no thread.
     setsid -f runuser -u "$2" -- env -i HOME="/home/$2" USER="$2" LOGNAME="$2" DISPLAY=:0 \\
-      PATH=/usr/bin:/bin LANG=C.UTF-8 sh -c 'exec "$@" >"$HOME/.browser.log" 2>&1' sh \\
+      PATH=/usr/bin:/bin LANG=C.UTF-8 \\
+      \${A11Y:+"AT_SPI_BUS_ADDRESS=$A11Y"} \${A11Y:+ACCESSIBILITY_ENABLED=1} \\
+      sh -c 'exec "$@" >"$HOME/.browser.log" 2>&1' sh \\
       google-chrome --user-data-dir="/home/$2/.browser" \\
       --remote-debugging-port="$3" --no-first-run --no-default-browser-check \\
       --hide-crash-restore-bubble \\

@@ -2,10 +2,11 @@
 // vendor CLIs use their own subscription logins, and a turn on a Claude account
 // with a token gets it explicitly (accountEnv).
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
+import { agentDesktopBinary, shellQuote } from '../agent-desktop.js'
 
 /** API keys never reach a harness. */
 const API_KEYS =
@@ -32,6 +33,33 @@ function ensurePnpmShim() {
     `#!/bin/sh\nexec "${process.execPath}" "${join(pnpmDir, 'bin', 'pnpm.cjs')}" "$@"\n`,
     { mode: 0o755 },
   )
+}
+
+/**
+ * On a Mac, `agent-desktop` for commands run through Brigade Computer Use (computer_run), which
+ * gives it Accessibility: the runner's own copy, the one computer_snapshot and computer_act use.
+ * Not when the person has one of their own on their PATH: theirs stays the one found.
+ */
+export function ensureAgentDesktopShim(
+  path = process.env.PATH ?? '',
+  dir = SHIM_DIR,
+  binary = process.platform === 'darwin' ? agentDesktopBinary() : undefined,
+) {
+  if (!binary?.macosHelper) return
+  const shim = join(dir, 'agent-desktop')
+  const content =
+    `#!/bin/sh\n# Brigade's agent-desktop\nAGENT_DESKTOP_MACOS_HELPER_PATH=${shellQuote(binary.macosHelper)} ` +
+    `exec ${shellQuote(binary.path)} "$@"\n`
+  if (path.split(delimiter).some((d) => d && d !== dir && existsSync(join(d, 'agent-desktop')))) {
+    // Theirs, installed since: ours goes, or it would come first.
+    if (existsSync(shim) && readFileSync(shim, 'utf8').includes("# Brigade's agent-desktop"))
+      rmSync(shim, { force: true })
+    return
+  }
+  // A runner update may move its copy: the shim follows it.
+  if (existsSync(shim) && readFileSync(shim, 'utf8') === content) return
+  mkdirSync(dir, { recursive: true, mode: 0o755 })
+  writeFileSync(shim, content, { mode: 0o755 })
 }
 
 const MARK = '__BRIGADE_PATH__'
@@ -76,6 +104,11 @@ export function harnessEnv(extra: Record<string, string> = {}): Record<string, s
     if (value !== undefined && !API_KEYS.test(key) && !RUNNER_ONLY.test(key)) env[key] = value
   }
   ensurePnpmShim()
+  try {
+    ensureAgentDesktopShim()
+  } catch (error) {
+    console.warn(`could not write the agent-desktop shim: ${String(error)}`)
+  }
   env.PATH = [SHIM_DIR, dirname(process.execPath), env.PATH].filter(Boolean).join(delimiter)
   return { ...env, ...extra }
 }

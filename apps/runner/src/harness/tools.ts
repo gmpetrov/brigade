@@ -4010,7 +4010,8 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
       description:
         'Run a shell command (zsh) through Brigade Computer Use, so that it gets the helper’s Accessibility and ' +
         'Screen Recording: for a command that clicks, types in, reads or records other apps, such as ' +
-        'agent-desktop, osascript with System Events or a screen recorder. Commands in your own shell have ' +
+        'agent-desktop (for what computer_snapshot and computer_act do not cover: its batch, wait or find), ' +
+        'osascript with System Events or a screen recorder. Commands in your own shell have ' +
         'neither on this Mac, and fail for lack of them (agent-desktop: PERM_DENIED): run those here, and ' +
         'everything else in your shell. While it runs, the pill shows your name with Stop; whatever it leaves ' +
         'running in the background is stopped when it ends. Returns its output (stdout and stderr, the last ' +
@@ -4066,6 +4067,7 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
       description:
         "An app's interface as text: each element's role, title, value and frame [x,y w×h] in screen points. " +
         'Cheaper and more exact than a screenshot to find what to click: click the middle of its frame. ' +
+        'computer_snapshot comes first: its refs act without moving the pointer. ' +
         ABOUT_COMPUTER,
       inputSchema: jsonSchema<{
         app?: string

@@ -41,7 +41,9 @@ import {
   threadTabsFile,
   touchBrowser,
 } from '../browsers.js'
+import { agentDesktopBinary } from '../agent-desktop.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
+import { teammateDesktopExec, teammateKeyboard } from '../desktop.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import {
   builtinSkills,
@@ -147,6 +149,7 @@ import {
   type ScheduleCaller,
   widgetGuideTool,
 } from './tools.js'
+import { desktopTools, macDesktopExec, type Desktop } from './desktop-tools.js'
 
 export type {
   ConnectorCaller,
@@ -326,6 +329,7 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
+  desktop: Desktop | undefined,
   machine: MachineRunTools | undefined,
   arrivals: Arrivals,
 ) {
@@ -442,6 +446,9 @@ function createAgent(
           : {}),
         ...(makeImage ? imageTools(makeImage) : {}),
         ...(computer ? computerUseTools(computer) : {}),
+        // Apps read and used by accessibility refs: on a Mac beside the tools above, on a cloud
+        // computer in the teammate's own browser window.
+        ...(desktop ? desktopTools(desktop) : {}),
         // Claude Code asks with its own question tool; Codex's adapter has none.
         ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
         [OPEN_TICKET_TOOL]: openTicketTool,
@@ -1854,6 +1861,30 @@ export class HarnessThread {
     }
   }
 
+  /** On a member's Mac: agent-desktop through Brigade Computer Use, beside the other computer tools. */
+  private macDesktop(computer: ComputerUse): Desktop {
+    return { exec: macDesktopExec(computer, agentDesktopBinary()), where: 'mac' }
+  }
+
+  /**
+   * On a cloud computer: agent-desktop as the teammate's own user on the desktop, where its
+   * browser's windows are, and the desktop's keyboard into them. Its browser is started first, as
+   * a browser tool call starts it: the helper starts the teammate's own accessibility bus with it.
+   */
+  private cloudDesktop(): Desktop | undefined {
+    const user = this.runAs
+    if (!user || process.platform !== 'linux') return
+    return {
+      exec: teammateDesktopExec(user, agentDesktopBinary()?.path),
+      where: 'cloud',
+      ready: async () => {
+        touchBrowser(this.spec.teammate.id)
+        await ensureBrowser(this.spec.teammate)
+      },
+      keyboard: teammateKeyboard(user),
+    }
+  }
+
   /** generate_image: an image by Codex, on the starter's Codex account, kept like Codex's own. */
   private async makeImage(input: Parameters<ImageMaker>[0], signal?: AbortSignal) {
     const account = this.spec.imageAccount
@@ -2110,6 +2141,7 @@ export class HarnessThread {
       ...(browser && tabsFile ? { browser: { port: browser, tabsFile } } : {}),
       readFile: (file) => this.readFile(file, 1024 * 1024, 'A secret file'),
     })
+    const computer = this.computerUse()
     const { agent, tools } = createAgent(
       this.spec,
       (call) => this.callWithFiles(call),
@@ -2168,7 +2200,8 @@ export class HarnessThread {
         }),
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
-      this.computerUse(),
+      computer,
+      computer ? this.macDesktop(computer) : this.cloudDesktop(),
       this.context.machine,
       this.arrivals,
     )

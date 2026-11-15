@@ -15,6 +15,8 @@ quiet() {
 quiet $PNPM --filter @brigade/contracts build
 quiet $PNPM --filter @brigade/runner build
 quiet $PNPM --filter @brigade/runner --prod deploy "$OUT/runner"
+# agent-desktop ships each platform's binaries: runners run on macOS and Linux, never Windows.
+rm -f "$OUT"/runner/node_modules/.pnpm/agent-desktop@*/node_modules/agent-desktop/bin/*win32*
 # .modules.yaml is pnpm's record of the install, with its time and this machine's store path.
 rm -rf "$OUT/runner/src" "$OUT/runner/tsconfig.json" "$OUT/runner/scripts" "$OUT/runner/node_modules/.modules.yaml"
 mkdir -p bundle

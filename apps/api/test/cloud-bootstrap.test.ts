@@ -597,3 +597,73 @@ test("Brigade's wallpaper goes on the desktop, is tried again after a failed dow
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test("a teammate's Chrome starts on its own accessibility bus when it has one, and as before when not", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'browser-a11y-'))
+  const log = join(dir, 'log')
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(dir, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  // The helper's commands, logged: what Chrome is started with is what matters here.
+  for (const name of ['install', 'xhost', 'python3', 'iptables', 'ip6tables', 'sleep'])
+    stub(name, `echo "${name} $*" >>"$LOG"`)
+  stub('id', 'echo 1001')
+  stub('pgrep', 'exit 0')
+  stub('ps', 'echo "/usr/lib/xorg/Xorg :0 -auth /var/run/x/:0 -nolisten tcp"')
+  stub('timeout', 'shift; exec "$@"')
+  stub('setsid', '[ "$1" = -f ] && shift; exec "$@"')
+  // runuser -u <user> -- env -i VAR=value... command: the variables logged, the command run here.
+  stub(
+    'runuser',
+    'shift 3; [ "$1" = env ] && shift && [ "$1" = -i ] && shift\n' +
+      'while case "$1" in *=*) true ;; *) false ;; esac; do echo "env $1" >>"$LOG"; shift; done\n' +
+      'exec "$@"',
+  )
+  stub('dbus-daemon', 'echo "dbus-daemon $*" >>"$LOG"')
+  stub(
+    'dbus-send',
+    'case "$*" in *GetId*) exit "$GETID" ;; *GetAddress*) [ -n "$ADDRESS" ] && echo "   $ADDRESS" ;; esac',
+  )
+  stub('google-chrome', 'echo "chrome $*" >>"$LOG"')
+  const start = (env: { GETID: string; ADDRESS: string }) => {
+    rmSync(log, { force: true })
+    const result = spawnSync(
+      'sh',
+      ['-c', TEAMMATE_HELPER, 'brigade-teammate', 'browser', 'bt-riley', '21001', 'Riley browser'],
+      { env: { PATH: `${dir}:/usr/bin:/bin`, LOG: log, HOME: dir, ...env }, encoding: 'utf8' },
+    )
+    assert.equal(result.status, 0, result.stderr)
+    return readFileSync(log, 'utf8')
+  }
+  try {
+    const bus = 'unix:path=/run/brigade-a11y/bt-riley/at-spi/bus_0,guid=0123abcd'
+    // Its session bus answers: not started again. Chrome gets the accessibility bus's address.
+    let calls = start({ GETID: '0', ADDRESS: bus })
+    assert.doesNotMatch(calls, /dbus-daemon/)
+    assert.match(calls, new RegExp(`env AT_SPI_BUS_ADDRESS=${bus.replace(/[.,]/g, '\\$&')}\\n`))
+    assert.match(calls, /env ACCESSIBILITY_ENABLED=1\n/)
+    assert.match(
+      calls,
+      /chrome --user-data-dir=.*\/home\/bt-riley\/.browser .*--window-name=Riley browser/,
+    )
+    // None yet: started, as the teammate, in its own folder.
+    calls = start({ GETID: '1', ADDRESS: bus })
+    assert.match(
+      calls,
+      /dbus-daemon --session --nofork --address=unix:path=\/run\/brigade-a11y\/bt-riley\/session/,
+    )
+    assert.match(calls, /env XDG_RUNTIME_DIR=\/run\/brigade-a11y\/bt-riley\n/)
+    assert.match(calls, /env AT_SPI_BUS_ADDRESS=/)
+    // No accessibility bus, or an address somewhere else: Chrome starts as it did before.
+    for (const address of [
+      '',
+      'unix:path=/tmp/other/bus',
+      'unix:path=/run/brigade-a11y/bt-other/bus',
+    ]) {
+      calls = start({ GETID: '0', ADDRESS: address })
+      assert.doesNotMatch(calls, /AT_SPI_BUS_ADDRESS|ACCESSIBILITY_ENABLED/)
+      assert.match(calls, /chrome --user-data-dir=/)
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

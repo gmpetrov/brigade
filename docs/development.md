@@ -55,7 +55,8 @@ another gets a new home. Switching stops the runner, which saves its threads, an
 
 Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teammates `computer_screenshot`,
 `computer_click`, `computer_type`, `computer_key`, `computer_scroll`, `computer_drag`, `computer_move`,
-`computer_apps`, `computer_open_app`, `computer_ui_tree` and `computer_run` on the member's Mac. The runner starts it with `open`,
+`computer_apps`, `computer_open_app`, `computer_ui_tree` and `computer_run` on the member's Mac, and
+`computer_snapshot` and `computer_act` through agent-desktop (below). The runner starts it with `open`,
 so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a terminal, and talks to it over a
 token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
 (no Esc shortcut); Stop ends computer use for that turn.
@@ -71,6 +72,32 @@ children the helper registers as its own (`screencapture`). That happens before
 the reply, and when the helper quits. `swift test` in `apps/computer-use-macos` checks the command's life;
 `scripts/test-sweep.sh` checks the sweep in an app opened with `open`, as the helper is (a test process belongs to
 the terminal's app, so it has nothing to sweep).
+
+### Apps by accessibility refs: agent-desktop
+
+`computer_snapshot` and `computer_act` read an app's interface as a tree whose elements have refs, then act on a ref
+(click, type, set a value, select, toggle, expand, scroll…) through the OS's accessibility API, without moving the
+pointer or taking the keyboard focus. They run [agent-desktop](https://github.com/vercel-labs/agent-desktop), which
+the runner ships as a dependency: `apps/runner/src/agent-desktop.ts` calls the binary for its platform directly (the
+package's own launcher picks it in an install script, which the runner's bundle doesn't run), and `bundle.sh` leaves
+its Windows binaries out. The tree goes back as text, an element a line, without hidden elements and cut at 40 KB
+(`renderTree`). The tools are in `apps/runner/src/harness/desktop-tools.ts`.
+
+- **On a Mac**, beside the tools above, agent-desktop runs through Brigade Computer Use's `run`, so it gets the
+  helper's Accessibility; its answer, and any text to type, go through files, never on its command line. `headed:
+true` lets an action use the real keyboard and mouse where accessibility doesn't take it. Commands run with
+  `computer_run` find the same copy as `agent-desktop`, unless the person has their own on their PATH.
+- **On a cloud computer**, a teammate reads and uses its own browser's windows: Chrome's own interface (a permission
+  prompt, a sign-in dialog, a bubble, its menus), which the browser tools, made for web pages, don't reach. The
+  helper's `browser` starts each teammate's own session bus in `/run/brigade-a11y/<user>` with its Chrome, whose
+  accessibility bus carries only that teammate's apps, and starts Chrome with `AT_SPI_BUS_ADDRESS` and
+  `ACCESSIBILITY_ENABLED=1` (Chrome turns its pages' accessibility on only once something reads them). The runner
+  runs agent-desktop as the teammate on display `:0` and that bus (`desktop.ts`), from outside the thread's
+  namespaces. With no window named, `computer_snapshot` reads the browser window in front and lists the others. A
+  field that takes no text through accessibility (Chrome's own) gets it from the desktop's keyboard (`xdotool`, as
+  the teammate, into its window, class `brigade-<user>`), and so does `computer_key`: agent-desktop matches X windows
+  by title, and the helper names each browser's window after its teammate, so it can't bring one to the front. A
+  browser started before the helper had the bus is read after its next start.
 
 ```bash
 pnpm --filter @brigade/computer-use-macos install:app   # helper only, into ~/Applications (runner finds it there)
