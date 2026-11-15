@@ -1,7 +1,8 @@
 # Brigade.app
 
-The desktop app, built with Electron for macOS, Windows and Linux. It lives in the menu bar (the
-system tray on Windows and Linux) and:
+The desktop app, built with Electron for macOS, Windows and Linux. A regular app in the Dock on
+macOS, which keeps running with its windows closed, with a menu in the menu bar (the system tray on
+Windows and Linux); it:
 
 - installs, links and keeps running the Brigade runner, so teammates work on this computer
   (macOS and Linux: the runner is POSIX only), for one of the workspaces linked here at a time

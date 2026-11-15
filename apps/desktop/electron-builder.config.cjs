@@ -30,8 +30,6 @@ module.exports = {
       // The Tauri app's executable name, which its login item (~/Library/LaunchAgents/
       // Brigade.plist) starts: a Mac that updated from it still opens Brigade at login.
       CFBundleExecutable: 'brigade-desktop',
-      // A menu-bar app: no Dock icon until the dashboard window opens (windows.ts).
-      LSUIElement: true,
       NSMicrophoneUsageDescription: 'Brigade uses the microphone when you dictate a message.',
     },
     // Brigade Computer Use.app, built and signed by its own script, with its own identity:

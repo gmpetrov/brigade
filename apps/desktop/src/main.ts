@@ -62,7 +62,6 @@ MimeType=x-scheme-handler/${SCHEME};
 }
 
 function start() {
-  if (process.platform === 'darwin') app.dock?.hide()
   if (process.platform === 'win32') app.setAppUserModelId('ai.brigade.desktop')
 
   // Open at login, turned on once on the first launch; after that it is the person's choice.
@@ -136,7 +135,7 @@ if (!app.requestSingleInstanceLock()) {
     // Opened again from Applications, the Start menu or a launcher: the dashboard.
     else if (ready) showDashboard()
   })
-  // macOS: opened again while running (Finder, Spotlight, the Dock).
+  // macOS: opened again while running (Finder, Spotlight, a click on its Dock icon).
   let launched = 0
   app.on('activate', () => {
     if (ready && Date.now() - launched > 3_000) showDashboard()

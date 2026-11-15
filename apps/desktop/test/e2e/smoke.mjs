@@ -90,6 +90,13 @@ try {
   const expected = process.platform === 'win32' ? 'unsupported' : 'notConnected'
   check('runner status', () => assert.equal(status, expected))
 
+  // macOS: a Dock icon from the start, before any window opens, as for any Mac app (0.4.4 had one
+  // only while the dashboard was open).
+  if (process.platform === 'darwin') {
+    const dock = await app.evaluate(({ app }) => app.dock?.isVisible())
+    check('Dock icon without a window', () => assert.equal(dock, true))
+  }
+
   // macOS: the app menu holds what the menu-bar menu does, as on a Mac (menu.ts).
   if (process.platform === 'darwin') {
     const menus = await app.evaluate(({ Menu }) =>

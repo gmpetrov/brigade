@@ -30,6 +30,6 @@ export function handleQuit() {
     event.preventDefault()
     void stopForQuit().then((quit) => quit && app.quit())
   })
-  // Closing its windows isn't quitting: Brigade lives in the menu bar.
+  // Closing its windows isn't quitting: Brigade keeps running, in the Dock and the menu bar.
   app.on('window-all-closed', () => {})
 }

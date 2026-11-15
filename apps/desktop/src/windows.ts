@@ -409,8 +409,6 @@ export function showDashboard(url = dashboard()) {
     contents.send('brigade:fullscreen', false)
   })
   guard(contents, 'main')
-  // A Dock icon while the dashboard is open; the menu bar alone otherwise, as before.
-  if (process.platform === 'darwin') void app.dock?.show()
   window.once('ready-to-show', () => bringUp(window, contents))
   // Whether the person is looking: the dashboard's notifications wait meanwhile
   // (apps/web/lib/use-live.ts). The window's, not its page's guess.
@@ -433,7 +431,6 @@ export function showDashboard(url = dashboard()) {
       view = undefined
     }
     if (!contents.isDestroyed()) contents.close()
-    if (process.platform === 'darwin') app.dock?.hide()
   })
   // Offline or the dashboard down: a page that says so and tries again.
   contents.on('did-fail-load', (_event, code, description, failed, isMainFrame) => {
