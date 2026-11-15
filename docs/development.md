@@ -111,10 +111,6 @@ a result often shows as text alone (Calculator's). A ref from a snapshot the too
 Apple menu (the system's Restart, Shut Down and Log Out, and the person's recent items) and with each submenu folded
 with its count (an app's Open Recent lists file names): rooted on an item, all of it.
 
-A thread resumed mid-turn after a runner update kept serving the tools its turn started with while their names stayed
-the same (`withTools` in `apps/runner/src/harness/closed-turn.ts`), so a teammate went on reading the old
-descriptions and inputs. The saved tools are now dropped when any tool's name, description or input changed.
-
 - **On a Mac**, beside the tools above, agent-desktop runs through Brigade Computer Use's `run`, so it gets the
   helper's Accessibility; its answer, and any text to type, go through files, never on its command line. `headed:
 true` lets an action use the real keyboard and mouse where accessibility doesn't take it. Commands run with

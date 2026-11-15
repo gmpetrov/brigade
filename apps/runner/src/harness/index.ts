@@ -8,7 +8,6 @@ import { basename, dirname, extname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
-import { asSchema } from 'ai'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
 import {
@@ -81,7 +80,6 @@ import {
   waitingOn,
   withoutBridge,
   withTools,
-  type ToolSpec,
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
@@ -481,16 +479,6 @@ function createAgent(
     }),
     /** Brigade's tools, by name. */
     tools: Object.keys(tools),
-    /** Brigade's tools as the harness hands them to the runtime (its `_toToolSpecs`). */
-    specs: Object.entries(tools).map(([name, tool]): ToolSpec => {
-      let inputSchema: unknown
-      try {
-        inputSchema = tool.inputSchema == null ? undefined : asSchema(tool.inputSchema).jsonSchema
-      } catch {
-        inputSchema = undefined
-      }
-      return { name, description: tool.description, inputSchema }
-    }),
   }
 }
 
@@ -2162,7 +2150,7 @@ export class HarnessThread {
       readFile: (file) => this.readFile(file, 1024 * 1024, 'A secret file'),
     })
     const computer = this.computerUse()
-    const { agent, tools, specs } = createAgent(
+    const { agent, tools } = createAgent(
       this.spec,
       (call) => this.callWithFiles(call),
       credentials,
@@ -2247,7 +2235,7 @@ export class HarnessThread {
       ...(adopt.length ? { adopt } : {}),
     })
     const saved = this.saved?.accountId === account.id ? this.saved.resume : undefined
-    const resume = saved ? withTools(saved, specs) : undefined
+    const resume = saved ? withTools(saved, tools) : undefined
     const session = await agent.createSession({
       sessionId: this.key,
       sandboxSession: sandbox,

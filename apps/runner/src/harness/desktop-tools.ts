@@ -929,15 +929,23 @@ export function macAppInput(desktop: Desktop): AppInput {
       return delivery(await call(['type', fields[0]!.ref_id!, '--stdin'], { stdin: text, signal }))
     },
     windows: async (app, signal) => {
+      // Only the app not being there yet means no window: a Stop, a missing permission or a
+      // missing helper is the answer itself, not a window to wait for.
       const listed = await desktopCall(desktop.exec, ['list-windows', '--app', app], {
         ...(signal ? { signal } : {}),
-      }).catch(() => [])
+      }).catch((error: unknown) => {
+        if (error instanceof DesktopError && NOT_THERE_YET.has(error.code)) return []
+        throw error
+      })
       return (Array.isArray(listed) ? (listed as WindowInfo[]) : [])
         .filter((w) => w.id && w.visible !== false && !w.minimized)
         .map((w) => ({ id: w.id!, ...(w.title ? { title: w.title } : {}) }))
     },
   }
 }
+
+/** agent-desktop's answers for an app that has no window yet, or is not running yet: wait. */
+const NOT_THERE_YET = new Set(['APP_NOT_FOUND', 'WINDOW_NOT_FOUND'])
 
 /** Roles of an element that takes typed text. */
 const TEXT_ROLES = new Set(['textfield', 'textarea', 'searchfield', 'combobox', 'securetextfield'])

@@ -283,3 +283,27 @@ test('a key for a named app without agent-desktop is refused, and nothing is sen
   )
   assert.deepEqual(calls, [])
 })
+
+test('opening an app: a Stop while waiting for its window ends the call with the Stop', async () => {
+  let asked = 0
+  const appInput: AppInput = {
+    press: async () => ({}),
+    type: async () => ({}),
+    windows: async () => {
+      asked++
+      throw new ComputerUseError(
+        'stopped',
+        'The person pressed Stop on the computer-use indicator.',
+      )
+    },
+  }
+  const { use } = computer(async () => ({ name: 'TextEdit', active: true }))
+  await assert.rejects(
+    computerUseTools(use, appInput).computer_open_app!.execute!(
+      { app: 'TextEdit' },
+      options(),
+    ) as Promise<unknown>,
+    (error: unknown) => error instanceof ComputerUseError && error.code === 'stopped',
+  )
+  assert.equal(asked, 1)
+})

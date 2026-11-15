@@ -1416,3 +1416,25 @@ test('a big window is read again after an action as before, without its text', a
   await tools.computer_act!.execute!({ ref: '@s1:e3', action: 'click' }, options())
   assert.equal(entriesOf(calls.at(-1)!.args)!.at(-1)!.args.interactive_only, true)
 })
+
+test("waiting for an app's window: an app not there yet is no window; a Stop is the answer itself", async () => {
+  const notYet = fakeExec(() => refusal('APP_NOT_FOUND'))
+  assert.deepEqual(await macAppInput({ exec: notYet.exec, where: 'mac' }).windows('TextEdit'), [])
+  const listed = fakeExec(() =>
+    envelope([
+      { id: 'w-1', title: 'Open', visible: true },
+      { id: 'w-2', title: 'Hidden', minimized: true },
+    ]),
+  )
+  assert.deepEqual(await macAppInput({ exec: listed.exec, where: 'mac' }).windows('TextEdit'), [
+    { id: 'w-1', title: 'Open' },
+  ])
+  // Cody's case (review of #858): the person pressed Stop while the tool waited.
+  const stopped: DesktopExec = async () => {
+    throw new ComputerUseError('stopped', 'The person pressed Stop on the computer-use indicator.')
+  }
+  await assert.rejects(
+    macAppInput({ exec: stopped, where: 'mac' }).windows('TextEdit'),
+    (error: unknown) => error instanceof ComputerUseError && error.code === 'stopped',
+  )
+})
