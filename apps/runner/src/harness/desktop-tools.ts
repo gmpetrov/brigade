@@ -13,7 +13,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { jsonSchema, tool, type Tool } from 'ai'
+import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
   DesktopError,
   desktopBatch,
@@ -112,7 +112,7 @@ export type ActToolInput = Partial<Omit<ActInput, 'headed'>> & {
 }
 
 /** What an action on a ref takes, alone or as one of computer_act's steps. */
-function stepProperties(where: 'mac' | 'cloud') {
+function stepProperties(where: 'mac' | 'cloud'): Record<string, JSONSchema7> {
   return {
     ref: { type: 'string', description: 'The ref, as the snapshot gives it: @s…:e…' },
     action: { type: 'string', enum: [...(where === 'mac' ? ACTIONS : CLOUD_ACTIONS)] },
@@ -124,7 +124,7 @@ function stepProperties(where: 'mac' | 'cloud') {
       description: 'For scroll (default down)',
     },
     amount: { type: 'number', description: 'For scroll: how far (default 3)' },
-  } as const
+  }
 }
 
 /** The surfaces agent-desktop reads on each: a Mac has a focused element and popovers, Linux not. */
