@@ -9,6 +9,7 @@ import {
   powerSaveBlocker,
   shell,
   Tray,
+  webContents,
   type MenuItemConstructorOptions,
 } from 'electron'
 import * as autostart from './autostart.js'
@@ -220,6 +221,8 @@ export function createTray() {
 export function setAppMenu() {
   if (process.platform !== 'darwin') return Menu.setApplicationMenu(null)
   const front = () => BrowserWindow.getFocusedWindow()
+  // The page in front: the dashboard's view in its window (windows.ts), else the window's own.
+  const page = () => webContents.getFocusedWebContents() ?? front()?.webContents
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       {
@@ -248,23 +251,35 @@ export function setAppMenu() {
       {
         label: 'View',
         submenu: [
-          { role: 'reload' },
+          { label: 'Reload', accelerator: 'Command+R', click: () => page()?.reload() },
           {
             label: 'Back',
             accelerator: 'Command+[',
-            click: () => front()?.webContents.navigationHistory.goBack(),
+            click: () => page()?.navigationHistory.goBack(),
           },
           {
             label: 'Forward',
             accelerator: 'Command+]',
-            click: () => front()?.webContents.navigationHistory.goForward(),
+            click: () => page()?.navigationHistory.goForward(),
           },
           { type: 'separator' },
-          { role: 'resetZoom' },
-          { role: 'zoomIn' },
-          { role: 'zoomOut' },
+          { label: 'Actual Size', accelerator: 'Command+0', click: () => page()?.setZoomLevel(0) },
+          {
+            label: 'Zoom In',
+            accelerator: 'Command+Plus',
+            click: () => page()?.setZoomLevel((page()?.getZoomLevel() ?? 0) + 0.5),
+          },
+          {
+            label: 'Zoom Out',
+            accelerator: 'Command+-',
+            click: () => page()?.setZoomLevel((page()?.getZoomLevel() ?? 0) - 0.5),
+          },
           { type: 'separator' },
-          { role: 'toggleDevTools' },
+          {
+            label: 'Toggle Developer Tools',
+            accelerator: 'Alt+Command+I',
+            click: () => page()?.toggleDevTools(),
+          },
         ],
       },
       { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'close' }] },

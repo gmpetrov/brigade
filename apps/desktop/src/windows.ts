@@ -7,6 +7,7 @@ import {
   app,
   BrowserWindow,
   type BrowserWindowConstructorOptions,
+  WebContentsView,
   screen,
   session,
   shell,
@@ -138,8 +139,14 @@ export function setUpSession() {
 /**
  * How the dashboard window is framed. No title bar on macOS, its traffic lights over the
  * sidebar's first row, and on Windows, whose own buttons sit over the top right; the desktop's
- * own title bar on Linux, where buttons the app drew would match no desktop. The dashboard lays
- * itself out for it (apps/web/lib/desktop-frame.ts), told through the bridge.
+ * own title bar on Linux, where buttons the app drew would match no desktop.
+ *
+ * The window holds a small page of its own (page/window.html: an empty band that moves the
+ * window, in the dashboard's background) and, over it, the dashboard in a view. Where the
+ * window's buttons would cover the page (Windows' always, macOS's traffic lights when the page
+ * is narrow and has no sidebar), the view starts below them: everything in the dashboard, its
+ * fixed panels included, lays out in what is left. On macOS the dashboard otherwise fills the
+ * window and makes room for the lights itself (apps/web/lib/desktop-frame.ts).
  */
 export type Frame = 'mac' | 'overlay' | 'native'
 
@@ -148,44 +155,76 @@ export const dashboardFrame = (platform = process.platform): Frame =>
 
 /** Centered on the sidebar's first row: its 36px buttons start 8px down. */
 export const TRAFFIC_LIGHTS = { x: 16, y: 19 }
-/** The height of Windows' buttons, and of the band the dashboard leaves them. */
+/** The height of Windows' buttons, and of the band above the dashboard. */
 export const OVERLAY_HEIGHT = 32
+/** The band above a narrow page on macOS, for the traffic lights. */
+const MAC_BAND = 32
 
 /** The dashboard's dark background until the page says which theme it shows. */
-const OVERLAY_DARK = { color: '#1a1a1e', symbolColor: '#e4e4e7' }
+const DARK = { color: '#1a1a1e', symbolColor: '#e4e4e7' }
 
 function frameOptions(): BrowserWindowConstructorOptions {
   switch (dashboardFrame()) {
     case 'mac':
       return { titleBarStyle: 'hidden', trafficLightPosition: TRAFFIC_LIGHTS }
     case 'overlay':
-      return {
-        titleBarStyle: 'hidden',
-        titleBarOverlay: { ...OVERLAY_DARK, height: OVERLAY_HEIGHT },
-      }
+      return { titleBarStyle: 'hidden', titleBarOverlay: { ...DARK, height: OVERLAY_HEIGHT } }
     default:
       return {}
   }
 }
 
-/** The page's background and text colors, for Windows' buttons over it. */
-export function setTitleBarColors(colors: { color: string; symbolColor: string }) {
-  const window = dashboardWindow()
-  if (!window || dashboardFrame() !== 'overlay') return
-  window.setTitleBarOverlay({ ...colors, height: OVERLAY_HEIGHT })
-}
-
 let main: BrowserWindow | undefined
+let view: WebContentsView | undefined
+/** The page asked for the band above it (macOS, narrow), and the window is in full screen. */
+let narrow = false
+let fullscreen = false
 
 export const dashboardWindow = () => (main && !main.isDestroyed() ? main : undefined)
 
+/** The dashboard's page in its window. */
+export const dashboardContents = () =>
+  view && !view.webContents.isDestroyed() ? view.webContents : undefined
+
+/** How far down the dashboard starts: below the band that keeps the window's buttons. */
+function band() {
+  const frame = dashboardFrame()
+  if (frame === 'overlay') return OVERLAY_HEIGHT
+  if (frame === 'mac' && narrow && !fullscreen) return MAC_BAND
+  return 0
+}
+
+function layout() {
+  const window = dashboardWindow()
+  if (!window || !view) return
+  const [width = 0, height = 0] = window.getContentSize()
+  const top = band()
+  view.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) })
+}
+
+/** The page's background and text colors: the band's, and Windows' buttons'. */
+export function setFrameColors(colors: { color: string; symbolColor: string }) {
+  const window = dashboardWindow()
+  if (!window) return
+  window.setBackgroundColor(colors.color)
+  if (dashboardFrame() === 'overlay')
+    window.setTitleBarOverlay({ ...colors, height: OVERLAY_HEIGHT })
+}
+
+/** macOS: the page is too narrow for its sidebar, so the traffic lights get a band above it. */
+export function setNarrow(value: boolean) {
+  if (dashboardFrame() !== 'mac' || narrow === value) return
+  narrow = value
+  layout()
+}
+
 /** Brings a window to the front with the keyboard in its page, so typing and Esc reach it. */
-export function bringUp(window: BrowserWindow) {
+export function bringUp(window: BrowserWindow, contents: WebContents = window.webContents) {
   if (process.platform === 'darwin') app.focus({ steal: true })
   if (window.isMinimized()) window.restore()
   window.show()
   window.focus()
-  window.webContents.focus()
+  contents.focus()
 }
 
 /** The bounds it had, while they still fit on a screen. */
@@ -202,9 +241,10 @@ function savedBounds() {
 /** The dashboard in a window of its own, at `url` (the dashboard's home by default). */
 export function showDashboard(url = dashboard()) {
   const open = dashboardWindow()
-  if (open) {
-    if (url !== dashboard() || !onDashboard(open.webContents.getURL())) void open.loadURL(url)
-    return bringUp(open)
+  const shown = dashboardContents()
+  if (open && shown) {
+    if (url !== dashboard() || !onDashboard(shown.getURL())) void shown.loadURL(url)
+    return bringUp(open, shown)
   }
   const window = new BrowserWindow({
     width: 1280,
@@ -215,17 +255,41 @@ export function showDashboard(url = dashboard()) {
     show: false,
     title: 'Brigade',
     autoHideMenuBar: true,
+    backgroundColor: DARK.color,
     ...frameOptions(),
-    webPreferences: dashboardPreferences(),
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
   })
+  const page = new WebContentsView({ webPreferences: dashboardPreferences() })
+  page.setBackgroundColor(DARK.color)
   main = window
+  view = page
+  narrow = false
+  fullscreen = false
+  window.contentView.addChildView(page)
+  layout()
+  window.on('resize', layout)
+  // The window's own page: the band, nothing to follow.
+  window.webContents.on('will-navigate', (event) => event.preventDefault())
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  void window.loadFile(join(__dirname, '..', 'page', 'window.html'))
+
+  const contents = page.webContents
   // Full screen hides the traffic lights: the page gives back the room it kept for them.
-  window.on('enter-full-screen', () => window.webContents.send('brigade:fullscreen', true))
-  window.on('leave-full-screen', () => window.webContents.send('brigade:fullscreen', false))
-  guard(window.webContents, 'main')
+  window.on('enter-full-screen', () => {
+    fullscreen = true
+    layout()
+    contents.send('brigade:fullscreen', true)
+  })
+  window.on('leave-full-screen', () => {
+    fullscreen = false
+    layout()
+    contents.send('brigade:fullscreen', false)
+  })
+  guard(contents, 'main')
   // A Dock icon while the dashboard is open; the menu bar alone otherwise, as before.
   if (process.platform === 'darwin') void app.dock?.show()
-  window.once('ready-to-show', () => bringUp(window))
+  window.once('ready-to-show', () => bringUp(window, contents))
+  window.on('focus', () => contents.focus())
   window.on('close', () => {
     const bounds = window.getNormalBounds()
     updateSettings((settings) => {
@@ -233,30 +297,34 @@ export function showDashboard(url = dashboard()) {
     })
   })
   window.on('closed', () => {
-    if (main === window) main = undefined
+    if (main === window) {
+      main = undefined
+      view = undefined
+    }
+    if (!contents.isDestroyed()) contents.close()
     if (process.platform === 'darwin') app.dock?.hide()
   })
   // Offline or the dashboard down: a page that says so and tries again.
-  window.webContents.on('did-fail-load', (_event, code, description, failed, isMainFrame) => {
+  contents.on('did-fail-load', (_event, code, description, failed, isMainFrame) => {
     // -3: a navigation replaced by another one, not a failure.
     if (!isMainFrame || code === -3) return
-    void window.loadFile(join(__dirname, '..', 'page', 'offline.html'), {
+    void contents.loadFile(join(__dirname, '..', 'page', 'offline.html'), {
       query: { url: failed, reason: description },
     })
   })
   if (process.platform !== 'darwin') {
     // No menu bar there: the usual keys to reload and go back.
-    window.webContents.on('before-input-event', (event, input) => {
+    contents.on('before-input-event', (event, input) => {
       if (input.type !== 'keyDown') return
       const key = input.key.toLowerCase()
-      const history = window.webContents.navigationHistory
-      if (key === 'f5' || (input.control && key === 'r')) window.webContents.reload()
+      const history = contents.navigationHistory
+      if (key === 'f5' || (input.control && key === 'r')) contents.reload()
       else if (input.alt && key === 'arrowleft' && history.canGoBack()) history.goBack()
       else if (input.alt && key === 'arrowright' && history.canGoForward()) history.goForward()
-      else if (input.control && input.shift && key === 'i') window.webContents.toggleDevTools()
+      else if (input.control && input.shift && key === 'i') contents.toggleDevTools()
       else return
       event.preventDefault()
     })
   }
-  void window.loadURL(url)
+  void contents.loadURL(url)
 }

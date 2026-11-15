@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- The dashboard window's own page (src/windows.ts): behind the dashboard's view, it shows only
+     as the band above it that keeps the window's buttons, and moves the window. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'"
+    />
+    <title>Brigade</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        -webkit-app-region: drag;
+        app-region: drag;
+      }
+    </style>
+  </head>
+  <body></body>
+</html>

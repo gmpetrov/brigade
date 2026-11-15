@@ -10,7 +10,7 @@ import * as setup from './setup.js'
 import { parseLink } from './link.js'
 import { takeProviderSignIn } from './provider-sign-in.js'
 import { updateSettings } from './settings.js'
-import { bringUp, dashboardWindow } from './windows.js'
+import { bringUp, dashboardContents, dashboardWindow } from './windows.js'
 
 export async function openLink(raw: string) {
   const link = parseLink(raw)
@@ -23,10 +23,11 @@ export async function openLink(raw: string) {
       ...(link.error && { error: link.error }),
     }
     // Back to the page that waits: the dashboard window, or the new thread window.
-    for (const window of [dashboardWindow(), capture.captureWindow()])
-      window?.webContents.send('brigade:provider-signed-in', result)
+    for (const contents of [dashboardContents(), capture.captureWindow()?.webContents])
+      contents?.send('brigade:provider-signed-in', result)
     const front = dashboardWindow()
-    if (front) bringUp(front)
+    const contents = dashboardContents()
+    if (front && contents) bringUp(front, contents)
     return
   }
   if (!runnerSupported())

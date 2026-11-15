@@ -5,7 +5,7 @@ import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electr
 import * as capture from './capture.js'
 import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
-import { dashboardFrame, kindOf, setTitleBarColors, type WindowKind } from './windows.js'
+import { dashboardFrame, kindOf, setFrameColors, setNarrow, type WindowKind } from './windows.js'
 
 /** The bridge's version: the dashboard checks it before using what came later. */
 export const BRIDGE_VERSION = 1
@@ -70,13 +70,18 @@ export function registerBridge() {
     return startProviderSignIn()
   })
 
-  // Windows' buttons drawn in the page's colors, as its theme changes.
+  // The band above the dashboard, and Windows' buttons, in the page's colors, as its theme changes.
   ipcMain.on('brigade:title-bar-colors', (event, colors: unknown) => {
     if (from(event) !== 'main' || !colors || typeof colors !== 'object') return
     const { color, symbolColor } = colors as Record<string, unknown>
     const hex = (value: unknown): value is string =>
       typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
-    if (hex(color) && hex(symbolColor)) setTitleBarColors({ color, symbolColor })
+    if (hex(color) && hex(symbolColor)) setFrameColors({ color, symbolColor })
+  })
+
+  // macOS: the page has no room for the traffic lights (too narrow for its sidebar).
+  ipcMain.on('brigade:narrow', (event, value: unknown) => {
+    if (from(event) === 'main') setNarrow(value === true)
   })
 
   // What needs the member, on the Dock icon (macOS) or the launcher's (Linux).

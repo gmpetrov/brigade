@@ -120,6 +120,15 @@ try {
   const frames = { darwin: 'mac', win32: 'overlay', linux: 'native' }
   check('main frame', () => assert.equal(mainSeen.info?.frame, frames[process.platform]))
   check('capture has no frame info', () => assert.equal(seen.info?.frame, undefined))
+  // The dashboard sits in a view below the band for the window's buttons: 32px on Windows,
+  // none elsewhere (macOS's band shows only on a narrow page).
+  const top = await app.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows().find((w) => w.contentView.children.length > 0)
+    return window?.contentView.children[0]?.getBounds().y
+  })
+  check('dashboard view below the band', () =>
+    assert.equal(top, process.platform === 'win32' ? 32 : 0),
+  )
   const refused = await main.evaluate(() =>
     window.brigadeDesktop.captures.list().then(
       () => 'listed',
@@ -148,9 +157,10 @@ try {
   check('provider sign-in comes back', () => assert.deepEqual(results, [{ connected: 'conn_1' }]))
 
   // Another site loaded in a window by the app itself still gets no bridge.
-  await app.evaluate(({ BrowserWindow }, url) => {
-    const w = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith('/app'))
-    return w.loadURL(url)
+  // The dashboard is a view in its window (windows.ts): found among all pages.
+  await app.evaluate(({ webContents }, url) => {
+    const page = webContents.getAllWebContents().find((c) => c.getURL().endsWith('/app'))
+    return page.loadURL(url)
   }, `${otherOrigin}/`)
   const otherSeen = await main.evaluate(() => window.seen)
   check('no bridge elsewhere', () => assert.equal(otherSeen.bridge, false))

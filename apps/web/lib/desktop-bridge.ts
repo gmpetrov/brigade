@@ -24,6 +24,7 @@ export type DesktopBridge = {
   setBadge: (count: number) => void
   frame?: {
     onFullscreen: (handle: (fullscreen: boolean) => void) => () => void
+    setNarrow: (narrow: boolean) => void
     setTitleBarColors: (colors: { color: string; symbolColor: string }) => void
   }
   /** A provider's sign-in, done in the browser: its result comes back to the app. */

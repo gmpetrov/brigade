@@ -42,7 +42,9 @@ if (info)
       /** The window went full screen (macOS hides the traffic lights) or came back. */
       onFullscreen: (handle: (fullscreen: boolean) => void) =>
         listen('brigade:fullscreen', (fullscreen) => handle(fullscreen === true)),
-      /** Windows' buttons in the page's colors, as #rrggbb. */
+      /** macOS: the page is too narrow for its sidebar, so the traffic lights need a band above it. */
+      setNarrow: (narrow: boolean) => ipcRenderer.send('brigade:narrow', narrow),
+      /** The band above the page, and Windows' buttons, in the page's colors, as #rrggbb. */
       setTitleBarColors: (colors: { color: string; symbolColor: string }) =>
         ipcRenderer.send('brigade:title-bar-colors', colors),
     },

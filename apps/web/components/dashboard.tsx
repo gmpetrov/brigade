@@ -286,7 +286,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const sidebarProjects = sidebarOrder.sort('projects', projects.data ?? [])
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
-  // Brigade.app's window without a title bar (lib/desktop-frame.ts).
+  // Brigade.app's window on macOS without a title bar (lib/desktop-frame.ts).
   const frame = useDesktopFrame()
   const { theme = 'dark', setTheme } = useTheme()
   const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
@@ -488,7 +488,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <SidebarHeader data-window-drag className={cn(frame === 'mac' && 'pt-0')}>
                 {/* Brigade.app on macOS, with no title bar: the traffic lights at the start of
                     this row, search and new thread across from them (lib/desktop-frame.ts).
-                    Folded to the rail, the row keeps the lights' room above the icons. */}
+                    Folded to the rail, the row keeps the lights' room above the icons. Narrower,
+                    the app keeps a band above the page instead. */}
                 {frame === 'mac' && (
                   <div className="flex h-[3.25rem] items-center justify-end gap-2 pl-[4.75rem] group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:pl-0">
                     <RoundButton
@@ -974,18 +975,9 @@ function Inset({ children }: { children: ReactNode }) {
   return (
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
-      {/* Brigade.app's window without a title bar: the empty top of the page moves it, as a
-          title bar would (lib/desktop-frame.ts). Behind everything; controls in it still click. */}
-      {frame && (
-        <div
-          data-window-drag
-          aria-hidden
-          className={cn(
-            'absolute inset-x-0 top-0',
-            frame === 'overlay' ? 'h-[var(--window-top)]' : 'h-10',
-          )}
-        />
-      )}
+      {/* Brigade.app's window on macOS, without a title bar: the empty top of the page moves
+          it, as a title bar would (lib/desktop-frame.ts). Controls over it still click. */}
+      {frame && <div data-window-drag aria-hidden className="absolute inset-x-0 top-0 h-10" />}
       <DemoBanner place="phone" />
       <DemoTour />
       <UpdatePill header={expanded} />

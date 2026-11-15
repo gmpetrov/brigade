@@ -8,7 +8,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { BrowserWindow, globalShortcut, shell } from 'electron'
+import { BrowserWindow, globalShortcut, shell, type WebContents } from 'electron'
 import { ctx } from './context.js'
 import { alert } from './dialogs.js'
 import { dashboard, home, loadSettings, onDashboard, updateSettings } from './settings.js'
@@ -16,7 +16,7 @@ import * as shortcuts from './shortcuts.js'
 import {
   bringUp,
   dashboardPreferences,
-  dashboardWindow,
+  dashboardContents,
   guard,
   showDashboard,
   signedInElsewhere,
@@ -196,9 +196,9 @@ export function chooseShortcut(kind: shortcuts.Kind, value: string) {
   applyShortcuts([kind])
 }
 
-const onSignInPage = (window: BrowserWindow | undefined) => {
+const onSignInPage = (contents: WebContents | undefined) => {
   try {
-    return !!window && new URL(window.webContents.getURL()).pathname === '/sign-in'
+    return !!contents && new URL(contents.getURL()).pathname === '/sign-in'
   } catch {
     return false
   }
@@ -206,10 +206,10 @@ const onSignInPage = (window: BrowserWindow | undefined) => {
 
 /** One window signed in: the other shares its session, and leaves its sign-in page for home. */
 signedInElsewhere((from) => {
-  const main = dashboardWindow()
-  const capture = captureWindow()
-  if (main && main.webContents !== from && onSignInPage(main)) void main.loadURL(dashboard())
-  if (capture && capture.webContents !== from && onSignInPage(capture))
+  const main = dashboardContents()
+  const capture = captureWindow()?.webContents
+  if (main && main !== from && onSignInPage(main)) void main.loadURL(dashboard())
+  if (capture && capture !== from && onSignInPage(capture))
     void capture.loadURL(`${dashboard()}/capture`)
 })
 
