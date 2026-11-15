@@ -105,15 +105,29 @@ jobs:
         working-directory: apps/desktop/release/out
         run: |
           APP=mac-universal/Brigade.app
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          spctl --assess --type execute --verbose=2 "$APP"
-          xcrun stapler validate "$APP"
+          HELPER="$APP/Contents/Resources/Brigade Computer Use.app"
+          plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Contents/Info.plist"; }
+          # Every check runs; each failure shows as an annotation with what it printed, which
+          # teammates can read (they can't read the job's log).
+          failed=0
+          check() {
+            local name="$1"; shift
+            local out
+            if ! out="$("$@" 2>&1)"; then
+              echo "::error title=$name::$(printf '%s' "$out" | tail -8 | tr '\n' ' ')"
+              failed=1
+            fi
+          }
+          check "App signature" codesign --verify --deep --strict --verbose=2 "$APP"
+          check "Gatekeeper" spctl --assess --type execute --verbose=2 "$APP"
+          check "Stapled ticket" xcrun stapler validate "$APP"
           # The executable the Tauri app's login item starts.
-          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")" = brigade-desktop ]
-          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION" ]
+          check "Executable name" test "$(plist CFBundleExecutable)" = brigade-desktop
+          check "Version $(plist CFBundleShortVersionString), not $VERSION" test "$(plist CFBundleShortVersionString)" = "$VERSION"
           # The helper keeps its own signature, which its permissions are tied to.
-          codesign --verify --strict --verbose=2 "$APP/Contents/Resources/Brigade Computer Use.app"
-          codesign -dvv "$APP/Contents/Resources/Brigade Computer Use.app" 2>&1 | grep -q '^Authority=Developer ID Application'
+          check "Helper signature" codesign --verify --strict --verbose=2 "$HELPER"
+          check "Helper signed with the Developer ID" sh -c 'codesign -dvv "$1" 2>&1 | grep "^Authority=Developer ID Application"' sh "$HELPER"
+          exit "$failed"
 
       - name: The Tauri apps' update
         env:
