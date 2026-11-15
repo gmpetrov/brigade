@@ -19,7 +19,7 @@ import { runnerSupported, Supervisor } from './runner.js'
 import { loadSettings, updateSettings } from './settings.js'
 import * as setup from './setup.js'
 import { startUpdates } from './updates.js'
-import { handleLinks, setUpSession, showDashboard } from './windows.js'
+import { dashboardWindow, handleLinks, setUpSession, showDashboard } from './windows.js'
 
 const SCHEME = 'brigade'
 
@@ -101,7 +101,9 @@ function start() {
 
   // The smoke test (test/e2e/smoke.mjs) reaches the app's parts from Playwright.
   if (process.env.BRIGADE_DESKTOP_TEST === '1')
-    Object.assign(globalThis, { brigadeTest: { capture, setup, showDashboard, ctx } })
+    Object.assign(globalThis, {
+      brigadeTest: { capture, setup, showDashboard, dashboardWindow, ctx },
+    })
 
   ready = true
   for (const url of [...early, ...linksIn(process.argv)]) void openLink(url)

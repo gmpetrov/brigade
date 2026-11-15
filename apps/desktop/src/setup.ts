@@ -152,7 +152,8 @@ async function act(id: string) {
   switch (id) {
     case 'move': {
       // Electron copies it to Applications, quits this copy and starts that one.
-      await stopForQuit()
+      // Kept open for unsaved edits: nothing moves.
+      if (!(await stopForQuit())) return
       let moved = false
       try {
         moved = app.moveToApplicationsFolder({ conflictHandler: () => true })

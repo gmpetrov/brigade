@@ -36,8 +36,7 @@ function set(next: State) {
 
 /** The runner stops, then the new version starts in this one's place. */
 export async function restartToUpdate() {
-  await stopForQuit()
-  autoUpdater.quitAndInstall(false, true)
+  if (await stopForQuit()) autoUpdater.quitAndInstall(false, true)
 }
 
 async function askRestart(version: string) {

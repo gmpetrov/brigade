@@ -14,6 +14,8 @@ import {
   type WebContents,
   type WebPreferences,
 } from 'electron'
+import { ctx } from './context.js'
+import { confirm } from './dialogs.js'
 import { dashboard, loadSettings, onDashboard, updateSettings } from './settings.js'
 
 export type WindowKind = 'main' | 'capture'
@@ -238,6 +240,75 @@ function savedBounds() {
   return visible && y < area.y + area.height - 100 ? bounds : undefined
 }
 
+let closing: Promise<boolean> | undefined
+
+/**
+ * Closes the dashboard window, its page asked first: the page's beforeunload (unsaved file
+ * edits, apps/web/lib/code-drafts.ts) keeps it unless the person discards them. Whether it
+ * closed. The window only holds the band's page: its own close never reaches the dashboard's.
+ */
+export function closeDashboard(): Promise<boolean> {
+  const window = dashboardWindow()
+  if (!window) return Promise.resolve(true)
+  const contents = dashboardContents()
+  if (!contents) return Promise.resolve(closeWindow(window))
+  closing ??= askToClose(window, contents).finally(() => {
+    closing = undefined
+  })
+  return closing
+}
+
+function saveBounds(window: BrowserWindow) {
+  const bounds = window.getNormalBounds()
+  updateSettings((settings) => {
+    settings.dashboardBounds = bounds
+  })
+}
+
+function closeWindow(window: BrowserWindow) {
+  if (window.isDestroyed()) return true
+  saveBounds(window)
+  window.destroy()
+  return true
+}
+
+function askToClose(window: BrowserWindow, contents: WebContents) {
+  return new Promise<boolean>((resolve) => {
+    const closed = () => {
+      contents.off('will-prevent-unload', kept)
+      contents.off('unresponsive', hung)
+      resolve(closeWindow(window))
+    }
+    // The page said no: the person decides.
+    const kept = () => {
+      contents.off('destroyed', closed)
+      contents.off('unresponsive', hung)
+      void confirm({
+        title: 'Close without saving?',
+        message: 'Files you edited in Brigade have changes that are not saved yet.',
+        ok: 'Close without saving',
+        cancel: 'Keep editing',
+        type: 'warning',
+      }).then((discard) => {
+        if (!discard) return resolve(false)
+        if (contents.isDestroyed()) return resolve(closeWindow(window))
+        contents.once('destroyed', () => resolve(closeWindow(window)))
+        contents.close()
+      })
+    }
+    // A page that does not answer can't keep the window.
+    const hung = () => {
+      contents.off('will-prevent-unload', kept)
+      contents.close()
+    }
+    contents.once('destroyed', closed)
+    contents.once('will-prevent-unload', kept)
+    contents.once('unresponsive', hung)
+    if (contents.isCrashed()) contents.close()
+    else contents.close({ waitForBeforeUnload: true })
+  })
+}
+
 /** The dashboard in a window of its own, at `url` (the dashboard's home by default). */
 export function showDashboard(url = dashboard()) {
   const open = dashboardWindow()
@@ -290,11 +361,11 @@ export function showDashboard(url = dashboard()) {
   if (process.platform === 'darwin') void app.dock?.show()
   window.once('ready-to-show', () => bringUp(window, contents))
   window.on('focus', () => contents.focus())
-  window.on('close', () => {
-    const bounds = window.getNormalBounds()
-    updateSettings((settings) => {
-      settings.dashboardBounds = bounds
-    })
+  // The page decides first: it keeps the window open while it has unsaved edits.
+  window.on('close', (event) => {
+    if (ctx.quitting || contents.isDestroyed()) return saveBounds(window)
+    event.preventDefault()
+    void closeDashboard()
   })
   window.on('closed', () => {
     if (main === window) {
