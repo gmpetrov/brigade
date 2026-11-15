@@ -1,6 +1,7 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
 import { resolve } from 'node:path'
+import { setTimeout as wait } from 'node:timers/promises'
 import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
   ATTACHMENT_MAX,
@@ -3851,6 +3852,10 @@ const point = {
   y: { type: 'number', description: 'Screen y, in points' },
 } as const
 
+/** How long computer_open_app waits for a window of the app, and then for it to finish opening. */
+const WINDOW_WAIT_MS = 5000
+const WINDOW_SETTLE_MS = 300
+
 const APP_FOR_KEYS = {
   type: 'string',
   description: 'The app it is for, by the name computer_apps lists (it must be running)',
@@ -3877,11 +3882,17 @@ export function computerUseTools(
    * that app's own process instead (appInput), so nothing that comes to the front meanwhile gets
    * them.
    */
-  const inFront = async (signal?: AbortSignal) => {
+  const frontApp = async (signal?: AbortSignal) => {
     const { apps } = (await computer.request('apps', {}, signal)) as {
-      apps?: { name?: string; active?: boolean }[]
+      apps?: { name?: string; bundleId?: string; active?: boolean }[]
     }
-    return apps?.find((running) => running.active)?.name ?? 'unknown'
+    return apps?.find((running) => running.active)
+  }
+  const inFront = async (signal?: AbortSignal) => (await frontApp(signal))?.name ?? 'unknown'
+  /** Whether an app as computer_apps lists it is the one named (its name, bundle id or .app). */
+  const isApp = (app: { name?: string; bundleId?: string } | undefined, named: string) => {
+    const wanted = named.toLowerCase().replace(/\.app$/, '')
+    return !!app && [app.name, app.bundleId].some((id) => id?.toLowerCase() === wanted)
   }
   const named = (app: string | undefined) => {
     if (!app) return
@@ -4022,21 +4033,60 @@ export function computerUseTools(
     computer_key: tool({
       description:
         'Press a key or a shortcut: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". Name the ' +
-        'app it is for: it goes to that app, even when another comes to the front meanwhile, and the app ' +
-        'stays where it is. Without one, it goes to the app in front, which the answer names (front). ' +
+        'app it is for: it goes to that app, even when another comes to the front meanwhile. An app behind ' +
+        'others takes no key, so it is refused there unless front: true brings the app forward first ' +
+        "(taking the person's focus). Without app, it goes to the app in front, which the answer names (front). " +
         ABOUT_COMPUTER,
-      inputSchema: jsonSchema<{ key: string; app?: string }>({
+      inputSchema: jsonSchema<{ key: string; app?: string; front?: boolean }>({
         type: 'object',
         properties: {
           key: { type: 'string', description: 'Modifiers (cmd, shift, alt, ctrl) joined with +' },
           app: APP_FOR_KEYS,
+          front: {
+            type: 'boolean',
+            description:
+              "Bring the app to the front first when it is behind another, taking the person's focus: " +
+              'only when they are not using the Mac (default false)',
+          },
         },
         required: ['key'],
       }),
       execute: async (input, { abortSignal }) => {
         const target = named(input.app)
-        if (target && input.app)
-          return { to: input.app, ...(await target.press(input.app, input.key, abortSignal)) }
+        if (target && input.app) {
+          // An app behind others takes no key: it has no window with the keyboard, and its menus,
+          // which shortcuts go through, are off (Cmd+S to TextEdit behind Chrome did nothing).
+          const front = await frontApp(abortSignal)
+          let brought = false
+          if (!isApp(front, input.app)) {
+            if (!input.front)
+              throw new Error(
+                `${input.app} is behind ${front?.name ?? 'another app'}, and an app behind others takes no key ` +
+                  '(its menus, which shortcuts go through, are off there), so nothing was sent. If the person ' +
+                  `is not using the Mac, call again with front: true: it brings ${input.app} to the front first, ` +
+                  'taking their focus. Text for one of its fields goes in from behind: computer_act on its ref, ' +
+                  'or computer_type with app.',
+              )
+            const opened = (await computer.request(
+              'open_app',
+              { app: input.app },
+              abortSignal,
+            )) as {
+              name?: string
+              active?: boolean
+            }
+            if (opened.active === false)
+              throw new Error(
+                `${opened.name ?? input.app} did not come to the front, so nothing was sent.`,
+              )
+            brought = true
+          }
+          return {
+            to: input.app,
+            ...(brought ? { broughtToFront: true } : {}),
+            ...(await target.press(input.app, input.key, abortSignal)),
+          }
+        }
         const front = await inFront(abortSignal)
         await computer.request('key', { key: input.key }, abortSignal)
         return { ok: true, front }
@@ -4050,14 +4100,41 @@ export function computerUseTools(
     computer_open_app: tool({
       description:
         'Open an app (or bring it to the front) by name or bundle id, e.g. "Visual Studio Code" or ' +
-        '"com.apple.Notes". ' +
+        '"com.apple.Notes". It answers once a window of it is there, with its windows (an app may open ' +
+        'on a dialog: TextEdit on its Open panel, whose New Document makes a document). ' +
         ABOUT_COMPUTER,
       inputSchema: jsonSchema<{ app: string }>({
         type: 'object',
         properties: { app: { type: 'string' } },
         required: ['app'],
       }),
-      execute: act('open_app'),
+      execute: async (input, { abortSignal }) => {
+        const opened = (await computer.request('open_app', input, abortSignal)) as Record<
+          string,
+          unknown
+        >
+        if (!appInput) return opened
+        // Its window, once there: a snapshot taken at once read an Open panel still opening (empty)
+        // or no window at all (WINDOW_NOT_FOUND).
+        const name = typeof opened.name === 'string' && opened.name ? opened.name : input.app
+        const until = Date.now() + WINDOW_WAIT_MS
+        let windows = await appInput.windows(name, abortSignal)
+        while (!windows.length && Date.now() < until) {
+          await wait(250, undefined, abortSignal ? { signal: abortSignal } : {})
+          windows = await appInput.windows(name, abortSignal)
+        }
+        if (windows.length)
+          await wait(WINDOW_SETTLE_MS, undefined, abortSignal ? { signal: abortSignal } : {})
+        return {
+          ...opened,
+          windows,
+          ...(windows.length
+            ? {}
+            : {
+                note: `No window of ${name} yet (an app of the menu bar has none): take a snapshot in a moment.`,
+              }),
+        }
+      },
     }),
     computer_run: tool({
       description:

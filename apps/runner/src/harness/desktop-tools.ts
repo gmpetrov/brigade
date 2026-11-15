@@ -269,6 +269,32 @@ export function snapshotEntry(input: SnapshotInput, where: Desktop['where']): Ba
 
 /** Chromium and Electron apps settle slowly: agent-desktop's 3 seconds read them thin. */
 const SNAPSHOT_TIMEOUT_MS = 8000
+/** A tree this short (in characters) is a small window's: read again with its text after an action. */
+const SMALL_TREE = 6000
+
+/**
+ * An app's menu bar as a map: its menus and their items, each submenu folded with how many items
+ * it holds (root on its item to open it). The Apple menu is left out: it is the system's (Restart,
+ * Shut Down, Log Out) and lists the person's recent apps and files, as an app's Open Recent does,
+ * which would stay in the thread for no use; together they made a menu bar's read 15 KB and more.
+ */
+export function menubarOutline(tree: DesktopNode | undefined): DesktopNode | undefined {
+  if (!tree?.children?.length) return tree
+  // menu bar (0) › menu item File (1) › menu File (2) › item Open Recent (3) › its menu (4)
+  const fold = (node: DesktopNode, depth: number): DesktopNode => {
+    if (depth >= 4 && node.children?.length) {
+      const { children, ...rest } = node
+      return { ...rest, children_count: children.length }
+    }
+    return node.children
+      ? { ...node, children: node.children.map((child) => fold(child, depth + 1)) }
+      : node
+  }
+  const [first, ...others] = tree.children
+  const menus = /^apple$/i.test(first?.name ?? '') ? others : tree.children
+  return fold({ ...tree, children: menus }, 0)
+}
+
 /** How long an interface gets to show what an action did, before it is read again. */
 export const SETTLE_MS = 300
 /** The most steps one computer_act takes (agent-desktop's batch takes 64 commands). */
@@ -425,19 +451,29 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
    * of its refs reads the same again, so it comes back with what it did and the new refs.
    */
   const reads = new Map<string, SnapshotInput>()
+  /**
+   * The snapshots whose tree was small (a dialog, a calculator): what an action did there is read
+   * again with its text too (all), since a result often shows as text (Calculator's 69 104),
+   * which a read of what can be acted on leaves out.
+   */
+  const small = new Set<string>()
   /** A snapshot's answer as the teammate reads it, remembered for the actions on its refs. */
   const present = (
     data: Record<string, unknown>,
     read: SnapshotInput,
     extra: { hidden?: boolean; named?: boolean } = {},
   ) => {
-    const tree = renderTree(data.tree as DesktopNode | undefined, {
+    const whole = data.tree as DesktopNode | undefined
+    const shown = read.surface === 'menubar' && !read.root ? menubarOutline(whole) : whole
+    const tree = renderTree(shown, {
       ...(extra.hidden ? { hidden: true } : {}),
       // Rooted on a region: all of it, as asked (up to the size limit).
       ...(read.root ? { children: Number.POSITIVE_INFINITY } : {}),
     })
     // The app it actually read, not only what was asked: one read by default (the app in front)
     // is read again after an action even when another app has come to the front since.
+    if (typeof data.snapshot_id === 'string' && tree.text.length <= SMALL_TREE && !tree.left)
+      small.add(data.snapshot_id)
     if (typeof data.snapshot_id === 'string')
       reads.set(data.snapshot_id, {
         ...read,
@@ -694,6 +730,10 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
         const last = steps[steps.length - 1]!
         const remembered = snapshotOf(last.ref)
         const read = input.observe === false ? undefined : reads.get(remembered ?? '')
+        // A small window is read again with its text: a result often shows as text alone.
+        const textToo = !!remembered && small.has(remembered)
+        const reading = (again: SnapshotInput) =>
+          snapshotEntry(textToo && !again.all ? { ...again, all: true } : again, where)
 
         const done: Record<string, unknown>[] = []
         let failed: { step: number; ref: string; error: string } | undefined
@@ -730,10 +770,7 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
           const readAlong = read && end === steps.length
           const entries = group.map(actEntry)
           if (readAlong)
-            entries.push(
-              { command: 'wait', args: { ms: SETTLE_MS } },
-              snapshotEntry(readAfter(read, []), where),
-            )
+            entries.push({ command: 'wait', args: { ms: SETTLE_MS } }, reading(readAfter(read, [])))
           let results
           try {
             results = await batch(entries, { headed, signal: abortSignal })
@@ -770,7 +807,7 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
           if (again) {
             try {
               const results = await batch(
-                [{ command: 'wait', args: { ms: SETTLE_MS } }, snapshotEntry(surfaceRead, where)],
+                [{ command: 'wait', args: { ms: SETTLE_MS } }, reading(surfaceRead)],
                 { signal: abortSignal },
               )
               const snapshot = results[1]
@@ -792,7 +829,7 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
               ...whole
             } = readAfter(read, [])
             try {
-              const results = await batch([snapshotEntry(whole, where)], { signal: abortSignal })
+              const results = await batch([reading(whole)], { signal: abortSignal })
               if (results[0]?.ok) {
                 take(results[0].data, whole)
                 afterError = undefined
@@ -853,6 +890,8 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
 export type AppInput = {
   press: (app: string, key: string, signal?: AbortSignal) => Promise<{ delivery?: string }>
   type: (app: string, text: string, signal?: AbortSignal) => Promise<{ delivery?: string }>
+  /** The app's windows a person can see (none yet while it opens). */
+  windows: (app: string, signal?: AbortSignal) => Promise<{ id: string; title?: string }[]>
 }
 
 /**
@@ -888,6 +927,14 @@ export function macAppInput(desktop: Desktop): AppInput {
             : `No field of ${app} has the keyboard focus, so nothing was typed: focus one first, or type into it by its ref (computer_act).`,
         )
       return delivery(await call(['type', fields[0]!.ref_id!, '--stdin'], { stdin: text, signal }))
+    },
+    windows: async (app, signal) => {
+      const listed = await desktopCall(desktop.exec, ['list-windows', '--app', app], {
+        ...(signal ? { signal } : {}),
+      }).catch(() => [])
+      return (Array.isArray(listed) ? (listed as WindowInfo[]) : [])
+        .filter((w) => w.id && w.visible !== false && !w.minimized)
+        .map((w) => ({ id: w.id!, ...(w.title ? { title: w.title } : {}) }))
     },
   }
 }

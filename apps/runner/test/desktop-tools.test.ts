@@ -1073,7 +1073,8 @@ test('an action on a ref reads its window again in the same call, with the new r
     { command: 'wait', args: { ms: 300 } },
     {
       command: 'snapshot',
-      args: { app: 'TextEdit', interactive_only: true, compact: true, timeout_ms: 8000 },
+      // A small window: read again with its text too (all).
+      args: { app: 'TextEdit', interactive_only: false, compact: true, timeout_ms: 8000 },
     },
   ])
   assert.ok(calls[1]!.args.includes('--stop-on-error'))
@@ -1238,7 +1239,7 @@ test('when what was read before is gone (a sheet the action closed), the app is 
   assert.match(result.after.tree, /window "test.rtf"/)
   assert.deepEqual(entriesOf(calls.at(-1)!.args)!.at(-1)!.args, {
     app: 'TextEdit',
-    interactive_only: true,
+    interactive_only: false,
     compact: true,
     timeout_ms: 8000,
   })
@@ -1326,4 +1327,92 @@ test('after an action, the app a default snapshot read is read again, even with 
   )) as Record<string, any>
   assert.equal(result.after.app, 'TextEdit')
   assert.equal(entriesOf(calls.at(-1)!.args)!.at(-1)!.args.app, 'TextEdit')
+})
+
+test('a menu bar is read as its menus and items: no Apple menu, each submenu folded with its count', async () => {
+  const item = (name: string, ref: string, submenu?: string[]): DesktopNode => ({
+    role: 'menuitem',
+    name,
+    ref_id: ref,
+    available_actions: ['Click'],
+    ...(submenu
+      ? {
+          children: [
+            {
+              role: 'menu',
+              name,
+              children: submenu.map((child, i) => item(child, `${ref}${i}`)),
+            },
+          ],
+        }
+      : {}),
+  })
+  const bar: DesktopNode = {
+    role: 'menu',
+    children: [
+      item('Apple', '@s1:e1', ['About This Mac', 'Recent Items', 'Shut Down']),
+      item('File', '@s1:e2', []),
+    ],
+  }
+  bar.children![1]!.children![0]!.children = [
+    item('Save…', '@s1:e3'),
+    item('Open Recent', '@s1:e4', ['AuthKey_SECRET.p8', 'notes.txt', 'Clear Menu']),
+  ]
+  const { exec } = fakeExec(() => envelope({ app: 'TextEdit', snapshot_id: 's1', tree: bar }))
+  const tools = desktopTools({ exec, where: 'mac' })
+  const read = (await tools.computer_snapshot!.execute!(
+    { app: 'TextEdit', surface: 'menubar' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(
+    read.tree,
+    [
+      'menu',
+      '  menuitem "File" @s1:e2 {click}',
+      '    menu "File"',
+      '      menuitem "Save…" @s1:e3 {click}',
+      '      menuitem "Open Recent" @s1:e4 {click}',
+      '        menu "Open Recent" (3 inside)',
+    ].join('\n'),
+  )
+  assert.doesNotMatch(read.tree, /AuthKey|Shut Down|Apple/)
+  // Rooted on an item, as asked: all of it.
+  const rooted = (await tools.computer_snapshot!.execute!(
+    { app: 'TextEdit', surface: 'menubar', root: '@s1:e4' },
+    options(),
+  )) as Record<string, any>
+  assert.match(rooted.tree, /notes\.txt/)
+})
+
+test('a big window is read again after an action as before, without its text', async () => {
+  const big = {
+    role: 'window',
+    name: 'Big',
+    children: Array.from({ length: 25 }, (_, i) => ({
+      role: 'group',
+      children: Array.from({ length: 25 }, (_, j) => ({
+        role: 'button',
+        name: `A button with a rather long name ${i}-${j}`,
+        ref_id: `@s1:e${i * 25 + j}`,
+      })),
+    })),
+  }
+  const { exec, calls } = fakeExec((args) => {
+    const entries = entriesOf(args)
+    if (!entries) return envelope({ app: 'Big', snapshot_id: 's1', tree: big })
+    return envelope({
+      results: entries.map((entry) => ({
+        command: entry.command,
+        ok: true,
+        data:
+          entry.command === 'snapshot'
+            ? { app: 'Big', snapshot_id: 's2', tree: { role: 'window' } }
+            : { disposition: { delivery: 'delivered_verified' } },
+      })),
+    })
+  })
+  const tools = desktopTools({ exec, where: 'mac' })
+  await tools.computer_snapshot!.execute!({ app: 'Big' }, options())
+  await tools.computer_act!.execute!({ ref: '@s1:e3', action: 'click' }, options())
+  assert.equal(entriesOf(calls.at(-1)!.args)!.at(-1)!.args.interactive_only, true)
 })

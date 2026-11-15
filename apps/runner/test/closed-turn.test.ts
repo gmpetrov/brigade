@@ -176,3 +176,58 @@ test("a frozen turn whose tools changed since goes on with the agent's own", () 
   assert.equal(withTools(between, ['open_ticket']), between)
   assert.equal(withTools(undefined, ['open_ticket']), undefined)
 })
+
+test("a frozen turn whose tools' descriptions or inputs changed (a runner update) goes on with the agent's own", () => {
+  const act = {
+    name: 'computer_act',
+    description: 'Act on an element by its ref. Then take a new snapshot to check it worked.',
+    inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] },
+  }
+  const frozen = {
+    ...waiting,
+    continueFrom: {
+      ...waiting.continueFrom,
+      turnSettings: { skills: [], tools: [{ name: 'open_ticket', description: 'Ask' }, act] },
+      pendingToolResults: [],
+    },
+  }
+  const { turnSettings: _settings, ...rest } = frozen.continueFrom
+  const ticket = { name: 'open_ticket', description: 'Ask' }
+  // The same names, a new input (computer_act's steps): the saved tools are not served again.
+  assert.deepEqual(
+    withTools(frozen, [
+      ticket,
+      {
+        ...act,
+        inputSchema: {
+          type: 'object',
+          properties: { ref: { type: 'string' }, steps: { type: 'array' } },
+        },
+      },
+    ]),
+    { ...frozen, continueFrom: rest },
+  )
+  // A new description alone.
+  assert.deepEqual(
+    withTools(frozen, [ticket, { ...act, description: 'Act, and read the window after.' }]),
+    { ...frozen, continueFrom: rest },
+  )
+  // The same specs, whatever their keys' order: kept as saved.
+  assert.equal(
+    withTools(frozen, [
+      {
+        // What JSON leaves out (undefined) is no change.
+        inputSchema: {
+          required: ['ref'],
+          properties: { ref: { type: 'string' } },
+          type: 'object',
+          description: undefined,
+        },
+        description: act.description,
+        name: 'computer_act',
+      },
+      ticket,
+    ]),
+    frozen,
+  )
+})

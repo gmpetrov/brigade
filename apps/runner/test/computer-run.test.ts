@@ -138,7 +138,11 @@ test("a key or text for a named app goes to that app's process, never to whateve
   let front = 'Finder'
   const deliveries: { what: string; app: string }[] = []
   const { use, calls } = computer(async (call) => {
-    if (call.method === 'open_app') front = call.params.app as string
+    if (call.method === 'open_app') {
+      front = call.params.app as string
+      return { name: front, active: true }
+    }
+    if (call.method === 'apps') return { apps: [{ name: front, active: true }] }
     if (call.method === 'key' || call.method === 'type')
       deliveries.push({ what: String(call.params.key ?? call.params.text), app: front })
     return { ok: true }
@@ -153,16 +157,17 @@ test("a key or text for a named app goes to that app's process, never to whateve
       deliveries.push({ what: text, app })
       return { delivery: 'delivered_verified' }
     },
+    windows: async () => [],
   }
   const tools = computerUseTools(use, appInput)
   const answers = await Promise.all([
-    tools.computer_key!.execute!({ app: 'TextEdit', key: 'cmd+a' }, options()),
-    tools.computer_key!.execute!({ app: 'Calculator', key: 'escape' }, options()),
+    tools.computer_key!.execute!({ app: 'TextEdit', key: 'cmd+a', front: true }, options()),
+    tools.computer_key!.execute!({ app: 'Calculator', key: 'escape', front: true }, options()),
     tools.computer_type!.execute!({ app: 'TextEdit', text: 'hi' }, options()),
   ])
   assert.deepEqual(answers, [
-    { to: 'TextEdit', delivery: 'delivered_unverified' },
-    { to: 'Calculator', delivery: 'delivered_unverified' },
+    { to: 'TextEdit', broughtToFront: true, delivery: 'delivered_unverified' },
+    { to: 'Calculator', broughtToFront: true, delivery: 'delivered_unverified' },
     { to: 'TextEdit', delivery: 'delivered_verified' },
   ])
   assert.deepEqual(
@@ -173,8 +178,74 @@ test("a key or text for a named app goes to that app's process, never to whateve
       { what: 'hi', app: 'TextEdit' },
     ],
   )
-  // Nothing went through the helper's global keyboard, and no app was brought forward.
-  assert.deepEqual(calls, [])
+  // Nothing went through the helper's global keyboard.
+  assert.ok(calls.every((c) => c.method !== 'key' && c.method !== 'type'))
+})
+
+test('a key for an app behind another is refused, unless front: true brings it forward first', async () => {
+  const pressed: string[] = []
+  const appInput: AppInput = {
+    press: async (app, key) => {
+      pressed.push(`${app}:${key}`)
+      return {}
+    },
+    type: async () => ({}),
+    windows: async () => [],
+  }
+  const { use, calls } = computer(async (call) =>
+    call.method === 'apps'
+      ? {
+          apps: [
+            { name: 'Google Chrome', active: true },
+            { name: 'TextEdit', active: false },
+          ],
+        }
+      : { name: 'TextEdit', active: true },
+  )
+  const tools = computerUseTools(use, appInput)
+  await assert.rejects(
+    tools.computer_key!.execute!({ key: 'cmd+s', app: 'TextEdit' }, options()) as Promise<unknown>,
+    /TextEdit is behind Google Chrome.*nothing was sent.*front: true/s,
+  )
+  assert.deepEqual(pressed, [])
+  assert.deepEqual(
+    calls.map((c) => c.method),
+    ['apps'],
+  )
+  assert.deepEqual(
+    await tools.computer_key!.execute!({ key: 'cmd+s', app: 'TextEdit', front: true }, options()),
+    { to: 'TextEdit', broughtToFront: true },
+  )
+  assert.deepEqual(pressed, ['TextEdit:cmd+s'])
+  // Already in front (by its bundle id here): sent as it is.
+  const inFront = computer(async () => ({
+    apps: [{ name: 'TextEdit', bundleId: 'com.apple.TextEdit', active: true }],
+  }))
+  assert.deepEqual(
+    await computerUseTools(inFront.use, appInput).computer_key!.execute!(
+      { key: 'cmd+b', app: 'com.apple.textedit' },
+      options(),
+    ),
+    { to: 'com.apple.textedit' },
+  )
+})
+
+test('opening an app answers once a window of it is there, with its windows', async () => {
+  let asked = 0
+  const appInput: AppInput = {
+    press: async () => ({}),
+    type: async () => ({}),
+    windows: async () => (++asked < 3 ? [] : [{ id: 'w-1', title: 'Open' }]),
+  }
+  const { use } = computer(async () => ({ name: 'TextEdit', active: true }))
+  assert.deepEqual(
+    await computerUseTools(use, appInput).computer_open_app!.execute!(
+      { app: 'TextEdit' },
+      options(),
+    ),
+    { name: 'TextEdit', active: true, windows: [{ id: 'w-1', title: 'Open' }] },
+  )
+  assert.equal(asked, 3)
 })
 
 test('a key without an app goes to the app in front, which the answer names', async () => {

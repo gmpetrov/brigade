@@ -76,21 +76,39 @@ export function withoutBridge(resume: unknown): unknown {
   }
 }
 
+/** A tool as the harness hands it to the runtime: its name, description and input's JSON Schema. */
+export type ToolSpec = { name: string; description?: string | undefined; inputSchema?: unknown }
+
 /**
  * A saved turn, for an agent made with these tools. The harness continues a turn with the
  * tools it started with, and stops it outright when one of them is gone: an App granted or
  * removed since, or a second account of a kind, which renames that kind's tools
- * (`github_list_repositories` becomes `github_list_repositories_acme`). Its tools changed,
- * the turn goes on without its saved settings: the harness then takes the agent's own.
+ * (`github_list_repositories` becomes `github_list_repositories_acme`). A runner update that
+ * changes a tool's description or input keeps its name, and the saved one went on being served:
+ * a thread kept reading computer_act without its steps, which the runner took. So with specs, a
+ * tool counts as changed when its description or input does; with names only, when it is renamed.
+ * Its tools changed, the turn goes on without its saved settings: the harness then takes the
+ * agent's own.
  */
-export function withTools(resume: unknown, tools: readonly string[]): unknown {
+export function withTools(resume: unknown, tools: readonly (string | ToolSpec)[]): unknown {
   const state = resume as { continueFrom?: { turnSettings?: { tools?: unknown } } } | undefined
   const from = state?.continueFrom
   const saved = from?.turnSettings?.tools
   if (!from || !Array.isArray(saved)) return resume
-  const names = saved.map((t: { name?: unknown }) => t?.name)
-  const current = new Set(tools)
-  if (names.length === current.size && names.every((n) => current.has(n as string))) return resume
+  const current = new Map(
+    tools.map((tool) => (typeof tool === 'string' ? [tool, undefined] : [tool.name, tool])),
+  )
+  const same =
+    saved.length === current.size &&
+    saved.every((entry: ToolSpec | undefined) => {
+      if (!entry || typeof entry.name !== 'string' || !current.has(entry.name)) return false
+      const now = current.get(entry.name)
+      // As saved: through JSON, which leaves out what is undefined.
+      const plain = (spec: ToolSpec) =>
+        canonical(JSON.parse(JSON.stringify([spec.description ?? null, spec.inputSchema ?? null])))
+      return !now || plain(entry) === plain(now)
+    })
+  if (same) return resume
   const { turnSettings: _settings, ...rest } = from
   return { ...state, continueFrom: rest }
 }

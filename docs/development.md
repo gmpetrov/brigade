@@ -64,7 +64,11 @@ for, and then go to that app's own process through agent-desktop (`macAppInput`)
 doesn't bring the app forward, text with `type` into its one focused field that takes text (`find --state focused`;
 AppKit marks a list's cells focused too), and nothing when there is none or several. Bringing the app forward and
 then sending let another app (the person, Brigade.app, a parallel call) come to the front in between and get them.
-Without an app they go to the app in front, as before, and the answer names it (`front`).
+Without an app they go to the app in front, as before, and the answer names it (`front`). An app behind others
+takes no key (its menus, which shortcuts go through, are off: Cmd+S to TextEdit behind Chrome did nothing), so a key
+for one is refused, unless `front: true` brings it forward first (taking the person's focus). `computer_open_app`
+answers once a window of the app is there (agent-desktop's `list-windows`, up to 5 seconds, then 300 ms for it to
+finish opening), with its windows: a snapshot taken at once read a panel still opening, or no window.
 
 Commands in a teammate's own shell don't get those permissions: macOS asks the app responsible for a process, the
 one that started it, and for the runner's commands that is Brigade.app, which holds neither. `computer_run` has the
@@ -99,9 +103,17 @@ them when the snapshot is rooted on it), and cut at 15 KB. The tools are in
 `computer_act` takes one action or `steps`, done in order. Actions without text go in agent-desktop's `batch`, one
 process for many, stopping at the first refusal; text (`type`, `set_value`) never goes in a batch, whose JSON is on
 the command line, but through stdin one action at a time. After acting it reads again what the ref's snapshot read
-(its app, the one it actually read when none was named, window and surface; not as a skeleton), in the same batch after 300 ms, or the menu, sheet or alert the last
-action opened, and answers with it in `after`: the new refs, without another call. A ref from a snapshot the tool
-didn't take in this turn gets no `after`, and the answer says to take one.
+(its app, the one it actually read when none was named, window and surface; not as a skeleton), in the same batch
+after 300 ms, or the menu, sheet or alert the last action opened, and answers with it in `after`: the new refs,
+without another call. A small window's (a tree under 6,000 characters) is read again with its text too (`all`), since
+a result often shows as text alone (Calculator's). A ref from a snapshot the tool didn't take in this turn gets no
+`after`, and the answer says to take one. A menu bar (`surface: menubar`) is read as its menus and items, without the
+Apple menu (the system's Restart, Shut Down and Log Out, and the person's recent items) and with each submenu folded
+with its count (an app's Open Recent lists file names): rooted on an item, all of it.
+
+A thread resumed mid-turn after a runner update kept serving the tools its turn started with while their names stayed
+the same (`withTools` in `apps/runner/src/harness/closed-turn.ts`), so a teammate went on reading the old
+descriptions and inputs. The saved tools are now dropped when any tool's name, description or input changed.
 
 - **On a Mac**, beside the tools above, agent-desktop runs through Brigade Computer Use's `run`, so it gets the
   helper's Accessibility; its answer, and any text to type, go through files, never on its command line. `headed:
