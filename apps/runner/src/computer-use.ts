@@ -20,6 +20,8 @@ const DIR = join(homedir(), '.brigade', 'computer-use')
 const LAUNCH_MS = 15_000
 /** Longest a request waits; opening an app can take a while. */
 const REQUEST_MS = 60_000
+/** Longest a command waits for the one before it to end, in the runner's line for the helper. */
+export const QUEUE_MS = 120_000
 
 export class ComputerUseError extends Error {
   constructor(
@@ -62,9 +64,57 @@ export type RequestOptions = {
   once?: boolean
 }
 
+/**
+ * One at a time, in the order asked: the helper runs one command at a time and refuses another
+ * while one runs ("busy"), which made a teammate's two calls in parallel (a snapshot beside an
+ * action) fail for nothing. A caller waits its turn here instead; one that gives up (its turn was
+ * interrupted) or waited `max` ms leaves the line without running.
+ */
+export class Line {
+  private last: Promise<void> = Promise.resolve()
+
+  constructor(private readonly max = QUEUE_MS) {}
+
+  async run<T>(work: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const before = this.last
+    let done!: () => void
+    const mine = new Promise<void>((resolve) => (done = resolve))
+    this.last = before.then(() => mine)
+    try {
+      await new Promise<void>((resolve, reject) => {
+        if (signal?.aborted) return reject(new Error('aborted'))
+        const timer = setTimeout(() => {
+          signal?.removeEventListener('abort', aborted)
+          reject(
+            new ComputerUseError(
+              'busy',
+              `Another command has been running through Brigade Computer Use for over ${Math.round(this.max / 1000)} seconds. Try again once it has ended.`,
+            ),
+          )
+        }, this.max)
+        const aborted = () => {
+          clearTimeout(timer)
+          reject(new Error('aborted'))
+        }
+        signal?.addEventListener('abort', aborted, { once: true })
+        void before.then(() => {
+          clearTimeout(timer)
+          signal?.removeEventListener('abort', aborted)
+          resolve()
+        })
+      })
+      return await work()
+    } finally {
+      done()
+    }
+  }
+}
+
 export class ComputerUseClient {
   private launching: Promise<void> | undefined
   private nextId = 1
+  /** Commands (run), one after the other. */
+  private readonly commands = new Line()
 
   constructor(private readonly app: string) {}
 
@@ -72,7 +122,18 @@ export class ComputerUseClient {
     method: string,
     params: Record<string, unknown> = {},
     signal?: AbortSignal,
-    { wait = REQUEST_MS, once = false }: RequestOptions = {},
+    options: RequestOptions = {},
+  ): Promise<unknown> {
+    if (method === 'run')
+      return this.commands.run(() => this.attempt(method, params, signal, options), signal)
+    return this.attempt(method, params, signal, options)
+  }
+
+  private async attempt(
+    method: string,
+    params: Record<string, unknown>,
+    signal: AbortSignal | undefined,
+    { wait = REQUEST_MS, once = false }: RequestOptions,
   ): Promise<unknown> {
     try {
       return await this.send(method, params, signal, wait)

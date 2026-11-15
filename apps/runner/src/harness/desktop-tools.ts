@@ -16,8 +16,10 @@ import { join } from 'node:path'
 import { jsonSchema, tool, type Tool } from 'ai'
 import {
   DesktopError,
+  desktopBatch,
   desktopCall,
   renderTree,
+  type BatchEntry,
   shellQuote,
   targetArgs,
   type AgentDesktopBinary,
@@ -100,6 +102,29 @@ export type ActInput = {
   direction?: 'up' | 'down' | 'left' | 'right'
   amount?: number
   headed?: boolean
+}
+
+/** computer_act's input: one action, or steps done in order. */
+export type ActToolInput = Partial<Omit<ActInput, 'headed'>> & {
+  steps?: Omit<ActInput, 'headed'>[]
+  headed?: boolean
+  observe?: boolean
+}
+
+/** What an action on a ref takes, alone or as one of computer_act's steps. */
+function stepProperties(where: 'mac' | 'cloud') {
+  return {
+    ref: { type: 'string', description: 'The ref, as the snapshot gives it: @s…:e…' },
+    action: { type: 'string', enum: [...(where === 'mac' ? ACTIONS : CLOUD_ACTIONS)] },
+    text: { type: 'string', description: 'For type and set_value' },
+    option: { type: 'string', description: 'For select: the option to pick' },
+    direction: {
+      type: 'string',
+      enum: ['up', 'down', 'left', 'right'],
+      description: 'For scroll (default down)',
+    },
+    amount: { type: 'number', description: 'For scroll: how far (default 3)' },
+  } as const
 }
 
 /** The surfaces agent-desktop reads on each: a Mac has a focused element and popovers, Linux not. */
@@ -187,13 +212,70 @@ export function actArgs(input: ActInput): { args: string[]; stdin?: string } {
           '--direction',
           input.direction ?? 'down',
           '--amount',
-          String(Math.min(Math.max(Math.round(input.amount ?? 3), 1), 50)),
+          String(scrollAmount(input.amount)),
         ],
       }
     default:
       return { args: [...headed, input.action.replace(/_/g, '-'), ref] }
   }
 }
+
+/** Actions that carry text: through stdin, one at a time, never in a batch's JSON. */
+const TEXT_ACTIONS = new Set<Action>(['type', 'set_value'])
+
+const scrollAmount = (amount?: number) => Math.min(Math.max(Math.round(amount ?? 3), 1), 50)
+
+/** An action without text as a batch entry: the command's own field names. */
+export function actEntry(input: ActInput): BatchEntry {
+  const ref_id = input.ref
+  switch (input.action) {
+    case 'type':
+    case 'set_value':
+      throw new Error(`${input.action} carries text, which never goes in a batch`)
+    case 'select':
+      if (!input.option) throw new Error('option is required to select')
+      return { command: 'select', args: { ref_id, value: input.option } }
+    case 'scroll':
+      return {
+        command: 'scroll',
+        args: { ref_id, direction: input.direction ?? 'down', amount: scrollAmount(input.amount) },
+      }
+    default:
+      return { command: input.action.replace(/_/g, '-'), args: { ref_id } }
+  }
+}
+
+/** A snapshot as a batch entry, as snapshotArgs gives it on the command line. */
+export function snapshotEntry(input: SnapshotInput, where: Desktop['where']): BatchEntry {
+  const app = input.app ?? (where === 'cloud' && !input.window ? CLOUD_APP : undefined)
+  return {
+    command: 'snapshot',
+    args: {
+      ...(app ? { app } : {}),
+      ...(input.window ? { window_id: input.window } : {}),
+      interactive_only: !input.all,
+      compact: true,
+      ...(input.root ? { root: input.root } : {}),
+      ...(input.skeleton ? { skeleton: true } : {}),
+      ...(input.bounds ? { include_bounds: true } : {}),
+      ...(input.surface && input.surface !== 'window' ? { surface: input.surface } : {}),
+      ...(input.maxDepth
+        ? { max_depth: Math.min(Math.max(Math.round(input.maxDepth), 1), 50) }
+        : {}),
+      timeout_ms: SNAPSHOT_TIMEOUT_MS,
+    },
+  }
+}
+
+/** Chromium and Electron apps settle slowly: agent-desktop's 3 seconds read them thin. */
+const SNAPSHOT_TIMEOUT_MS = 8000
+/** How long an interface gets to show what an action did, before it is read again. */
+export const SETTLE_MS = 300
+/** The most steps one computer_act takes (agent-desktop's batch takes 64 commands). */
+export const STEPS_MAX = 30
+
+/** The snapshot a ref belongs to: @<snapshot id>:e<n>. */
+const snapshotOf = (ref: string) => /^@([^:]+):/.exec(ref)?.[1]
 
 /** The arguments for a snapshot. */
 export function snapshotArgs(input: SnapshotInput, where: Desktop['where']) {
@@ -210,9 +292,8 @@ export function snapshotArgs(input: SnapshotInput, where: Desktop['where']) {
     ...(input.maxDepth
       ? ['--max-depth', String(Math.min(Math.max(Math.round(input.maxDepth), 1), 50))]
       : []),
-    // Chromium and Electron apps settle slowly: agent-desktop's 3 seconds read them thin.
     '--timeout-ms',
-    '8000',
+    String(SNAPSHOT_TIMEOUT_MS),
   ]
 }
 
@@ -329,6 +410,52 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
       ...(options.signal ? { signal: options.signal } : {}),
     })
   }
+  const batch = async (
+    entries: BatchEntry[],
+    options: { headed?: boolean; signal?: AbortSignal | undefined },
+  ) => {
+    await desktop.ready?.(options.signal)
+    return desktopBatch(desktop.exec, entries, {
+      ...(options.headed ? { headed: true } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    })
+  }
+  /**
+   * What each snapshot of this turn read (its app, window, surface), by its id: an action on one
+   * of its refs reads the same again, so it comes back with what it did and the new refs.
+   */
+  const reads = new Map<string, SnapshotInput>()
+  /** A snapshot's answer as the teammate reads it, remembered for the actions on its refs. */
+  const present = (
+    data: Record<string, unknown>,
+    read: SnapshotInput,
+    extra: { hidden?: boolean; named?: boolean } = {},
+  ) => {
+    const tree = renderTree(data.tree as DesktopNode | undefined, {
+      ...(extra.hidden ? { hidden: true } : {}),
+      // Rooted on a region: all of it, as asked (up to the size limit).
+      ...(read.root ? { children: Number.POSITIVE_INFINITY } : {}),
+    })
+    if (typeof data.snapshot_id === 'string') reads.set(data.snapshot_id, read)
+    return {
+      app: data.app,
+      snapshot: data.snapshot_id,
+      ...(data.complete === false
+        ? {
+            complete: false,
+            incomplete: 'The app was still loading: take another snapshot to see all of it.',
+          }
+        : {}),
+      tree: tree.text,
+      ...(tree.left
+        ? {
+            cut: `${tree.left} more elements are not shown: narrow it with skeleton: true, then root on the region you need.`,
+          }
+        : {}),
+      ...(tree.hidden ? { hiddenLeftOut: tree.hidden } : {}),
+      ...(read.window && !extra.named ? { window: read.window } : {}),
+    }
+  }
   /**
    * Text into a field that takes none through accessibility: the field focused by a click on its
    * ref, then typed with the keyboard (what was in it selected first, for set_value).
@@ -337,6 +464,59 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
     await call(['click', input.ref], { signal })
     if (input.action === 'set_value') await keyboard!.key('ctrl+a', signal)
     await keyboard!.type(input.text ?? '', signal)
+  }
+  /** What an action did, as agent-desktop answered it. */
+  const outcome = (action: Action, data: Record<string, unknown>) => {
+    const disposition = data.disposition as { delivery?: string } | undefined
+    const surfaces = surfacesOf(data)
+    return {
+      action,
+      ...(disposition?.delivery ? { delivery: disposition.delivery } : {}),
+      ...(surfaces.length ? { open: surfaces } : {}),
+    }
+  }
+  /** One action on its own command line: text through stdin, typed with the keyboard where it must. */
+  const single = async (act: ActInput, signal?: AbortSignal) => {
+    const { args, stdin } = actArgs(act)
+    try {
+      return outcome(
+        act.action,
+        await call(args, { ...(stdin !== undefined ? { stdin } : {}), signal }),
+      )
+    } catch (error) {
+      if (
+        keyboard &&
+        TEXT_ACTIONS.has(act.action) &&
+        error instanceof DesktopError &&
+        NO_SEMANTIC_TEXT.has(error.code)
+      ) {
+        await typeWithKeyboard(act, signal).catch((error: unknown) => explain(error, where))
+        return {
+          action: act.action,
+          delivery: 'typed_with_keyboard',
+          check: 'Take a new snapshot to check the field (a password field shows no value).',
+        }
+      }
+      explain(error, where)
+    }
+  }
+  /** After an action: the read its ref came from again, or the menu, sheet or alert it opened. */
+  const readAfter = (read: SnapshotInput, opened: { type?: unknown; window?: string }[]) => {
+    const surface = opened.find(
+      (s) =>
+        typeof s.type === 'string' &&
+        s.type !== 'window' &&
+        (SURFACES[where] as readonly string[]).includes(s.type),
+    )
+    // A skeleton was a map to find the region: what the action did shows in the region itself.
+    const { skeleton: _skeleton, ...again } = read
+    return surface
+      ? {
+          ...(read.app ? { app: read.app } : {}),
+          ...(read.window ? { window: read.window } : {}),
+          surface: surface.type as string,
+        }
+      : again
   }
   const tools: Record<string, Tool> = {
     computer_snapshot: tool({
@@ -349,8 +529,10 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
           ? 'Use computer_screenshot and computer_click for what the tree does not show (a canvas, a ' +
             'game, an element without a ref). '
           : 'A dialog or a bubble is a window of its own, or a sheet (surface: sheet). ') +
-        'Refs belong to their snapshot: take a new one after the interface changed, and to check that ' +
-        'an action worked. A big app: skeleton first, then root on the region you need. ' +
+        'Long lists show their first items and a line for the rest, and elements scrolled out of view ' +
+        'are counted in a line: root on a list to see all of it. Refs belong to their snapshot; ' +
+        'computer_act gives the new ones after it acts. A big app: skeleton first, then root on the ' +
+        'region you need. ' +
         about,
       inputSchema: jsonSchema<SnapshotInput>({
         type: 'object',
@@ -369,7 +551,10 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
                 ? 'A window id, when the app has several (an error lists them)'
                 : 'A window id from otherWindows (default: the window in front)',
           },
-          root: { type: 'string', description: 'A ref: only what is inside that element' },
+          root: {
+            type: 'string',
+            description: 'A ref: only what is inside that element, every item of its lists',
+          },
           skeleton: {
             type: 'boolean',
             description: 'A shallow overview, each container with how many elements it holds',
@@ -385,7 +570,7 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
           },
           hidden: {
             type: 'boolean',
-            description: 'Include elements hidden from view (default false)',
+            description: 'Include elements hidden or scrolled out of view (default false)',
           },
           bounds: {
             type: 'boolean',
@@ -409,26 +594,12 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
         const data = await call(snapshotArgs(read, where), { signal: abortSignal }).catch(
           (error: unknown) => explain(error, where),
         )
-        const tree = renderTree(data.tree as DesktopNode | undefined, {
-          ...(input.hidden ? { hidden: true } : {}),
-        })
+        const { hidden: _hidden, ...remembered } = read
         return {
-          app: data.app,
-          snapshot: data.snapshot_id,
-          ...(data.complete === false
-            ? {
-                complete: false,
-                incomplete: 'The app was still loading: take another snapshot to see all of it.',
-              }
-            : {}),
-          tree: tree.text,
-          ...(tree.left
-            ? {
-                cut: `${tree.left} more elements are not shown: narrow it with skeleton: true, then root on the region you need.`,
-              }
-            : {}),
-          ...(tree.hidden ? { hiddenLeftOut: tree.hidden } : {}),
-          ...(read.window && !input.window ? { window: read.window } : {}),
+          ...present(data, remembered, {
+            ...(input.hidden ? { hidden: true } : {}),
+            named: !!input.window,
+          }),
           ...(others.length ? { otherWindows: others } : {}),
         }
       },
@@ -444,21 +615,25 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
             'for a moment. '
           : 'A field that takes no text that way (Chrome’s own fields) gets it from the keyboard: your ' +
             'browser window comes to the front of the desktop for it. ') +
-        'Then take a new snapshot to check it worked. ' +
+        'Several actions in a row (keys of a keypad, fields of a form): give them as steps, done in ' +
+        'order in one call, stopping at the first that fails. It answers with what each did and, in ' +
+        'after, the window as it is now with its new refs (or the menu, sheet or alert it opened): ' +
+        'no snapshot is needed to check it, unless it says so. ' +
         about,
-      inputSchema: jsonSchema<ActInput>({
+      inputSchema: jsonSchema<ActToolInput>({
         type: 'object',
         properties: {
-          ref: { type: 'string', description: 'The ref, as the snapshot gives it: @s…:e…' },
-          action: { type: 'string', enum: [...(where === 'mac' ? ACTIONS : CLOUD_ACTIONS)] },
-          text: { type: 'string', description: 'For type and set_value' },
-          option: { type: 'string', description: 'For select: the option to pick' },
-          direction: {
-            type: 'string',
-            enum: ['up', 'down', 'left', 'right'],
-            description: 'For scroll (default down)',
+          ...stepProperties(where),
+          steps: {
+            type: 'array',
+            maxItems: STEPS_MAX,
+            description: `Actions done in order, instead of ref and action (at most ${STEPS_MAX})`,
+            items: {
+              type: 'object',
+              properties: stepProperties(where),
+              required: ['ref', 'action'],
+            },
           },
-          amount: { type: 'number', description: 'For scroll: how far (default 3)' },
           ...(where === 'mac'
             ? {
                 headed: {
@@ -468,43 +643,172 @@ export function desktopTools(desktop: Desktop): Record<string, Tool> {
                 },
               }
             : {}),
+          observe: {
+            type: 'boolean',
+            description: 'Read the window again after acting, in after (default true)',
+          },
         },
-        required: ['ref', 'action'],
       }),
       execute: async (input, { abortSignal }) => {
         // A cloud computer's desktop takes no headed input from agent-desktop (see the top).
-        const act = where === 'cloud' ? { ...input, headed: false } : input
-        const { args, stdin } = actArgs(act)
-        let data: Record<string, unknown>
-        try {
-          data = await call(args, {
-            ...(stdin !== undefined ? { stdin } : {}),
-            signal: abortSignal,
-          })
-        } catch (error) {
+        const headed = where === 'mac' && !!input.headed
+        const many = !!input.steps?.length
+        const steps: ActInput[] = many
+          ? input.steps!.map((step) => ({ ...step, headed }))
+          : [
+              {
+                ref: input.ref!,
+                action: input.action!,
+                ...(input.text !== undefined ? { text: input.text } : {}),
+                ...(input.option !== undefined ? { option: input.option } : {}),
+                ...(input.direction ? { direction: input.direction } : {}),
+                ...(input.amount !== undefined ? { amount: input.amount } : {}),
+                headed,
+              },
+            ]
+        if (steps.length > STEPS_MAX)
+          throw new Error(`At most ${STEPS_MAX} steps in one call: split them.`)
+        for (const step of steps) {
+          if (!step.ref || !step.action)
+            throw new Error('Give a ref and an action, or steps that each have them.')
           if (
-            keyboard &&
-            (act.action === 'type' || act.action === 'set_value') &&
-            error instanceof DesktopError &&
-            NO_SEMANTIC_TEXT.has(error.code)
-          ) {
-            await typeWithKeyboard(act, abortSignal).catch((error: unknown) =>
-              explain(error, where),
+            !(where === 'mac' ? ACTIONS : (CLOUD_ACTIONS as readonly Action[])).includes(
+              step.action,
             )
-            return {
-              action: input.action,
-              delivery: 'typed_with_keyboard',
-              check: 'Take a new snapshot to check the field (a password field shows no value).',
+          )
+            throw new Error(`Not an action here: ${step.action}`)
+          if (TEXT_ACTIONS.has(step.action) && step.text === undefined)
+            throw new Error(`text is required to ${step.action}`)
+          if (step.action === 'select' && !step.option)
+            throw new Error('option is required to select')
+        }
+        const last = steps[steps.length - 1]!
+        const remembered = snapshotOf(last.ref)
+        const read = input.observe === false ? undefined : reads.get(remembered ?? '')
+
+        const done: Record<string, unknown>[] = []
+        let failed: { step: number; ref: string; error: string } | undefined
+        let after: Record<string, unknown> | undefined
+        let afterError: string | undefined
+        const fail = (index: number, error: unknown) => {
+          if (!many) explain(error, where)
+          failed = {
+            step: index,
+            ref: steps[index]!.ref,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+        const take = (data: Record<string, unknown>, from: SnapshotInput) => {
+          after = present(data, from)
+        }
+
+        let i = 0
+        while (i < steps.length && !failed) {
+          // Text through stdin, one at a time; and one action with nothing to read after it.
+          if (TEXT_ACTIONS.has(steps[i]!.action) || (!many && !read)) {
+            try {
+              done.push((await single(steps[i]!, abortSignal))!)
+            } catch (error) {
+              fail(i, error)
+            }
+            i++
+            continue
+          }
+          // Actions without text, in a row: one batch, and the read after it when it ends them.
+          let end = i
+          while (end < steps.length && !TEXT_ACTIONS.has(steps[end]!.action)) end++
+          const group = steps.slice(i, end)
+          const readAlong = read && end === steps.length
+          const entries = group.map(actEntry)
+          if (readAlong)
+            entries.push(
+              { command: 'wait', args: { ms: SETTLE_MS } },
+              snapshotEntry(readAfter(read, []), where),
+            )
+          let results
+          try {
+            results = await batch(entries, { headed, signal: abortSignal })
+          } catch (error) {
+            fail(i, error)
+            break
+          }
+          for (let k = 0; k < group.length; k++) {
+            const result = results[k]
+            if (!result) {
+              fail(i + k, new Error('agent-desktop did not get to it'))
+              break
+            }
+            if (!result.ok) {
+              fail(i + k, result.error)
+              break
+            }
+            done.push(outcome(group[k]!.action, result.data))
+          }
+          if (readAlong && !failed) {
+            const snapshot = results[results.length - 1]
+            if (results.length === entries.length && snapshot?.ok)
+              take(snapshot.data, readAfter(read, []))
+            else if (snapshot && !snapshot.ok) afterError = snapshot.error.message
+          }
+          i = end
+        }
+
+        if (read) {
+          // What the last action opened (a menu, a sheet), else the window when not read yet.
+          const opened = (done[done.length - 1]?.open as { type?: unknown }[] | undefined) ?? []
+          const surfaceRead = readAfter(read, opened)
+          const again = surfaceRead.surface !== read.surface || (!after && !afterError)
+          if (again) {
+            try {
+              const results = await batch(
+                [{ command: 'wait', args: { ms: SETTLE_MS } }, snapshotEntry(surfaceRead, where)],
+                { signal: abortSignal },
+              )
+              const snapshot = results[1]
+              if (snapshot?.ok) {
+                take(snapshot.data, surfaceRead)
+                afterError = undefined
+              } else if (snapshot) afterError = snapshot.error.message
+            } catch (error) {
+              afterError = error instanceof Error ? error.message : String(error)
             }
           }
-          explain(error, where)
+          // What was read before may be gone (a region, a sheet the action closed, a window):
+          // the app as a whole instead.
+          if (!after && (read.root || read.surface || read.window)) {
+            const {
+              root: _root,
+              surface: _surface,
+              window: _window,
+              ...whole
+            } = readAfter(read, [])
+            try {
+              const results = await batch([snapshotEntry(whole, where)], { signal: abortSignal })
+              if (results[0]?.ok) {
+                take(results[0].data, whole)
+                afterError = undefined
+              }
+            } catch {
+              // Said below: the teammate takes a new snapshot.
+            }
+          }
         }
-        const disposition = data.disposition as { delivery?: string } | undefined
-        const surfaces = surfacesOf(data)
+        const check =
+          after || input.observe === false
+            ? {}
+            : {
+                check: afterError
+                  ? `Could not read the window after it (${afterError}): take a new snapshot to check it.`
+                  : 'Take a new snapshot to check it worked.',
+              }
+        if (!many) return { ...check, ...done[0], ...(after ? { after } : {}) }
         return {
-          action: input.action,
-          ...(disposition?.delivery ? { delivery: disposition.delivery } : {}),
-          ...(surfaces.length ? { open: surfaces } : {}),
+          done: done.length,
+          of: steps.length,
+          steps: done,
+          ...(failed ? { failed } : {}),
+          ...(after ? { after } : {}),
+          ...check,
         }
       },
     }),

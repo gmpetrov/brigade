@@ -16,10 +16,12 @@ import {
 import { ComputerUseError, type RequestOptions } from '../src/computer-use.js'
 import {
   actArgs,
+  actEntry,
   desktopTools,
   macDesktopExec,
   pickWindow,
   snapshotArgs,
+  snapshotEntry,
   xdotoolKey,
   type Desktop,
   type Keyboard,
@@ -112,7 +114,7 @@ test('a tree past its size stops and says how many elements it left out', () => 
       ref_id: `@s1:e${i}`,
     })),
   }
-  const { text, left } = renderTree(big, { max: 300 })
+  const { text, left } = renderTree(big, { max: 300, children: Number.POSITIVE_INFINITY })
   assert.ok(text.length <= 300)
   assert.ok(left > 80)
   assert.equal(text.split('\n').length + left, 101)
@@ -411,6 +413,8 @@ test('an action says how it was delivered and what it left open', async () => {
       action: 'click',
       delivery: 'delivered_verified',
       open: [{ type: 'menu', title: 'Menu', window: 'w-1' }],
+      // Its snapshot was not taken in this turn: nothing to read again after it.
+      check: 'Take a new snapshot to check it worked.',
     },
   )
 })
@@ -905,4 +909,336 @@ test('a stalled download fails at its deadline, and a caller that gives up stops
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('a long list shows its first items and a line for the rest; rooted on it, all of it', () => {
+  const list: DesktopNode = {
+    role: 'list',
+    ref_id: '@s1:e1',
+    children: Array.from({ length: 40 }, (_, i) => ({
+      role: 'textfield',
+      value: `file-${i}`,
+      ref_id: `@s1:e${i + 2}`,
+    })),
+  }
+  const short = renderTree(list).text.split('\n')
+  assert.equal(short.length, 1 + 25 + 1)
+  assert.equal(short.at(-1), '  … 15 more here: snapshot with root @s1:e1 to list them')
+  assert.equal(renderTree(list, { children: Number.POSITIVE_INFINITY }).text.split('\n').length, 41)
+})
+
+test('siblings scrolled out of view, three or more in a row, are one line; hidden: true lists them', () => {
+  const at = (i: number, out: boolean): DesktopNode => ({
+    role: 'textfield',
+    value: `file-${i}`,
+    ref_id: `@s1:e${i}`,
+    ...(out ? { states: ['offscreen'] } : {}),
+  })
+  const list: DesktopNode = {
+    role: 'list',
+    children: [
+      ...Array.from({ length: 30 }, (_, i) => at(i, true)),
+      at(30, false),
+      at(31, false),
+      at(32, true),
+      at(33, true),
+    ],
+  }
+  assert.equal(
+    renderTree(list).text,
+    [
+      'list',
+      '  … 30 out of view (scroll to them, or snapshot with hidden: true)',
+      '  textfield = "file-30" @s1:e30',
+      '  textfield = "file-31" @s1:e31',
+      // Two in a row stay as they are.
+      '  textfield = "file-32" [offscreen] @s1:e32',
+      '  textfield = "file-33" [offscreen] @s1:e33',
+    ].join('\n'),
+  )
+  assert.equal(
+    renderTree(list, { hidden: true, children: Number.POSITIVE_INFINITY }).text.split('\n').length,
+    35,
+  )
+})
+
+test('actions and snapshots become batch entries, by their own field names', () => {
+  assert.deepEqual(actEntry({ ref: '@s1:e1', action: 'right_click' }), {
+    command: 'right-click',
+    args: { ref_id: '@s1:e1' },
+  })
+  assert.deepEqual(actEntry({ ref: '@s1:e1', action: 'select', option: 'PDF' }), {
+    command: 'select',
+    args: { ref_id: '@s1:e1', value: 'PDF' },
+  })
+  assert.deepEqual(actEntry({ ref: '@s1:e1', action: 'scroll', amount: 500 }), {
+    command: 'scroll',
+    args: { ref_id: '@s1:e1', direction: 'down', amount: 50 },
+  })
+  assert.throws(() => actEntry({ ref: '@s1:e1', action: 'type', text: 'secret' }), /never/)
+  assert.deepEqual(
+    snapshotEntry({ app: 'TextEdit', surface: 'sheet', maxDepth: 4, bounds: true }, 'mac'),
+    {
+      command: 'snapshot',
+      args: {
+        app: 'TextEdit',
+        interactive_only: true,
+        compact: true,
+        include_bounds: true,
+        surface: 'sheet',
+        max_depth: 4,
+        timeout_ms: 8000,
+      },
+    },
+  )
+})
+
+/** The entries of a batch call, or undefined for another command. */
+const entriesOf = (args: string[]) => {
+  const at = args.indexOf('batch')
+  return at < 0 ? undefined : (JSON.parse(args[at + 1]!) as { command: string; args: any }[])
+}
+
+/** An exec that answers snapshots with a tree of their own id, batches entry by entry. */
+function appExec(
+  refuse: (entry: { command: string; args: any }) => string | undefined = () => undefined,
+) {
+  let shot = 0
+  const snapshotData = (args: any) => {
+    shot++
+    return {
+      app: args?.app ?? 'TextEdit',
+      snapshot_id: `s${shot}`,
+      tree: {
+        role: args?.surface === 'sheet' ? 'sheet' : 'window',
+        name: args?.surface === 'sheet' ? 'save' : 'Untitled',
+        children: [{ role: 'button', name: 'Save', ref_id: `@s${shot}:e1` }],
+      },
+    }
+  }
+  return fakeExec((args) => {
+    const entries = entriesOf(args)
+    if (!entries) {
+      if (args[0] === 'snapshot')
+        return envelope(snapshotData({ app: args[args.indexOf('--app') + 1] }))
+      return envelope({ disposition: { delivery: 'delivered_verified' } })
+    }
+    const results = []
+    for (const entry of entries) {
+      const code = refuse(entry)
+      if (code) {
+        results.push({
+          command: entry.command,
+          ok: false,
+          error: { code, message: `${code} message` },
+        })
+        break
+      }
+      results.push({
+        command: entry.command,
+        ok: true,
+        data:
+          entry.command === 'snapshot'
+            ? snapshotData(entry.args)
+            : entry.command === 'wait'
+              ? { waited_ms: entry.args.ms }
+              : { disposition: { delivery: 'delivered_unverified' } },
+      })
+    }
+    return envelope({ results })
+  })
+}
+
+test('an action on a ref reads its window again in the same call, with the new refs', async () => {
+  const { exec, calls } = appExec()
+  const tools = desktopTools({ exec, where: 'mac' })
+  const snapshot = (await tools.computer_snapshot!.execute!(
+    { app: 'TextEdit', skeleton: true },
+    options(),
+  )) as Record<string, unknown>
+  assert.equal(snapshot.snapshot, 's1')
+  const result = (await tools.computer_act!.execute!(
+    { ref: '@s1:e1', action: 'click' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.action, 'click')
+  assert.equal(result.delivery, 'delivered_unverified')
+  assert.equal(result.check, undefined)
+  assert.equal(result.after.snapshot, 's2')
+  assert.match(result.after.tree, /button "Save" @s2:e1/)
+  // One trip: the click, a moment to settle, and the same app read again (not as a skeleton).
+  assert.deepEqual(entriesOf(calls[1]!.args), [
+    { command: 'click', args: { ref_id: '@s1:e1' } },
+    { command: 'wait', args: { ms: 300 } },
+    {
+      command: 'snapshot',
+      args: { app: 'TextEdit', interactive_only: true, compact: true, timeout_ms: 8000 },
+    },
+  ])
+  assert.ok(calls[1]!.args.includes('--stop-on-error'))
+  // The new refs are known in turn.
+  const next = (await tools.computer_act!.execute!(
+    { ref: '@s2:e1', action: 'click' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(next.after.snapshot, 's3')
+  assert.equal(calls.length, 3)
+})
+
+test('steps go in order in batches, text alone through stdin, and the window is read once at the end', async () => {
+  const { exec, calls } = appExec()
+  const tools = desktopTools({ exec, where: 'mac' })
+  await tools.computer_snapshot!.execute!({ app: 'Calculator' }, options())
+  const result = (await tools.computer_act!.execute!(
+    {
+      steps: [
+        { ref: '@s1:e1', action: 'click' },
+        { ref: '@s1:e2', action: 'click' },
+        { ref: '@s1:e3', action: 'type', text: 'secret words' },
+        { ref: '@s1:e4', action: 'click' },
+      ],
+    },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.done, 4)
+  assert.equal(result.of, 4)
+  assert.equal(result.failed, undefined)
+  assert.equal(result.after.snapshot, 's2')
+  assert.deepEqual(
+    calls.slice(1).map((c) => entriesOf(c.args)?.map((e) => e.command) ?? c.args),
+    [
+      ['click', 'click'],
+      ['type', '@s1:e3', '--stdin'],
+      ['click', 'wait', 'snapshot'],
+    ],
+  )
+  assert.equal(calls[2]!.stdin, 'secret words')
+  // Text is never on a command line.
+  assert.ok(calls.every((c) => !c.args.join(' ').includes('secret')))
+})
+
+test('a step that fails stops the rest, says which, and the window is read as it is', async () => {
+  const { exec, calls } = appExec((entry) =>
+    entry.args?.ref_id === '@s1:e2' ? 'STALE_REF' : undefined,
+  )
+  const tools = desktopTools({ exec, where: 'mac' })
+  await tools.computer_snapshot!.execute!({ app: 'Calculator' }, options())
+  const result = (await tools.computer_act!.execute!(
+    {
+      steps: [
+        { ref: '@s1:e1', action: 'click' },
+        { ref: '@s1:e2', action: 'click' },
+        { ref: '@s1:e3', action: 'click' },
+      ],
+    },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.done, 1)
+  assert.equal(result.of, 3)
+  assert.equal(result.failed.step, 1)
+  assert.equal(result.failed.ref, '@s1:e2')
+  assert.match(result.failed.error, /STALE_REF/)
+  assert.equal(result.after.snapshot, 's2')
+  assert.equal(calls.length, 3)
+})
+
+test('an action that opens a sheet comes back with the sheet', async () => {
+  const { exec, calls } = fakeExec((args) => {
+    const entries = entriesOf(args)
+    if (!entries)
+      return envelope({
+        app: 'TextEdit',
+        snapshot_id: 's1',
+        tree: { role: 'window', name: 'Untitled' },
+      })
+    return envelope({
+      results: entries.map((entry) => ({
+        command: entry.command,
+        ok: true,
+        data:
+          entry.command === 'snapshot'
+            ? {
+                app: 'TextEdit',
+                snapshot_id: entry.args.surface ? 's3' : 's2',
+                tree: { role: entry.args.surface ?? 'window', name: 'x' },
+              }
+            : {
+                disposition: { delivery: 'delivered_verified' },
+                surfaces: [{ type: 'sheet', title: 'save' }],
+              },
+      })),
+    })
+  })
+  const tools = desktopTools({ exec, where: 'mac' })
+  await tools.computer_snapshot!.execute!({ app: 'TextEdit' }, options())
+  const result = (await tools.computer_act!.execute!(
+    { ref: '@s1:e9', action: 'click' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.after.snapshot, 's3')
+  assert.match(result.after.tree, /^sheet/)
+  assert.equal(entriesOf(calls.at(-1)!.args)!.at(-1)!.args.surface, 'sheet')
+})
+
+test('a step list is checked before anything is done', async () => {
+  const { exec, calls } = appExec()
+  const act = desktopTools({ exec, where: 'mac' }).computer_act!
+  await assert.rejects(act.execute!({}, options()) as Promise<unknown>, /ref and an action/)
+  await assert.rejects(
+    act.execute!({ steps: [{ ref: '@s1:e1', action: 'type' }] }, options()) as Promise<unknown>,
+    /text is required/,
+  )
+  await assert.rejects(
+    act.execute!(
+      { steps: Array.from({ length: 31 }, () => ({ ref: '@s1:e1', action: 'click' })) },
+      options(),
+    ) as Promise<unknown>,
+    /At most 30/,
+  )
+  assert.equal(calls.length, 0)
+})
+
+test('when what was read before is gone (a sheet the action closed), the app is read as a whole', async () => {
+  const { exec, calls } = fakeExec((args) => {
+    const entries = entriesOf(args)
+    if (!entries)
+      return envelope({ app: 'TextEdit', snapshot_id: 's1', tree: { role: 'sheet', name: 'save' } })
+    return envelope({
+      results: entries.map((entry) =>
+        entry.command === 'snapshot' && entry.args.surface
+          ? {
+              command: 'snapshot',
+              ok: false,
+              error: { code: 'SURFACE_NOT_FOUND', message: 'no sheet' },
+            }
+          : {
+              command: entry.command,
+              ok: true,
+              data:
+                entry.command === 'snapshot'
+                  ? {
+                      app: 'TextEdit',
+                      snapshot_id: 's2',
+                      tree: { role: 'window', name: 'test.rtf' },
+                    }
+                  : { disposition: { delivery: 'delivered_unverified' } },
+            },
+      ),
+    })
+  })
+  const tools = desktopTools({ exec, where: 'mac' })
+  await tools.computer_snapshot!.execute!({ app: 'TextEdit', surface: 'sheet' }, options())
+  const result = (await tools.computer_act!.execute!(
+    { ref: '@s1:e7', action: 'click' },
+    options(),
+  )) as Record<string, any>
+  assert.equal(result.check, undefined)
+  assert.equal(result.after.snapshot, 's2')
+  assert.match(result.after.tree, /window "test.rtf"/)
+  assert.deepEqual(entriesOf(calls.at(-1)!.args)!.at(-1)!.args, {
+    app: 'TextEdit',
+    interactive_only: true,
+    compact: true,
+    timeout_ms: 8000,
+  })
 })

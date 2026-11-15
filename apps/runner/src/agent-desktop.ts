@@ -255,22 +255,60 @@ export async function desktopCall(
   options?: { stdin?: string; signal?: AbortSignal },
 ) {
   const envelope = parseEnvelope(await exec(args, options))
-  if (!envelope.ok) {
-    const error = envelope.error ?? {}
-    const code = error.code ?? 'failed'
-    const retry =
-      error.disposition?.retry === 'unsafe'
-        ? ' It may have happened anyway: look before you try again.'
-        : ''
-    // Sentences, each ended once: agent-desktop's own end with a period, or don't.
-    const sentence = (text: string) =>
-      /[.!?]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`
-    const words = [error.message ?? `${args[0]} failed`, error.suggestion].filter(
-      (text): text is string => !!text?.trim(),
-    )
-    throw new DesktopError(code, `${code}: ${words.map(sentence).join(' ')}${retry}`, error.details)
-  }
+  if (!envelope.ok) throw refusal(envelope.error, args[0] ?? 'command')
   return envelope.data ?? {}
+}
+
+/** agent-desktop's refusal as a DesktopError, in its own words. */
+function refusal(error: Envelope['error'] = {}, command: string) {
+  const code = error.code ?? 'failed'
+  const retry =
+    error.disposition?.retry === 'unsafe'
+      ? ' It may have happened anyway: look before you try again.'
+      : ''
+  // Sentences, each ended once: agent-desktop's own end with a period, or don't.
+  const sentence = (text: string) => (/[.!?]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`)
+  const words = [error.message ?? `${command} failed`, error.suggestion].filter(
+    (text): text is string => !!text?.trim(),
+  )
+  return new DesktopError(code, `${code}: ${words.map(sentence).join(' ')}${retry}`, error.details)
+}
+
+/** A command in agent-desktop's batch, with its arguments by their own field names. */
+export type BatchEntry = { command: string; args: Record<string, unknown> }
+
+/** What one command of a batch did: its data, or its refusal. */
+export type BatchResult =
+  { ok: true; data: Record<string, unknown> } | { ok: false; error: DesktopError }
+
+/**
+ * Several commands in one agent-desktop process, in order, stopping at the first refusal: one
+ * trip through Brigade Computer Use rather than one each. The JSON goes on the command line, so
+ * it never carries text to type (that goes through stdin, one action at a time). The results
+ * stop where the batch stopped.
+ */
+export async function desktopBatch(
+  exec: DesktopExec,
+  entries: BatchEntry[],
+  options: { headed?: boolean; signal?: AbortSignal } = {},
+): Promise<BatchResult[]> {
+  const data = await desktopCall(
+    exec,
+    [...(options.headed ? ['--headed'] : []), 'batch', JSON.stringify(entries), '--stop-on-error'],
+    options.signal ? { signal: options.signal } : {},
+  )
+  const results = Array.isArray(data.results) ? (data.results as Record<string, unknown>[]) : []
+  return results.map((result, index) =>
+    result.ok === true
+      ? { ok: true, data: (result.data as Record<string, unknown> | undefined) ?? {} }
+      : {
+          ok: false,
+          error: refusal(
+            (result.error as Envelope['error']) ?? {},
+            entries[index]?.command ?? 'command',
+          ),
+        },
+  )
 }
 
 /** An element of a snapshot's tree, as agent-desktop gives it. */
@@ -289,8 +327,16 @@ export type DesktopNode = {
 }
 
 const TEXT_MAX = 160
-/** The most of a tree a tool gives back: past it, the teammate narrows the snapshot. */
-export const TREE_MAX = 40_000
+/**
+ * The most of a tree a tool gives back: past it, the teammate narrows the snapshot. Each
+ * character is read by the model at every later step of the turn, so a big window (a file
+ * dialog listing a home folder ran to 40 KB, three times) slowed a whole test down.
+ */
+export const TREE_MAX = 15_000
+/** The children of one element shown before the rest is summed up in a line (a long list). */
+export const CHILDREN_MAX = 25
+/** Siblings scrolled out of view in a row, from which they are summed up in a line. */
+const OUT_OF_VIEW_RUN = 3
 
 const short = (text: string) => {
   const one = text.replace(/\s+/g, ' ').trim()
@@ -325,34 +371,69 @@ function line(node: DesktopNode) {
   return parts.join(' ')
 }
 
+const offscreen = (node: DesktopNode) => !!node.states?.includes('offscreen')
+
 /**
  * A snapshot's tree as indented text, an element a line: far fewer tokens than its JSON, which
  * repeats every key. Elements hidden from the person (states: hidden) are left out with what
- * they hold, unless `hidden`. Past `max` characters it stops, and says how many it left out.
+ * they hold, and a run of siblings scrolled out of view is one line saying how many, unless
+ * `hidden`. An element shows its first `children` children (CHILDREN_MAX by default), then a
+ * line for the rest. Past `max` characters it stops, and says how many it left out.
  */
 export function renderTree(
   tree: DesktopNode | undefined,
-  options: { hidden?: boolean; max?: number } = {},
+  options: { hidden?: boolean; max?: number; children?: number } = {},
 ) {
   const max = options.max ?? TREE_MAX
+  const childrenMax = options.children ?? CHILDREN_MAX
   const lines: string[] = []
   let size = 0
   let left = 0
   let hiddenLeft = 0
-  const walk = (node: DesktopNode, depth: number) => {
-    if (!options.hidden && node.states?.includes('hidden')) {
-      hiddenLeft++
+  const push = (text: string) => {
+    if (size + text.length + 1 > max) {
+      left++
       return
     }
-    const text = `${'  '.repeat(depth)}${line(node)}`
-    if (size + text.length + 1 > max) left++
-    else {
-      lines.push(text)
-      size += text.length + 1
-    }
-    for (const child of node.children ?? []) walk(child, depth + 1)
+    lines.push(text)
+    size += text.length + 1
   }
-  if (tree) walk(tree, 0)
+  const walk = (node: DesktopNode, depth: number) => {
+    push(`${'  '.repeat(depth)}${line(node)}`)
+    const indent = '  '.repeat(depth + 1)
+    const children = (node.children ?? []).filter((child) => {
+      if (options.hidden || !child.states?.includes('hidden')) return true
+      hiddenLeft++
+      return false
+    })
+    let shown = 0
+    for (let i = 0; i < children.length; i++) {
+      if (shown >= childrenMax) {
+        const rest = children.length - i
+        push(
+          `${indent}… ${rest} more here${node.ref_id ? `: snapshot with root ${node.ref_id} to list them` : ''}`,
+        )
+        break
+      }
+      // Siblings scrolled out of view, in a row: one line, the way to them, not each of them.
+      if (!options.hidden && offscreen(children[i]!)) {
+        let end = i
+        while (end < children.length && offscreen(children[end]!)) end++
+        if (end - i >= OUT_OF_VIEW_RUN) {
+          push(`${indent}… ${end - i} out of view (scroll to them, or snapshot with hidden: true)`)
+          shown++
+          i = end - 1
+          continue
+        }
+      }
+      walk(children[i]!, depth + 1)
+      shown++
+    }
+  }
+  if (tree) {
+    if (!options.hidden && tree.states?.includes('hidden')) hiddenLeft++
+    else walk(tree, 0)
+  }
   return { text: lines.join('\n'), left, hidden: hiddenLeft }
 }
 

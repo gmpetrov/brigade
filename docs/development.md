@@ -59,12 +59,16 @@ Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teamma
 `computer_snapshot` and `computer_act` through agent-desktop (below). The runner starts it with `open`,
 so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a terminal, and talks to it over a
 token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
-(no Esc shortcut); Stop ends computer use for that turn.
+(no Esc shortcut); Stop ends computer use for that turn. `computer_key` and `computer_type` take the app they are
+meant for: the runner brings it to the front (`open_app`) and sends nothing unless it is there, since keys go to
+whatever is in front; their answer names the app that got them.
 
 Commands in a teammate's own shell don't get those permissions: macOS asks the app responsible for a process, the
 one that started it, and for the runner's commands that is Brigade.app, which holds neither. `computer_run` has the
 helper start the command instead (`Run.swift`), so a CLI that needs them (agent-desktop, `osascript` with System
-Events, a screen recorder) gets them, while the pill shows with Stop. One runs at a time. When it ends, times out (120
+Events, a screen recorder) gets them, while the pill shows with Stop. One runs at a time: the runner's commands wait
+their turn in a line (`Line` in `apps/runner/src/computer-use.ts`, two minutes at most) rather than meet the helper's
+`busy`. The helper looks at the command every 10 ms for its first two seconds, then every 200 ms. When it ends, times out (120
 seconds by default, 30 minutes at most), the person presses Stop or the turn is interrupted (`cancel`), the helper
 stops the command's shell (by pid, even if it left its group), its process group and every other process macOS counts
 the helper responsible for, which a process keeps when it detaches (`setsid`, a double fork); it spares only the
@@ -83,8 +87,18 @@ the runner's bundle doesn't carry: its binaries for every platform took the bund
 `apps/runner/src/agent-desktop.ts` from npm the first time a teammate uses it, checks it against the integrity pinned
 there (the lockfile's, which a test compares), and keeps only its own platform's binaries beside the runner
 (`<install dir>/agent-desktop/<version>`, which a runner update leaves and a cloud computer's teammate users can run).
-In the repository, the devDependency's copy is used. The tree goes back as text, an element a line, without hidden elements and cut at 40 KB
-(`renderTree`). The tools are in `apps/runner/src/harness/desktop-tools.ts`.
+In the repository, the devDependency's copy is used. The tree goes back as text, an element a line (`renderTree`),
+kept small since the model reads it again at every later step of the turn: without hidden elements, a run of three or
+more siblings scrolled out of view as one line, an element's first 25 children then a line for the rest (all of
+them when the snapshot is rooted on it), and cut at 15 KB. The tools are in
+`apps/runner/src/harness/desktop-tools.ts`.
+
+`computer_act` takes one action or `steps`, done in order. Actions without text go in agent-desktop's `batch`, one
+process for many, stopping at the first refusal; text (`type`, `set_value`) never goes in a batch, whose JSON is on
+the command line, but through stdin one action at a time. After acting it reads again what the ref's snapshot read
+(its app, window, surface; not as a skeleton), in the same batch after 300 ms, or the menu, sheet or alert the last
+action opened, and answers with it in `after`: the new refs, without another call. A ref from a snapshot the tool
+didn't take in this turn gets no `after`, and the answer says to take one.
 
 - **On a Mac**, beside the tools above, agent-desktop runs through Brigade Computer Use's `run`, so it gets the
   helper's Accessibility; its answer, and any text to type, go through files, never on its command line. `headed:

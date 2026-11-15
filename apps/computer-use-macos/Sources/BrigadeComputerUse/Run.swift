@@ -74,7 +74,10 @@ enum Run {
       } else if Date().timeIntervalSince(signalledAt) > 3 {
         _ = send(SIGKILL, group: root, root: root)
       }
-      try? await Task.sleep(nanoseconds: 200_000_000)
+      // Most commands (agent-desktop's snapshots and actions) end within a second: looked at
+      // every 10 ms then, rather than 200, which made each of them wait 100 ms on average.
+      let pause: UInt64 = Date().timeIntervalSince(started) < 2 ? 10_000_000 : 200_000_000
+      try? await Task.sleep(nanoseconds: pause)
     }
     lock.withLock { rootLive = false }
     // What it left running stops with it, before the reply: nothing is left to a timer that

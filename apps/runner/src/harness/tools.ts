@@ -3850,6 +3850,12 @@ const point = {
   y: { type: 'number', description: 'Screen y, in points' },
 } as const
 
+const APP_FOR_KEYS = {
+  type: 'string',
+  description:
+    'The app it is meant for, by the name computer_apps lists or its bundle id: brought to the front first',
+} as const
+
 /**
  * See and use the apps on a member's Mac: screenshots, the mouse and keyboard,
  * opening apps and reading their interface. For what nothing else reaches:
@@ -3860,6 +3866,30 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
     (method: string) =>
     (input: object, { abortSignal }: { abortSignal?: AbortSignal }) =>
       computer.request(method, input as Record<string, unknown>, abortSignal)
+  /**
+   * Keys and text go to the app in front, whatever it is: Brigade.app itself came back to the
+   * front between two calls once, and a shortcut meant for TextEdit went elsewhere. With an app
+   * named, it is brought to the front first and nothing is sent unless it is there; either way,
+   * the answer names the app that got them.
+   */
+  const frontFor = async (app: string | undefined, signal?: AbortSignal) => {
+    if (app) {
+      const opened = (await computer.request('open_app', { app }, signal)) as {
+        name?: string
+        active?: boolean
+      }
+      if (opened.active === false)
+        throw new Error(
+          `${opened.name ?? app} did not come to the front, so nothing was sent. Look at the screen ` +
+            '(a dialog of another app may hold the focus), then try again.',
+        )
+      return opened.name ?? app
+    }
+    const { apps } = (await computer.request('apps', {}, signal)) as {
+      apps?: { name?: string; active?: boolean }[]
+    }
+    return apps?.find((running) => running.active)?.name ?? 'unknown'
+  }
   return {
     computer_screenshot: tool({
       description:
@@ -3968,27 +3998,41 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
     }),
     computer_type: tool({
       description:
-        'Type text into whatever has the keyboard focus (click the field first); a newline presses Return. ' +
+        'Type text into whatever has the keyboard focus in an app (click the field first); a newline ' +
+        'presses Return. Name the app: it is brought to the front first, and nothing is typed if it ' +
+        'does not come. The answer says which app it went to. computer_act (type, set_value) types ' +
+        'into a ref without taking the keyboard: it comes first. ' +
         ABOUT_COMPUTER,
-      inputSchema: jsonSchema<{ text: string }>({
+      inputSchema: jsonSchema<{ text: string; app?: string }>({
         type: 'object',
-        properties: { text: { type: 'string' } },
+        properties: { text: { type: 'string' }, app: APP_FOR_KEYS },
         required: ['text'],
       }),
-      execute: act('type'),
+      execute: async (input, { abortSignal }) => {
+        const to = await frontFor(input.app, abortSignal)
+        await computer.request('type', { text: input.text }, abortSignal)
+        return { ok: true, to }
+      },
     }),
     computer_key: tool({
       description:
-        'Press a key or a shortcut: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". ' +
+        'Press a key or a shortcut in an app: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". ' +
+        'Name the app: it is brought to the front first, and no key is pressed if it does not come. ' +
+        'The answer says which app it went to. ' +
         ABOUT_COMPUTER,
-      inputSchema: jsonSchema<{ key: string }>({
+      inputSchema: jsonSchema<{ key: string; app?: string }>({
         type: 'object',
         properties: {
           key: { type: 'string', description: 'Modifiers (cmd, shift, alt, ctrl) joined with +' },
+          app: APP_FOR_KEYS,
         },
         required: ['key'],
       }),
-      execute: act('key'),
+      execute: async (input, { abortSignal }) => {
+        const to = await frontFor(input.app, abortSignal)
+        await computer.request('key', { key: input.key }, abortSignal)
+        return { ok: true, to }
+      },
     }),
     computer_apps: tool({
       description: 'The apps running on this Mac, which one is in front. ' + ABOUT_COMPUTER,
