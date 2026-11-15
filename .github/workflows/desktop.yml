@@ -1,0 +1,82 @@
+# Brigade.app (apps/desktop) on each pull request that changes it: its tests, then the app packaged
+# as a release packages it (not signed) on macOS, Windows and Linux, and started there against a
+# stand-in dashboard (test/e2e/smoke.mjs). A change that breaks a platform's app shows here rather
+# than in a release.
+name: Brigade.app
+
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/computer-use-macos/**'
+      - '.github/workflows/desktop*.yml'
+      - 'pnpm-lock.yaml'
+
+concurrency:
+  group: desktop-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @brigade/desktop...
+
+      - name: Typecheck
+        working-directory: apps/desktop
+        run: pnpm typecheck
+
+      # The runner's parts are POSIX: no runner on Windows.
+      - name: Tests
+        if: runner.os != 'Windows'
+        working-directory: apps/desktop
+        run: pnpm test
+
+      - name: Package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: apps/desktop/scripts/build.sh
+
+      - name: The macOS bundle
+        if: runner.os == 'macOS'
+        working-directory: apps/desktop/release/out
+        run: |
+          APP="$(ls -d mac*/Brigade.app | head -1)"
+          PLIST="$APP/Contents/Info.plist"
+          # The executable the Tauri app's login item starts.
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST")" = brigade-desktop ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$PLIST")" = ai.brigade.desktop ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$PLIST")" = true ]
+          /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$PLIST"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$PLIST" | grep -qx brigade
+          [ -x "$APP/Contents/Resources/Brigade Computer Use.app/Contents/MacOS/brigade-computer-use" ]
+          lipo -archs "$APP/Contents/MacOS/brigade-desktop" | tr ' ' '\n' | sort | tr '\n' ' ' | grep -q 'arm64 x86_64'
+          ls Brigade.dmg *-mac.zip latest-mac.yml
+
+      - name: Smoke test
+        working-directory: apps/desktop
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq xvfb >/dev/null
+            xvfb-run -a node test/e2e/smoke.mjs
+          else
+            node test/e2e/smoke.mjs
+          fi

@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- The dashboard window when the dashboard can't be reached (src/windows.ts): says so, and
+     tries again, by itself every 10 seconds and on a click. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'"
+    />
+    <title>Brigade</title>
+    <link rel="stylesheet" href="setup.css" />
+    <link rel="stylesheet" href="offline.css" />
+    <script src="offline.js" defer></script>
+  </head>
+  <body class="offline">
+    <h1>Can't reach Brigade</h1>
+    <p id="reason">Check your connection. Brigade tries again in a moment.</p>
+    <button id="retry" class="next">Try again</button>
+  </body>
+</html>

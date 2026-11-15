@@ -70,7 +70,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { newThreadId, pendingRow, pendingThreads } from '@/lib/pending-threads'
 import { preloadThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
-import { captures } from '@/lib/brigade-app'
+import { captures, desktopPlatform } from '@/lib/brigade-app'
 
 const quietSelect =
   'h-8 border-transparent bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent/50'
@@ -849,12 +849,14 @@ export function NewThread({
         {...drop.props}
       >
         <div
-          // A whole window has no title bar: its macOS buttons sit at the start of this row
-          // (capture.rs), and the row moves the window, its pickers aside.
+          // A whole window has no title bar on macOS: its buttons sit at the start of this row
+          // (apps/desktop/src/capture.ts), and the row moves the window, its pickers aside.
           onMouseDown={fill ? captures.drag : undefined}
+          data-window-drag={fill || undefined}
           className={cn(
             'flex min-w-0 flex-wrap items-center gap-1 px-3 py-2 text-sm text-muted-foreground',
-            fill && 'min-h-[52px] pl-[78px] select-none',
+            fill && 'min-h-[52px] select-none',
+            fill && (desktopPlatform() ?? 'darwin') === 'darwin' && 'pl-[78px]',
           )}
         >
           <span className="pl-1">New thread for</span>

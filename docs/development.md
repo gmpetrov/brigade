@@ -36,6 +36,9 @@ Only one runner runs per home: `start` claims `runner.pid` and exits with code 3
 
 ## Brigade.app and computer use (macOS)
 
+Brigade.app is an Electron app (`apps/desktop`, see its README) for macOS, Linux and Windows: the runner below
+on macOS and Linux, the dashboard in a window of its own and the new thread window everywhere.
+
 Members link a Mac with **Brigade.app** (`apps/desktop`) instead of the terminal: **Computers → Link this Mac →
 Open in Brigade** opens a `brigade://link?code=…&api=…` link, the app asks before connecting, runs the API's
 `install.sh` (Node.js and the runner, as the command does), links the runner and keeps `brigade-runner start`
@@ -43,7 +46,7 @@ running from the menu bar. The runner still updates itself from the API's bundle
 GitHub Releases (`apps/desktop/release`). Logs: `~/.brigade/logs/runner.log`.
 
 A Mac can be linked to several workspaces and runs for one at a time, picked in the menu's **Workspace** submenu
-(`apps/desktop/src-tauri/src/workspaces.rs`). Each has a runner home of its own, since a home holds a workspace's
+(`apps/desktop/src/workspaces.ts`). Each has a runner home of its own, since a home holds a workspace's
 link, outbox, library mirror and thread folders: the first one linked keeps `~/.brigade`, the others get
 `~/.brigade/workspaces/<key>`, and all share the runner install in `~/.brigade`. The app starts the runner with
 `BRIGADE_HOME` set to the chosen home, named in `~/.brigade/active-workspace`. The dashboard's link names its

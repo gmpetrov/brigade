@@ -14,9 +14,9 @@ server runs, says exactly what is deployed.
   newest entry carries `package.json`'s version and that versions only go up.
 - Releases before v0.4.0 (October 14 to November 1, 2026) keep their date and have no number.
 - A git tag `v0.4.0` may mark a release's commit, pushed only when a person asks. **Never a GitHub
-  Release**: Brigade.app updates from the latest GitHub Release's `latest.json`
-  (`apps/desktop/src-tauri/tauri.conf.json`), so a release that isn't the app's would stop every
-  installed app from updating.
+  Release**: Brigade.app updates from the latest GitHub Release's `latest-mac.yml`, `latest.yml`
+  and `latest-linux.yml` (and the Tauri apps not updated yet from its `latest.json`), so a release
+  that isn't the app's would stop every installed app from updating.
 
 ## Where it shows
 

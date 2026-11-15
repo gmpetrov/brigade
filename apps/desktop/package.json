@@ -1,14 +1,33 @@
 {
   "name": "@brigade/desktop",
-  "version": "0.1.0",
+  "productName": "Brigade",
+  "version": "0.0.0",
   "private": true,
-  "description": "Brigade.app: the menu-bar app that installs, links and runs the Brigade runner on a member's computer.",
+  "description": "Brigade.app: installs, links and runs the Brigade runner on a member's computer, and shows the dashboard.",
+  "author": {
+    "name": "Brigade",
+    "email": "support@brigade.lol"
+  },
+  "homepage": "https://www.brigade.lol",
+  "main": "dist/main.js",
+  "desktopName": "brigade-desktop.desktop",
   "scripts": {
-    "tauri": "tauri",
-    "dev:app": "tauri dev",
-    "build:app": "scripts/build.sh"
+    "bundle": "node scripts/bundle.mjs",
+    "dev:app": "node scripts/bundle.mjs && node node_modules/electron/install.js && electron .",
+    "build:app": "scripts/build.sh",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "clean": "rm -rf dist release/out .turbo",
+    "smoke": "node test/e2e/smoke.mjs"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.12.4"
+    "@types/node": "24.19.2",
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11",
+    "esbuild": "0.28.2",
+    "playwright-core": "1.64.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
   }
 }

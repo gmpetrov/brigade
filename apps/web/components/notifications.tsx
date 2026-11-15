@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { api, useApi } from '@/lib/api'
+import { inDesktopApp, setDesktopBadge } from '@/lib/brigade-app'
 
 const PRESETS: { value: NotifyPreset; label: string; detail: string }[] = [
   {
@@ -28,8 +29,10 @@ const PRESETS: { value: NotifyPreset; label: string; detail: string }[] = [
   },
 ]
 
+// Brigade.app's windows (Electron) have no push service: notifications come to the browser.
 const supported = () =>
   typeof window !== 'undefined' &&
+  !inDesktopApp() &&
   'serviceWorker' in navigator &&
   'PushManager' in window &&
   'Notification' in window
@@ -69,6 +72,8 @@ export function useAppNotifications(needsYou: number) {
   }, [])
 
   useEffect(() => {
+    // Brigade.app's dashboard window: on the app's own icon.
+    setDesktopBadge(needsYou)
     if (!('setAppBadge' in navigator)) return
     void (needsYou > 0 ? navigator.setAppBadge(needsYou) : navigator.clearAppBadge()).catch(
       () => {},
@@ -89,10 +94,10 @@ export function useAppNotifications(needsYou: number) {
   }, [])
 }
 
-type DeviceState = 'unsupported' | 'install' | 'blocked' | 'off' | 'on'
+type DeviceState = 'unsupported' | 'app' | 'install' | 'blocked' | 'off' | 'on'
 
 async function deviceState(): Promise<DeviceState> {
-  if (!supported()) return iosInBrowser() ? 'install' : 'unsupported'
+  if (!supported()) return inDesktopApp() ? 'app' : iosInBrowser() ? 'install' : 'unsupported'
   if (Notification.permission === 'denied') return 'blocked'
   const reg = await navigator.serviceWorker.getRegistration()
   const subscription = await reg?.pushManager.getSubscription()
@@ -192,6 +197,11 @@ export function NotificationsPanel() {
               <p className="text-muted-foreground text-sm">
                 On iPhone, add Brigade to your Home Screen first: tap Share, then Add to Home
                 Screen. Open it from there and turn notifications on here.
+              </p>
+            )}
+            {device === 'app' && (
+              <p className="text-muted-foreground text-sm">
+                Brigade.app doesn’t show notifications yet: turn them on in your browser.
               </p>
             )}
             {device === 'unsupported' && (

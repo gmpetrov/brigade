@@ -1,6 +1,8 @@
-// Asks Brigade (setup.rs) for each step every 1.5 seconds and draws them; a
+// Asks Brigade (src/setup.ts) for each step every 1.5 seconds and draws them; a
 // step's button runs the action that fixes it.
-const { invoke } = window.__TAURI__.core
+const setup = window.brigadeSetup
+/** An action's outcome: { error } when it failed. */
+const run = (id) => setup.action(id).catch((error) => ({ error: String(error) }))
 
 const list = document.getElementById('steps')
 const summary = document.getElementById('summary')
@@ -9,10 +11,13 @@ const later = document.getElementById('later')
 const errors = new Map()
 let busy = null
 
-function render({ steps, done }) {
+const heading = document.querySelector('h1')
+
+function render({ steps, done, computer }) {
+  heading.textContent = `Get this ${computer} ready for your teammates`
   const count = steps.filter((s) => s.done === true).length
   summary.textContent = done
-    ? 'All set: your teammates can work on this Mac.'
+    ? `All set: your teammates can work on this ${computer}.`
     : `${count} of ${steps.length} done. Each step updates as soon as it's done.`
   close.hidden = !done
   later.hidden = done
@@ -56,11 +61,8 @@ function render({ steps, done }) {
 async function act(step, action) {
   busy = action
   errors.delete(step)
-  try {
-    await invoke('setup_action', { id: action })
-  } catch (error) {
-    errors.set(step, String(error))
-  }
+  const { error } = await run(action)
+  if (error) errors.set(step, error)
   busy = null
   refresh()
 }
@@ -70,13 +72,14 @@ async function refresh() {
   if (pending) return
   pending = true
   try {
-    render(await invoke('setup_state'))
+    const current = await setup.state()
+    if (current) render(current)
   } finally {
     pending = false
   }
 }
 
-close.addEventListener('click', () => invoke('setup_action', { id: 'close' }))
-later.addEventListener('click', () => invoke('setup_action', { id: 'close' }))
+close.addEventListener('click', () => run('close'))
+later.addEventListener('click', () => run('close'))
 refresh()
 setInterval(refresh, 1500)

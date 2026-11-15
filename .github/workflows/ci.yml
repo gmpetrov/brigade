@@ -125,3 +125,7 @@ jobs:
       - name: Preview gateway
         if: ${{ !cancelled() }}
         run: node scripts/ci/test.mjs apps/preview-gateway --import tsx
+
+      - name: Desktop
+        if: ${{ !cancelled() }}
+        run: node scripts/ci/test.mjs apps/desktop --import tsx

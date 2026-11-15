@@ -36,10 +36,12 @@ The web code is `apps/web/components/dictation.tsx`, the API's `apps/api/src/dic
 
 ## Brigade.app
 
-The Mac app loads the dashboard, so it has dictation once its bundle names the microphone:
-`NSMicrophoneUsageDescription` in `apps/desktop/src-tauri/Info.plist` (Tauri merges it) and
-`com.apple.security.device.audio-input` in its entitlements (hardened runtime). Versions
-released before that cannot use the microphone; the composer says so.
+The app loads the dashboard, so it has dictation once its bundle names the microphone:
+`NSMicrophoneUsageDescription` in `apps/desktop/electron-builder.config.cjs` (`extendInfo`) and
+`com.apple.security.device.audio-input` in `apps/desktop/build/entitlements.mac.plist` (hardened
+runtime). Its session grants the microphone to the dashboard's pages only
+(`apps/desktop/src/windows.ts`). Versions released before that cannot use the microphone; the
+composer says so.
 
 ## Production
 

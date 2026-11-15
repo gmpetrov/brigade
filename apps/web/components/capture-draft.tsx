@@ -1,5 +1,5 @@
 'use client'
-// Brigade.app's screenshot window (apps/desktop/src-tauri/src/capture.rs): each
+// Brigade.app's new thread window (apps/desktop/src/capture.ts): each
 // capture of the shortcut joins this draft, uploaded at once like a pasted file,
 // and the new-thread box sends them with what is written. Closing the window
 // keeps it all; the teammate, project and computer stay picked for the next one.
@@ -96,7 +96,7 @@ export function CaptureDraft() {
   // Esc closes the window, unless a menu, the `@` or `/` suggestions or the image preview is
   // open: Esc closes that first. Heard on the way down (capture), before the message box:
   // its editor (ProseMirror) takes every Esc, so it would never reach the window otherwise.
-  // When the page does not have the keyboard, Brigade.app closes it itself (escape.rs).
+  // Brigade.app gives the page the keyboard as it brings the window up (windows.ts).
   useEffect(() => {
     if (!app) return
     function onKeyDown(e: KeyboardEvent) {

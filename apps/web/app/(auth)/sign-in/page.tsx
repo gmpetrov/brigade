@@ -9,13 +9,13 @@ import { LegalConsent } from '@/components/legal-consent'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
-import { inCaptureWindow, signInWithBrowser } from '@/lib/brigade-app'
+import { inCaptureWindow, inDesktopApp, signInWithBrowser } from '@/lib/brigade-app'
 import { afterSignIn, markSignedIn } from '@/lib/signed-in'
 
 export default function SignIn() {
   const router = useRouter()
   const [error, setError] = useState<string>()
-  // In Brigade.app's window, the browser signs in (lib/brigade-app.ts): its own session is
+  // In Brigade.app's windows, the browser signs in (lib/brigade-app.ts): its own session is
   // out of reach here. 'waiting': the browser is open; 'form': the form here after all.
   const [app, setApp] = useState<'browser' | 'waiting' | 'form'>()
   // Back from Google with ?error=: the API names what went wrong. With ?signed, signed in
@@ -29,7 +29,7 @@ export default function SignIn() {
     }
     const failed = query.get('error')
     if (failed) setError(`Could not sign in with Google (${failed.replaceAll('_', ' ')})`)
-    if (!inCaptureWindow()) return
+    if (!inDesktopApp()) return
     setApp('browser')
     const code = query.get('desktop_code')
     const verifier = query.get('verifier')
@@ -40,7 +40,7 @@ export default function SignIn() {
       .then(({ error }) => {
         if (error) return setError(error.message ?? 'Could not sign in')
         markSignedIn()
-        location.replace('/app/capture')
+        location.replace(inCaptureWindow() ? '/app/capture' : afterSignIn())
       })
       .catch(() => setError('Could not reach Brigade. Check your connection and try again.'))
   }, [])

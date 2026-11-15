@@ -1,13 +1,19 @@
-# Releases Brigade.app (apps/desktop, with apps/computer-use-macos inside it) when a
-# desktop-v* tag is pushed, e.g. `git tag desktop-v0.2.0 && git push origin desktop-v0.2.0`:
-# builds a universal app, signs it with the Developer ID, notarizes it, and publishes a
-# GitHub Release with Brigade.dmg (what the dashboard links to) and latest.json, which
-# installed apps check to update themselves.
+# Releases Brigade.app (apps/desktop, with apps/computer-use-macos inside it on macOS) when a
+# desktop-v* tag is pushed, e.g. `git tag desktop-v0.4.0 && git push origin desktop-v0.4.0`:
+# builds it for macOS (universal, signed with the Developer ID and notarized), Windows and Linux,
+# and publishes one GitHub Release with every platform's files. Installed apps update from it:
+#   - Brigade.app (Electron) reads latest-mac.yml, latest.yml or latest-linux.yml (updates.ts);
+#   - the Tauri Brigade.app it replaces reads latest.json, which points it at Brigade.app.tar.gz:
+#     the Electron app, signed with the Tauri update key, which that app's updater installs in
+#     its place. Keep publishing it while Macs may still run a Tauri version (0.3.x).
+# The dashboard links to Brigade.dmg; Brigade-Setup.exe and Brigade-x86_64.AppImage are the
+# Windows and Linux downloads.
 #
 # Secrets: APPLE_CERTIFICATE (the Developer ID Application .p12, base64),
 # APPLE_CERTIFICATE_PASSWORD, APPLE_API_KEY (an App Store Connect API key's .p8, for
 # notarization), APPLE_API_KEY_ID, APPLE_API_ISSUER, TAURI_SIGNING_PRIVATE_KEY and
-# TAURI_SIGNING_PRIVATE_KEY_PASSWORD (signs updates; its public key is in tauri.conf.json).
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD (signs latest.json's archive for the Tauri apps; its public
+# key is in their tauri.conf.json, kept in git history).
 name: Release Brigade.app
 
 on:
@@ -22,42 +28,27 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  mac:
     runs-on: macos-15
-    env:
-      VERSION: ${{ github.ref_name }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
       - name: Version from the tag
         run: |
-          VERSION="${VERSION#desktop-v}"
+          VERSION="${GITHUB_REF_NAME#desktop-v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          cd apps/desktop/src-tauri
-          jq --arg v "$VERSION" '.version = $v' tauri.conf.json > conf.json && mv conf.json tauri.conf.json
+          cd apps/desktop && npm pkg set version="$VERSION"
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile --filter @brigade/desktop
+      - run: pnpm install --frozen-lockfile --filter @brigade/desktop...
 
-      # Newer rustup no longer installs the toolchain rust-toolchain.toml pins on its own.
-      - name: Rust toolchain
-        working-directory: apps/desktop/src-tauri
-        run: |
-          CHANNEL="$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)"
-          rustup toolchain install "$CHANNEL" --profile minimal --target aarch64-apple-darwin --target x86_64-apple-darwin
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            apps/desktop/src-tauri/target
-          key: desktop-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'apps/desktop/src-tauri/rust-toolchain.toml') }}
-
+      # For Brigade Computer Use.app, which its own script signs; electron-builder signs the rest
+      # from CSC_LINK below.
       - name: Import the Developer ID certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -79,31 +70,130 @@ jobs:
 
       - name: Build, sign and notarize
         env:
-          TARGET: universal-apple-darwin
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$APPLE_API_KEY_CONTENT" > "$APPLE_API_KEY"
+          apps/desktop/scripts/build.sh
+          rm "$APPLE_API_KEY"
+
+      - name: Check the app
+        working-directory: apps/desktop/release/out
+        run: |
+          APP=mac-universal/Brigade.app
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+          # The executable the Tauri app's login item starts.
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")" = brigade-desktop ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION" ]
+          # The helper keeps its own signature, which its permissions are tied to.
+          codesign --verify --strict "$APP/Contents/Resources/Brigade Computer Use.app"
+          codesign -dvv "$APP/Contents/Resources/Brigade Computer Use.app" 2>&1 | grep -q '^Authority=Developer ID Application'
+
+      - name: The Tauri apps' update
+        env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        working-directory: apps/desktop/release/out
         run: |
-          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
-          printf '%s' "$APPLE_API_KEY_CONTENT" > "$APPLE_API_KEY_PATH"
-          apps/desktop/scripts/build.sh
-          rm "$APPLE_API_KEY_PATH"
-
-      - name: Publish the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BUNDLE=apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle
-          OUT="$RUNNER_TEMP/release" && mkdir -p "$OUT"
-          cp "$BUNDLE"/dmg/*.dmg "$OUT/Brigade.dmg"
-          cp "$BUNDLE/macos/Brigade.app.tar.gz" "$OUT/Brigade.app.tar.gz"
-          URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Brigade.app.tar.gz"
-          SIGNATURE="$(cat "$BUNDLE/macos/Brigade.app.tar.gz.sig")"
+          # As the Tauri bundler made it: one Brigade.app folder at the root, no AppleDouble files.
+          COPYFILE_DISABLE=1 tar --no-xattrs -czf Brigade.app.tar.gz -C mac-universal Brigade.app
+          if tar -tzf Brigade.app.tar.gz | grep -v '^Brigade\.app' | grep -q .; then echo "Unexpected entries" >&2; exit 1; fi
+          if tar -tzf Brigade.app.tar.gz | grep -q '/\._'; then echo "AppleDouble files in the archive" >&2; exit 1; fi
+          npx --yes @tauri-apps/cli@2.12.4 signer sign Brigade.app.tar.gz
+          URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/Brigade.app.tar.gz"
+          SIGNATURE="$(cat Brigade.app.tar.gz.sig)"
           # One universal app serves both architectures.
           jq -n --arg v "$VERSION" --arg url "$URL" --arg sig "$SIGNATURE" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
             version: $v, pub_date: $date, notes: "",
             platforms: { "darwin-aarch64": { url: $url, signature: $sig }, "darwin-x86_64": { url: $url, signature: $sig } }
-          }' > "$OUT/latest.json"
-          gh release create "${{ github.ref_name }}" "$OUT"/* --title "Brigade.app $VERSION" --generate-notes --latest
+          }' > latest.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/out/Brigade.dmg
+            apps/desktop/release/out/Brigade.dmg.blockmap
+            apps/desktop/release/out/*-mac.zip
+            apps/desktop/release/out/*-mac.zip.blockmap
+            apps/desktop/release/out/latest-mac.yml
+            apps/desktop/release/out/Brigade.app.tar.gz
+            apps/desktop/release/out/latest.json
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version from the tag
+        run: cd apps/desktop && npm pkg set version="${GITHUB_REF_NAME#desktop-v}"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @brigade/desktop...
+      # Not signed: Brigade has no Windows code-signing certificate yet (SmartScreen warns).
+      - name: Build
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: apps/desktop/scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/out/Brigade-Setup.exe
+            apps/desktop/release/out/Brigade-Setup.exe.blockmap
+            apps/desktop/release/out/latest.yml
+
+  linux:
+    # The oldest Ubuntu GitHub runs: an AppImage runs on systems as new as or newer than its build's.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version from the tag
+        run: cd apps/desktop && npm pkg set version="${GITHUB_REF_NAME#desktop-v}"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @brigade/desktop...
+      - name: Build
+        run: apps/desktop/scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/out/Brigade-x86_64.AppImage
+            apps/desktop/release/out/*.deb
+            apps/desktop/release/out/latest-linux.yml
+
+  publish:
+    needs: [mac, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la release
+          gh release create "$GITHUB_REF_NAME" release/* --repo "${{ github.repository }}" \
+            --title "Brigade.app ${GITHUB_REF_NAME#desktop-v}" --generate-notes --latest
