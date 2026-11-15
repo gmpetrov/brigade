@@ -13,6 +13,12 @@ system tray on Windows and Linux) and:
 - walks a new member through what is missing (`src/setup.ts`, `page/setup.html`), opens at login
   (`src/autostart.ts`) and updates itself (`src/updates.ts`).
 
+The dashboard window has no title bar on macOS (traffic lights over the sidebar's first row) and
+Windows (the system's buttons over the top right); Linux keeps the desktop's own
+(`src/windows.ts`). The dashboard lays itself out for it from the bridge's `frame`
+(`apps/web/lib/desktop-frame.ts`): it keeps room for the buttons and marks the empty space that
+moves the window (`data-window-drag`).
+
 Its windows load the live dashboard (www.brigade.lol, or the dashboard the last link named): the
 UI is the web app's, not a copy. Their pages reach the app through a bridge,
 `window.brigadeDesktop` (`src/preload.ts`, `src/ipc.ts`), given only to the dashboard's own site

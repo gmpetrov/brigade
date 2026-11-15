@@ -119,6 +119,7 @@ import {
 import { setLiveWorkspace } from '@/lib/live-socket'
 import { setThreadsShownScope } from '@/lib/use-thread-events'
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
+import { useDesktopFrame } from '@/lib/desktop-frame'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
@@ -285,6 +286,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const sidebarProjects = sidebarOrder.sort('projects', projects.data ?? [])
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
+  // Brigade.app's window without a title bar (lib/desktop-frame.ts).
+  const frame = useDesktopFrame()
   const { theme = 'dark', setTheme } = useTheme()
   const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
@@ -482,7 +485,21 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 settings then open as menus beside it. */}
             <Sidebar collapsible="icon">
               <SidebarResizer width={sidebarWidth} onWidth={setSidebarWidth} />
-              <SidebarHeader>
+              <SidebarHeader data-window-drag className={cn(frame === 'mac' && 'pt-0')}>
+                {/* Brigade.app on macOS, with no title bar: the traffic lights at the start of
+                    this row, search and new thread across from them (lib/desktop-frame.ts).
+                    Folded to the rail, the row keeps the lights' room above the icons. */}
+                {frame === 'mac' && (
+                  <div className="flex h-[3.25rem] items-center justify-end gap-2 pl-[4.75rem] group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:pl-0">
+                    <RoundButton
+                      label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
+                      onClick={() => setSearching(true)}
+                    >
+                      <Search />
+                    </RoundButton>
+                    <NewThreadButton />
+                  </div>
+                )}
                 <SidebarMenu>
                   <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:block">
                     <DropdownMenu>
@@ -508,13 +525,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         }
                       />
                     </DropdownMenu>
-                    <RoundButton
-                      label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
-                      onClick={() => setSearching(true)}
-                    >
-                      <Search />
-                    </RoundButton>
-                    <NewThreadButton />
+                    {frame !== 'mac' && (
+                      <>
+                        <RoundButton
+                          label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
+                          onClick={() => setSearching(true)}
+                        >
+                          <Search />
+                        </RoundButton>
+                        <NewThreadButton />
+                      </>
+                    )}
                   </SidebarMenuItem>
                 </SidebarMenu>
                 {/* Folded: the same two as icons of the rail. */}
@@ -947,11 +968,24 @@ function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin:
  */
 function Inset({ children }: { children: ReactNode }) {
   const { expanded, computerPage } = useThreadPanel()
+  const frame = useDesktopFrame()
   // The Inbox lays out its own columns, edge to edge, each the window's height.
   const inboxPage = usePathname().startsWith('/app/inbox')
   return (
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
+      {/* Brigade.app's window without a title bar: the empty top of the page moves it, as a
+          title bar would (lib/desktop-frame.ts). Behind everything; controls in it still click. */}
+      {frame && (
+        <div
+          data-window-drag
+          aria-hidden
+          className={cn(
+            'absolute inset-x-0 top-0',
+            frame === 'overlay' ? 'h-[var(--window-top)]' : 'h-10',
+          )}
+        />
+      )}
       <DemoBanner place="phone" />
       <DemoTour />
       <UpdatePill header={expanded} />

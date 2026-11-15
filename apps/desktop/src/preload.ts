@@ -3,7 +3,14 @@
 // main side (ipc.ts) answers `info` with nothing anywhere else, and the bridge stays out.
 import { contextBridge, ipcRenderer } from 'electron'
 
-type Info = { window: 'main' | 'capture'; platform: string; version: string; bridge: number }
+type Info = {
+  window: 'main' | 'capture'
+  platform: string
+  version: string
+  bridge: number
+  /** The dashboard window's frame: 'mac' (no title bar), 'overlay' (Windows), 'native'. */
+  frame?: 'mac' | 'overlay' | 'native'
+}
 
 const info = ipcRenderer.sendSync('brigade:info') as Info | null
 
@@ -31,6 +38,14 @@ if (info)
     },
     signInWithBrowser: () => ipcRenderer.invoke('brigade:sign-in'),
     setBadge: (count: number) => ipcRenderer.send('brigade:badge', count),
+    frame: {
+      /** The window went full screen (macOS hides the traffic lights) or came back. */
+      onFullscreen: (handle: (fullscreen: boolean) => void) =>
+        listen('brigade:fullscreen', (fullscreen) => handle(fullscreen === true)),
+      /** Windows' buttons in the page's colors, as #rrggbb. */
+      setTitleBarColors: (colors: { color: string; symbolColor: string }) =>
+        ipcRenderer.send('brigade:title-bar-colors', colors),
+    },
     providerSignIn: {
       start: () => ipcRenderer.invoke('brigade:provider-sign-in:start'),
       onResult: (handle: (result: { connected?: string; error?: string }) => void) =>

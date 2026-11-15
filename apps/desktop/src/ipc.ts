@@ -5,7 +5,7 @@ import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electr
 import * as capture from './capture.js'
 import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
-import { kindOf, type WindowKind } from './windows.js'
+import { dashboardFrame, kindOf, setTitleBarColors, type WindowKind } from './windows.js'
 
 /** The bridge's version: the dashboard checks it before using what came later. */
 export const BRIDGE_VERSION = 1
@@ -23,6 +23,9 @@ export function registerBridge() {
       ? {
           window: kind,
           platform: process.platform,
+          // Only the dashboard window goes without a title bar (the new thread window has its
+          // own way, capture.ts).
+          ...(kind === 'main' && { frame: dashboardFrame() }),
           version: app.getVersion(),
           bridge: BRIDGE_VERSION,
         }
@@ -65,6 +68,15 @@ export function registerBridge() {
   ipcMain.handle('brigade:provider-sign-in:start', (event) => {
     if (!from(event)) throw new Error('Not allowed.')
     return startProviderSignIn()
+  })
+
+  // Windows' buttons drawn in the page's colors, as its theme changes.
+  ipcMain.on('brigade:title-bar-colors', (event, colors: unknown) => {
+    if (from(event) !== 'main' || !colors || typeof colors !== 'object') return
+    const { color, symbolColor } = colors as Record<string, unknown>
+    const hex = (value: unknown): value is string =>
+      typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+    if (hex(color) && hex(symbolColor)) setTitleBarColors({ color, symbolColor })
   })
 
   // What needs the member, on the Dock icon (macOS) or the launcher's (Linux).

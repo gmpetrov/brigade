@@ -116,6 +116,10 @@ try {
   const main = await windowAt('/app', true)
   const mainSeen = await main.evaluate(() => window.seen)
   check('main bridge', () => assert.equal(mainSeen.info?.window, 'main'))
+  // No title bar on macOS and Windows; the desktop's own on Linux. The new thread window has none.
+  const frames = { darwin: 'mac', win32: 'overlay', linux: 'native' }
+  check('main frame', () => assert.equal(mainSeen.info?.frame, frames[process.platform]))
+  check('capture has no frame info', () => assert.equal(seen.info?.frame, undefined))
   const refused = await main.evaluate(() =>
     window.brigadeDesktop.captures.list().then(
       () => 'listed',

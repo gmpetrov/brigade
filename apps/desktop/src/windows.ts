@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   app,
   BrowserWindow,
+  type BrowserWindowConstructorOptions,
   screen,
   session,
   shell,
@@ -134,6 +135,46 @@ export function setUpSession() {
   )
 }
 
+/**
+ * How the dashboard window is framed. No title bar on macOS, its traffic lights over the
+ * sidebar's first row, and on Windows, whose own buttons sit over the top right; the desktop's
+ * own title bar on Linux, where buttons the app drew would match no desktop. The dashboard lays
+ * itself out for it (apps/web/lib/desktop-frame.ts), told through the bridge.
+ */
+export type Frame = 'mac' | 'overlay' | 'native'
+
+export const dashboardFrame = (platform = process.platform): Frame =>
+  platform === 'darwin' ? 'mac' : platform === 'win32' ? 'overlay' : 'native'
+
+/** Centered on the sidebar's first row: its 36px buttons start 8px down. */
+export const TRAFFIC_LIGHTS = { x: 16, y: 19 }
+/** The height of Windows' buttons, and of the band the dashboard leaves them. */
+export const OVERLAY_HEIGHT = 32
+
+/** The dashboard's dark background until the page says which theme it shows. */
+const OVERLAY_DARK = { color: '#1a1a1e', symbolColor: '#e4e4e7' }
+
+function frameOptions(): BrowserWindowConstructorOptions {
+  switch (dashboardFrame()) {
+    case 'mac':
+      return { titleBarStyle: 'hidden', trafficLightPosition: TRAFFIC_LIGHTS }
+    case 'overlay':
+      return {
+        titleBarStyle: 'hidden',
+        titleBarOverlay: { ...OVERLAY_DARK, height: OVERLAY_HEIGHT },
+      }
+    default:
+      return {}
+  }
+}
+
+/** The page's background and text colors, for Windows' buttons over it. */
+export function setTitleBarColors(colors: { color: string; symbolColor: string }) {
+  const window = dashboardWindow()
+  if (!window || dashboardFrame() !== 'overlay') return
+  window.setTitleBarOverlay({ ...colors, height: OVERLAY_HEIGHT })
+}
+
 let main: BrowserWindow | undefined
 
 export const dashboardWindow = () => (main && !main.isDestroyed() ? main : undefined)
@@ -174,9 +215,13 @@ export function showDashboard(url = dashboard()) {
     show: false,
     title: 'Brigade',
     autoHideMenuBar: true,
+    ...frameOptions(),
     webPreferences: dashboardPreferences(),
   })
   main = window
+  // Full screen hides the traffic lights: the page gives back the room it kept for them.
+  window.on('enter-full-screen', () => window.webContents.send('brigade:fullscreen', true))
+  window.on('leave-full-screen', () => window.webContents.send('brigade:fullscreen', false))
   guard(window.webContents, 'main')
   // A Dock icon while the dashboard is open; the menu bar alone otherwise, as before.
   if (process.platform === 'darwin') void app.dock?.show()

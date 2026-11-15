@@ -1584,3 +1584,45 @@ html[data-sidebar-resizing] [data-slot='sidebar-gap'],
 html[data-sidebar-resizing] [data-slot='sidebar-container'] {
   transition: none;
 }
+
+/* Brigade.app's dashboard window without a title bar (lib/desktop-frame.ts). What moves the
+ * window is marked data-window-drag: only its empty space does, since every control in it is
+ * carved out. Ignored by browsers. */
+html[data-desktop-frame] [data-window-drag] {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+html[data-desktop-frame]
+  [data-window-drag]
+  :is(a, button, input, select, textarea, label, [role], [contenteditable='true']) {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+/* Windows: its buttons sit over the top right, 32px tall, above a band the page leaves empty
+ * (apps/desktop/src/windows.ts, OVERLAY_HEIGHT). What fills the window's height fills what is
+ * left. */
+html[data-desktop-frame='overlay'] [data-slot='sidebar-inset'] {
+  --window-top: 32px;
+  padding-top: var(--window-top);
+}
+html[data-desktop-frame='overlay'] [data-slot='sidebar-inset'] :is(.h-svh, .h-dvh) {
+  height: calc(100svh - var(--window-top));
+}
+@media (min-width: 48rem) {
+  html[data-desktop-frame='overlay'] [data-slot='sidebar-inset'] .md\:h-svh {
+    height: calc(100svh - var(--window-top));
+  }
+}
+@media (min-width: 64rem) {
+  html[data-desktop-frame='overlay'] [data-slot='sidebar-inset'] .lg\:h-dvh {
+    height: calc(100dvh - var(--window-top));
+  }
+}
+/* macOS with the sidebar folded to its rail: the traffic lights reach past the rail, so the
+ * thread's sidebar toggle steps aside from them. */
+html[data-desktop-frame='mac']
+  .peer[data-state='collapsed']
+  ~ [data-slot='sidebar-inset']
+  .pill-toggle {
+  left: 2rem;
+}
