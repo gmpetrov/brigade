@@ -3,7 +3,7 @@
 // site; the draft's captures only from the new thread window.
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import * as capture from './capture.js'
-import { findAgain, openFind } from './find.js'
+import { closeFind, findAgain, openFind } from './find.js'
 import * as notifications from './notifications.js'
 import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
@@ -86,6 +86,7 @@ export function registerBridge() {
     if (from(event) !== 'main') return
     if (what === 'open') void openFind()
     else if (what === 'next' || what === 'previous') void findAgain(what === 'next')
+    else if (what === 'close') closeFind()
   })
 
   // macOS: the page has no room for the traffic lights (too narrow for its sidebar).

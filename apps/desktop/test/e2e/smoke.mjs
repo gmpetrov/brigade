@@ -213,6 +213,13 @@ try {
   await bar.keyboard.press('Escape')
   const closed = await waitFor(async () => !(await findShown()), 5_000).catch(() => false)
   check('find bar closes', () => assert.equal(closed, true))
+  // Esc closes it from the dashboard's page too, once the person clicked back into it.
+  await main.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f')
+  await waitFor(findShown, 5_000).catch(() => {})
+  await main.bringToFront()
+  await main.keyboard.press('Escape')
+  const closedFromPage = await waitFor(async () => !(await findShown()), 5_000).catch(() => false)
+  check('find bar closes on Esc in the page', () => assert.equal(closedFromPage, true))
 
   // An App's sign-in, done in the browser, comes back to the page that waits: once, and only
   // with the one-time value the app gave it.

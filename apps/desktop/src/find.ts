@@ -107,6 +107,7 @@ export async function openFind() {
   if (!state) return
   const reopened = !state.open
   state.open = true
+  if (reopened) state.page.send('brigade:find-open', true)
   state.view.setVisible(true)
   await state.ready
   if (state.own.isDestroyed() || state.page.isDestroyed()) return
@@ -129,6 +130,7 @@ export function closeFind(focusPage = true) {
   const state = live()
   if (!state || !state.open) return
   state.open = false
+  state.page.send('brigade:find-open', false)
   state.view.setVisible(false)
   state.page.stopFindInPage('keepSelection')
   if (focusPage) state.page.focus()
