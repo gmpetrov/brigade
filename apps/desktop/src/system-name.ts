@@ -43,15 +43,33 @@ function run(file: string, args: string[]) {
   })
 }
 
-/** This computer's account's full name, or null. */
+/** The account Brigade.app runs as; none when the system cannot say (os.userInfo throws). */
+function currentUser(): { username: string; uid: number } | null {
+  try {
+    const { username, uid } = os.userInfo()
+    return { username, uid }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * This computer's account's full name, or null: never throws, whatever the system. Windows asks
+ * nothing; a command that is missing, fails or takes over 2 seconds gives none.
+ */
 export async function accountFullName(
   platform: NodeJS.Platform = process.platform,
   exec: typeof run = run,
+  user = currentUser(),
 ) {
-  const user = os.userInfo()
-  if (platform === 'darwin')
-    return fullNameOf((await exec('/usr/bin/id', ['-F'])).trim(), user.username)
-  if (platform !== 'linux' || user.uid < 0) return null
-  const entry = (await exec('getent', ['passwd', String(user.uid)])).trim()
-  return fullNameOf(entry.split(':')[4], user.username)
+  try {
+    if (!user || (platform !== 'darwin' && platform !== 'linux')) return null
+    if (platform === 'darwin')
+      return fullNameOf((await exec('/usr/bin/id', ['-F'])).trim(), user.username)
+    if (user.uid < 0) return null
+    const entry = (await exec('getent', ['passwd', String(user.uid)])).trim()
+    return fullNameOf(entry.split(':')[4], user.username)
+  } catch {
+    return null
+  }
 }
