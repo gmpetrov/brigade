@@ -201,6 +201,7 @@ import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
 import { wakeLabel } from '@/lib/snooze'
 import { choiceLabel } from '@/lib/choice-label'
+import { themeChange, ThemeChangeCard } from '@/components/theme-card'
 
 export type Item =
   | {
@@ -1019,6 +1020,7 @@ export function MessageBubble({ text, side = false }: { text: string; side?: boo
   return (
     <div
       ref={bubble}
+      data-look="person-message"
       className={cn(
         'min-w-0 rounded-2xl rounded-br-md leading-relaxed wrap-anywhere whitespace-pre-wrap',
         side
@@ -1187,6 +1189,20 @@ function receivedEmail(text: string) {
 
 const json = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+
+/** A theme tool call that changed the look (docs/themes.md), for its card. */
+const themeChanged = (item: {
+  toolName: string
+  input: unknown
+  output?: unknown
+  finished: boolean
+  isError?: boolean
+}) =>
+  themeChange({
+    ...item,
+    bareName: bareToolName(item.toolName),
+    outputText: json(item.output ?? ''),
+  })
 
 /** An approval's question in words, for the writes people meet most: its tool name otherwise. */
 function approvalAsk(toolName: string) {
@@ -1369,6 +1385,7 @@ const isActivity = (item: Item): item is ActivityItem => {
       !shownWidget(item) &&
       !proposedTeam(item) &&
       !playbookCard(item) &&
+      !themeChanged(item) &&
       !(item.finished && !item.isError && (openedPull(item) || startedChild(item)))
     activities.set(item, known)
   }
@@ -2114,7 +2131,7 @@ const ToolStep = memo(
     item: Extract<Item, { kind: 'tool' }>
   }) {
     return (
-      <Collapsible className="min-w-0 text-sm">
+      <Collapsible data-look="tool-step" className="min-w-0 text-sm">
         <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground hover:text-foreground">
           <ToolLine toolName={item.toolName} input={item.input} output={item.output} />
           <ChevronRight
@@ -3005,6 +3022,7 @@ export function ThreadItems({
               )}
               {/* As wide as its text, so actions floating by its first line sit at the end of a short line, not at the far edge. */}
               <div
+                data-look="teammate-message"
                 className={cn(
                   'relative flex w-fit max-w-full min-w-0 flex-col gap-0.5',
                   // Room for them on the right, so they never cover its text.
@@ -3141,6 +3159,8 @@ export function ThreadItems({
               children={childThreads}
             />
           )
+        const restyled = themeChanged(item)
+        if (restyled) return <ThemeChangeCard key={item.key} change={restyled} />
         const opened = item.finished && !item.isError ? openedPull(item) : null
         if (opened)
           return (
@@ -3979,7 +3999,7 @@ export function QuestionCard({
   const disabled = !canAnswer || !!answer
 
   return (
-    <Card className="gap-4 border-primary/40 px-5 py-4">
+    <Card data-look="chat-card" className="gap-4 border-primary/40 px-5 py-4">
       {item.questions.map((q, i) => {
         const optionId = (o: { id: string }) => `${item.questionId}-${q.id}-${o.id}`
         const question = (
@@ -4276,7 +4296,7 @@ export function TicketCard({
   const granting = Object.values(replies).some((r) => r.type === 'access' && r.granted)
 
   return (
-    <Card className="gap-0 border-primary/40 px-5 py-4">
+    <Card data-look="chat-card" className="gap-0 border-primary/40 px-5 py-4">
       <div className="flex items-start gap-2">
         <ClipboardList aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
         <div className="min-w-0 flex-1 font-semibold">{item.title}</div>

@@ -105,7 +105,7 @@ export function ThreadRow({
     )
 
   return (
-    <SidebarMenuItem {...drag}>
+    <SidebarMenuItem data-look="sidebar-thread" {...drag}>
       <SidebarMenuButton
         asChild
         isActive={active}

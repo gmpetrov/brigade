@@ -709,7 +709,10 @@ export function ThreadPanel() {
  */
 function PillBar({ children, documents }: { children: ReactNode; documents: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center px-12">
+    <div
+      data-look="thread-header"
+      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center px-12"
+    >
       <SidebarToggle className="pill-toggle pointer-events-auto absolute top-3 left-2 ml-0 max-md:top-2.5" />
       {children}
       {documents && <DocumentsButton className="pointer-events-auto absolute top-2.5 right-2" />}

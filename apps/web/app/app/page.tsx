@@ -93,7 +93,7 @@ export default function Home() {
   const summaryReady = threads.data && tickets.data && pulls.data && failures.data
 
   return (
-    <div className="flex flex-col gap-8">
+    <div data-look="today" className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-extrabold tracking-tight">{greeting(me.user.name)}</h1>
         {summaryReady && (

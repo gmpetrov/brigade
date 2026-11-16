@@ -1473,7 +1473,7 @@ export function ThreadConversation({
   )
 
   return (
-    <div ref={root} className="flex min-h-0 flex-1 flex-col">
+    <div ref={root} data-look="thread" className="flex min-h-0 flex-1 flex-col">
       <EditsSenderSync
         threadId={id}
         // Without the right to write here, no composer takes them: the canvas sends at once.
@@ -1903,6 +1903,7 @@ export function ThreadConversation({
                     anywhere on the conversation, not just here. */}
                 <Card
                   data-composer-frame
+                  data-look="composer"
                   className={cn(
                     'relative gap-2 rounded-xl p-2 shadow-md focus-within:border-ring',
                     drop.dragging && 'border-primary',

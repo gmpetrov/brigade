@@ -19,6 +19,7 @@ import type { WorkspaceScope } from './scope.js'
 import { deleteThread } from './thread-delete.js'
 import { loadThread } from './thread-spec.js'
 import { handBack } from './work.js'
+import { removeMemberThemes } from './themes.js'
 
 export { beingRemoved }
 
@@ -146,6 +147,8 @@ async function cleanUp(userId: string, membership: Membership, handTo?: string) 
     }
     const db = scoped(scope)
     const actor = { type: 'member' as const, id: membership.id }
+    // Their own looks (docs/themes.md): the rows would go with the membership, their files not.
+    await removeMemberThemes(db, scope, membership.id)
     if (handTo) {
       // Kept for the team, but those on their own computer: it goes with them.
       await db.session.updateMany({

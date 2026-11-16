@@ -24,13 +24,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import {
-  deleteObject,
-  directUploads,
-  presignGet,
-  readHead,
-  themeFileKey,
-} from './bucket.js'
+import { deleteObject, directUploads, presignGet, readHead, themeFileKey } from './bucket.js'
 import { Prisma, type Scope, type ScopedDb } from './db.js'
 import { featuresOfMember } from './features.js'
 import { hubs } from './hub.js'
@@ -338,12 +332,14 @@ export async function undo(
   by: By,
 ) {
   const history = await db.themeChange.findMany({ where: { memberId }, orderBy: { seq: 'desc' } })
-  if (!history.length) throw new HTTPException(409, { message: 'There are no look changes to go back on.' })
+  if (!history.length)
+    throw new HTTPException(409, { message: 'There are no look changes to go back on.' })
   const oldest = history[history.length - 1]!
   let target: { seq: number; look: Look }
   let count: number
   if (input.seq !== undefined) {
-    if (input.seq === history[0]!.seq) throw new HTTPException(409, { message: 'That is how it looks now.' })
+    if (input.seq === history[0]!.seq)
+      throw new HTTPException(409, { message: 'That is how it looks now.' })
     if (input.seq === 0 && oldest.seq === 1) target = { seq: 0, look: { slug: null, file: null } }
     else {
       const found = history.find((h) => h.seq === input.seq)
@@ -496,6 +492,16 @@ export async function addFile(
   }
 }
 
+/** A member leaving: their themes here go, with their files in the bucket. */
+export async function removeMemberThemes(db: ScopedDb, scope: Scope, memberId: string) {
+  const files = await db.themeAsset.findMany({
+    where: { theme: { memberId } },
+    select: { id: true },
+  })
+  await db.theme.deleteMany({ where: { memberId } })
+  await Promise.all(files.map((f) => removeFileBytes(scope, f.id)))
+}
+
 const removeFileBytes = (scope: Scope, id: string) =>
   deleteObject(themeFileKey(scope, id)).catch((error: unknown) =>
     console.warn(`theme file ${id}: bytes not deleted: ${String(error)}`),
@@ -644,6 +650,7 @@ export async function handleThemeCall(
         })
         return {
           seq: saved.seq,
+          member: memberId,
           id: saved.slug,
           text:
             `${saved.existed ? 'Updated' : 'Saved'} the theme ${parsed.theme.name} (${saved.slug}): the person's windows wear it now. Ask them how it looks.` +
@@ -652,10 +659,12 @@ export async function handleThemeCall(
               : ''),
         }
       }
-      if (!id) return { error: 'Give theme (to save and wear it), or id (a saved theme, or "none").' }
+      if (!id)
+        return { error: 'Give theme (to save and wear it), or id (a saved theme, or "none").' }
       const worn = await wear(db, scope, memberId, id === 'none' ? null : id, by)
       return {
         seq: worn.seq,
+        member: memberId,
         text: worn.name
           ? `The person's windows wear ${worn.name} now.`
           : "The theme is off: the person's windows show the dashboard's own look.",
@@ -695,6 +704,7 @@ export async function handleThemeCall(
     )
     return {
       seq: back.seq,
+      member: memberId,
       text:
         `Went back ${back.count === 1 ? '1 change' : `${back.count} changes`}: the person's windows ` +
         (back.name ? `wear ${back.name} as it was then.` : "show the dashboard's own look.") +

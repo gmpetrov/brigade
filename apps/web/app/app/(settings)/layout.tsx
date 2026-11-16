@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   return (
-    <div className="flex flex-col gap-6 md:flex-row md:gap-10">
+    <div data-look="settings" className="flex flex-col gap-6 md:flex-row md:gap-10">
       <nav
         aria-label="Settings"
         className="-mx-1 flex shrink-0 gap-1 overflow-x-auto px-1 [scrollbar-width:none] md:mx-0 md:w-44 md:flex-col md:gap-5 md:px-0"

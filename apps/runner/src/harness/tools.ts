@@ -4793,7 +4793,7 @@ export function themeTools(call: ScheduleCaller): Record<string, Tool> {
           theme: {
             type: 'object',
             description:
-              'The whole theme: { name, canvas?, accent?, colors?, radius?, font?, fontMono?, css? }, as theme_read\'s guide says',
+              "The whole theme: { name, canvas?, accent?, colors?, radius?, font?, fontMono?, css? }, as theme_read's guide says",
             properties: {
               name: { type: 'string' },
               canvas: { type: 'string', description: 'Base background, hex' },

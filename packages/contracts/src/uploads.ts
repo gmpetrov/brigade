@@ -14,7 +14,13 @@ import { THEME_LIMITS } from './themes.js'
  * teammate), a skill pack to import, one file of a teammate's skill proposal, a logo, an image
  * or font of a theme (docs/themes.md).
  */
-export const UPLOAD_PURPOSES = ['library', 'skill_pack', 'skill_file', 'logo', 'theme_file'] as const
+export const UPLOAD_PURPOSES = [
+  'library',
+  'skill_pack',
+  'skill_file',
+  'logo',
+  'theme_file',
+] as const
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number]
 
 /** Largest file of each purpose. */

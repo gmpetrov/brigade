@@ -134,7 +134,7 @@ function LibraryView() {
     )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-look="library" className="flex flex-col gap-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-extrabold tracking-tight">Library</h1>
         <div data-corner-clear className="flex items-center gap-2">

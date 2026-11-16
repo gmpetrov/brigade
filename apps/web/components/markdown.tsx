@@ -97,6 +97,7 @@ function CodeBlock({ children, ...props }: ComponentProps<'pre'>) {
       </Hint>
       <pre
         {...props}
+        data-look="code-block"
         className={cn(
           'overflow-x-auto rounded-lg bg-muted px-4 py-3 font-mono text-[0.8125rem] leading-relaxed',
           language && 'pt-7',

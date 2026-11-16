@@ -28,7 +28,8 @@ export type BuiltInLook = (typeof BUILT_IN_LOOKS)[number]
  * A theme file's name. Images and fonts only: no SVG, which a browser may run as a page when
  * someone opens its address.
  */
-export const THEME_FILE_NAME = /^[a-z0-9][a-z0-9_-]{0,79}\.(png|jpe?g|webp|gif|avif|woff2?|ttf|otf)$/
+export const THEME_FILE_NAME =
+  /^[a-z0-9][a-z0-9_-]{0,79}\.(png|jpe?g|webp|gif|avif|woff2?|ttf|otf)$/
 
 export const THEME_FILE_TYPES: Readonly<Record<string, string>> = {
   png: 'image/png',
@@ -265,7 +266,9 @@ export function themeSlug(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 48)
     .replace(/-+$/, '')
-  return slug && !(BUILT_IN_LOOKS as readonly string[]).includes(slug) ? slug : `theme-${slug || 'custom'}`
+  return slug && !(BUILT_IN_LOOKS as readonly string[]).includes(slug)
+    ? slug
+    : `theme-${slug || 'custom'}`
 }
 
 /** A theme file's name from any file name: lowercase, safe, its extension kept. */
@@ -353,7 +356,8 @@ function codeOnly(css: string): string {
       out += ' '
     } else if (c === '"' || c === "'") {
       let end = i + 1
-      while (end < css.length && css[end] !== c && css[end] !== '\n') end += css[end] === '\\' ? 2 : 1
+      while (end < css.length && css[end] !== c && css[end] !== '\n')
+        end += css[end] === '\\' ? 2 : 1
       out += `${c}${' '.repeat(Math.max(0, end - i - 1))}${c}`
       i = end
     } else out += c
@@ -449,7 +453,10 @@ export const THEME_HOOKS = [
   { selector: '[data-look="person-message"]', what: "a person's message bubble" },
   { selector: '[data-look="teammate-message"]', what: "a teammate's reply" },
   { selector: '[data-look="tool-step"]', what: "a line of a teammate's work, folded" },
-  { selector: '[data-look="chat-card"]', what: 'a card in a thread: tickets, questions, sub-threads' },
+  {
+    selector: '[data-look="chat-card"]',
+    what: 'a card in a thread: tickets, questions, sub-threads',
+  },
   { selector: '[data-look="composer"]', what: 'the message box' },
   { selector: '[data-look="code-block"]', what: 'a code block' },
   { selector: '[data-look="today"]', what: 'the Today page' },
@@ -487,7 +494,7 @@ export function themeGuide(): string {
     'Stable selectors (every other class name changes between releases: never rely on them):',
     ...THEME_HOOKS.map((h) => `- ${h.selector}: ${h.what}`),
     '',
-    "A theme changes the look, not the layout or behaviour: it cannot move the sidebar to the right, add a panel or change what a screen does. Say so rather than promise it. Never hide or disguise what asks the person to decide (tickets, approvals, the Allow and Deny buttons).",
+    'A theme changes the look, not the layout or behaviour: it cannot move the sidebar to the right, add a panel or change what a screen does. Say so rather than promise it. Never hide or disguise what asks the person to decide (tickets, approvals, the Allow and Deny buttons).',
     '',
     'Calls: theme_read (optional id: that saved theme too). theme_set with theme (the theme as JSON) saves it, as id or its name\'s slug, and wears it; with only id it wears a saved theme, or "none" takes the theme off. theme_add_file with id and path, then use url("theme:<file>") in the css and call theme_set again. theme_undo goes back: steps (default 1) undoes that many changes; seq returns to the look right after that change from theme_read\'s history. An undo is itself a change, so undoing it again is a redo.',
     '',

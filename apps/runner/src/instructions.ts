@@ -1105,7 +1105,7 @@ const MAKING_MISSIONS =
 
 const THEMES =
   '## Brigade themes\n\n' +
-  "When the person asks to change how Brigade itself looks for them (its colours, fonts, density, a " +
+  'When the person asks to change how Brigade itself looks for them (its colours, fonts, density, a ' +
   'background, \"make it look like…\"), restyle it with `theme_set`, after reading `theme_read` and its ' +
   'guide. It changes only their own windows, live. You cannot see it: change one thing at a time and ' +
   'ask how it looks. A theme changes the look, never the layout or what a screen does: say so rather ' +

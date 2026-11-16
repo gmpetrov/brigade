@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next'
-import { ThemeProvider } from 'next-themes'
 import type { ReactNode } from 'react'
+import { LookProvider } from '@/components/look-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { THEME_FIRST_PAINT } from '@/lib/theme-runtime'
 import { themeFontHrefs } from './theme-fonts'
 import './globals.css'
 
@@ -34,11 +35,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {themeFontHrefs.map((href) => (
           <link key={href} rel="stylesheet" href={href} />
         ))}
+        {/* A worn theme's colours from the first paint (docs/themes.md). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_FIRST_PAINT }} />
       </head>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <LookProvider>
           <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
+        </LookProvider>
       </body>
     </html>
   )
