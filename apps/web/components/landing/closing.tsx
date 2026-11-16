@@ -27,12 +27,6 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
             Our own teammates write {share} of Brigade&apos;s code, and a person makes the calls
             that matter. The whole history is public.
           </p>
-          <p className={c('mark-note')}>
-            <span className={c('av mark')} aria-hidden="true">
-              M
-            </span>
-            This page was researched by Mark, a Brigade teammate.
-          </p>
           <a className={c('link')} href={REPO_URL}>
             Read the code on GitHub <Icon name="arrow" />
           </a>

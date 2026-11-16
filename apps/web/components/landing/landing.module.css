@@ -1666,15 +1666,6 @@ svg.i {
   color: var(--muted-foreground);
   letter-spacing: 0;
 }
-.mark-note {
-  margin-top: 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--muted-foreground);
-}
-
 /* =================== 9 · Pricing (dark band) =================== */
 .pricing {
   background: var(--background);
