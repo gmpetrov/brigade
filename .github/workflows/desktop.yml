@@ -111,7 +111,8 @@ jobs:
       - name: Desktop session
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb mutter at-spi2-core dbus-x11 xdotool imagemagick \
+          # x11-apps: xwd, the test's own capture of the root window to compare the screenshot with.
+          sudo apt-get install -y -qq xvfb mutter at-spi2-core dbus-x11 xdotool imagemagick x11-apps \
             gnome-calculator gnome-text-editor >/dev/null
       # The agent-desktop the runner pins (apps/runner's devDependency).
       - name: agent-desktop
