@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ActivityIndicator } from '@/components/ui/activity-indicator'
 import { api, blobOfDataUrl, uploadFile, useApi } from '@/lib/api'
-import { wearInWindow } from '@/lib/theme-runtime'
+import { invalidateThemeLoads, wearInWindow } from '@/lib/theme-runtime'
 
 /** A look change in a few words. */
 export function lookChangeText(change: Pick<LookChange, 'kind' | 'name' | 'count'>): string {
@@ -82,7 +82,10 @@ export function AppearanceSection() {
 
   const wear = (id: string | null) =>
     run(`wear:${id}`, async () => {
-      if (id === null) wearInWindow(null)
+      if (id === null) {
+        invalidateThemeLoads()
+        wearInWindow(null)
+      }
       await api('/themes/active', { method: 'PUT', body: { id } })
     })
 

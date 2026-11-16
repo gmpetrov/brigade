@@ -313,12 +313,14 @@ export async function specFor(
     !passing &&
     !playbook &&
     (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('missions')
-  // Themes (docs/themes.md): the starter's own look, in a thread they started, when they have it.
+  // Themes (docs/themes.md): the starter's own look, in a thread they started, when they have it,
+  // while nobody else asks there (the API checks again at each call).
   const themes =
     !passing &&
     !playbook &&
     thread.origin === 'member' &&
-    (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('themes')
+    (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('themes') &&
+    (await shownAccounts(db, thread)).person === thread.startedByMemberId
   // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
   const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computerId)
   const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }

@@ -27,6 +27,7 @@ import { audit, type Actor } from './audit.js'
 import { deleteObject, directUploads, presignGet, readHead, themeFileKey } from './bucket.js'
 import { Prisma, type Scope, type ScopedDb } from './db.js'
 import { featuresOfMember } from './features.js'
+import { shownAccounts } from './thread-spec.js'
 import { hubs } from './hub.js'
 import {
   copyUpload,
@@ -230,7 +231,7 @@ export async function saveAndWear(
   db: ScopedDb,
   scope: Scope,
   memberId: string,
-  input: { slug?: string; theme: ThemeFile; by: By },
+  input: { slug?: string; theme: ThemeFile; by: By; made?: boolean },
 ) {
   const slug = input.slug || themeSlug(input.theme.name)
   const problem = idProblem(slug) ?? (input.theme.css ? themeCssProblem(input.theme.css) : null)
@@ -258,7 +259,7 @@ export async function saveAndWear(
         })
       })
   const seq = await record(db, memberId, {
-    kind: existing ? 'edited' : 'made',
+    kind: existing && !input.made ? 'edited' : 'made',
     name: input.theme.name,
     by: input.by,
     look: { slug, file: input.theme },
@@ -428,6 +429,94 @@ const ascii = (b: Uint8Array, from: number, to: number) =>
 export const themeFileMatches = (contentType: string, head: Uint8Array) =>
   !!MAGIC[contentType]?.(head)
 
+/** Why a name cannot be a theme file's, or its type. */
+function fileType(name: string): string {
+  const contentType = THEME_FILE_NAME.test(name) ? themeFileType(name) : undefined
+  if (!contentType)
+    throw new HTTPException(400, {
+      message:
+        'A theme file is an image (png, jpg, webp, gif, avif) or a font (woff2, woff, ttf, otf), named in lowercase letters, digits, - and _. No SVG.',
+    })
+  return contentType
+}
+
+type CheckedUpload = Awaited<ReturnType<typeof readyUpload>> & { name: string; type: string }
+
+/** A finished upload, checked to be the image or font `name` says: nothing changes yet. */
+async function checkUpload(
+  db: ScopedDb,
+  scope: Scope,
+  owner: UploadOwner,
+  name: string,
+  uploadId: string,
+): Promise<CheckedUpload> {
+  const type = fileType(name)
+  // Only the owner's: an upload of anyone else's is not found, and left alone.
+  const upload = await readyUpload(db, owner, uploadId, 'theme_file')
+  try {
+    if (upload.size > THEME_LIMITS.fileBytes)
+      throw new HTTPException(413, {
+        message: `A theme file is up to ${THEME_LIMITS.fileBytes / 1024 / 1024} MB.`,
+      })
+    const head = await readHead(uploadBytesKey(scope, upload), 64)
+    if (!head) throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
+    if (!themeFileMatches(type, head))
+      throw new HTTPException(400, {
+        message: `${name} is not a ${name.split('.').pop()} ${type.startsWith('font/') ? 'font' : 'image'}: its bytes say otherwise.`,
+      })
+  } catch (error) {
+    await discardUpload(scope, upload.id)
+    throw error
+  }
+  return { ...upload, name, type }
+}
+
+/**
+ * Checked uploads into a theme, all or none: each is copied to a file of its own, pending and
+ * so unseen; once all are in, they are ready and the files they replace go. A failure on the
+ * way removes what was copied, and the theme's files stay as they were.
+ */
+async function storeFiles(db: ScopedDb, scope: Scope, themeId: string, uploads: CheckedUpload[]) {
+  const staged: { id: string; name: string }[] = []
+  try {
+    for (const upload of uploads) {
+      const row = await db.themeAsset.create({
+        data: { themeId, name: upload.name, contentType: upload.type, size: upload.size } as never,
+      })
+      staged.push({ id: row.id, name: upload.name })
+      await copyUpload(scope, upload, themeFileKey(scope, row.id), upload.type)
+    }
+  } catch (error) {
+    for (const row of staged) {
+      await db.themeAsset.delete({ where: { id: row.id } }).catch(() => undefined)
+      await removeFileBytes(scope, row.id)
+    }
+    throw error
+  }
+  const names = staged.map((r) => r.name)
+  const replaced = await db.themeAsset.findMany({
+    where: { themeId, name: { in: names }, id: { notIn: staged.map((r) => r.id) } },
+  })
+  await db.themeAsset.updateMany({
+    where: { id: { in: staged.map((r) => r.id) } },
+    data: { status: 'ready' },
+  })
+  for (const old of replaced) {
+    await db.themeAsset.delete({ where: { id: old.id } }).catch(() => undefined)
+    await removeFileBytes(scope, old.id)
+  }
+  return replaced.map((r) => r.name)
+}
+
+/** Whether `names` would take a theme past its number of files. */
+function tooManyFiles(have: { name: string }[], names: string[]) {
+  const all = new Set([...have.map((f) => f.name), ...names])
+  if (all.size > THEME_LIMITS.filesPerTheme)
+    throw new HTTPException(409, {
+      message: `A theme has up to ${THEME_LIMITS.filesPerTheme} files: remove one from its css and start a new theme, or replace one by its name.`,
+    })
+}
+
 /**
  * A finished upload into a saved theme, as `name`: its bytes checked to be the image or font
  * its name says, then copied to the theme's files. One of the same name is replaced.
@@ -446,49 +535,81 @@ export async function addFile(
     throw new HTTPException(404, {
       message: `No saved theme is called ${JSON.stringify(input.slug)}: save it with theme_set first.`,
     })
-  const contentType = THEME_FILE_NAME.test(input.name) ? themeFileType(input.name) : undefined
-  if (!contentType)
-    throw new HTTPException(400, {
-      message:
-        'A theme file is an image (png, jpg, webp, gif, avif) or a font (woff2, woff, ttf, otf), named in lowercase letters, digits, - and _. No SVG.',
-    })
-  const replaced = theme.files.filter((f) => f.name === input.name)
-  if (!replaced.length && theme.files.length >= THEME_LIMITS.filesPerTheme)
-    throw new HTTPException(409, {
-      message: `A theme has up to ${THEME_LIMITS.filesPerTheme} files: remove one from its css and start a new theme, or replace one by its name.`,
-    })
-  const upload = await readyUpload(db, input.owner, input.uploadId, 'theme_file')
+  fileType(input.name)
+  tooManyFiles(theme.files, [input.name])
+  const upload = await checkUpload(db, scope, input.owner, input.name, input.uploadId)
   try {
-    if (upload.size > THEME_LIMITS.fileBytes)
-      throw new HTTPException(413, {
-        message: `A theme file is up to ${THEME_LIMITS.fileBytes / 1024 / 1024} MB.`,
-      })
-    const head = await readHead(uploadBytesKey(scope, upload), 64)
-    if (!head) throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
-    if (!themeFileMatches(contentType, head))
-      throw new HTTPException(400, {
-        message: `That file is not a ${input.name.split('.').pop()} ${contentType.startsWith('font/') ? 'font' : 'image'}: its bytes say otherwise.`,
-      })
-    const row = await db.themeAsset.create({
-      data: { themeId: theme.id, name: input.name, contentType, size: upload.size } as never,
-    })
-    try {
-      await copyUpload(scope, upload, themeFileKey(scope, row.id), contentType)
-    } catch (error) {
-      await db.themeAsset.delete({ where: { id: row.id } }).catch(() => undefined)
-      throw error
-    }
-    await db.themeAsset.update({ where: { id: row.id }, data: { status: 'ready' } })
-    for (const old of replaced) {
-      await db.themeAsset.delete({ where: { id: old.id } }).catch(() => undefined)
-      await removeFileBytes(scope, old.id)
-    }
+    const replaced = await storeFiles(db, scope, theme.id, [upload])
     // A theme worn with this file shows it now.
     const { look } = await currentLook(db, memberId)
     if (look.slug === input.slug) themeChanged(scope, memberId)
-    return { name: input.name, contentType, size: upload.size, replaced: replaced.length > 0 }
+    return {
+      name: input.name,
+      contentType: upload.type,
+      size: upload.size,
+      replaced: replaced.length > 0,
+    }
   } finally {
     await discardUpload(scope, upload.id)
+  }
+}
+
+/**
+ * An exported theme brought back with its files, all or nothing: the theme and every file are
+ * checked before anything changes, the files stored before the theme is saved and worn. A theme
+ * it would replace keeps its look and files when any of it is refused.
+ */
+export async function importTheme(
+  db: ScopedDb,
+  scope: Scope,
+  memberId: string,
+  input: { slug?: string; theme: ThemeFile; files: Record<string, string> },
+) {
+  const slug = input.slug || themeSlug(input.theme.name)
+  const problem = idProblem(slug) ?? (input.theme.css ? themeCssProblem(input.theme.css) : null)
+  const owner = { memberId }
+  const uploads: CheckedUpload[] = []
+  try {
+    if (problem) throw new HTTPException(400, { message: problem })
+    const existing = await db.theme.findFirst({
+      where: { memberId, slug },
+      include: { files: { where: { status: 'ready' } } },
+    })
+    if (
+      !existing &&
+      (await db.theme.count({ where: { memberId } })) >= THEME_LIMITS.themesPerMember
+    )
+      throw new HTTPException(409, {
+        message: `A person keeps up to ${THEME_LIMITS.themesPerMember} themes: delete one first.`,
+      })
+    tooManyFiles(existing?.files ?? [], Object.keys(input.files))
+    for (const [name, uploadId] of Object.entries(input.files))
+      uploads.push(await checkUpload(db, scope, owner, name, uploadId))
+    // A new theme's row first, for its files; it goes again if they cannot be stored.
+    const theme =
+      existing ??
+      (await db.theme.create({
+        data: {
+          memberId,
+          slug,
+          name: input.theme.name,
+          file: input.theme as unknown as Prisma.InputJsonValue,
+        } as never,
+      }))
+    try {
+      await storeFiles(db, scope, theme.id, uploads)
+    } catch (error) {
+      if (!existing) await db.theme.delete({ where: { id: theme.id } }).catch(() => undefined)
+      throw error
+    }
+    return await saveAndWear(db, scope, memberId, {
+      slug,
+      theme: input.theme,
+      by: null,
+      made: !existing,
+    })
+  } finally {
+    for (const upload of uploads) await discardUpload(scope, upload.id).catch(() => undefined)
   }
 }
 
@@ -579,6 +700,9 @@ type Session = {
   playbookRunId?: string | null
 }
 
+const SEVERAL_PEOPLE =
+  "Several people ask in this thread, and a theme is the starter's own look: a person restyles their dashboard with you in a thread of their own."
+
 const ONLY_A_PERSON =
   'Themes are changed only in a thread a person started: the theme is theirs. Here, just do the work.'
 
@@ -614,6 +738,10 @@ export async function handleThemeCall(
   op: ThemeOperation,
 ): Promise<object | { error: string }> {
   if (session.origin !== 'member' || session.playbookRunId) return { error: ONLY_A_PERSON }
+  // The starter's look, changed only while they alone ask here: once another member asks in the
+  // thread, their words could otherwise restyle (or hide controls in) the starter's dashboard.
+  const { person } = await shownAccounts(db, session)
+  if (person !== session.startedByMemberId) return { error: SEVERAL_PEOPLE }
   const memberId = session.startedByMemberId
   if (!(await featuresOfMember(memberId, scope.workspaceId)).has('themes'))
     return { error: 'Themes are not open to this person yet.' }

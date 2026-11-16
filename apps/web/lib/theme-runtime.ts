@@ -151,6 +151,50 @@ export function refreshDelay(worn: WornTheme, now = Date.now()): number | null {
   return Math.max(60_000, expires - now - 60 * 60_000)
 }
 
+/** Goes up with each load of the worn theme, and when the look changes here: an older answer is dropped. */
+let loadGeneration = 0
+
+/** Answers of loads still on their way no longer apply: the look was just changed here. */
+export const invalidateThemeLoads = () => {
+  loadGeneration++
+}
+
+/**
+ * Loads the worn theme and wears it, again before its files' addresses run out. Only the latest
+ * load's answer applies: one that comes back after a newer load, after the look changed here
+ * (invalidateThemeLoads) or after `stop`, is dropped, so an older look never replaces a newer one.
+ */
+export function themeLoader<T>(io: {
+  fetch: () => Promise<WornTheme>
+  wear: (worn: WornTheme) => void
+  schedule: (run: () => void, ms: number) => T
+  cancel: (timer: T | undefined) => void
+}) {
+  let timer: T | undefined
+  const load = async (): Promise<void> => {
+    const mine = ++loadGeneration
+    io.cancel(timer)
+    let worn: WornTheme
+    try {
+      worn = await io.fetch()
+    } catch {
+      // Offline or refused: the look kept in this browser stays until the next try.
+      return
+    }
+    if (mine !== loadGeneration) return
+    io.wear(worn)
+    const delay = refreshDelay(worn)
+    if (delay !== null) timer = io.schedule(() => void load(), delay)
+  }
+  return {
+    load,
+    stop: () => {
+      invalidateThemeLoads()
+      io.cancel(timer)
+    },
+  }
+}
+
 /** The reset shortcut: ⌘⌥⇧R on a Mac, Ctrl+Alt+Shift+R elsewhere. */
 export const isResetLookKey = (
   event: Pick<KeyboardEvent, 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>,

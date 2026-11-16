@@ -3,13 +3,14 @@
 // again whenever it changes (theme.changed, sent only to them) and before its files' signed
 // addresses run out. ⌘⌥⇧R (Ctrl+Alt+Shift+R) takes it off, whatever it hides.
 import type { WornTheme } from '@brigade/contracts'
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { api } from '@/lib/api'
 import {
+  invalidateThemeLoads,
   isResetLookKey,
   leaveSafeLook,
   leaveWindow,
-  refreshDelay,
+  themeLoader,
   serverThemeState,
   subscribeTheme,
   themeState,
@@ -22,34 +23,34 @@ export const useWornTheme = () => useSyncExternalStore(subscribeTheme, themeStat
 
 /** Take the theme off: in this window at once, then for every window of the member. */
 export async function takeOffTheme() {
+  invalidateThemeLoads()
   wearInWindow(null)
   await api('/themes/active', { method: 'PUT', body: { id: null } }).catch(() => undefined)
 }
 
 /** `enabled`: the member has themes; undefined while that is not known yet. */
 export function ThemeRuntime({ enabled }: { enabled: boolean | undefined }) {
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const load = useCallback(async () => {
-    clearTimeout(timer.current)
-    try {
-      const worn = await api<WornTheme>('/themes/active')
-      wearInWindow(worn)
-      const delay = refreshDelay(worn)
-      if (delay !== null) timer.current = setTimeout(() => void load(), delay)
-    } catch {
-      // Offline or refused: the look kept in this browser stays until the next try.
-    }
-  }, [])
+  // One loader for this window: only its latest answer is worn (themeLoader).
+  const [loader] = useState(() =>
+    themeLoader({
+      fetch: () => api<WornTheme>('/themes/active'),
+      wear: wearInWindow,
+      schedule: (run, ms) => setTimeout(run, ms),
+      cancel: (timer) => clearTimeout(timer),
+    }),
+  )
+  const load = loader.load
 
   useEffect(() => {
     if (enabled === undefined) return
     if (!enabled) {
+      loader.stop()
       wearInWindow(null)
       return
     }
     void load()
-    return () => clearTimeout(timer.current)
-  }, [enabled, load])
+    return () => loader.stop()
+  }, [enabled, load, loader])
 
   // Leaving the dashboard (a public page): the site keeps its own look.
   useEffect(() => () => leaveWindow(), [])

@@ -66,7 +66,7 @@ Every change (made, edited, wore, off, deleted, undid) is kept with the look rig
 (`ThemeChange`): the member's latest change is the look they wear. The last 30 are kept. Going
 back returns to one of them, saving that theme again as it was then; an undo is itself a change,
 so undoing it again is a redo. Each change tells the member's open windows (`theme.changed`, sent
-only to them through the workspace's hub).
+only to them through the workspace's hub). A window wears only its latest load's answer: an older one coming back late is dropped.
 
 ## Getting out of a theme that hides too much
 
@@ -92,11 +92,11 @@ person has the feature (`ThreadSpec.themes`):
 | `theme_add_file` | Copy an image or font from the teammate's folder into a saved theme.                     |
 | `theme_undo`     | Go back `steps` changes, or to the look right after change `seq`.                        |
 
-The theme is always the thread starter's. An API from before themes answers the tools with
+The theme is always the thread starter's, and only while they alone ask in the thread: once another member asks there (`shownAccounts`), the tools are no longer offered and the API refuses them, so nobody else's words restyle (or hide controls in) the starter's dashboard. An API from before themes answers the tools with
 "Brigade's server does not have themes yet".
 
 ## Sharing
 
 A theme is one member's in one workspace. To share one, the member exports it from Preferences
 (one `.brigade-theme.json` with its files inlined) and another imports it: the import is checked
-exactly as a teammate's theme is.
+exactly as a teammate's theme is, all or nothing: every file is checked and stored before the theme is saved and worn, and a theme it would replace keeps its look and files when any of it is refused.

@@ -271,6 +271,102 @@ describe('themes', { skip: !database && 'no database answers' }, () => {
     assert.equal(bobs.history.length, 1)
   })
 
+  test('a thread another member asks in changes nobody’s look', async () => {
+    const teammate = await db.teammate.create({ data: { name: 'Riley' } as never })
+    const shared = await db.session.create({
+      data: {
+        teammateId: teammate.id,
+        startedByMemberId: ada,
+        askedByMemberId: bob,
+        computerId,
+        title: 'Shared',
+        origin: 'member',
+      } as never,
+    })
+    const s = { ...session(), id: shared.id }
+    const before = (await themes.listThemes(db, ada)).history[0]!.seq
+    const refused = await call(
+      {
+        name: 'theme_set',
+        theme: { name: 'Hidden', css: '[data-look="chat-card"] { display: none }' },
+      },
+      s,
+    )
+    assert.match(String(refused.error), /Several people ask in this thread/)
+    assert.match(String((await call({ name: 'theme_undo' }, s)).error), /Several people/)
+    assert.equal((await themes.listThemes(db, ada)).history[0]!.seq, before)
+    // Ada alone again (her own thread): she may.
+    await db.session.update({ where: { id: shared.id }, data: { askedByMemberId: ada } })
+    assert.equal((await call({ name: 'theme_read' }, s)).error, undefined)
+  })
+
+  test('an import is all or nothing: a bad file leaves the theme it would replace as it was', async () => {
+    const { putObject } = await import('../src/bucket.js')
+    const { uploadBytesKey } = await import('../src/uploads.js')
+    const upload = async (name: string, bytes: Uint8Array) => {
+      const row = await db.upload.create({
+        data: {
+          purpose: 'theme_file',
+          name,
+          contentType: 'image/png',
+          size: bytes.byteLength,
+          status: 'ready',
+          checked: 'c1',
+          memberId: ada,
+        } as never,
+      })
+      await putObject(uploadBytesKey(scope, row), bytes, 'image/png')
+      return row.id
+    }
+    const first = await themes.importTheme(db, scope, ada, {
+      theme: {
+        name: 'Imported',
+        canvas: '#ffffff',
+        css: 'body { background: url("theme:a.png") }',
+      },
+      files: { 'a.png': await upload('a.png', PNG) },
+    })
+    assert.equal(first.slug, 'imported')
+    const assetsBefore = await db.themeAsset.findMany({
+      where: { theme: { memberId: ada, slug: 'imported' } },
+    })
+    assert.deepEqual(
+      assetsBefore.map((a) => [a.name, a.status]),
+      [['a.png', 'ready']],
+    )
+    const seq = (await themes.listThemes(db, ada)).history[0]!.seq
+    // Over it: a good a.png, then a b.png that is not a PNG.
+    await assert.rejects(
+      themes.importTheme(db, scope, ada, {
+        theme: { name: 'Imported', canvas: '#000000' },
+        files: {
+          'a.png': await upload('a.png', PNG),
+          'b.png': await upload('b.png', new TextEncoder().encode('not an image')),
+        },
+      }),
+      /b\.png is not a png image/,
+    )
+    const after = await db.themeAsset.findMany({
+      where: { theme: { memberId: ada, slug: 'imported' } },
+    })
+    assert.deepEqual(
+      after.map((a) => a.id),
+      assetsBefore.map((a) => a.id),
+    )
+    const saved = await themes.readTheme(db, ada, 'imported')
+    assert.equal(saved?.theme.canvas, '#ffffff')
+    assert.equal((await themes.listThemes(db, ada)).history[0]!.seq, seq)
+    // A new theme whose file is refused is not left behind.
+    await assert.rejects(
+      themes.importTheme(db, scope, ada, {
+        theme: { name: 'Never' },
+        files: { 'c.png': await upload('c.png', new TextEncoder().encode('nope')) },
+      }),
+      /is not a png image/,
+    )
+    assert.equal(await themes.readTheme(db, ada, 'never'), null)
+  })
+
   test('only in a thread a person started, with the themes feature', async () => {
     const trigger = await call({ name: 'theme_read' }, session(ada, 'trigger'))
     assert.match(String(trigger.error), /thread a person started/)
@@ -284,12 +380,12 @@ describe('themes', { skip: !database && 'no database answers' }, () => {
   })
 
   test('a member leaving takes their themes and files with them', async () => {
-    const files = await db.themeAsset.count({ where: { theme: { memberId: ada } } })
+    // The imported theme's file, among others.
+    assert.ok((await db.themeAsset.count({ where: { theme: { memberId: ada } } })) > 0)
     await call({ name: 'theme_set', theme: { name: 'Leaving', canvas: '#101010' } })
     await themes.removeMemberThemes(db, scope, ada)
     assert.equal(await db.theme.count({ where: { memberId: ada } }), 0)
     assert.equal(await db.themeAsset.count({ where: { theme: { memberId: ada } } }), 0)
-    assert.equal(files, 0)
     // Bob's stay.
     assert.equal(await db.theme.count({ where: { memberId: bob } }), 1)
   })

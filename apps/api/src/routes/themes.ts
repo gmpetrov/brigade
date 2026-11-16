@@ -17,12 +17,10 @@ import { featuresOfUser, requireFeature } from '../features.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { serveObject } from '../serve-object.js'
 import {
-  addFile,
   deleteTheme,
+  importTheme,
   listThemes,
   parseTheme,
-  saveAndWear,
-  themeChanged,
   themeFileRow,
   themeFileUrls,
   undo,
@@ -77,19 +75,12 @@ export const themeRoutes = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, ImportTheme)
     const parsed = parseTheme(input.theme)
     if ('error' in parsed) throw new HTTPException(400, { message: parsed.error })
-    const saved = await saveAndWear(db, scope, scope.memberId, {
+    // All or nothing: a theme it would replace stays as it was when any file is refused.
+    const saved = await importTheme(db, scope, scope.memberId, {
       ...(input.id ? { slug: input.id } : {}),
       theme: parsed.theme,
-      by: null,
+      files: input.files ?? {},
     })
-    for (const [name, uploadId] of Object.entries(input.files ?? {}))
-      await addFile(db, scope, scope.memberId, {
-        slug: saved.slug,
-        name,
-        uploadId,
-        owner: { memberId: scope.memberId },
-      })
-    themeChanged(scope, scope.memberId)
     return c.json({ id: saved.slug, seq: saved.seq }, 201)
   })
 
