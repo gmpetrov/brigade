@@ -258,6 +258,9 @@ model Member {
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]
+  /// Their own looks for the dashboard (docs/themes.md), one set per workspace.
+  themes                Theme[]
+  themeChanges          ThemeChange[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -373,6 +376,8 @@ model Workspace {
   documentPins          DocumentPin[]
   libraryShares         LibraryShare[]
   toolStates            ToolState[]
+  themes                Theme[]
+  themeChanges          ThemeChange[]
   toolAccounts          ToolAccount[]
   listPins              ListPin[]
   sidebarOrders         SidebarOrder[]
@@ -2387,6 +2392,78 @@ model ToolState {
   updatedAt         DateTime  @updatedAt
 
   @@unique([toolId, owner, key])
+  @@index([workspaceId])
+}
+
+/// A member's own look for the dashboard (docs/themes.md), made by talking with a teammate:
+/// colours, a stylesheet and the files it uses. One member's, in one workspace: it changes only
+/// their windows there. Which one they wear is their latest ThemeChange's.
+model Theme {
+  id             String      @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// How the member and teammates name it (THEME_ID): unique among the member's themes here.
+  slug           String
+  name           String
+  /// The theme itself (@brigade/contracts' ThemeFile).
+  file           Json
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  files          ThemeAsset[]
+
+  @@unique([memberId, workspaceId, slug])
+  @@index([workspaceId])
+}
+
+/// An image or font a theme's stylesheet uses (`url("theme:<name>")`), in the bucket
+/// (themeFileKey). The dashboard loads it from the bucket's signed address, never through the API.
+model ThemeAsset {
+  id             String           @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  themeId        String
+  theme          Theme            @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  name           String
+  contentType    String
+  size           Int
+  /// pending while its bytes are on their way to the bucket; ready once checked.
+  status         AttachmentStatus @default(pending)
+  createdAt      DateTime         @default(now())
+
+  @@index([themeId, name])
+  @@index([workspaceId])
+}
+
+/// One of a member's look changes (docs/themes.md), with the look right after it: going back
+/// returns to one of these. Their latest is the look they wear. The last THEME_LIMITS.history
+/// are kept.
+model ThemeChange {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// Goes up by one with each of the member's changes in the workspace.
+  seq            Int
+  /// made, edited, wore, off, deleted or undid (LOOK_CHANGE_KINDS).
+  kind           String
+  /// The theme it was about.
+  name           String?
+  /// For undid: how many changes it went back on.
+  count          Int?
+  /// The teammate that made it; null for the member themselves.
+  byTeammateId   String?
+  byName         String?
+  /// The look right after: the worn theme's slug and file, or null for the dashboard's own.
+  wornSlug       String?
+  wornFile       Json?
+  createdAt      DateTime  @default(now())
+
+  @@unique([memberId, workspaceId, seq])
   @@index([workspaceId])
 }
 

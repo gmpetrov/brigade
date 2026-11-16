@@ -7,12 +7,14 @@ import { ATTACHMENT_MAX } from './attachments.js'
 import { LIBRARY_FILE_MAX } from './library.js'
 import { PROJECT_LOGO_MAX } from './projects.js'
 import { SKILL_FILE_MAX, SKILL_PACK_MAX } from './skills.js'
+import { THEME_LIMITS } from './themes.js'
 
 /**
  * What an upload is for: a library file (from the dashboard, the design canvas or a
- * teammate), a skill pack to import, one file of a teammate's skill proposal, a logo.
+ * teammate), a skill pack to import, one file of a teammate's skill proposal, a logo, an image
+ * or font of a theme (docs/themes.md).
  */
-export const UPLOAD_PURPOSES = ['library', 'skill_pack', 'skill_file', 'logo'] as const
+export const UPLOAD_PURPOSES = ['library', 'skill_pack', 'skill_file', 'logo', 'theme_file'] as const
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number]
 
 /** Largest file of each purpose. */
@@ -21,6 +23,7 @@ export const UPLOAD_MAX: Record<UploadPurpose, number> = {
   skill_pack: SKILL_PACK_MAX,
   skill_file: SKILL_FILE_MAX,
   logo: PROJECT_LOGO_MAX,
+  theme_file: THEME_LIMITS.fileBytes,
 }
 
 const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, 'a SHA-256, in lowercase hex')
@@ -41,7 +44,7 @@ export type StartFileUpload = z.input<typeof StartFileUpload>
 /** A runner starts an upload for a teammate of a thread on its computer: POST /runner/uploads. */
 export const StartRunnerUpload = z
   .object({
-    purpose: z.enum(['library', 'skill_file']),
+    purpose: z.enum(['library', 'skill_file', 'theme_file']),
     sessionId: z.string().min(1).max(64),
     teammateId: z.string().min(1).max(64).optional(),
     name: z.string().trim().min(1).max(500),

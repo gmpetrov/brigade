@@ -75,6 +75,12 @@ export const FEATURES = {
       'to benchmark Pi against Claude Code and Codex.',
     default: false,
   },
+  themes: {
+    description:
+      'Themes (docs/themes.md): a person asks a teammate to restyle their own dashboard (colours, ' +
+      'fonts, a stylesheet, images), which applies live in their windows only. Tried by the team first.',
+    default: false,
+  },
 } as const satisfies Record<string, { description: string; default: boolean }>
 
 export type Feature = keyof typeof FEATURES

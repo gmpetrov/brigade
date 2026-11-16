@@ -464,6 +464,9 @@ export const ModelName = {
   LibraryFolderGrant: 'LibraryFolderGrant',
   LibraryShare: 'LibraryShare',
   ToolState: 'ToolState',
+  Theme: 'Theme',
+  ThemeAsset: 'ThemeAsset',
+  ThemeChange: 'ThemeChange',
   ToolAccount: 'ToolAccount',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
@@ -529,7 +532,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "adConversion" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "toolState" | "toolAccount" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "desktopDevice" | "desktopMessage" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull" | "initiative" | "initiativeAction" | "initiativeOutput" | "initiativeValue"
+    modelProps: "user" | "analyticsFirst" | "adConversion" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "toolState" | "theme" | "themeAsset" | "themeChange" | "toolAccount" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "desktopDevice" | "desktopMessage" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull" | "initiative" | "initiativeAction" | "initiativeOutput" | "initiativeValue"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5491,6 +5494,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Theme: {
+      payload: Prisma.$ThemePayload<ExtArgs>
+      fields: Prisma.ThemeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThemeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThemeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        findFirst: {
+          args: Prisma.ThemeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThemeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        findMany: {
+          args: Prisma.ThemeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>[]
+        }
+        create: {
+          args: Prisma.ThemeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        createMany: {
+          args: Prisma.ThemeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThemeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>[]
+        }
+        delete: {
+          args: Prisma.ThemeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        update: {
+          args: Prisma.ThemeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        deleteMany: {
+          args: Prisma.ThemeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThemeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThemeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>[]
+        }
+        upsert: {
+          args: Prisma.ThemeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemePayload>
+        }
+        aggregate: {
+          args: Prisma.ThemeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTheme>
+        }
+        groupBy: {
+          args: Prisma.ThemeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThemeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThemeAsset: {
+      payload: Prisma.$ThemeAssetPayload<ExtArgs>
+      fields: Prisma.ThemeAssetFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThemeAssetFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThemeAssetFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        findFirst: {
+          args: Prisma.ThemeAssetFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThemeAssetFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        findMany: {
+          args: Prisma.ThemeAssetFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>[]
+        }
+        create: {
+          args: Prisma.ThemeAssetCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        createMany: {
+          args: Prisma.ThemeAssetCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThemeAssetCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>[]
+        }
+        delete: {
+          args: Prisma.ThemeAssetDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        update: {
+          args: Prisma.ThemeAssetUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        deleteMany: {
+          args: Prisma.ThemeAssetDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThemeAssetUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThemeAssetUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>[]
+        }
+        upsert: {
+          args: Prisma.ThemeAssetUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeAssetPayload>
+        }
+        aggregate: {
+          args: Prisma.ThemeAssetAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThemeAsset>
+        }
+        groupBy: {
+          args: Prisma.ThemeAssetGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeAssetGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThemeAssetCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeAssetCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThemeChange: {
+      payload: Prisma.$ThemeChangePayload<ExtArgs>
+      fields: Prisma.ThemeChangeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThemeChangeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThemeChangeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        findFirst: {
+          args: Prisma.ThemeChangeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThemeChangeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        findMany: {
+          args: Prisma.ThemeChangeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>[]
+        }
+        create: {
+          args: Prisma.ThemeChangeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        createMany: {
+          args: Prisma.ThemeChangeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThemeChangeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>[]
+        }
+        delete: {
+          args: Prisma.ThemeChangeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        update: {
+          args: Prisma.ThemeChangeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        deleteMany: {
+          args: Prisma.ThemeChangeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThemeChangeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThemeChangeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>[]
+        }
+        upsert: {
+          args: Prisma.ThemeChangeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThemeChangePayload>
+        }
+        aggregate: {
+          args: Prisma.ThemeChangeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThemeChange>
+        }
+        groupBy: {
+          args: Prisma.ThemeChangeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeChangeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThemeChangeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThemeChangeCountAggregateOutputType> | number
+        }
+      }
+    }
     ToolAccount: {
       payload: Prisma.$ToolAccountPayload<ExtArgs>
       fields: Prisma.ToolAccountFieldRefs
@@ -10402,6 +10627,55 @@ export const ToolStateScalarFieldEnum = {
 export type ToolStateScalarFieldEnum = (typeof ToolStateScalarFieldEnum)[keyof typeof ToolStateScalarFieldEnum]
 
 
+export const ThemeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  slug: 'slug',
+  name: 'name',
+  file: 'file',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ThemeScalarFieldEnum = (typeof ThemeScalarFieldEnum)[keyof typeof ThemeScalarFieldEnum]
+
+
+export const ThemeAssetScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  themeId: 'themeId',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type ThemeAssetScalarFieldEnum = (typeof ThemeAssetScalarFieldEnum)[keyof typeof ThemeAssetScalarFieldEnum]
+
+
+export const ThemeChangeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  seq: 'seq',
+  kind: 'kind',
+  name: 'name',
+  count: 'count',
+  byTeammateId: 'byTeammateId',
+  byName: 'byName',
+  wornSlug: 'wornSlug',
+  wornFile: 'wornFile',
+  createdAt: 'createdAt'
+} as const
+
+export type ThemeChangeScalarFieldEnum = (typeof ThemeChangeScalarFieldEnum)[keyof typeof ThemeChangeScalarFieldEnum]
+
+
 export const ToolAccountScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -12366,6 +12640,9 @@ export type GlobalOmitConfig = {
   libraryFolderGrant?: Prisma.LibraryFolderGrantOmit
   libraryShare?: Prisma.LibraryShareOmit
   toolState?: Prisma.ToolStateOmit
+  theme?: Prisma.ThemeOmit
+  themeAsset?: Prisma.ThemeAssetOmit
+  themeChange?: Prisma.ThemeChangeOmit
   toolAccount?: Prisma.ToolAccountOmit
   documentAsset?: Prisma.DocumentAssetOmit
   bucketCleanup?: Prisma.BucketCleanupOmit

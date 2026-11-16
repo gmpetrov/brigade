@@ -451,6 +451,26 @@ export type LibraryShare = Prisma.LibraryShareModel
  */
 export type ToolState = Prisma.ToolStateModel
 /**
+ * Model Theme
+ * A member's own look for the dashboard (docs/themes.md), made by talking with a teammate:
+ * colours, a stylesheet and the files it uses. One member's, in one workspace: it changes only
+ * their windows there. Which one they wear is their latest ThemeChange's.
+ */
+export type Theme = Prisma.ThemeModel
+/**
+ * Model ThemeAsset
+ * An image or font a theme's stylesheet uses (`url("theme:<name>")`), in the bucket
+ * (themeFileKey). The dashboard loads it from the bucket's signed address, never through the API.
+ */
+export type ThemeAsset = Prisma.ThemeAssetModel
+/**
+ * Model ThemeChange
+ * One of a member's look changes (docs/themes.md), with the look right after it: going back
+ * returns to one of these. Their latest is the look they wear. The last THEME_LIMITS.history
+ * are kept.
+ */
+export type ThemeChange = Prisma.ThemeChangeModel
+/**
  * Model ToolAccount
  * An App account attached to a tool (docs/tools.md): the tool's page may call its operations,
  * through the dashboard, for people allowed to use the account. `codeHash` is the tool's files

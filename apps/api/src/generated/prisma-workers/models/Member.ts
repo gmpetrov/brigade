@@ -288,6 +288,8 @@ export type MemberWhereInput = {
   chiefPasses?: Prisma.ChiefPassListRelationFilter
   pushNotices?: Prisma.PushNoticeListRelationFilter
   playbookInstallations?: Prisma.PlaybookInstallationListRelationFilter
+  themes?: Prisma.ThemeListRelationFilter
+  themeChanges?: Prisma.ThemeChangeListRelationFilter
 }
 
 export type MemberOrderByWithRelationInput = {
@@ -326,6 +328,8 @@ export type MemberOrderByWithRelationInput = {
   chiefPasses?: Prisma.ChiefPassOrderByRelationAggregateInput
   pushNotices?: Prisma.PushNoticeOrderByRelationAggregateInput
   playbookInstallations?: Prisma.PlaybookInstallationOrderByRelationAggregateInput
+  themes?: Prisma.ThemeOrderByRelationAggregateInput
+  themeChanges?: Prisma.ThemeChangeOrderByRelationAggregateInput
 }
 
 export type MemberWhereUniqueInput = Prisma.AtLeast<{
@@ -368,6 +372,8 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   chiefPasses?: Prisma.ChiefPassListRelationFilter
   pushNotices?: Prisma.PushNoticeListRelationFilter
   playbookInstallations?: Prisma.PlaybookInstallationListRelationFilter
+  themes?: Prisma.ThemeListRelationFilter
+  themeChanges?: Prisma.ThemeChangeListRelationFilter
 }, "id" | "organizationId_userId">
 
 export type MemberOrderByWithAggregationInput = {
@@ -450,6 +456,8 @@ export type MemberCreateInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateInput = {
@@ -486,6 +494,8 @@ export type MemberUncheckedCreateInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUpdateInput = {
@@ -522,6 +532,8 @@ export type MemberUpdateInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateInput = {
@@ -558,6 +570,8 @@ export type MemberUncheckedUpdateInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateManyInput = {
@@ -1011,6 +1025,34 @@ export type MemberUpdateOneRequiredWithoutDocumentPinsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutDocumentPinsInput, Prisma.MemberUpdateWithoutDocumentPinsInput>, Prisma.MemberUncheckedUpdateWithoutDocumentPinsInput>
 }
 
+export type MemberCreateNestedOneWithoutThemesInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThemesInput, Prisma.MemberUncheckedCreateWithoutThemesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThemesInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutThemesNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThemesInput, Prisma.MemberUncheckedCreateWithoutThemesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThemesInput
+  upsert?: Prisma.MemberUpsertWithoutThemesInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutThemesInput, Prisma.MemberUpdateWithoutThemesInput>, Prisma.MemberUncheckedUpdateWithoutThemesInput>
+}
+
+export type MemberCreateNestedOneWithoutThemeChangesInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThemeChangesInput, Prisma.MemberUncheckedCreateWithoutThemeChangesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThemeChangesInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutThemeChangesNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThemeChangesInput, Prisma.MemberUncheckedCreateWithoutThemeChangesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThemeChangesInput
+  upsert?: Prisma.MemberUpsertWithoutThemeChangesInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutThemeChangesInput, Prisma.MemberUpdateWithoutThemeChangesInput>, Prisma.MemberUncheckedUpdateWithoutThemeChangesInput>
+}
+
 export type MemberCreateNestedOneWithoutPushNoticesInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutPushNoticesInput
@@ -1072,6 +1114,8 @@ export type MemberCreateWithoutUserInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutUserInput = {
@@ -1107,6 +1151,8 @@ export type MemberUncheckedCreateWithoutUserInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutUserInput = {
@@ -1191,6 +1237,8 @@ export type MemberCreateWithoutOrganizationInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutOrganizationInput = {
@@ -1226,6 +1274,8 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutOrganizationInput = {
@@ -1287,6 +1337,8 @@ export type MemberCreateWithoutComputersInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutComputersInput = {
@@ -1322,6 +1374,8 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutComputersInput = {
@@ -1373,6 +1427,8 @@ export type MemberUpdateWithoutComputersInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutComputersInput = {
@@ -1408,6 +1464,8 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutThreadReadsInput = {
@@ -1443,6 +1501,8 @@ export type MemberCreateWithoutThreadReadsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutThreadReadsInput = {
@@ -1478,6 +1538,8 @@ export type MemberUncheckedCreateWithoutThreadReadsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutThreadReadsInput = {
@@ -1529,6 +1591,8 @@ export type MemberUpdateWithoutThreadReadsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutThreadReadsInput = {
@@ -1564,6 +1628,8 @@ export type MemberUncheckedUpdateWithoutThreadReadsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutThreadPinsInput = {
@@ -1599,6 +1665,8 @@ export type MemberCreateWithoutThreadPinsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutThreadPinsInput = {
@@ -1634,6 +1702,8 @@ export type MemberUncheckedCreateWithoutThreadPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutThreadPinsInput = {
@@ -1685,6 +1755,8 @@ export type MemberUpdateWithoutThreadPinsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutThreadPinsInput = {
@@ -1720,6 +1792,8 @@ export type MemberUncheckedUpdateWithoutThreadPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSidebarOrdersInput = {
@@ -1755,6 +1829,8 @@ export type MemberCreateWithoutSidebarOrdersInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSidebarOrdersInput = {
@@ -1790,6 +1866,8 @@ export type MemberUncheckedCreateWithoutSidebarOrdersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSidebarOrdersInput = {
@@ -1841,6 +1919,8 @@ export type MemberUpdateWithoutSidebarOrdersInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSidebarOrdersInput = {
@@ -1876,6 +1956,8 @@ export type MemberUncheckedUpdateWithoutSidebarOrdersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutThreadLatersInput = {
@@ -1911,6 +1993,8 @@ export type MemberCreateWithoutThreadLatersInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutThreadLatersInput = {
@@ -1946,6 +2030,8 @@ export type MemberUncheckedCreateWithoutThreadLatersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutThreadLatersInput = {
@@ -1997,6 +2083,8 @@ export type MemberUpdateWithoutThreadLatersInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutThreadLatersInput = {
@@ -2032,6 +2120,8 @@ export type MemberUncheckedUpdateWithoutThreadLatersInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutHomeDismissalsInput = {
@@ -2067,6 +2157,8 @@ export type MemberCreateWithoutHomeDismissalsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutHomeDismissalsInput = {
@@ -2102,6 +2194,8 @@ export type MemberUncheckedCreateWithoutHomeDismissalsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutHomeDismissalsInput = {
@@ -2153,6 +2247,8 @@ export type MemberUpdateWithoutHomeDismissalsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutHomeDismissalsInput = {
@@ -2188,6 +2284,8 @@ export type MemberUncheckedUpdateWithoutHomeDismissalsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSessionsInput = {
@@ -2223,6 +2321,8 @@ export type MemberCreateWithoutSessionsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSessionsInput = {
@@ -2258,6 +2358,8 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSessionsInput = {
@@ -2309,6 +2411,8 @@ export type MemberUpdateWithoutSessionsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSessionsInput = {
@@ -2344,6 +2448,8 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutTasksInput = {
@@ -2379,6 +2485,8 @@ export type MemberCreateWithoutTasksInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutTasksInput = {
@@ -2414,6 +2522,8 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutTasksInput = {
@@ -2465,6 +2575,8 @@ export type MemberUpdateWithoutTasksInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutTasksInput = {
@@ -2500,6 +2612,8 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSchedulesInput = {
@@ -2535,6 +2649,8 @@ export type MemberCreateWithoutSchedulesInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSchedulesInput = {
@@ -2570,6 +2686,8 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSchedulesInput = {
@@ -2621,6 +2739,8 @@ export type MemberUpdateWithoutSchedulesInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSchedulesInput = {
@@ -2656,6 +2776,8 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutChiefDecisionsInput = {
@@ -2691,6 +2813,8 @@ export type MemberCreateWithoutChiefDecisionsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutChiefDecisionsInput = {
@@ -2726,6 +2850,8 @@ export type MemberUncheckedCreateWithoutChiefDecisionsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutChiefDecisionsInput = {
@@ -2777,6 +2903,8 @@ export type MemberUpdateWithoutChiefDecisionsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutChiefDecisionsInput = {
@@ -2812,6 +2940,8 @@ export type MemberUncheckedUpdateWithoutChiefDecisionsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutChiefPassesInput = {
@@ -2847,6 +2977,8 @@ export type MemberCreateWithoutChiefPassesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutChiefPassesInput = {
@@ -2882,6 +3014,8 @@ export type MemberUncheckedCreateWithoutChiefPassesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutChiefPassesInput = {
@@ -2933,6 +3067,8 @@ export type MemberUpdateWithoutChiefPassesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutChiefPassesInput = {
@@ -2968,6 +3104,8 @@ export type MemberUncheckedUpdateWithoutChiefPassesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutAccountsInput = {
@@ -3003,6 +3141,8 @@ export type MemberCreateWithoutAccountsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutAccountsInput = {
@@ -3038,6 +3178,8 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutAccountsInput = {
@@ -3089,6 +3231,8 @@ export type MemberUpdateWithoutAccountsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutAccountsInput = {
@@ -3124,6 +3268,8 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutListPinsInput = {
@@ -3159,6 +3305,8 @@ export type MemberCreateWithoutListPinsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutListPinsInput = {
@@ -3194,6 +3342,8 @@ export type MemberUncheckedCreateWithoutListPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutListPinsInput = {
@@ -3245,6 +3395,8 @@ export type MemberUpdateWithoutListPinsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutListPinsInput = {
@@ -3280,6 +3432,8 @@ export type MemberUncheckedUpdateWithoutListPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutDocumentPinsInput = {
@@ -3315,6 +3469,8 @@ export type MemberCreateWithoutDocumentPinsInput = {
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutDocumentPinsInput = {
@@ -3350,6 +3506,8 @@ export type MemberUncheckedCreateWithoutDocumentPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutDocumentPinsInput = {
@@ -3401,6 +3559,8 @@ export type MemberUpdateWithoutDocumentPinsInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutDocumentPinsInput = {
@@ -3436,6 +3596,336 @@ export type MemberUncheckedUpdateWithoutDocumentPinsInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberCreateWithoutThemesInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  removingAt?: Date | string | null
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  autoMerge?: boolean
+  previewMachines?: boolean
+  chiefAnswers?: boolean
+  chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Date | string | null
+  chiefPass?: boolean
+  chiefRules?: string | null
+  chiefRulesRefused?: Prisma.MemberCreatechiefRulesRefusedInput | string[]
+  timezone?: string | null
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutMemberInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutMemberInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
+}
+
+export type MemberUncheckedCreateWithoutThemesInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  removingAt?: Date | string | null
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  autoMerge?: boolean
+  previewMachines?: boolean
+  chiefAnswers?: boolean
+  chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Date | string | null
+  chiefPass?: boolean
+  chiefRules?: string | null
+  chiefRulesRefused?: Prisma.MemberCreatechiefRulesRefusedInput | string[]
+  timezone?: string | null
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutMemberInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutMemberInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
+}
+
+export type MemberCreateOrConnectWithoutThemesInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThemesInput, Prisma.MemberUncheckedCreateWithoutThemesInput>
+}
+
+export type MemberUpsertWithoutThemesInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutThemesInput, Prisma.MemberUncheckedUpdateWithoutThemesInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThemesInput, Prisma.MemberUncheckedCreateWithoutThemesInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutThemesInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutThemesInput, Prisma.MemberUncheckedUpdateWithoutThemesInput>
+}
+
+export type MemberUpdateWithoutThemesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefPass?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefRules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefRulesRefused?: Prisma.MemberUpdatechiefRulesRefusedInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutMemberNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutMemberNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutThemesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefPass?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefRules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefRulesRefused?: Prisma.MemberUpdatechiefRulesRefusedInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutMemberNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutMemberNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberCreateWithoutThemeChangesInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  removingAt?: Date | string | null
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  autoMerge?: boolean
+  previewMachines?: boolean
+  chiefAnswers?: boolean
+  chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Date | string | null
+  chiefPass?: boolean
+  chiefRules?: string | null
+  chiefRulesRefused?: Prisma.MemberCreatechiefRulesRefusedInput | string[]
+  timezone?: string | null
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutMemberInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
+  chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutMemberInput
+  chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+}
+
+export type MemberUncheckedCreateWithoutThemeChangesInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  removingAt?: Date | string | null
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  autoMerge?: boolean
+  previewMachines?: boolean
+  chiefAnswers?: boolean
+  chiefAuto?: Prisma.MemberCreatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Date | string | null
+  chiefPass?: boolean
+  chiefRules?: string | null
+  chiefRulesRefused?: Prisma.MemberCreatechiefRulesRefusedInput | string[]
+  timezone?: string | null
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutMemberInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutMemberInput
+  chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+}
+
+export type MemberCreateOrConnectWithoutThemeChangesInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThemeChangesInput, Prisma.MemberUncheckedCreateWithoutThemeChangesInput>
+}
+
+export type MemberUpsertWithoutThemeChangesInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutThemeChangesInput, Prisma.MemberUncheckedUpdateWithoutThemeChangesInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThemeChangesInput, Prisma.MemberUncheckedCreateWithoutThemeChangesInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutThemeChangesInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutThemeChangesInput, Prisma.MemberUncheckedUpdateWithoutThemeChangesInput>
+}
+
+export type MemberUpdateWithoutThemeChangesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefPass?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefRules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefRulesRefused?: Prisma.MemberUpdatechiefRulesRefusedInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutMemberNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutMemberNestedInput
+  chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutThemeChangesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  previewMachines?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAnswers?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefAuto?: Prisma.MemberUpdatechiefAutoInput | string[]
+  chiefAutoChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chiefPass?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chiefRules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chiefRulesRefused?: Prisma.MemberUpdatechiefRulesRefusedInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutMemberNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
+  chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutMemberNestedInput
+  chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutPushNoticesInput = {
@@ -3471,6 +3961,8 @@ export type MemberCreateWithoutPushNoticesInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutMemberInput
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutPushNoticesInput = {
@@ -3506,6 +3998,8 @@ export type MemberUncheckedCreateWithoutPushNoticesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutMemberInput
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutPushNoticesInput = {
@@ -3557,6 +4051,8 @@ export type MemberUpdateWithoutPushNoticesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutMemberNestedInput
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutPushNoticesInput = {
@@ -3592,6 +4088,8 @@ export type MemberUncheckedUpdateWithoutPushNoticesInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutMemberNestedInput
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutPlaybookInstallationsInput = {
@@ -3627,6 +4125,8 @@ export type MemberCreateWithoutPlaybookInstallationsInput = {
   chiefDecisions?: Prisma.ChiefDecisionCreateNestedManyWithoutMemberInput
   chiefPasses?: Prisma.ChiefPassCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
+  themes?: Prisma.ThemeCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutPlaybookInstallationsInput = {
@@ -3662,6 +4162,8 @@ export type MemberUncheckedCreateWithoutPlaybookInstallationsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedCreateNestedManyWithoutMemberInput
   chiefPasses?: Prisma.ChiefPassUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
+  themes?: Prisma.ThemeUncheckedCreateNestedManyWithoutMemberInput
+  themeChanges?: Prisma.ThemeChangeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutPlaybookInstallationsInput = {
@@ -3713,6 +4215,8 @@ export type MemberUpdateWithoutPlaybookInstallationsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUpdateManyWithoutMemberNestedInput
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutPlaybookInstallationsInput = {
@@ -3748,6 +4252,8 @@ export type MemberUncheckedUpdateWithoutPlaybookInstallationsInput = {
   chiefDecisions?: Prisma.ChiefDecisionUncheckedUpdateManyWithoutMemberNestedInput
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateManyUserInput = {
@@ -3802,6 +4308,8 @@ export type MemberUpdateWithoutUserInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutUserInput = {
@@ -3837,6 +4345,8 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutUserInput = {
@@ -3910,6 +4420,8 @@ export type MemberUpdateWithoutOrganizationInput = {
   chiefPasses?: Prisma.ChiefPassUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutOrganizationInput = {
@@ -3945,6 +4457,8 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   chiefPasses?: Prisma.ChiefPassUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+  themes?: Prisma.ThemeUncheckedUpdateManyWithoutMemberNestedInput
+  themeChanges?: Prisma.ThemeChangeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
@@ -3988,6 +4502,8 @@ export type MemberCountOutputType = {
   chiefPasses: number
   pushNotices: number
   playbookInstallations: number
+  themes: number
+  themeChanges: number
 }
 
 export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4007,6 +4523,8 @@ export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   chiefPasses?: boolean | MemberCountOutputTypeCountChiefPassesArgs
   pushNotices?: boolean | MemberCountOutputTypeCountPushNoticesArgs
   playbookInstallations?: boolean | MemberCountOutputTypeCountPlaybookInstallationsArgs
+  themes?: boolean | MemberCountOutputTypeCountThemesArgs
+  themeChanges?: boolean | MemberCountOutputTypeCountThemeChangesArgs
 }
 
 /**
@@ -4131,6 +4649,20 @@ export type MemberCountOutputTypeCountPlaybookInstallationsArgs<ExtArgs extends 
   where?: Prisma.PlaybookInstallationWhereInput
 }
 
+/**
+ * MemberCountOutputType without action
+ */
+export type MemberCountOutputTypeCountThemesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThemeWhereInput
+}
+
+/**
+ * MemberCountOutputType without action
+ */
+export type MemberCountOutputTypeCountThemeChangesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThemeChangeWhereInput
+}
+
 
 export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4168,6 +4700,8 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   chiefPasses?: boolean | Prisma.Member$chiefPassesArgs<ExtArgs>
   pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
   playbookInstallations?: boolean | Prisma.Member$playbookInstallationsArgs<ExtArgs>
+  themes?: boolean | Prisma.Member$themesArgs<ExtArgs>
+  themeChanges?: boolean | Prisma.Member$themeChangesArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
@@ -4255,6 +4789,8 @@ export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   chiefPasses?: boolean | Prisma.Member$chiefPassesArgs<ExtArgs>
   pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
   playbookInstallations?: boolean | Prisma.Member$playbookInstallationsArgs<ExtArgs>
+  themes?: boolean | Prisma.Member$themesArgs<ExtArgs>
+  themeChanges?: boolean | Prisma.Member$themeChangesArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4290,6 +4826,11 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
      * Playbooks that run on their accounts.
      */
     playbookInstallations: Prisma.$PlaybookInstallationPayload<ExtArgs>[]
+    /**
+     * Their own looks for the dashboard (docs/themes.md), one set per workspace.
+     */
+    themes: Prisma.$ThemePayload<ExtArgs>[]
+    themeChanges: Prisma.$ThemeChangePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4764,6 +5305,8 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   chiefPasses<T extends Prisma.Member$chiefPassesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$chiefPassesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ChiefPassPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pushNotices<T extends Prisma.Member$pushNoticesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$pushNoticesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PushNoticePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playbookInstallations<T extends Prisma.Member$playbookInstallationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$playbookInstallationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookInstallationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  themes<T extends Prisma.Member$themesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$themesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThemePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  themeChanges<T extends Prisma.Member$themeChangesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$themeChangesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThemeChangePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5592,6 +6135,54 @@ export type Member$playbookInstallationsArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.PlaybookInstallationScalarFieldEnum | Prisma.PlaybookInstallationScalarFieldEnum[]
+}
+
+/**
+ * Member.themes
+ */
+export type Member$themesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Theme
+   */
+  select?: Prisma.ThemeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Theme
+   */
+  omit?: Prisma.ThemeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThemeInclude<ExtArgs> | null
+  where?: Prisma.ThemeWhereInput
+  orderBy?: Prisma.ThemeOrderByWithRelationInput | Prisma.ThemeOrderByWithRelationInput[]
+  cursor?: Prisma.ThemeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThemeScalarFieldEnum | Prisma.ThemeScalarFieldEnum[]
+}
+
+/**
+ * Member.themeChanges
+ */
+export type Member$themeChangesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThemeChange
+   */
+  select?: Prisma.ThemeChangeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThemeChange
+   */
+  omit?: Prisma.ThemeChangeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThemeChangeInclude<ExtArgs> | null
+  where?: Prisma.ThemeChangeWhereInput
+  orderBy?: Prisma.ThemeChangeOrderByWithRelationInput | Prisma.ThemeChangeOrderByWithRelationInput[]
+  cursor?: Prisma.ThemeChangeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThemeChangeScalarFieldEnum | Prisma.ThemeChangeScalarFieldEnum[]
 }
 
 /**

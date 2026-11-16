@@ -576,6 +576,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     flow: z.enum(['paste', 'device']).optional(),
     error: z.string().optional(),
   }),
+  /** Their look changed (docs/themes.md), sent only to that member: their windows load it again. */
+  z.object({ type: z.literal('theme.changed') }),
   z.object({ type: z.literal('error'), message: z.string() }),
   /** Keeps the socket from looking idle: Cloudflare closes one silent for a minute. */
   z.object({ type: z.literal('ping') }),

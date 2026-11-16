@@ -78,6 +78,13 @@ export function assetKey(scope: Scope, assetId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/assets/${assetId}`
 }
 
+/** The bucket key of an image or font of a member's theme (src/themes.ts). */
+export function themeFileKey(scope: Scope, fileId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, fileId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/theme-files/${fileId}`
+}
+
 /** The bucket key of a project's logo: one per project, replaced by a new one. */
 export function projectLogoKey(scope: Scope, projectId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, projectId])
@@ -306,11 +313,14 @@ const DOWNLOAD_URL_SECONDS = 5 * 60
  * A short-lived URL the browser can GET one object from, served with the
  * given type and disposition. The bucket answers range requests, so video
  * seeks without the API in the way. `seconds`: how long it works, when not the usual.
+ * `signedAt`: when it counts from, when not now; the same time signs the same URL, which a
+ * browser keeps in its cache (a theme's files, src/themes.ts).
  */
 export async function presignGet(
   key: string,
   response: { contentType: string; disposition: string },
   seconds = DOWNLOAD_URL_SECONDS,
+  signedAt?: Date,
 ) {
   if (!r2) throw new Error('Signed downloads need R2')
   const query = new URLSearchParams({
@@ -320,7 +330,10 @@ export async function presignGet(
   })
   const signed = await r2.client.sign(`${url(key)}?${query}`, {
     method: 'GET',
-    aws: { signQuery: true },
+    aws: {
+      signQuery: true,
+      ...(signedAt ? { datetime: signedAt.toISOString().replace(/[:-]|\.\d{3}/g, '') } : {}),
+    },
   })
   return { url: signed.url, seconds }
 }

@@ -559,10 +559,6 @@ export type DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput = {
   deleteMany?: Prisma.DocumentAssetScalarWhereInput | Prisma.DocumentAssetScalarWhereInput[]
 }
 
-export type EnumAttachmentStatusFieldUpdateOperationsInput = {
-  set?: $Enums.AttachmentStatus
-}
-
 export type DocumentAssetCreateWithoutDocumentInput = {
   id?: string
   organizationId: string

@@ -282,6 +282,11 @@ export const ThreadSpec = z.object({
    * teammate may make one of the work delegated there (create_mission). Older APIs leave it out.
    */
   missions: z.boolean().default(false),
+  /**
+   * Its starter has Themes (the themes feature, docs/themes.md): in a thread a person started, its
+   * teammates may restyle the starter's dashboard (theme_read, theme_set…). Older APIs leave it out.
+   */
+  themes: z.boolean().default(false),
   mission: z
     .object({
       id: z.string(),

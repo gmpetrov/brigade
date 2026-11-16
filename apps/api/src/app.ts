@@ -39,6 +39,7 @@ import { library } from './routes/library.js'
 import { lists } from './routes/lists.js'
 import { boardRoutes } from './routes/board.js'
 import { missionRoutes } from './routes/missions.js'
+import { themeRoutes } from './routes/themes.js'
 import { notifications } from './routes/notifications.js'
 import { desktopNotifications } from './routes/desktop-notifications.js'
 import { projects } from './routes/projects.js'
@@ -244,6 +245,7 @@ app.route('/api/library', library)
 app.route('/api/lists', lists)
 app.route('/api/board', boardRoutes)
 app.route('/api/missions', missionRoutes)
+app.route('/api/themes', themeRoutes)
 app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)

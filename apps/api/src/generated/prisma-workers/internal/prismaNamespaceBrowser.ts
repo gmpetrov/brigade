@@ -118,6 +118,9 @@ export const ModelName = {
   LibraryFolderGrant: 'LibraryFolderGrant',
   LibraryShare: 'LibraryShare',
   ToolState: 'ToolState',
+  Theme: 'Theme',
+  ThemeAsset: 'ThemeAsset',
+  ThemeChange: 'ThemeChange',
   ToolAccount: 'ToolAccount',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
@@ -1356,6 +1359,55 @@ export const ToolStateScalarFieldEnum = {
 } as const
 
 export type ToolStateScalarFieldEnum = (typeof ToolStateScalarFieldEnum)[keyof typeof ToolStateScalarFieldEnum]
+
+
+export const ThemeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  slug: 'slug',
+  name: 'name',
+  file: 'file',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ThemeScalarFieldEnum = (typeof ThemeScalarFieldEnum)[keyof typeof ThemeScalarFieldEnum]
+
+
+export const ThemeAssetScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  themeId: 'themeId',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type ThemeAssetScalarFieldEnum = (typeof ThemeAssetScalarFieldEnum)[keyof typeof ThemeAssetScalarFieldEnum]
+
+
+export const ThemeChangeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  seq: 'seq',
+  kind: 'kind',
+  name: 'name',
+  count: 'count',
+  byTeammateId: 'byTeammateId',
+  byName: 'byName',
+  wornSlug: 'wornSlug',
+  wornFile: 'wornFile',
+  createdAt: 'createdAt'
+} as const
+
+export type ThemeChangeScalarFieldEnum = (typeof ThemeChangeScalarFieldEnum)[keyof typeof ThemeChangeScalarFieldEnum]
 
 
 export const ToolAccountScalarFieldEnum = {

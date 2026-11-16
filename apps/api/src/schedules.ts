@@ -36,6 +36,7 @@ import { actingTeammate, loadThread, shownAccounts } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleListCall, isListOperation } from './lists.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
+import { handleThemeCall, isThemeOperation } from './themes.js'
 import { handleInitiativeCall, isInitiativeOperation, missionIdOfThread } from './initiatives.js'
 import { completeThread, isDoneOperation } from './thread-done.js'
 import { startThread } from './work.js'
@@ -566,6 +567,11 @@ export async function handleScheduleCall(
   // And missions (docs/missions.md): actions planned, outputs and numbers recorded.
   if (isInitiativeOperation(op)) {
     const output = await handleInitiativeCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And themes (docs/themes.md): the starter's own look for the dashboard.
+  if (isThemeOperation(op)) {
+    const output = await handleThemeCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And goals (docs/goals.md): a contract proposed, where one stands, and its summary.
