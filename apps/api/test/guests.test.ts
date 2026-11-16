@@ -343,3 +343,78 @@ test('a guest project full of work waits for the account to be saved', { skip },
   await prisma.user.update({ where: { id: guest.userId }, data: { guest: false } })
   await guests.requireGuestRoom(guest.userId, guest.workspaceId)
 })
+
+test('tries sent at once each count: none gets past the fifth', { skip }, async () => {
+  const guest = await newGuest()
+  const email = `race-${run}@example.com`
+  emails.push(email)
+  const code = await savingCode(guest.cookie, email)
+  const other = code === '000000' ? '111111' : '000000'
+  const wrong = await Promise.all(
+    Array.from({ length: 20 }, () =>
+      call('/api/auth/guest/save', { body: { email, code: other }, cookie: guest.cookie }),
+    ),
+  )
+  assert.ok(wrong.every((r) => r.status === 400))
+  const right = await call('/api/auth/guest/save', { body: { email, code }, cookie: guest.cookie })
+  assert.equal(right.status, 400)
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: guest.userId } })).guest, true)
+})
+
+test('the right code sent twice at once saves once', { skip }, async () => {
+  const guest = await newGuest()
+  const email = `twice-${run}@example.com`
+  emails.push(email)
+  const code = await savingCode(guest.cookie, email)
+  const both = await Promise.all(
+    [0, 1].map(() => call('/api/auth/guest/save', { body: { email, code }, cookie: guest.cookie })),
+  )
+  assert.deepEqual(both.map((r) => r.status).sort(), [200, 400])
+})
+
+test(
+  'a guest the sweep has taken can no longer be saved, and one saved first is spared',
+  { skip },
+  async () => {
+    const later = new Date(Date.now() + (guests.GUEST_IDLE_DAYS + 1) * 24 * 60 * 60_000)
+    // Saved before the sweep reaches them: left alone.
+    const saving = await newGuest()
+    const email = `spared-${run}@example.com`
+    emails.push(email)
+    const code = await savingCode(saving.cookie, email)
+    const saved = await call('/api/auth/guest/save', {
+      body: { email, code },
+      cookie: saving.cookie,
+    })
+    assert.equal(saved.status, 200)
+    // Taken by the sweep (its first step), then the right code: it saves nothing.
+    const taken = await newGuest()
+    const takenEmail = `taken-by-sweep-${run}@example.com`
+    emails.push(takenEmail)
+    const takenCode = await savingCode(taken.cookie, takenEmail)
+    await prisma.user.update({
+      where: { id: taken.userId },
+      data: { email: `swept-${taken.userId}@${guests.GUEST_EMAIL_DOMAIN}` },
+    })
+    const refused = await call('/api/auth/guest/save', {
+      body: { email: takenEmail, code: takenCode },
+      cookie: taken.cookie,
+    })
+    assert.equal(refused.status, 409)
+    assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: taken.userId } })).guest, true)
+    // Taken by the sweep while their code is on its way: the code saves nothing.
+    const swept = await newGuest()
+    const late = `late-${run}@example.com`
+    emails.push(late)
+    const lateCode = await savingCode(swept.cookie, late)
+    const deleted = await guests.sweepIdleGuests(later, 1000)
+    assert.ok(deleted.includes(swept.userId))
+    assert.ok(!deleted.includes(saving.userId))
+    assert.equal(await prisma.user.count({ where: { id: saving.userId } }), 1)
+    const after = await call('/api/auth/guest/save', {
+      body: { email: late, code: lateCode },
+      cookie: swept.cookie,
+    })
+    assert.notEqual(after.status, 200)
+  },
+)

@@ -69,6 +69,8 @@ export default function SignIn() {
   }
 
   async function startWithoutAccount() {
+    // Asked for now (the button, or the first launch): whatever was chosen before gives way.
+    signingIn.current = false
     setError(undefined)
     setGuest('starting')
     try {

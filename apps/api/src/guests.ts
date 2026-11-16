@@ -189,33 +189,36 @@ export const guestSignIn = () =>
           const userId = c.context.session.user.id
           const wrong = () =>
             c.error('BAD_REQUEST', { message: 'This code is wrong or has expired' })
-          const row = await prisma.verification.findFirst({
-            where: { identifier: savingIdentifier(userId) },
-          })
-          if (!row || row.expiresAt < new Date()) throw wrong()
+          // A try counts before it is checked, in one statement: tries sent at once each count,
+          // and none past the last.
+          const [row] = await prisma.$queryRaw<{ id: string; value: string }[]>`
+            UPDATE "Verification"
+            SET "value" = jsonb_set(
+                  "value"::jsonb,
+                  '{tries}',
+                  to_jsonb(coalesce(("value"::jsonb ->> 'tries')::int, 0) + 1)
+                )::text,
+                "updatedAt" = now()
+            WHERE "identifier" = ${savingIdentifier(userId)}
+              AND "expiresAt" > now()
+              AND coalesce(("value"::jsonb ->> 'tries')::int, 0) < ${CODE_TRIES}
+            RETURNING "id", "value"`
+          if (!row) throw wrong()
           const saving = JSON.parse(row.value) as Saving
           const given = Buffer.from(digest(c.body.code))
-          const right =
-            saving.email === c.body.email &&
-            timingSafeEqual(given, Buffer.from(saving.code)) &&
-            saving.tries < CODE_TRIES
-          if (!right) {
-            // Each wrong try counts; the last one uses the code up.
-            const tries = saving.tries + 1
-            await prisma.verification.updateMany({
-              where: { id: row.id },
-              data: { value: JSON.stringify({ ...saving, tries }) },
-            })
+          if (saving.email !== c.body.email || !timingSafeEqual(given, Buffer.from(saving.code)))
             throw wrong()
-          }
-          await prisma.verification.deleteMany({ where: { id: row.id } })
+          // The right code works once: only the request that removes it goes on.
+          const used = await prisma.verification.deleteMany({ where: { id: row.id } })
+          if (!used.count) throw wrong()
           // Only a guest becomes saved, and only with an address nobody took meanwhile.
           const saved = await prisma
             .$transaction(async (tx) => {
               if (await tx.user.count({ where: { email: saving.email } })) return 0
               const user = await tx.user.findUnique({ where: { id: userId } })
               const { count } = await tx.user.updateMany({
-                where: { id: userId, guest: true },
+                // Not one the sweep has taken to delete (its address is a swept one then).
+                where: { id: userId, guest: true, email: { startsWith: 'guest-' } },
                 // The placeholder name goes, as a sign-up with a code has none; one they gave stays.
                 data: {
                   email: saving.email,
@@ -265,7 +268,7 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
         },
       },
     },
-    select: { id: true },
+    select: { id: true, email: true },
     orderBy: { createdAt: 'asc' },
     take: limit,
   })
@@ -273,10 +276,22 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
   const { deleteAccount } = await import('./account-delete.js')
   const deleted: string[] = []
   for (const guest of guests) {
+    // Taken first, in one statement: a guest saving their account at this moment is either
+    // saved (and left alone here) or refused (src/guests.ts's saveGuest wants a guest's address).
+    const swept = `swept-${guest.id}@${GUEST_EMAIL_DOMAIN}`
+    const taken = await prisma.user.updateMany({
+      where: { id: guest.id, guest: true, email: guest.email },
+      data: { email: swept },
+    })
+    if (!taken.count) continue
     try {
       await deleteAccount(guest.id)
       deleted.push(guest.id)
     } catch (error) {
+      // Still at work: it stays a guest, with its address back, for a later run.
+      await prisma.user
+        .updateMany({ where: { id: guest.id, email: swept }, data: { email: guest.email } })
+        .catch(() => {})
       console.warn(`idle guest ${guest.id} not deleted yet: ${String(error)}`)
     }
   }
