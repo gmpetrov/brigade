@@ -16,6 +16,7 @@ import {
   NODE_VERSION,
   nodeAtLeast,
   RunnerLinkResult,
+  themeFileType,
   type AgentEvent,
   type ApiToRunner,
   type ThreadSpec,
@@ -60,7 +61,7 @@ import { EventFiles } from './event-files.js'
 import { Outbox } from './outbox.js'
 import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
-import { bundleStore, cleanStaging, libraryMessage } from './uploads.js'
+import { bundleStore, cleanStaging, libraryMessage, uploadForTeammate } from './uploads.js'
 import { MemoryGuard, memoryRoom, turnsAtOnce } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { MachineHolds } from './machine-holds.js'
@@ -454,6 +455,16 @@ async function start() {
       memoryFor: (teammateId) => library.memoryFor(teammateId),
       bundles,
       uploadFile: (input) => attachments.upload(input),
+      // A theme's image or font (docs/themes.md), staged: to the bucket, checked once in.
+      uploadThemeFile: async ({ file, ...seat }) =>
+        (
+          await uploadForTeammate(config, {
+            purpose: 'theme_file',
+            ...seat,
+            contentType: themeFileType(seat.name) ?? '',
+            file,
+          })
+        ).id,
       skillFile: (hash) => attachments.skillFile(hash),
       conversation: async (sessionId, teammateId) => {
         const response = await folderRequest({ sessionId, teammateId }, '/conversation')

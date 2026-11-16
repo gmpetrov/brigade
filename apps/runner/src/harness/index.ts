@@ -14,6 +14,7 @@ import {
   ATTACHMENT_MAX,
   CODEX_DEFAULT_MODEL,
   LIBRARY_FILE_MAX,
+  THEME_LIMITS,
   type AccountRef,
   type AgentEvent,
   type BackgroundWork,
@@ -122,7 +123,7 @@ import { ReplyWatch, terminalTools } from './replies.js'
 import { declareDone, Outbox } from './outbox.js'
 import { Arrivals } from './arrivals.js'
 import { filesFieldsOf, withUploads } from './call-files.js'
-import { stageStream } from '../uploads.js'
+import { stageStream, type StagedFile } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import { backgroundTasks, backgroundWait, reportWaitsFor } from './background.js'
 import {
@@ -136,6 +137,7 @@ import {
   credentialTools,
   doneTools,
   goalTools,
+  themeTools,
   missionTools,
   createMissionTools,
   imageTools,
@@ -203,6 +205,13 @@ export type ThreadContext = {
   }) => Promise<string>
   /** What was said in a thread before it moved to this computer, as the teammate's conversation. */
   conversation: (sessionId: string, teammateId: string) => Promise<Transcript>
+  /** A theme's file, staged on this computer, to the bucket (docs/themes.md). Returns the upload's id. */
+  uploadThemeFile?: (input: {
+    sessionId: string
+    teammateId: string
+    name: string
+    file: StagedFile
+  }) => Promise<string>
 }
 export type { CredentialRequester } from '../credentials.js'
 
@@ -506,6 +515,8 @@ function createAgent(
           : spec.parent && !spec.playbook
             ? goalTools(callSchedule, { top: false })
             : {}),
+        // Themes (docs/themes.md): the starter's own look, in a thread they started.
+        ...(spec.themes && startedByPerson(spec) ? themeTools(callSchedule) : {}),
         // Missions (docs/missions.md): in a thread of one, its plan and what went out.
         ...(spec.mission
           ? missionTools(callSchedule, spec.mission)
@@ -2520,8 +2531,8 @@ export class HarnessThread {
             }
           : result
       },
-      (call) =>
-        reportWithFiles(this.reportsWhenDone(call), {
+      async (call) =>
+        reportWithFiles(this.reportsWhenDone(await this.themeFileCall(call)), {
           read: (file, max) => this.readFile(file, max, 'Files sent with a report'),
           upload: (name, bytes) =>
             this.context.uploadFile({
@@ -2808,6 +2819,31 @@ export class HarnessThread {
   }
 
   /** A child's report waits for the teammate's own sub-agents (reportWaitsFor). */
+  /**
+   * theme_add_file names a file of the teammate's: read as the teammate sees it, it goes to the
+   * bucket first, and the call names the upload (docs/themes.md).
+   */
+  private async themeFileCall(
+    call: Parameters<ScheduleCaller>[0],
+  ): Promise<Parameters<ScheduleCaller>[0]> {
+    const { operation } = call
+    if (operation.name !== 'theme_add_file' || operation.upload) return call
+    const upload = this.context.uploadThemeFile
+    if (!upload) throw new Error("This computer's Brigade cannot send theme files yet.")
+    const staged = await this.stageFile(operation.path, THEME_LIMITS.fileBytes, 'Theme files')
+    try {
+      const id = await upload({
+        sessionId: this.spec.sessionId,
+        teammateId: this.spec.teammate.id,
+        name: basename(operation.path),
+        file: staged,
+      })
+      return { ...call, operation: { ...operation, upload: { id } } }
+    } finally {
+      await rm(staged.path, { force: true })
+    }
+  }
+
   private reportsWhenDone(call: Parameters<ScheduleCaller>[0]) {
     const waits = call.operation.name === 'report' ? reportWaitsFor(this.background) : undefined
     if (waits) throw new Error(waits)

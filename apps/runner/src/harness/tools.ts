@@ -4743,3 +4743,127 @@ export function missionTools(
     })
   return tools
 }
+
+/** What a theme tool says on an API from before themes. */
+const THEMES_UNKNOWN =
+  "Brigade's server does not have themes yet: it is older than this computer's runner. Tell the person it comes with Brigade's next update."
+
+/**
+ * Themes (docs/themes.md): the look of the dashboard for the person who started the thread, in
+ * their windows only. Through the schedule calls, which the API checks; theme_add_file's file is
+ * uploaded by the harness before the call (themeFileCall in index.ts).
+ */
+export function themeTools(call: ScheduleCaller): Record<string, Tool> {
+  const send = (
+    operation: ScheduleOperation,
+    toolCallId: string,
+    toolName: string,
+    input: unknown,
+  ) =>
+    call({ operation, toolCallId, toolName, input }).catch((error: unknown) => {
+      if (errorMessage(error).includes('could not read this call')) throw new Error(THEMES_UNKNOWN)
+      throw error
+    })
+  return {
+    theme_read: tool({
+      description:
+        "Read the person's themes for Brigade's dashboard: the one they wear, the ones saved, their last look changes (each with its seq) and the guide to writing one (colours, CSS, files, stable selectors). Call it before your first theme_set in a thread. id: also return that saved theme whole.",
+      inputSchema: jsonSchema<{ id?: string }>({
+        type: 'object',
+        properties: { id: { type: 'string', description: "A saved theme's id" } },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'theme_read', ...(input.id ? { id: input.id } : {}) },
+          toolCallId,
+          'theme_read',
+          input,
+        ),
+    }),
+    theme_set: tool({
+      description:
+        "Restyle Brigade's dashboard for the person who started this thread, live in their windows only. With theme: save it (as id, or its name's slug) and wear it. With only id: wear that saved theme, or \"none\" for the dashboard's own look. Read theme_read's guide first; make one small change at a time and ask how it looks.",
+      inputSchema: jsonSchema<{ id?: string; theme?: Record<string, unknown> }>({
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'Lowercase letters, digits and dashes; "none" takes the theme off',
+          },
+          theme: {
+            type: 'object',
+            description:
+              'The whole theme: { name, canvas?, accent?, colors?, radius?, font?, fontMono?, css? }, as theme_read\'s guide says',
+            properties: {
+              name: { type: 'string' },
+              canvas: { type: 'string', description: 'Base background, hex' },
+              accent: { type: 'string', description: 'Highlight, hex' },
+              colors: {
+                type: 'object',
+                additionalProperties: { type: 'string' },
+                description: 'Single colour tokens by name',
+              },
+              radius: { type: 'string', description: 'e.g. "0.5rem", "0"' },
+              font: { type: 'string', description: 'A font-family list' },
+              fontMono: { type: 'string', description: 'A font-family list for code' },
+              css: { type: 'string', description: "Applied after the dashboard's own styles" },
+            },
+            required: ['name'],
+          },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'theme_set',
+            ...(input.id ? { id: input.id } : {}),
+            ...(input.theme !== undefined ? { theme: input.theme } : {}),
+          },
+          toolCallId,
+          'theme_set',
+          input,
+        ),
+    }),
+    theme_add_file: tool({
+      description:
+        'Copy an image (png, jpg, webp, gif, avif) or a font (woff2, woff, ttf, otf) from your folder or this thread\'s attachments into a saved theme, up to 5 MB. Its css then names it url("theme:<file>"): the answer gives the name. No SVG.',
+      inputSchema: jsonSchema<{ id: string; path: string }>({
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: "The saved theme's id" },
+          path: { type: 'string', description: 'The file, as you would read it' },
+        },
+        required: ['id', 'path'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'theme_add_file', id: input.id, path: input.path },
+          toolCallId,
+          'theme_add_file',
+          input,
+        ),
+    }),
+    theme_undo: tool({
+      description:
+        "Go back on the person's look changes: steps (default 1) undoes that many; seq (from theme_read's history) returns to the look right after that change, 0 to before any. An undo is a change too: undoing it again is a redo.",
+      inputSchema: jsonSchema<{ steps?: number; seq?: number }>({
+        type: 'object',
+        properties: {
+          steps: { type: 'number', description: 'How many changes to undo' },
+          seq: { type: 'number', description: "A change's seq from theme_read" },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'theme_undo',
+            ...(input.steps !== undefined ? { steps: input.steps } : {}),
+            ...(input.seq !== undefined ? { seq: input.seq } : {}),
+          },
+          toolCallId,
+          'theme_undo',
+          input,
+        ),
+    }),
+  }
+}

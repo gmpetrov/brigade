@@ -185,7 +185,7 @@ export async function upload<T, K>(
 export function uploadForTeammate(
   api: Api,
   input: {
-    purpose: 'library' | 'skill_file'
+    purpose: 'library' | 'skill_file' | 'theme_file'
     sessionId: string
     teammateId?: string
     name: string

@@ -162,6 +162,8 @@ export function instructions(
     spec.mission
       ? mission(spec.mission)
       : spec.missions && startedByPerson(spec) && MAKING_MISSIONS,
+    // The starter's own look for the dashboard (the themes feature, docs/themes.md).
+    spec.themes && startedByPerson(spec) && THEMES,
     // A dry run starts none: nobody would answer it.
     !spec.playbook?.dryRun && children(spec),
     spec.playbook
@@ -1100,6 +1102,14 @@ const MAKING_MISSIONS =
   'there is one. The Missions page then shows them what is planned, what waits on them and what went ' +
   'out, without opening this thread. Not for a one-off task or a deliverable: those are threads, and ' +
   'lists for checklists. One mission per initiative: say so in your reply when you make one.'
+
+const THEMES =
+  '## Brigade themes\n\n' +
+  "When the person asks to change how Brigade itself looks for them (its colours, fonts, density, a " +
+  'background, \"make it look like…\"), restyle it with `theme_set`, after reading `theme_read` and its ' +
+  'guide. It changes only their own windows, live. You cannot see it: change one thing at a time and ' +
+  'ask how it looks. A theme changes the look, never the layout or what a screen does: say so rather ' +
+  'than promise it. Not for the design of their own product: that is a design.'
 
 /** A thread of a mission (docs/missions.md): what it is, and how its plan and outputs are kept. */
 const mission = (m: NonNullable<ThreadSpec['mission']>) =>
