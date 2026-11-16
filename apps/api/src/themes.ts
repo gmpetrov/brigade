@@ -25,7 +25,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { deleteObject, directUploads, presignGet, readHead, themeFileKey } from './bucket.js'
-import { Prisma, type Scope, type ScopedDb } from './db.js'
+import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
 import { featuresOfMember } from './features.js'
 import { shownAccounts } from './thread-spec.js'
 import { hubs } from './hub.js'
@@ -471,6 +471,12 @@ async function checkUpload(
   return { ...upload, name, type }
 }
 
+/** Tests only: runs once a store's files are copied, before they are published. */
+let beforePublish: (() => Promise<void>) | undefined
+export const onThemeFilesPublish = (hook: (() => Promise<void>) | undefined) => {
+  beforePublish = hook
+}
+
 /**
  * Checked uploads into a theme, all or none: each is copied to a file of its own, pending and
  * so unseen; once all are in, they are ready and the files they replace go. A failure on the
@@ -494,17 +500,33 @@ async function storeFiles(db: ScopedDb, scope: Scope, themeId: string, uploads: 
     throw error
   }
   const names = staged.map((r) => r.name)
-  const replaced = await db.themeAsset.findMany({
-    where: { themeId, name: { in: names }, id: { notIn: staged.map((r) => r.id) } },
+  const stagedIds = staged.map((r) => r.id)
+  await beforePublish?.()
+  // One publication at a time per theme, under its row's lock: each replaces only the files
+  // ready before it, never another's still on its way, so two at once leave the later one's.
+  const replaced = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`
+      SELECT id FROM "Theme" WHERE id = ${themeId} AND "workspaceId" = ${scope.workspaceId}
+      FOR UPDATE`
+    const old = await tx.themeAsset.findMany({
+      where: {
+        themeId,
+        workspaceId: scope.workspaceId,
+        name: { in: names },
+        status: 'ready',
+        id: { notIn: stagedIds },
+      },
+      select: { id: true, name: true },
+    })
+    await tx.themeAsset.updateMany({
+      where: { id: { in: stagedIds }, workspaceId: scope.workspaceId },
+      data: { status: 'ready' },
+    })
+    if (old.length) await tx.themeAsset.deleteMany({ where: { id: { in: old.map((o) => o.id) } } })
+    return old
   })
-  await db.themeAsset.updateMany({
-    where: { id: { in: staged.map((r) => r.id) } },
-    data: { status: 'ready' },
-  })
-  for (const old of replaced) {
-    await db.themeAsset.delete({ where: { id: old.id } }).catch(() => undefined)
-    await removeFileBytes(scope, old.id)
-  }
+  // Once nothing refers to them any more.
+  for (const old of replaced) await removeFileBytes(scope, old.id)
   return replaced.map((r) => r.name)
 }
 

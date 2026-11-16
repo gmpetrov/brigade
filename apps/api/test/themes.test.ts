@@ -367,6 +367,58 @@ describe('themes', { skip: !database && 'no database answers' }, () => {
     assert.equal(await themes.readTheme(db, ada, 'never'), null)
   })
 
+  test('two replacements of one file at once leave one, the later', async () => {
+    const { getObject, putObject, themeFileKey } = await import('../src/bucket.js')
+    const { uploadBytesKey } = await import('../src/uploads.js')
+    await themes.saveAndWear(db, scope, ada, { slug: 'race', theme: { name: 'Race' }, by: null })
+    const upload = async () => {
+      const row = await db.upload.create({
+        data: {
+          purpose: 'theme_file',
+          name: 'r.png',
+          contentType: 'image/png',
+          size: PNG.byteLength,
+          status: 'ready',
+          checked: 'c1',
+          memberId: ada,
+        } as never,
+      })
+      await putObject(uploadBytesKey(scope, row), PNG, 'image/png')
+      return row.id
+    }
+    const ids = [await upload(), await upload()]
+    // Both copied before either publishes: the interleaving that lost both.
+    let arrived = 0
+    let release!: () => void
+    const both = new Promise<void>((resolve) => (release = resolve))
+    themes.onThemeFilesPublish(async () => {
+      if (++arrived === 2) release()
+      await both
+    })
+    try {
+      await Promise.all(
+        ids.map((uploadId) =>
+          themes.addFile(db, scope, ada, {
+            slug: 'race',
+            name: 'r.png',
+            uploadId,
+            owner: { memberId: ada },
+          }),
+        ),
+      )
+    } finally {
+      themes.onThemeFilesPublish(undefined)
+    }
+    const rows = await db.themeAsset.findMany({
+      where: { theme: { memberId: ada, slug: 'race' }, name: 'r.png' },
+    })
+    assert.deepEqual(
+      rows.map((r) => r.status),
+      ['ready'],
+    )
+    assert.ok(await getObject(themeFileKey(scope, rows[0]!.id)), 'its bytes are kept')
+  })
+
   test('only in a thread a person started, with the themes feature', async () => {
     const trigger = await call({ name: 'theme_read' }, session(ada, 'trigger'))
     assert.match(String(trigger.error), /thread a person started/)
