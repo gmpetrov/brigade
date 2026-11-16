@@ -7,6 +7,7 @@ import { desktopBridge } from './desktop-bridge'
 // request to the API or work in the dashboard's Worker. A stale one costs a trip:
 // /app gets a 401, clears it and sends the browser back to sign in.
 const NAME = 'brigade_signed_in'
+const KNOWN = 'brigade_known'
 
 /**
  * Where to go once signed in: /app, or the page that sent the browser to sign in (?next=),
@@ -34,7 +35,13 @@ export function afterSignIn() {
 export function markSignedIn() {
   const secure = location.protocol === 'https:' ? '; secure' : ''
   document.cookie = `${NAME}=1; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax${secure}`
+  // Kept through signing out: Brigade.app's window does not start a guest where someone was
+  // signed in before (lib/guest.ts).
+  document.cookie = `${KNOWN}=1; path=/; max-age=${60 * 60 * 24 * 400}; samesite=lax${secure}`
 }
+
+/** Whether someone was ever signed in in this browser (or Brigade.app's window). */
+export const signedInBefore = () => new RegExp(`(?:^|; )${KNOWN}=1`).test(document.cookie)
 
 export function markSignedOut() {
   document.cookie = `${NAME}=; path=/; max-age=0`

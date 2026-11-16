@@ -6,6 +6,7 @@
 import { api, type Me } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 import { desktopPlatform, inCaptureWindow, inDesktopApp } from '@/lib/brigade-app'
+import { desktopBridge } from '@/lib/desktop-bridge'
 import { markSignedIn } from '@/lib/signed-in'
 import { signupSourceHere } from '@/lib/signup-source'
 
@@ -27,9 +28,11 @@ const slug = () => `my-project-${Math.random().toString(36).slice(2, 8)}`
 /** Become a guest, with a first project, ready for onboarding's next step. */
 export async function startAsGuest() {
   const source = signupSourceHere()
+  // Greeted by the computer's own account's name, as the app reads it; else Guest.
+  const name = desktopBridge()?.info.userName
   const started = await authClient.$fetch('/guest', {
     method: 'POST',
-    body: source ? { signupSource: source } : {},
+    body: { ...(source && { signupSource: source }), ...(name && { name }) },
   })
   if (started.error) throw new Error(started.error.message ?? 'Could not start Brigade')
   markSignedIn()

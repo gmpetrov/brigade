@@ -7,6 +7,7 @@ import { closeFind, findAgain, openFind } from './find.js'
 import * as notifications from './notifications.js'
 import { startProviderSignIn } from './provider-sign-in.js'
 import { onDashboard } from './settings.js'
+import { accountFullName } from './system-name.js'
 import { dashboardFrame, kindOf, setFrameColors, setNarrow, type WindowKind } from './windows.js'
 
 /** The bridge's version: the dashboard checks it before using what came later. */
@@ -19,6 +20,11 @@ function from(event: IpcMainEvent | IpcMainInvokeEvent): WindowKind | undefined 
 }
 
 export function registerBridge() {
+  // Read once, early: a page asks for `info` as it loads, and waits for nothing.
+  let userName: string | null = null
+  void accountFullName()
+    .then((name) => (userName = name))
+    .catch(() => {})
   ipcMain.on('brigade:info', (event) => {
     const kind = from(event)
     event.returnValue = kind
@@ -30,6 +36,8 @@ export function registerBridge() {
           ...(kind === 'main' && { frame: dashboardFrame() }),
           version: app.getVersion(),
           bridge: BRIDGE_VERSION,
+          // The computer's account's full name, for a guest's account (docs/guests.md).
+          ...(kind === 'main' && userName && { userName }),
         }
       : null
   })

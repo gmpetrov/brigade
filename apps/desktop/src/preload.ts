@@ -10,6 +10,8 @@ type Info = {
   bridge: number
   /** The dashboard window's frame: 'mac' (no title bar), 'overlay' (Windows), 'native'. */
   frame?: 'mac' | 'overlay' | 'native'
+  /** The computer's account's full name, when it has one worth greeting by (system-name.ts). */
+  userName?: string
 }
 
 const info = ipcRenderer.sendSync('brigade:info') as Info | null

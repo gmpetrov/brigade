@@ -10,6 +10,8 @@ export type DesktopBridge = {
     bridge: number
     /** The dashboard window's frame (apps/desktop/src/windows.ts); older apps leave it out. */
     frame?: 'mac' | 'overlay' | 'native'
+    /** The computer's account's full name, for a guest's account; older apps leave it out. */
+    userName?: string
   }
   captures: {
     list: () => Promise<string[]>

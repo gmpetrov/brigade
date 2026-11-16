@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { EmailSignIn } from '@/components/email-sign-in'
 import { GoogleSignIn } from '@/components/google-sign-in'
@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
 import { inCaptureWindow, inDesktopApp, signInWithBrowser } from '@/lib/brigade-app'
 import { guestOffered, startAsGuest } from '@/lib/guest'
-import { afterSignIn, markSignedIn } from '@/lib/signed-in'
+import { afterSignIn, markSignedIn, signedInBefore } from '@/lib/signed-in'
 
 export default function SignIn() {
   const router = useRouter()
@@ -19,8 +19,11 @@ export default function SignIn() {
   // In Brigade.app's windows, the browser signs in (lib/brigade-app.ts): its own session is
   // out of reach here. 'waiting': the browser is open; 'form': the form here after all.
   const [app, setApp] = useState<'browser' | 'waiting' | 'form'>()
-  // In Brigade.app, with guests open: start without an account (docs/guests.md).
+  // In Brigade.app, with guests open (docs/guests.md): a window nobody ever signed in to starts
+  // as a guest at once ('starting'); one someone signed out of offers it ('offered').
   const [guest, setGuest] = useState<'offered' | 'starting'>()
+  // 'Already have an account?' while it starts: the sign-in stays, whatever the start does.
+  const signingIn = useRef(false)
   // Back from Google with ?error=: the API names what went wrong. With ?signed, signed in
   // with Google on the way to ?next=. In Brigade.app's window, with ?desktop_code= and
   // ?verifier=: the browser's sign-in, brought back by the app.
@@ -35,7 +38,11 @@ export default function SignIn() {
     if (!inDesktopApp()) return
     setApp('browser')
     void guestOffered()
-      .then((offered) => offered && setGuest((was) => was ?? 'offered'))
+      .then((offered) => {
+        if (!offered) return
+        if (signedInBefore()) return setGuest((was) => was ?? 'offered')
+        void startWithoutAccount()
+      })
       .catch(() => {})
     const code = query.get('desktop_code')
     const verifier = query.get('verifier')
@@ -66,7 +73,7 @@ export default function SignIn() {
     setGuest('starting')
     try {
       await startAsGuest()
-      location.replace('/onboarding')
+      if (!signingIn.current) location.replace('/onboarding')
     } catch (e) {
       setError((e as Error).message)
       setGuest('offered')
@@ -92,7 +99,25 @@ export default function SignIn() {
             <p className="text-sm text-muted-foreground">Your AI teammates are waiting.</p>
           </div>
         </div>
-        {app === 'browser' || app === 'waiting' ? (
+        {guest === 'starting' && !signingIn.current ? (
+          <Card>
+            <CardContent className="flex flex-col gap-5">
+              <p className="text-center text-sm text-muted-foreground">
+                Getting your workspace ready…
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  signingIn.current = true
+                  setGuest('offered')
+                }}
+                className="self-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Already have an account? Sign in
+              </button>
+            </CardContent>
+          </Card>
+        ) : app === 'browser' || app === 'waiting' ? (
           <Card>
             <CardContent className="flex flex-col gap-5">
               {guest && (

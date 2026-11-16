@@ -198,6 +198,15 @@ test('a guest is signed in, makes a project and is told apart', { skip }, async 
   assert.equal((user.attribution as { method?: string } | null)?.method, 'guest')
 })
 
+test("a guest is named after the computer's account when the app gives it", { skip }, async () => {
+  const started = await call('/api/auth/guest', { body: { name: '  Georges Petrov ' } })
+  assert.equal(started.status, 200, await started.clone().text())
+  const session = await call('/api/auth/get-session', { cookie: cookieOf(started) })
+  const { user } = (await session.json()) as { user: { id: string; name: string } }
+  users.push(user.id)
+  assert.equal(user.name, 'Georges Petrov')
+})
+
 test('a guest cannot invite anyone or buy Brigade Cloud', { skip }, async () => {
   const guest = await newGuest()
   const invited = await call('/api/members/invitations', {

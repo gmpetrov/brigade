@@ -1,20 +1,31 @@
 # Guests
 
-Brigade.app can start without a sign-in. Its sign-in page offers **Start without an account**:
-the person gets a project of their own, links this computer, and their teammates run on the
-Claude or ChatGPT login already on it. They save the account with an email whenever they like.
+Brigade.app starts without a sign-in. The first time its window opens, the person is a guest at
+once, greeted by their computer's own name: they get a project of their own, link this computer,
+and their teammates run on the Claude or ChatGPT login already on it. They save the account with
+an email whenever they like.
 
 Only in Brigade.app's main window (`lib/guest.ts` in the dashboard, `inDesktopApp()`), on a Mac or
 Linux, where its runner runs teammates. The website's sign-up is unchanged.
 
 ## How it works
 
+- **No button, the first time**: the sign-in page, in Brigade.app's window, starts the guest at
+  once and shows **Getting your workspace ready…** with **Already have an account? Sign in**. A
+  window someone was ever signed in to (the `brigade_known` cookie, kept through signing out,
+  `lib/signed-in.ts`) shows the sign-in instead, with **Start without an account** as a button:
+  signing out never makes a guest on its own.
+- **Their name**: Brigade.app reads its account's full name on this computer (macOS's `id -F`,
+  Linux's GECOS field; never the login's short name, an address or a generic name such as
+  `admin`: apps/desktop/src/system-name.ts) and gives it to the page as the bridge's
+  `info.userName`. The guest is made with it (`name` in `POST /api/auth/guest`), else `Guest`. An
+  app before it gives none.
 - **The feature flag `guest_mode`** opens it, to everyone or nobody: a guest has no address
   for `emails` or a workspace for `workspaceIds` yet (docs/feature-flags.md).
   `GET /api/auth/guest/available` says whether it is open, and the sign-in page shows the button
   only then.
 - **Starting** (`POST /api/auth/guest`, the `guest-sign-in` better-auth plugin in
-  `apps/api/src/guests.ts`): a user with `guest` set, the name `Guest` and a placeholder address
+  `apps/api/src/guests.ts`): a user with `guest` set, that name (else `Guest`) and a placeholder address
   `guest-<uuid>@guest.brigade.invalid`, which never receives mail nor matches a flag's domain.
   The window is signed in with a session of 400 days: signed out, a guest could never sign in
   again, and better-auth's refresh would cut a session to a week. Five a visitor an hour

@@ -98,7 +98,11 @@ export const guestSignIn = () =>
         {
           method: 'POST',
           // Where they came from, as the sign-up page sends it (src/signup-source.ts).
-          body: z.object({ signupSource: z.unknown().optional() }),
+          // The computer's account's full name, as Brigade.app reads it (its system-name.ts).
+          body: z.object({
+            signupSource: z.unknown().optional(),
+            name: z.string().trim().min(1).max(100).optional(),
+          }),
         },
         async (c) => {
           if (!(await guestsOpen())) throw c.error('NOT_FOUND', { message: 'Not found' })
@@ -106,7 +110,7 @@ export const guestSignIn = () =>
           // Through better-auth, so its hooks run: src/auth.ts records the sign-up.
           const user = await c.context.internalAdapter.createUser(
             {
-              name: GUEST_NAME,
+              name: c.body.name ?? GUEST_NAME,
               email: `guest-${id}@${GUEST_EMAIL_DOMAIN}`,
               emailVerified: false,
               guest: true,
