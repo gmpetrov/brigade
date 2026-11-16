@@ -44,6 +44,7 @@ import { dueSnoozes, wakeDueSnoozes } from './later.js'
 import { dueGoals, measureDueGoals } from './goals.js'
 import { dueActions, runDueActions } from './initiatives.js'
 import { sendAdConversions } from './google-ads.js'
+import { sweepIdleGuests } from './guests.js'
 import { dueWorkspaceCleanups, sweepDeletedWorkspaces } from './workspace-delete.js'
 
 /** One run of a job: for a workspace, for one row (an event a webhook kept), or for all (null). */
@@ -156,6 +157,9 @@ export const JOBS = {
   'inbound-event-sweep': { every: 3600, run: () => sweepInbound() },
   'trigger-delivery-sweep': { every: 3600, run: () => sweepDeliveries() },
   'mail-sweep': { every: 3600, run: () => sweepMail() },
+  // Hourly: guests left unsaved and unused for two weeks, with their projects (src/guests.ts),
+  // a few a run: each is a whole account's deletion.
+  'guest-sweep': { every: 3600, run: (_key, now) => sweepIdleGuests(now).then(() => {}) },
 
   // One row each, when asked for (enqueue): a webhook's event kept, a received mail kept.
   'inbound-event': { run: (key) => (key ? processInbound(key) : Promise.resolve()) },

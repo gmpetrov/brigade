@@ -43,6 +43,9 @@ model User {
   /// heard of Brigade; @brigade/contracts' OnboardingAnswers), set once. `{}`: all skipped;
   /// null: never asked (invited, or here before the questions).
   onboardingAnswers Json?
+  /// A guest (src/guests.ts, docs/guests.md): made by Brigade.app without a sign-in, with a
+  /// placeholder address, until the person saves the account with their own email.
+  guest             Boolean          @default(false)
   analyticsFirsts   AnalyticsFirst[]
   adConversions     AdConversion[]
 }

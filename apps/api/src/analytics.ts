@@ -384,6 +384,7 @@ export function signupMethod(path: string | undefined) {
   if (path === '/sign-in/email-otp') return 'email_code'
   if (path.startsWith('/callback/') || path.startsWith('/oauth2/callback')) return 'google'
   if (path === '/sign-up/email') return 'password'
+  if (path === '/guest') return 'guest'
   return 'other'
 }
 
@@ -423,6 +424,19 @@ export async function recordSignup(
     properties: { feature: 'onboarding', method, channel: source.channel },
     setOnce: signupProperties(source, method),
     set: { internal },
+  })
+}
+
+/**
+ * `guest_saved`: a guest (src/guests.ts) saved their account with an email of their own. The
+ * same person as their `signed_up` (method `guest`), now with an address that may be the team's.
+ */
+export function recordGuestSaved(userId: string, email: string) {
+  if (!analyticsOn()) return
+  track('guest_saved', {
+    distinctId: userId,
+    properties: { feature: 'onboarding' },
+    set: { internal: isInternalEmail(email) },
   })
 }
 

@@ -63,6 +63,7 @@ import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Hint } from '@/components/ui/tooltip'
 import { DemoBanner } from '@/components/demo-banner'
+import { GuestBanner, SaveAccountDialog } from '@/components/save-account'
 import { DemoTour } from '@/components/demo-tour'
 import {
   DropdownMenu,
@@ -293,6 +294,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const accounts = useApi<Account[]>('/accounts')
   const reloadAccounts = accounts.reload
   const [searching, setSearching] = useState(false)
+  // A guest (docs/guests.md) saves their account; asked to sign out, they are offered it first.
+  const [saving, setSaving] = useState<'save' | 'leave'>()
   // Expanded or folded to icons, as the member left it: the sidebar keeps it in a cookie.
   // Read once, before the sidebar first shows (it waits for the member to load).
   const [sidebarOpen, setSidebarOpen] = useState(
@@ -412,9 +415,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     badge.add(c.id)
   }
 
-  async function signOut() {
+  async function signOut(confirmed = false) {
     // The demo has no account to leave: the way out is signing up for real.
     if (DEMO) return signUp()
+    if (data?.guest && !confirmed) return setSaving('leave')
     await authClient.signOut()
     markSignedOut()
     await clearBrowserData()
@@ -652,6 +656,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
               <SidebarFooter className="gap-3">
                 <DemoBanner place="sidebar" />
+                {data?.guest && <GuestBanner onSave={() => setSaving('save')} />}
+                <SaveAccountDialog
+                  open={!!saving}
+                  onOpenChange={(open) => !open && setSaving(undefined)}
+                  onSaved={() => void me.reload()}
+                  leaving={saving === 'leave'}
+                  onLeave={() => void signOut(true)}
+                />
                 {/* The member and their menu, and the way to connect apps; folded, a column. */}
                 <div className="flex items-center gap-2 px-2 pb-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:p-0">
                   <DropdownMenu onOpenChange={(open) => open && void reloadAccounts()}>

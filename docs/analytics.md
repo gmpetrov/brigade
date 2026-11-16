@@ -80,7 +80,7 @@ HN and X often drop the referrer.
 
 The person's properties, set once by `signed_up`: `signup_channel`, `signup_source`,
 `signup_medium`, `signup_campaign`, `signup_referrer`, `signup_landing_page`, `signup_method`
-(`email_code`, `google`, `password`). Each event of a person also carries `internal`, as an event
+(`email_code`, `google`, `password`, `guest`: Brigade.app started without a sign-in, docs/guests.md). Each event of a person also carries `internal`, as an event
 property and set on the person: PostHog's test-account filter (project settings → Filter out
 internal and test users) is `internal` is not `true`, on the event, so it holds for past events
 whatever the person later became. Events of no person (`workspace:<id>`) carry none. `onboarding_answered` sets what they answered to
@@ -177,6 +177,7 @@ a short word (`ENUM_VALUE`); the rest is dropped, whatever a rule returns.
 | Event                                                                                                                                                               | Where                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `signed_up` (`method`, `channel`)                                                                                                                                   | `recordSignup`, from better-auth's `databaseHooks.user.create.after` (`src/auth.ts`)                                                                      |
+| `guest_saved`                                                                                                                                                       | `recordGuestSaved` in `src/analytics.ts`, when a guest saves their account with an email (`src/guests.ts`)                                                |
 | `turn_completed` (`harness`, `duration_s`, `outcome`: `done`, `interrupted`, `error`)                                                                               | `trackTurns`, once a run of a thread's events is stored (`src/hub/runner-messages.ts`)                                                                    |
 | `ticket_opened` (`kind`: the ticket's type)                                                                                                                         | Every ticket made through a scoped client (`onScopedWrite` in `src/analytics.ts`)                                                                         |
 | `pull_request_opened` (`by`)                                                                                                                                        | `notePullRequestCall` in `src/pull-requests.ts`, when a teammate opens one                                                                                |

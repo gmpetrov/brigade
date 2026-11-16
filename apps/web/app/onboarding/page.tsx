@@ -37,6 +37,7 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { inDesktopApp } from '@/lib/brigade-app'
 import { detectDevice, type Device } from '@/lib/device'
 import { LINUX_APPIMAGE_URL, LINUX_DEB_URL } from '@/lib/linux-app'
 import { MAC_APP_URL } from '@/lib/mac-app'
@@ -251,7 +252,7 @@ export default function Onboarding() {
     return (
       <>
         <SetupWorkspaceSwitcher me={me} />
-        <ConnectAI onReady={reload} />
+        <ConnectAI onReady={reload} guest={!!me.guest} />
       </>
     )
 
@@ -421,7 +422,14 @@ const PRICE = (
  * be added later from Computers. Once an account works, the chief's setup
  * thread starts.
  */
-function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
+function ConnectAI({
+  onReady,
+  guest,
+}: {
+  onReady: () => Promise<Me | undefined>
+  /** A guest (docs/guests.md): their own computer only, Brigade Cloud once the account is saved. */
+  guest: boolean
+}) {
   const router = useRouter()
   const accounts = useApi<Account[]>('/accounts')
   const computers = useApi<ComputersResponse>('/computers')
@@ -532,9 +540,23 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const getLink = useCallback(() => {
     setError(undefined)
     return api<Omit<LinkCode, 'issuedAt'>>('/computers/link-code', { method: 'POST' })
-      .then((issued) => setLink({ ...issued, issuedAt: Date.now() }))
-      .catch((e: Error) => setError(e.message))
+      .then((issued) => {
+        setLink({ ...issued, issuedAt: Date.now() })
+        return issued
+      })
+      .catch((e: Error) => {
+        setError(e.message)
+        return undefined
+      })
   }, [])
+  // In Brigade.app's own window, it is this computer: its link goes straight to the app, which
+  // asks before it connects (apps/desktop/src/links.ts).
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => setInApp(inDesktopApp()), [])
+  const linkHere = useCallback(async () => {
+    const issued = await getLink()
+    if (issued?.appLink) location.href = issued.appLink
+  }, [getLink])
 
   const all = computers.data?.computers ?? []
   const usable = usableComputers(computers.data)
@@ -553,7 +575,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
         login?.state !== 'failed'
       )
     })
-  const offerCloud = !!computers.data?.cloudAvailable
+  const offerCloud = !guest && !!computers.data?.cloudAvailable
   // With billing on, the cloud computer comes with Brigade Cloud: their own machine is free.
   const planNeeded = offerCloud && !computers.data?.cloudEntitled
   // A new workspace's computer is still being made: sign-in opens once it starts.
@@ -563,6 +585,14 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const failed = !cloudUsable && cloud?.status === 'error'
   // Once they set up their own machine, Brigade Cloud steps back to one line.
   const cloudCompact = planNeeded && (!!link || !!machine)
+
+  // A guest chose to start here: this computer links at once, once.
+  const linkedHere = useRef(false)
+  useEffect(() => {
+    if (!guest || !inApp || !computers.data || machine || linkedHere.current) return
+    linkedHere.current = true
+    void linkHere()
+  }, [guest, inApp, computers.data, machine, linkHere])
 
   // On Chromebooks the command is the way in: show it straight away.
   const linuxLink = useRef(false)
@@ -816,7 +846,15 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           meta={app.meta}
           aside={free}
         />
-        {!link ? (
+        {inApp && !terminal ? (
+          <>
+            <Button size="lg" onClick={() => void linkHere()}>
+              {app.icon}
+              Link this {app.name}
+            </Button>
+            {link && waitFor(app.name, 'link')}
+          </>
+        ) : !link ? (
           <>
             <Button variant="outline" size="lg" asChild>
               <a href={app.url} onClick={() => void getLink()}>

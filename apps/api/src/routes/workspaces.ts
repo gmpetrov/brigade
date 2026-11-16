@@ -82,7 +82,14 @@ export const workspaces = new Hono<AppEnv>()
     const [user, memberships] = await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: { id: c.var.userId },
-        select: { id: true, name: true, email: true, image: true, onboardingAnswers: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          onboardingAnswers: true,
+          guest: true,
+        },
       }),
       prisma.member.findMany({ where: { userId: c.var.userId }, include: { organization: true } }),
     ])
@@ -133,9 +140,11 @@ export const workspaces = new Hono<AppEnv>()
             ],
           },
         })) > 0
-    const { onboardingAnswers, ...person } = user
+    const { onboardingAnswers, guest, ...person } = user
     return c.json({
       user: person,
+      // A guest (src/guests.ts): made by Brigade.app without a sign-in, until saved with an email.
+      guest,
       // What they answered to onboarding's questions; null: never asked.
       onboardingAnswers: onboardingAnswers as OnboardingAnswers | null,
       aiReady,

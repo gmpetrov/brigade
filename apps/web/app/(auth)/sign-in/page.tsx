@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
 import { inCaptureWindow, inDesktopApp, signInWithBrowser } from '@/lib/brigade-app'
+import { guestOffered, startAsGuest } from '@/lib/guest'
 import { afterSignIn, markSignedIn } from '@/lib/signed-in'
 
 export default function SignIn() {
@@ -18,6 +19,8 @@ export default function SignIn() {
   // In Brigade.app's windows, the browser signs in (lib/brigade-app.ts): its own session is
   // out of reach here. 'waiting': the browser is open; 'form': the form here after all.
   const [app, setApp] = useState<'browser' | 'waiting' | 'form'>()
+  // In Brigade.app, with guests open: start without an account (docs/guests.md).
+  const [guest, setGuest] = useState<'offered' | 'starting'>()
   // Back from Google with ?error=: the API names what went wrong. With ?signed, signed in
   // with Google on the way to ?next=. In Brigade.app's window, with ?desktop_code= and
   // ?verifier=: the browser's sign-in, brought back by the app.
@@ -31,6 +34,9 @@ export default function SignIn() {
     if (failed) setError(`Could not sign in with Google (${failed.replaceAll('_', ' ')})`)
     if (!inDesktopApp()) return
     setApp('browser')
+    void guestOffered()
+      .then((offered) => offered && setGuest((was) => was ?? 'offered'))
+      .catch(() => {})
     const code = query.get('desktop_code')
     const verifier = query.get('verifier')
     if (!code || !verifier) return
@@ -55,6 +61,18 @@ export default function SignIn() {
     }
   }
 
+  async function startWithoutAccount() {
+    setError(undefined)
+    setGuest('starting')
+    try {
+      await startAsGuest()
+      location.replace('/onboarding')
+    } catch (e) {
+      setError((e as Error).message)
+      setGuest('offered')
+    }
+  }
+
   function signedIn() {
     markSignedIn()
     const next = afterSignIn()
@@ -68,14 +86,42 @@ export default function SignIn() {
         <div className="flex flex-col items-center gap-4 text-center">
           <BrigadeMark className="size-14" />
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-extrabold tracking-tight">Sign in to Brigade</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">
+              {guest ? 'Welcome to Brigade' : 'Sign in to Brigade'}
+            </h1>
             <p className="text-sm text-muted-foreground">Your AI teammates are waiting.</p>
           </div>
         </div>
         {app === 'browser' || app === 'waiting' ? (
           <Card>
             <CardContent className="flex flex-col gap-5">
-              <Button size="lg" className="w-full" onClick={browser}>
+              {guest && (
+                <>
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    disabled={guest === 'starting'}
+                    onClick={() => void startWithoutAccount()}
+                  >
+                    {guest === 'starting' ? 'Starting…' : 'Start without an account'}
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Your teammates run on this computer, with the Claude or ChatGPT login on it.
+                    Save your account with your email whenever you like.
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" />
+                    or
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                </>
+              )}
+              <Button
+                size="lg"
+                variant={guest ? 'outline' : 'default'}
+                className="w-full"
+                onClick={browser}
+              >
                 Sign in with your browser
               </Button>
               <p className="text-sm text-muted-foreground">

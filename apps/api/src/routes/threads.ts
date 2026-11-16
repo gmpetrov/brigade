@@ -89,6 +89,7 @@ import { applyPick, checkPick } from '../designs.js'
 import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
 import { prisma, type ScopedDb } from '../db.js'
+import { requireGuestRoom } from '../guests.js'
 import { hubs, scheduleUpdated, threadUpdated } from '../hub.js'
 import { codeFiles, findSource, readThreadFile, writeThreadFile } from '../runner-requests.js'
 import { contentTypeFor, isText } from '../library.js'
@@ -1269,6 +1270,7 @@ export const threads = new Hono<AppEnv>()
   /** A new top-level message starts a new thread with a fresh context. */
   .post('/', async (c) => {
     const { scope, db } = c.var
+    await requireGuestRoom(c.var.userId, scope.workspaceId)
     const input = await parseBody(c.req.raw, StartThread)
     // Looked up together, each a trip to the database; their errors still in this order.
     const [teammate, computer, project] = await Promise.all([
@@ -1358,6 +1360,7 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
+    await requireGuestRoom(c.var.userId, scope.workspaceId)
     const refused = thread.status === 'waiting' ? await waitingRefusal(db, thread) : undefined
     if (refused) throw new HTTPException(409, { message: refused })
     if (thread.status === 'paused' && (await openCapTicket(db, thread.id)))

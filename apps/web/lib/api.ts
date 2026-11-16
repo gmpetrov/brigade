@@ -401,6 +401,11 @@ export type Me = {
   user: { id: string; name: string; email: string; image: string | null }
   /** What they answered to onboarding's questions; null: never asked (POST /me/onboarding). */
   onboardingAnswers: OnboardingAnswers | null
+  /**
+   * A guest (docs/guests.md): Brigade.app made the account without a sign-in, until they save it
+   * with an email. Absent from APIs before it.
+   */
+  guest?: boolean
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
   role: 'owner' | 'admin' | 'member' | 'viewer' | null

@@ -3,6 +3,13 @@
 // FeatureFlag row (everyone, addresses, email domains or workspaces).
 
 export const FEATURES = {
+  guest_mode: {
+    description:
+      'Brigade.app starts without a sign-in (docs/guests.md): its sign-in page offers Start ' +
+      'without an account, which makes a guest account for this computer, saved later with an ' +
+      'email. Open it to everyone or nobody: a guest has no address yet.',
+    default: false,
+  },
   gmail: {
     description:
       'Connect Gmail accounts. Google blocks its restricted scopes for anyone not listed as a test ' +

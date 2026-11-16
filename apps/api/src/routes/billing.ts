@@ -13,6 +13,7 @@ import {
 } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
+import { requireSavedAccount } from '../guests.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 const billingPage = () => `${env.WEB_URL[0]}/app/billing`
@@ -43,6 +44,7 @@ export const billing = new Hono<AppEnv>()
   /** Stripe Checkout for the Cloud plan, for this workspace. Its address, to open. */
   .post('/checkout', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
+    await requireSavedAccount(c.var.userId, 'Brigade Cloud')
     const { from } = await parseBody(c.req.raw, BillingCheckout)
     if (!billingEnabled())
       throw new HTTPException(409, { message: 'Billing is off on this server' })

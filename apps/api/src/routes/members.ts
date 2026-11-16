@@ -11,6 +11,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { audit } from '../audit.js'
 import { auth } from '../auth.js'
 import { prisma, type Prisma } from '../db.js'
+import { requireSavedAccount } from '../guests.js'
 import { spendInvitation } from '../invitation-budget.js'
 import {
   beingRemoved,
@@ -132,6 +133,7 @@ export const members = new Hono<AppEnv>()
   .post('/members/invitations', requireWorkspace, async (c) => {
     const { scope } = c.var
     requireRole(scope, 'owner', 'admin')
+    await requireSavedAccount(c.var.userId, 'inviting someone')
     const { email, role } = await parseBody(c.req.raw, CreateInvitation)
     const open = await prisma.invitation.findFirst({
       where: { organizationId: scope.organizationId, email, ...openNow() },

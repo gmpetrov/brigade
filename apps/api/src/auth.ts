@@ -16,6 +16,7 @@ import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { desktopSignIn } from './desktop-sign-in.js'
+import { guestSignIn } from './guests.js'
 import { INVITATION_DAYS, sendInvitation } from './invitation-mail.js'
 import { passwordSignIn } from './password-sign-in.js'
 import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
@@ -40,6 +41,8 @@ function limitOf(request: Request, rule: { window: number; max: number }) {
   if (path === '/get-session' || path.startsWith('/organization/')) return false as const
   // A few typos; each code also takes only 5 tries (allowedAttempts).
   if (path === '/sign-in/email-otp') return { window: 60, max: 10 }
+  // A guest is made without a check that a person is there (src/guests.ts): a few an hour.
+  if (path === '/guest' && request.method === 'POST') return { window: 3600, max: 5 }
   return rule
 }
 
@@ -87,6 +90,12 @@ export const auth = betterAuth({
     },
   },
   account: { modelName: 'authAccount' },
+  // Guests (src/guests.ts): made only by Brigade.app's window, never through a sign-up's input.
+  user: {
+    additionalFields: {
+      guest: { type: 'boolean', required: false, defaultValue: false, input: false },
+    },
+  },
   // Where a new person came from (src/signup-source.ts), kept on them, and `signed_up`
   // (src/analytics.ts). After the user's row is written; never fails the sign-up.
   databaseHooks: {
@@ -112,6 +121,7 @@ export const auth = betterAuth({
     // not as the cookie. Remove once the lab's letter of validation is in.
     bearer(),
     desktopSignIn(),
+    guestSignIn(),
     passwordSignIn(),
     emailOTP({
       otpLength: 6,
