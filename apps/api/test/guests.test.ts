@@ -418,3 +418,38 @@ test(
     assert.notEqual(after.status, 200)
   },
 )
+
+test(
+  'a guest one sweep holds is left to it; one left over by a run that died is taken again',
+  { skip },
+  async () => {
+    const held = await newGuest()
+    // Made two weeks and more ago, and just taken by another run (its address swapped).
+    await prisma.user.update({
+      where: { id: held.userId },
+      data: { createdAt: new Date(Date.now() - (guests.GUEST_IDLE_DAYS + 1) * 24 * 60 * 60_000) },
+    })
+    await prisma.user.update({
+      where: { id: held.userId },
+      data: { email: `swept-${held.userId}@${guests.GUEST_EMAIL_DOMAIN}` },
+    })
+    const now = await guests.sweepIdleGuests(new Date(), 1000)
+    assert.ok(!now.includes(held.userId))
+    assert.equal(await prisma.user.count({ where: { id: held.userId } }), 1)
+    // Two hours on, that run is long gone: this one takes it and deletes it.
+    const afterwards = await guests.sweepIdleGuests(new Date(Date.now() + 2 * 60 * 60_000), 1000)
+    assert.ok(afterwards.includes(held.userId))
+    assert.equal(await prisma.user.count({ where: { id: held.userId } }), 0)
+  },
+)
+
+test('two sweeps at once delete a guest once, and never a saved one', { skip }, async () => {
+  const later = new Date(Date.now() + (guests.GUEST_IDLE_DAYS + 1) * 24 * 60 * 60_000)
+  const idle = await newGuest()
+  const [a, b] = await Promise.all([
+    guests.sweepIdleGuests(later, 1000),
+    guests.sweepIdleGuests(later, 1000),
+  ])
+  assert.equal([...a, ...b].filter((id) => id === idle.userId).length, 1)
+  assert.equal(await prisma.user.count({ where: { id: idle.userId } }), 0)
+})

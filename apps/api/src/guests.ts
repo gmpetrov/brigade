@@ -21,6 +21,8 @@ import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
 
 /** The placeholder addresses' domain: `.invalid` never receives mail, nor matches a flag's. */
 export const GUEST_EMAIL_DOMAIN = 'guest.brigade.invalid'
+/** A guest the sweep took this long ago and still has: the run that took it died. */
+const SWEPT_STALE_MS = 60 * 60_000
 /** A guest's name until they give one or save the account. */
 const GUEST_NAME = 'Guest'
 /** Unsaved and unused this long, a guest goes, with their project. */
@@ -252,6 +254,15 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
     where: {
       guest: true,
       createdAt: { lt: since },
+      // Not one another run holds (its address swapped), unless that run died holding it: a run
+      // ends within minutes (JOB_DEADLINE_MS), so a swept one untouched for an hour is left over.
+      OR: [
+        { email: { startsWith: 'guest-' } },
+        {
+          email: { startsWith: 'swept-' },
+          updatedAt: { lt: new Date(now.getTime() - SWEPT_STALE_MS) },
+        },
+      ],
       members: {
         none: {
           organization: {
@@ -268,7 +279,7 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
         },
       },
     },
-    select: { id: true, email: true },
+    select: { id: true, email: true, updatedAt: true },
     orderBy: { createdAt: 'asc' },
     take: limit,
   })
@@ -278,9 +289,11 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
   for (const guest of guests) {
     // Taken first, in one statement: a guest saving their account at this moment is either
     // saved (and left alone here) or refused (src/guests.ts's saveGuest wants a guest's address).
+    // Two runs that read the same row: the one that changes it first (and so its updatedAt) holds
+    // it, the other finds it changed.
     const swept = `swept-${guest.id}@${GUEST_EMAIL_DOMAIN}`
     const taken = await prisma.user.updateMany({
-      where: { id: guest.id, guest: true, email: guest.email },
+      where: { id: guest.id, guest: true, email: guest.email, updatedAt: guest.updatedAt },
       data: { email: swept },
     })
     if (!taken.count) continue
@@ -290,7 +303,10 @@ export async function sweepIdleGuests(now = new Date(), limit = 10) {
     } catch (error) {
       // Still at work: it stays a guest, with its address back, for a later run.
       await prisma.user
-        .updateMany({ where: { id: guest.id, email: swept }, data: { email: guest.email } })
+        .updateMany({
+          where: { id: guest.id, email: swept },
+          data: { email: `guest-${guest.id}@${GUEST_EMAIL_DOMAIN}` },
+        })
         .catch(() => {})
       console.warn(`idle guest ${guest.id} not deleted yet: ${String(error)}`)
     }
