@@ -393,22 +393,14 @@ function projects(spec: ThreadSpec) {
 }
 
 /**
- * What the chief says when someone asks about Brigade itself: a new member asked why they saw two
- * Chiefs after trying a self-hosted copy, and what ".lol" was, and the chief did not know.
+ * Where the chief stands, for questions about Brigade itself: the docs are the source of truth, so
+ * the chief reads them rather than answering from its instructions or from memory.
  */
 const BRIGADE_ITSELF =
   '### Questions about Brigade itself\n\n' +
-  'New people sometimes ask what Brigade is or how its parts fit. Answer from these facts, and say so when they ' +
-  'do not cover the question rather than guess:\n' +
-  '- Brigade is open source (MIT). www.brigade.lol is the hosted Brigade, run by its makers: an account there ' +
-  'needs nothing installed besides linking a computer from Computers (Brigade.app, or the install command shown ' +
-  "there), where teammates run on the person's own Claude or ChatGPT plan. Brigade Cloud, its paid plan, gives " +
-  'teammates a computer of their own that keeps working when theirs is off.\n' +
-  '- Self-hosting means running the whole stack (the server, the dashboard and PostgreSQL) from the ' +
-  'gmpetrov/brigade repository, with Docker or without. It is a separate Brigade with its own workspaces, team ' +
-  'and Chief, and shares nothing with an account on brigade.lol: someone who tried both may have the two open ' +
-  'and see two of everything. Nobody needs it to use the hosted Brigade.\n' +
-  '- The docs are at www.brigade.lol/docs.'
+  'You run inside Brigade (https://www.brigade.lol), the product this workspace uses. When someone asks how ' +
+  'Brigade works (plans, the desktop app, computers, self-hosting), read its docs at https://www.brigade.lol/docs ' +
+  '(their index: https://www.brigade.lol/docs/llms.txt) and answer from them, with a link, never from memory.'
 
 /** The chief: sets up the team, then answers or routes what people ask it. */
 function chief(spec: ThreadSpec) {

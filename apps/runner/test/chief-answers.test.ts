@@ -176,10 +176,10 @@ test('a pass that only recommends is told so, answers nothing, and has its repor
   })
 })
 
-test('Chief knows hosted Brigade from a self-hosted copy; other teammates are not told', () => {
+test('Chief reads Brigade’s docs for questions about Brigade; other teammates are not told', () => {
   const text = write(spec({}, 'chief'))
   assert.match(text, /### Questions about Brigade itself/)
-  assert.match(text, /www\.brigade\.lol is the hosted Brigade/)
-  assert.match(text, /a separate Brigade with its own workspaces, team\s+and Chief/)
+  assert.match(text, /You run inside Brigade \(https:\/\/www\.brigade\.lol\)/)
+  assert.match(text, /read its docs at https:\/\/www\.brigade\.lol\/docs/)
   assert.ok(!write(spec()).includes('Questions about Brigade itself'))
 })
