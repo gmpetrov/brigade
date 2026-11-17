@@ -392,6 +392,24 @@ function projects(spec: ThreadSpec) {
   ].join('\n\n')
 }
 
+/**
+ * What the chief says when someone asks about Brigade itself: a new member asked why they saw two
+ * Chiefs after trying a self-hosted copy, and what ".lol" was, and the chief did not know.
+ */
+const BRIGADE_ITSELF =
+  '### Questions about Brigade itself\n\n' +
+  'New people sometimes ask what Brigade is or how its parts fit. Answer from these facts, and say so when they ' +
+  'do not cover the question rather than guess:\n' +
+  '- Brigade is open source (MIT). www.brigade.lol is the hosted Brigade, run by its makers: an account there ' +
+  'needs nothing installed besides linking a computer from Computers (Brigade.app, or the install command shown ' +
+  "there), where teammates run on the person's own Claude or ChatGPT plan. Brigade Cloud, its paid plan, gives " +
+  'teammates a computer of their own that keeps working when theirs is off.\n' +
+  '- Self-hosting means running the whole stack (the server, the dashboard and PostgreSQL) from the ' +
+  'gmpetrov/brigade repository, with Docker or without. It is a separate Brigade with its own workspaces, team ' +
+  'and Chief, and shares nothing with an account on brigade.lol: someone who tried both may have the two open ' +
+  'and see two of everything. Nobody needs it to use the hosted Brigade.\n' +
+  '- The docs are at www.brigade.lol/docs.'
+
 /** The chief: sets up the team, then answers or routes what people ask it. */
 function chief(spec: ThreadSpec) {
   const roster = spec.roster ?? []
@@ -434,6 +452,7 @@ function chief(spec: ThreadSpec) {
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
+    BRIGADE_ITSELF,
     rulesForChief(spec.rulesAct === true),
     roster.length > 0
       ? `### The team\n\n${roster.map((t) => `- ${t.name}${t.role ? `: ${t.role}` : ''}`).join('\n')}`
