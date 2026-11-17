@@ -398,7 +398,12 @@ async function claim(tx: Tx, row: PreviewMachine, status: 'stopping' | 'destroyi
   return count === 0 ? null : tx.previewMachine.findUniqueOrThrow({ where: { id: row.id } })
 }
 
-/** `touch`: the preview is in use; the provider's own stop is pushed back now and then. */
+/**
+ * `touch`: the preview is in use; the provider's own stop is pushed back now and then. Not once
+ * its workspace moved to Starter, whose plan has no machines (wantsMachine): the machine is put
+ * to sleep instead, and the runner's next `up` runs the preview on the computer. One nobody
+ * touches stops by the sweep (UNUSED_STOP_MS).
+ */
 export async function machineTouch(
   machines: MachineProvider | null,
   runner: Pick<Runner, 'computerId'>,
@@ -407,6 +412,8 @@ export async function machineTouch(
 ) {
   const session = machines && (await threadOf(runner, sessionId))
   if (!machines || !session) return
+  if ((await planOf(session.workspaceId)).tier === 'starter')
+    return machineSleep(machines, runner, sessionId)
   // Under the lock: a sweep judging this machine idle sees the touch, or comes before it.
   const touched = await underLock(session.workspaceId, async (tx) => {
     const row = await tx.previewMachine.findUnique({ where: { sessionId } })

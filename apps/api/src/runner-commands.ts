@@ -349,12 +349,44 @@ const described = (message: DurableCommand) => {
 }
 
 /**
+ * Cloud computers with commands waiting past GIVE_UP_MS whose workspace's Starter hours are used
+ * up (src/billing.ts cloudAccess): marked held now. They sleep until the hours come back, or the
+ * plan moves to Max, and their commands wait for them, in order, rather than fail: the minute's
+ * resend starts the computer once it may run (resendCommands).
+ */
+async function holdForHours(cutoff: Date, now: number) {
+  const waiting = await prisma.runnerCommand.findMany({
+    where: { status: 'pending', createdAt: { lt: cutoff }, computer: { kind: 'cloud' } },
+    distinct: ['computerId'],
+    select: { computerId: true, workspaceId: true },
+  })
+  if (!waiting.length) return
+  const { cloudAccess } = await import('./billing.js')
+  for (const [workspaceId, rows] of Map.groupBy(waiting, (r) => r.workspaceId)) {
+    const access = await cloudAccess(workspaceId, new Date(now))
+    if (access.ok || access.reason !== 'hours') continue
+    await prisma.computer.updateMany({
+      where: { id: { in: rows.map((r) => r.computerId) } },
+      data: { hoursHeldAt: new Date(now) },
+    })
+  }
+}
+
+/**
  * Commands not through in 24 hours: failed, and a ticket in each of their threads says what did
  * not go (once per thread while it is open). A thread left starting for one goes back to idle.
+ * Not those of a cloud computer held for Starter's hours (holdForHours) until a day after its
+ * hold ends: time enough to start it and deliver them once it may run again.
  */
 export async function giveUp(now = Date.now()) {
+  const cutoff = new Date(now - GIVE_UP_MS)
+  await holdForHours(cutoff, now)
   const old = await prisma.runnerCommand.findMany({
-    where: { status: 'pending', createdAt: { lt: new Date(now - GIVE_UP_MS) } },
+    where: {
+      status: 'pending',
+      createdAt: { lt: cutoff },
+      computer: { OR: [{ hoursHeldAt: null }, { hoursHeldAt: { lt: cutoff } }] },
+    },
     orderBy: { createdAt: 'asc' },
     // Each with its message, up to a megabyte: a few at a time (pendingCommands).
     take: 20,

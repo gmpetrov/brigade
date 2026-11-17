@@ -156,7 +156,17 @@ before(async () => {
   await prisma.user.create({
     data: { id: ownerId, name: ownerId, email: `${ownerId}@example.com` },
   })
-  for (const name of ['checkout', 'tier', 'hours', 'period', 'upgrade', 'features'])
+  for (const name of [
+    'checkout',
+    'tier',
+    'hours',
+    'period',
+    'upgrade',
+    'features',
+    'held',
+    'max',
+    'machines',
+  ])
     ws[name] = (await prisma.workspace.create({ data: { organizationId, name } })).id
 })
 
@@ -342,3 +352,151 @@ test('dictation comes with Starter too, whatever its hours', { skip }, async () 
   assert.equal(await billing.cloudEntitled(workspaceId), false)
   assert.deepEqual(await dictationStatus(workspaceId), { available: true })
 })
+
+// --- Work waiting while the hours are used up ----------------------------------------------
+
+/** A thread of the workspace on its cloud computer, the owner's, with a Riley of its own. */
+async function cloudThread(workspaceId: string) {
+  const memberId = `member-${organizationId}`
+  await prisma.member.upsert({
+    where: { id: memberId },
+    create: { id: memberId, organizationId, userId: ownerId, role: 'owner' },
+    update: {},
+  })
+  const teammate = await prisma.teammate.create({
+    data: { organizationId, workspaceId, name: 'Riley' } as never,
+  })
+  const computer = await prisma.computer.create({
+    data: { organizationId, workspaceId, kind: 'cloud', name: 'Cloud', status: 'stopped' },
+  })
+  const session = await prisma.session.create({
+    data: {
+      organizationId,
+      workspaceId,
+      teammateId: teammate.id,
+      startedByMemberId: memberId,
+      computerId: computer.id,
+      title: 'A thread',
+      status: 'idle',
+      lastSeq: 0,
+    } as never,
+  })
+  return { computerId: computer.id, sessionId: session.id }
+}
+
+/** A message for the thread, waiting since `at` for its computer. */
+const waiting = (
+  workspaceId: string,
+  thread: { computerId: string; sessionId: string },
+  at: Date,
+) =>
+  prisma.runnerCommand.create({
+    data: {
+      id: randomUUID(),
+      organizationId,
+      workspaceId,
+      computerId: thread.computerId,
+      sessionId: thread.sessionId,
+      type: 'thread.prompt',
+      message: { type: 'thread.prompt', text: 'Go on', memberId: null } as never,
+      createdAt: at,
+    },
+  })
+
+const statusOf = async (commandId: string) =>
+  (await prisma.runnerCommand.findUniqueOrThrow({ where: { id: commandId } })).status
+
+test(
+  "work waiting while Starter's hours are used up is kept, then given up a day after",
+  { skip },
+  async () => {
+    const { giveUp } = await import('../src/runner-commands.js')
+    const workspaceId = ws.held!
+    const t0 = Date.now()
+    const plan = await starterRow(
+      workspaceId,
+      new Date(t0 - 10 * 24 * HOUR),
+      new Date(t0 + 20 * 24 * HOUR),
+    )
+    await run(workspaceId, new Date(t0 - 9 * 24 * HOUR), 101)
+    const thread = await cloudThread(workspaceId)
+    // Sent 30 hours ago, on day 5 of a pause that lasts weeks.
+    const command = await waiting(workspaceId, thread, new Date(t0 - 30 * HOUR))
+    await giveUp(t0)
+    assert.equal(await statusOf(command.id), 'pending', 'kept while the hours are used up')
+    const computer = await prisma.computer.findUniqueOrThrow({ where: { id: thread.computerId } })
+    assert.equal(computer.hoursHeldAt?.getTime(), t0)
+    await giveUp(t0 + 6 * 24 * HOUR)
+    assert.equal(await statusOf(command.id), 'pending', 'kept for as long as the pause lasts')
+
+    // Upgraded to Max (or the hours came back): the computer may run, and the minute's resend
+    // starts it. Its commands get a day for it before they are given up.
+    await prisma.billingSubscription.update({ where: { id: plan.id }, data: { tier: 'cloud' } })
+    await giveUp(t0 + 6 * 24 * HOUR + 60_000)
+    assert.equal(await statusOf(command.id), 'pending', 'not given up the minute the pause ends')
+    await giveUp(t0 + 7 * 24 * HOUR + 60_000)
+    assert.equal(await statusOf(command.id), 'failed', 'given up a day after the pause ended')
+    const ticket = await prisma.ticket.findFirst({ where: { sessionId: thread.sessionId } })
+    assert.ok(ticket, 'with a ticket in its thread')
+  },
+)
+
+test("work waiting for Max's cloud computer is still given up after a day", { skip }, async () => {
+  const { giveUp } = await import('../src/runner-commands.js')
+  const workspaceId = ws.max!
+  const t0 = Date.now()
+  await prisma.billingSubscription.create({
+    data: {
+      workspaceId,
+      plan: 'cloud',
+      tier: 'cloud',
+      status: 'active',
+      periodStart: new Date(t0 - 10 * 24 * HOUR),
+      periodEnd: new Date(t0 + 20 * 24 * HOUR),
+    },
+  })
+  await run(workspaceId, new Date(t0 - 9 * 24 * HOUR), 101)
+  const thread = await cloudThread(workspaceId)
+  const command = await waiting(workspaceId, thread, new Date(t0 - 25 * HOUR))
+  await giveUp(t0)
+  assert.equal(await statusOf(command.id), 'failed')
+  const computer = await prisma.computer.findUniqueOrThrow({ where: { id: thread.computerId } })
+  assert.equal(computer.hoursHeldAt, null)
+})
+
+test(
+  "a thread's machine in use is put to sleep once the workspace is on Starter",
+  { skip },
+  async () => {
+    const { machineTouch } = await import('../src/preview-machines.js')
+    const workspaceId = ws.machines!
+    await starterRow(
+      workspaceId,
+      new Date(Date.now() - 10 * 24 * HOUR),
+      new Date(Date.now() + 20 * 24 * HOUR),
+    )
+    const thread = await cloudThread(workspaceId)
+    // Made while the workspace was on Max, its preview still in use.
+    await prisma.previewMachine.create({
+      data: {
+        organizationId,
+        workspaceId,
+        sessionId: thread.sessionId,
+        status: 'running',
+        providerRef: { provider: 'boat', id: 'vm-starter-machine' },
+        keptAliveAt: new Date(Date.now() - HOUR),
+      },
+    })
+    const calls = { stopped: [] as string[], keptAlive: [] as string[] }
+    const machines = {
+      stop: async (ref: { id: string }) => void calls.stopped.push(ref.id),
+      keepAlive: async (ref: { id: string }) => void calls.keptAlive.push(ref.id),
+    }
+    await machineTouch(machines as never, { computerId: thread.computerId }, thread.sessionId)
+    assert.deepEqual(calls, { stopped: ['vm-starter-machine'], keptAlive: [] })
+    const machine = await prisma.previewMachine.findUniqueOrThrow({
+      where: { sessionId: thread.sessionId },
+    })
+    assert.equal(machine.status, 'stopped')
+  },
+)

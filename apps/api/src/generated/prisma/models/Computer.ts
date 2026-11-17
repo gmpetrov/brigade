@@ -34,6 +34,7 @@ export type ComputerMinAggregateOutputType = {
   size: string | null
   machineId: string | null
   status: $Enums.ComputerStatus | null
+  hoursHeldAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +49,7 @@ export type ComputerMaxAggregateOutputType = {
   size: string | null
   machineId: string | null
   status: $Enums.ComputerStatus | null
+  hoursHeldAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +66,7 @@ export type ComputerCountAggregateOutputType = {
   machineId: number
   status: number
   disk: number
+  hoursHeldAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -80,6 +83,7 @@ export type ComputerMinAggregateInputType = {
   size?: true
   machineId?: true
   status?: true
+  hoursHeldAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -94,6 +98,7 @@ export type ComputerMaxAggregateInputType = {
   size?: true
   machineId?: true
   status?: true
+  hoursHeldAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -110,6 +115,7 @@ export type ComputerCountAggregateInputType = {
   machineId?: true
   status?: true
   disk?: true
+  hoursHeldAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -199,6 +205,7 @@ export type ComputerGroupByOutputType = {
   machineId: string | null
   status: $Enums.ComputerStatus
   disk: runtime.JsonValue | null
+  hoursHeldAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ComputerCountAggregateOutputType | null
@@ -236,6 +243,7 @@ export type ComputerWhereInput = {
   machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   disk?: Prisma.JsonNullableFilter<"Computer">
+  hoursHeldAt?: Prisma.DateTimeNullableFilter<"Computer"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -259,6 +267,7 @@ export type ComputerOrderByWithRelationInput = {
   machineId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   disk?: Prisma.SortOrderInput | Prisma.SortOrder
+  hoursHeldAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -285,6 +294,7 @@ export type ComputerWhereUniqueInput = Prisma.AtLeast<{
   machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   disk?: Prisma.JsonNullableFilter<"Computer">
+  hoursHeldAt?: Prisma.DateTimeNullableFilter<"Computer"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -308,6 +318,7 @@ export type ComputerOrderByWithAggregationInput = {
   machineId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   disk?: Prisma.SortOrderInput | Prisma.SortOrder
+  hoursHeldAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ComputerCountOrderByAggregateInput
@@ -330,6 +341,7 @@ export type ComputerScalarWhereWithAggregatesInput = {
   machineId?: Prisma.StringNullableWithAggregatesFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusWithAggregatesFilter<"Computer"> | $Enums.ComputerStatus
   disk?: Prisma.JsonNullableWithAggregatesFilter<"Computer">
+  hoursHeldAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Computer"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Computer"> | Date | string
 }
@@ -344,6 +356,7 @@ export type ComputerCreateInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -367,6 +380,7 @@ export type ComputerUncheckedCreateInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -386,6 +400,7 @@ export type ComputerUpdateInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -409,6 +424,7 @@ export type ComputerUncheckedUpdateInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -430,6 +446,7 @@ export type ComputerCreateManyInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -444,6 +461,7 @@ export type ComputerUpdateManyMutationInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -460,6 +478,7 @@ export type ComputerUncheckedUpdateManyInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -486,6 +505,7 @@ export type ComputerCountOrderByAggregateInput = {
   machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   disk?: Prisma.SortOrder
+  hoursHeldAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -500,6 +520,7 @@ export type ComputerMaxOrderByAggregateInput = {
   size?: Prisma.SortOrder
   machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  hoursHeldAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -514,6 +535,7 @@ export type ComputerMinOrderByAggregateInput = {
   size?: Prisma.SortOrder
   machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  hoursHeldAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -695,6 +717,7 @@ export type ComputerCreateWithoutMemberInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -716,6 +739,7 @@ export type ComputerUncheckedCreateWithoutMemberInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -766,6 +790,7 @@ export type ComputerScalarWhereInput = {
   machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   disk?: Prisma.JsonNullableFilter<"Computer">
+  hoursHeldAt?: Prisma.DateTimeNullableFilter<"Computer"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
 }
@@ -780,6 +805,7 @@ export type ComputerCreateWithoutWorkspaceInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   member?: Prisma.MemberCreateNestedOneWithoutComputersInput
@@ -801,6 +827,7 @@ export type ComputerUncheckedCreateWithoutWorkspaceInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -846,6 +873,7 @@ export type ComputerCreateWithoutRunnerInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -868,6 +896,7 @@ export type ComputerUncheckedCreateWithoutRunnerInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
@@ -902,6 +931,7 @@ export type ComputerUpdateWithoutRunnerInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -924,6 +954,7 @@ export type ComputerUncheckedUpdateWithoutRunnerInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
@@ -942,6 +973,7 @@ export type ComputerCreateWithoutSessionsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -964,6 +996,7 @@ export type ComputerUncheckedCreateWithoutSessionsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -998,6 +1031,7 @@ export type ComputerUpdateWithoutSessionsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -1020,6 +1054,7 @@ export type ComputerUncheckedUpdateWithoutSessionsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1038,6 +1073,7 @@ export type ComputerCreateWithoutAccountsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -1060,6 +1096,7 @@ export type ComputerUncheckedCreateWithoutAccountsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -1094,6 +1131,7 @@ export type ComputerUpdateWithoutAccountsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -1116,6 +1154,7 @@ export type ComputerUncheckedUpdateWithoutAccountsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1134,6 +1173,7 @@ export type ComputerCreateWithoutCommandsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -1156,6 +1196,7 @@ export type ComputerUncheckedCreateWithoutCommandsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -1190,6 +1231,7 @@ export type ComputerUpdateWithoutCommandsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -1212,6 +1254,7 @@ export type ComputerUncheckedUpdateWithoutCommandsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1230,6 +1273,7 @@ export type ComputerCreateWithoutReplacementsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
@@ -1252,6 +1296,7 @@ export type ComputerUncheckedCreateWithoutReplacementsInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
@@ -1286,6 +1331,7 @@ export type ComputerUpdateWithoutReplacementsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -1308,6 +1354,7 @@ export type ComputerUncheckedUpdateWithoutReplacementsInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1327,6 +1374,7 @@ export type ComputerCreateManyMemberInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1341,6 +1389,7 @@ export type ComputerUpdateWithoutMemberInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
@@ -1362,6 +1411,7 @@ export type ComputerUncheckedUpdateWithoutMemberInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1382,6 +1432,7 @@ export type ComputerUncheckedUpdateManyWithoutMemberInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1397,6 +1448,7 @@ export type ComputerCreateManyWorkspaceInput = {
   machineId?: string | null
   status?: $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1411,6 +1463,7 @@ export type ComputerUpdateWithoutWorkspaceInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   member?: Prisma.MemberUpdateOneWithoutComputersNestedInput
@@ -1432,6 +1485,7 @@ export type ComputerUncheckedUpdateWithoutWorkspaceInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
@@ -1452,6 +1506,7 @@ export type ComputerUncheckedUpdateManyWithoutWorkspaceInput = {
   machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   disk?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  hoursHeldAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1526,6 +1581,7 @@ export type ComputerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   machineId?: boolean
   status?: boolean
   disk?: boolean
+  hoursHeldAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1550,6 +1606,7 @@ export type ComputerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   machineId?: boolean
   status?: boolean
   disk?: boolean
+  hoursHeldAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1568,6 +1625,7 @@ export type ComputerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   machineId?: boolean
   status?: boolean
   disk?: boolean
+  hoursHeldAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1586,11 +1644,12 @@ export type ComputerSelectScalar = {
   machineId?: boolean
   status?: boolean
   disk?: boolean
+  hoursHeldAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ComputerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "memberId" | "name" | "providerRef" | "size" | "machineId" | "status" | "disk" | "createdAt" | "updatedAt", ExtArgs["result"]["computer"]>
+export type ComputerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "memberId" | "name" | "providerRef" | "size" | "machineId" | "status" | "disk" | "hoursHeldAt" | "createdAt" | "updatedAt", ExtArgs["result"]["computer"]>
 export type ComputerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.Computer$memberArgs<ExtArgs>
@@ -1647,6 +1706,12 @@ export type $ComputerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * (src/computer-disk.ts): how full, since when, and what takes room. Null otherwise.
      */
     disk: runtime.JsonValue | null
+    /**
+     * A cloud computer: the last minute its workspace's Starter hours were found used up while
+     * commands waited for it (src/runner-commands.ts giveUp). Its commands are kept, not given
+     * up, until a day after it.
+     */
+    hoursHeldAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["computer"]>
@@ -2090,6 +2155,7 @@ export interface ComputerFieldRefs {
   readonly machineId: Prisma.FieldRef<"Computer", 'String'>
   readonly status: Prisma.FieldRef<"Computer", 'ComputerStatus'>
   readonly disk: Prisma.FieldRef<"Computer", 'Json'>
+  readonly hoursHeldAt: Prisma.FieldRef<"Computer", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Computer", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Computer", 'DateTime'>
 }

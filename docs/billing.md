@@ -79,8 +79,11 @@ on the same row, at the next reconcile.
 - **Used up**, the computer may not run (`cloudAccess` answers `hours`, so `cloudEntitled` is
   false): the minute's check stops it like a computer without a plan (`enforcePlans`, forced),
   it does not start again (`requireCloudPlan` answers 402 with when it comes back), and the work
-  sent to it waits in the hub until the period renews or the plan goes up. Its disk stays.
-  Computers says so, and a new thread points to Settings › Billing.
+  sent to it waits as commands until the period renews or the plan goes up, when the minute's
+  resend starts it. Commands are given up after 24 hours, with a ticket, except those of a
+  computer held for its hours: `giveUp` marks it (`Computer.hoursHeldAt`) each minute it finds
+  them waiting while the hours are used up, and keeps them until a day after the last such
+  minute. Its disk stays. Computers says so, and a new thread points to Settings › Billing.
 - **Running low:** from 80% of the period's hours, a card at the foot of the sidebar
   (`components/cloud-hours-banner.tsx`) shows the hours used and when they start over, with
   Upgrade to Max for owners and admins; at 100%, that the cloud computer sleeps until then. It
@@ -88,7 +91,8 @@ on the same row, at the next reconcile.
   every 5 minutes.
 - **The plan still stands:** email addresses, the Inbox and dictation work (`planEntitled`),
   whatever the hours. Threads' own machines (`wantsMachine`, preview_machines) never come with
-  Starter.
+  Starter: one made while on Max is put to sleep at its next touch once the plan is Starter
+  (`machineTouch`), and the preview moves to the cloud computer at its next `up`.
 - **Upgrade:** Settings › Billing's Upgrade opens Stripe's portal at the confirmation of
   Max's price for the same subscription (`startUpgrade`, a `subscription_update_confirm`
   flow), which charges the difference for the rest of the period at once. Brigade's portal
