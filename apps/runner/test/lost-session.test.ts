@@ -41,6 +41,8 @@ type Options = {
   publishes?: boolean
   /** What the runner kept of the thread, in place of the parked session below. */
   state?: unknown
+  /** What a resumed session fails with, in place of Claude Code's LOST. */
+  error?: string
 }
 
 /**
@@ -63,7 +65,7 @@ function scriptedHarness(heard: string[], next: { resumes: boolean }, options: O
           heard.push(typeof prompt === 'string' ? prompt : JSON.stringify(prompt))
           emit({ type: 'stream-start', modelId: 'scripted' })
           if (resumes || options.always) {
-            emit({ type: 'error', error: LOST })
+            emit({ type: 'error', error: options.error ?? LOST })
             return { submitToolResult: async () => {}, done: Promise.resolve() }
           }
           if (options.publishes) {
@@ -373,6 +375,58 @@ test('a call approved for the lost conversation runs in the new one without aski
       [],
       'the person is not asked twice',
     )
+  } finally {
+    await t.done()
+  }
+})
+
+test('Codex refusing to start its thread over: an answered ticket goes on in a new session with the whole request', async () => {
+  // The member's request, logs pasted first: longer than the transcript keeps, so a short reply
+  // after it pushed it out of the conversation so far. Kept whole (asked), it is told again.
+  const request = `${'log line\n'.repeat(5_000)}Investigate why the resume stalled.`
+  const state = waitingOn(
+    {
+      pendingToolResults: [
+        {
+          toolCallId: 'ticket-1',
+          toolName: 'open_ticket',
+          input: JSON.stringify({
+            title: 'Read incident records in Neon',
+            asks: [{ id: 'neon', type: 'access', kind: 'connection', what: 'neon' }],
+          }),
+        },
+      ],
+    },
+    'unused',
+  )
+  const t = await setup({
+    error:
+      'Codex thread restart refused (CODEX_THREAD_RESTART): its tools or instructions changed since it started, and a new thread would have none of its conversation.',
+    state: {
+      ...state,
+      asked: request,
+      transcript: [{ role: 'assistant', text: "I'll trace the handoff through the database." }],
+    },
+  })
+  try {
+    const outcome = await t.run({
+      kind: 'ticket',
+      requestId: 'ticket-1',
+      answer: { action: 'answered', replies: { neon: { type: 'access', granted: true } } },
+    } as never)
+    assert.deepEqual(outcome, { status: 'idle' })
+    const handoff = t.heard[1] ?? ''
+    assert.match(handoff, /^This conversation continues in a new session because your tools/)
+    assert.match(handoff, /You: I'll trace the handoff through the database\./)
+    assert.ok(handoff.includes(request), 'the whole request')
+    assert.match(handoff, /you made this open_ticket call, which waited on the person/)
+    assert.ok(handoff.includes('"granted":true'), 'the answer')
+    // No notice that the conversation was deleted: it was not.
+    assert.equal(
+      t.events.some((e) => e.type === 'raw' && e.source === 'runner'),
+      false,
+    )
+    assert.equal(t.heard.length, 2)
   } finally {
     await t.done()
   }
