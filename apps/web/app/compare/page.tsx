@@ -74,7 +74,8 @@ export default function Compare() {
         <p className={c('lead vs-answer')}>
           <strong>Brigade</strong> is {BRIGADE.what.charAt(0).toLowerCase() + BRIGADE.what.slice(1)}{' '}
           It runs on the Claude or ChatGPT plan you already pay for: Brigade never bills you for AI
-          usage. It is free on your own computer, and Brigade Cloud is $99 a month per workspace.
+          usage. It is free on your own computer, and Brigade Cloud is from $15 a month per
+          workspace.
         </p>
         <CompareCta />
       </header>

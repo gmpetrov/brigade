@@ -50,7 +50,7 @@ export const BRIGADE = {
   runs: 'Free on your own computer (Mac, Windows or Linux). Brigade Cloud gives teammates a computer of their own that keeps working when yours is off.',
   open: 'Yes, MIT. You can read every line and host it yourself.',
   price:
-    'Free on your own computer. Cloud: $99 a month per workspace. AI usage is on your own plan.',
+    'Free on your own computer. Cloud: from $15 a month per workspace (Starter, 100 hours) to $99 (Max, no hour limit). AI usage is on your own plan.',
 }
 
 const row = (label: string, brigade: string, them: string, mark?: Mark): Row => ({

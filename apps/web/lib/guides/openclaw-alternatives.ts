@@ -45,7 +45,7 @@ Find your number, then jump to the matching section.
 | Manus | A cloud agent that does whole tasks for you | No | A Manus plan |
 | n8n | Automations you can see as a workflow | Source-available | Free to self-host, or n8n Cloud |
 | Lindy | A hosted assistant for inbox and calendar | No | A Lindy plan |
-| Brigade | A team of AI teammates for a company | Yes, MIT | Free on your computer, Cloud $99/mo; AI on your own plan |
+| Brigade | A team of AI teammates for a company | Yes, MIT | Free on your computer, Cloud from $15/mo; AI on your own plan |
 
 ## If you want the same thing, with less hassle
 
@@ -107,7 +107,7 @@ That's what [Brigade](/) is for. It's an open-source app (MIT) that gives your c
 
 ![Brigade's home screen with the decisions waiting on you](/landing/demo-light.webp "Brigade's home: threads, teammates, and the decisions waiting on you, in one place.")
 
-It's free on your own computer, and Brigade Cloud ($99 a month per workspace) gives your teammates a computer that keeps working when yours is off.
+It's free on your own computer, and Brigade Cloud (from $15 a month per workspace) gives your teammates a computer that keeps working when yours is off.
 
 **Don't pick Brigade if** you want one personal assistant inside WhatsApp or Telegram (Brigade has its own app, on the web and your phone, and with Cloud an email address per teammate), or if you want to run local or arbitrary models (Brigade runs Claude Code and Codex). Hermes Agent or one of the small claws will suit you better. Our [Brigade vs OpenClaw](/compare/openclaw) page goes through the differences line by line.
 

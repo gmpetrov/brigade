@@ -30,6 +30,7 @@ export type BillingSubscriptionMinAggregateOutputType = {
   id: string | null
   workspaceId: string | null
   plan: string | null
+  tier: string | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string | null
@@ -47,6 +48,7 @@ export type BillingSubscriptionMaxAggregateOutputType = {
   id: string | null
   workspaceId: string | null
   plan: string | null
+  tier: string | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string | null
@@ -64,6 +66,7 @@ export type BillingSubscriptionCountAggregateOutputType = {
   id: number
   workspaceId: number
   plan: number
+  tier: number
   stripeCustomerId: number
   stripeSubscriptionId: number
   status: number
@@ -83,6 +86,7 @@ export type BillingSubscriptionMinAggregateInputType = {
   id?: true
   workspaceId?: true
   plan?: true
+  tier?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
@@ -100,6 +104,7 @@ export type BillingSubscriptionMaxAggregateInputType = {
   id?: true
   workspaceId?: true
   plan?: true
+  tier?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
@@ -117,6 +122,7 @@ export type BillingSubscriptionCountAggregateInputType = {
   id?: true
   workspaceId?: true
   plan?: true
+  tier?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
@@ -207,6 +213,7 @@ export type BillingSubscriptionGroupByOutputType = {
   id: string
   workspaceId: string
   plan: string
+  tier: string
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string
@@ -245,6 +252,7 @@ export type BillingSubscriptionWhereInput = {
   id?: Prisma.StringFilter<"BillingSubscription"> | string
   workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
   plan?: Prisma.StringFilter<"BillingSubscription"> | string
+  tier?: Prisma.StringFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringFilter<"BillingSubscription"> | string
@@ -263,6 +271,7 @@ export type BillingSubscriptionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
+  tier?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -284,6 +293,7 @@ export type BillingSubscriptionWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.BillingSubscriptionWhereInput | Prisma.BillingSubscriptionWhereInput[]
   workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
   plan?: Prisma.StringFilter<"BillingSubscription"> | string
+  tier?: Prisma.StringFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringFilter<"BillingSubscription"> | string
@@ -302,6 +312,7 @@ export type BillingSubscriptionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
+  tier?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -325,6 +336,7 @@ export type BillingSubscriptionScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   workspaceId?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   plan?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
+  tier?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
@@ -341,6 +353,7 @@ export type BillingSubscriptionScalarWhereWithAggregatesInput = {
 export type BillingSubscriptionCreateInput = {
   id?: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -359,6 +372,7 @@ export type BillingSubscriptionUncheckedCreateInput = {
   id?: string
   workspaceId: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -375,6 +389,7 @@ export type BillingSubscriptionUncheckedCreateInput = {
 export type BillingSubscriptionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -393,6 +408,7 @@ export type BillingSubscriptionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -410,6 +426,7 @@ export type BillingSubscriptionCreateManyInput = {
   id?: string
   workspaceId: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -426,6 +443,7 @@ export type BillingSubscriptionCreateManyInput = {
 export type BillingSubscriptionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -443,6 +461,7 @@ export type BillingSubscriptionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -460,6 +479,7 @@ export type BillingSubscriptionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
+  tier?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -477,6 +497,7 @@ export type BillingSubscriptionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
+  tier?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -494,6 +515,7 @@ export type BillingSubscriptionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
+  tier?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -562,6 +584,7 @@ export type BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput = 
 export type BillingSubscriptionCreateWithoutWorkspaceInput = {
   id?: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -578,6 +601,7 @@ export type BillingSubscriptionCreateWithoutWorkspaceInput = {
 export type BillingSubscriptionUncheckedCreateWithoutWorkspaceInput = {
   id?: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -624,6 +648,7 @@ export type BillingSubscriptionScalarWhereInput = {
   id?: Prisma.StringFilter<"BillingSubscription"> | string
   workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
   plan?: Prisma.StringFilter<"BillingSubscription"> | string
+  tier?: Prisma.StringFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringFilter<"BillingSubscription"> | string
@@ -640,6 +665,7 @@ export type BillingSubscriptionScalarWhereInput = {
 export type BillingSubscriptionCreateManyWorkspaceInput = {
   id?: string
   plan: string
+  tier?: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
@@ -656,6 +682,7 @@ export type BillingSubscriptionCreateManyWorkspaceInput = {
 export type BillingSubscriptionUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -672,6 +699,7 @@ export type BillingSubscriptionUpdateWithoutWorkspaceInput = {
 export type BillingSubscriptionUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -688,6 +716,7 @@ export type BillingSubscriptionUncheckedUpdateWithoutWorkspaceInput = {
 export type BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -707,6 +736,7 @@ export type BillingSubscriptionSelect<ExtArgs extends runtime.Types.Extensions.I
   id?: boolean
   workspaceId?: boolean
   plan?: boolean
+  tier?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
@@ -725,6 +755,7 @@ export type BillingSubscriptionSelectCreateManyAndReturn<ExtArgs extends runtime
   id?: boolean
   workspaceId?: boolean
   plan?: boolean
+  tier?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
@@ -743,6 +774,7 @@ export type BillingSubscriptionSelectUpdateManyAndReturn<ExtArgs extends runtime
   id?: boolean
   workspaceId?: boolean
   plan?: boolean
+  tier?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
@@ -761,6 +793,7 @@ export type BillingSubscriptionSelectScalar = {
   id?: boolean
   workspaceId?: boolean
   plan?: boolean
+  tier?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
@@ -774,7 +807,7 @@ export type BillingSubscriptionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type BillingSubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "workspaceId" | "plan" | "stripeCustomerId" | "stripeSubscriptionId" | "status" | "periodStart" | "periodEnd" | "cancelAtPeriodEnd" | "cancelAt" | "canceledAt" | "endedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["billingSubscription"]>
+export type BillingSubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "workspaceId" | "plan" | "tier" | "stripeCustomerId" | "stripeSubscriptionId" | "status" | "periodStart" | "periodEnd" | "cancelAtPeriodEnd" | "cancelAt" | "canceledAt" | "endedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["billingSubscription"]>
 export type BillingSubscriptionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }
@@ -797,6 +830,11 @@ export type $BillingSubscriptionPayload<ExtArgs extends runtime.Types.Extensions
      * "cloud"
      */
     plan: string
+    /**
+     * Which Cloud plan its Stripe price is (billing.ts PLANS): "cloud", or "starter" ($15, with a
+     * monthly allowance of cloud computer hours). Follows the subscription's price.
+     */
+    tier: string
     stripeCustomerId: string | null
     stripeSubscriptionId: string | null
     /**
@@ -1238,6 +1276,7 @@ export interface BillingSubscriptionFieldRefs {
   readonly id: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly workspaceId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly plan: Prisma.FieldRef<"BillingSubscription", 'String'>
+  readonly tier: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly stripeCustomerId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly stripeSubscriptionId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly status: Prisma.FieldRef<"BillingSubscription", 'String'>

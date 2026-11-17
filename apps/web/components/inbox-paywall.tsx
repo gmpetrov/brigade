@@ -110,7 +110,7 @@ export function InboxPaywall({ plan }: { plan: InboxPlan }) {
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Email comes with Brigade Cloud, $99 a month. Ask an owner or admin to subscribe.
+              Email comes with Brigade Cloud, from $15 a month. Ask an owner or admin to subscribe.
             </p>
           )}
           {error && <p className="text-sm text-destructive-text">{error}</p>}

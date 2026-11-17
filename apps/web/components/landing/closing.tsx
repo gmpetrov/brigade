@@ -86,72 +86,104 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
   )
 }
 
-/** Pricing, on a band in the dark theme whatever the page's theme, where pebbles fall on Start with Cloud. */
+/**
+ * The cards at the top of /pricing, as Settings › Billing offers them
+ * (components/settings/billing.tsx): Free and Starter, Max in the comparison below them.
+ */
+const PLANS: {
+  name: string
+  icon: 'laptop' | 'clock'
+  amount: string
+  who: string
+  features: string[]
+  cta: string
+}[] = [
+  {
+    name: 'Free',
+    icon: 'laptop',
+    amount: '$0',
+    who: 'For trying it on your own computer',
+    features: [
+      'Unlimited teammates, threads and members',
+      'Your own Claude or ChatGPT plan',
+      'GitHub, Notion, Linear, Stripe and many more Apps',
+      'Teammates work while your computer is on',
+    ],
+    cta: 'Sign up',
+  },
+  {
+    name: 'Starter',
+    icon: 'clock',
+    amount: '$15',
+    who: 'Always-on teammates at the lowest price',
+    features: [
+      'Everything in Free',
+      'A cloud computer for 100 hours a month',
+      'Teammates keep working with your laptop closed',
+      'Schedules and triggers run on time, even at 3 a.m.',
+      'An email address for each teammate',
+    ],
+    cta: 'Get Starter',
+  },
+]
+
+/**
+ * The top of /pricing, on a band in the dark theme whatever the page's theme, its title the
+ * page's heading: Free and Starter, pebbles falling on Starter's button.
+ */
 export function Pricing() {
+  const featured = 'Starter'
   return (
-    <section aria-labelledby="pricing-title" className={c('pricing dark')} id="pricing">
+    <section
+      aria-labelledby="pricing-title"
+      className={c('pricing dark pricing-page')}
+      id="pricing"
+    >
       <div className={c('wrap')}>
-        <div className={c('pr-head')}>
-          <h2 className={c('h2')} id="pricing-title">
-            Simple Pricing
-          </h2>
+        <div className={c('pr-head centered')}>
+          <h1 className={c('h2')} id="pricing-title">
+            Pricing
+          </h1>
         </div>
-        <div className={c('plans')}>
-          <div className={c('plan')}>
-            <div className={c('plan-n')}>
-              <Icon name="laptop" />
-              Free
+        <div className={c('plans two')}>
+          {PLANS.map((plan) => (
+            <div
+              key={plan.name}
+              className={c(plan.name === featured ? 'plan cloud' : 'plan')}
+              {...(plan.name === featured ? { 'data-pebble-card': true } : {})}
+            >
+              <div className={c('plan-n')}>
+                <Icon name={plan.icon} />
+                {plan.name}
+              </div>
+              <div className={c('price')}>
+                <span className={c('amt')}>{plan.amount}</span>
+                {plan.amount !== '$0' && <span className={c('per')}>/ month</span>}
+              </div>
+              <p className={c('who')}>{plan.who}</p>
+              <ul className={c('feat')}>
+                {plan.features.map((feature) => (
+                  <li key={feature}>
+                    <Icon name="check" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <AuthLink
+                className={c(plan.name === featured ? 'btn pri lg' : 'btn lg')}
+                href={SIGN_UP}
+                {...(plan.name === featured ? { 'data-pebble-target': true } : {})}
+              >
+                {plan.cta}
+              </AuthLink>
             </div>
-            <div className={c('price')}>
-              <span className={c('amt')}>$0</span>
-            </div>
-            <ul className={c('feat')}>
-              <li>
-                <Icon name="check" />
-                Teammates run on your own computer while it&apos;s on
-              </li>
-              <li>
-                <Icon name="check" />
-                Your Claude or ChatGPT plan
-              </li>
-              <li>
-                <Icon name="check" />
-                Unlimited teammates, threads and members
-              </li>
-            </ul>
-            <AuthLink className={c('btn lg')} href={SIGN_UP}>
-              Sign up
-            </AuthLink>
-          </div>
-          <div className={c('plan cloud')} data-pebble-card>
-            <div className={c('plan-n')}>
-              <Icon name="cloud" />
-              Cloud
-            </div>
-            <div className={c('price')}>
-              <span className={c('amt')}>$99</span>
-              <span className={c('per')}>/ month</span>
-            </div>
-            <ul className={c('feat')}>
-              <li>
-                <Icon name="check" />
-                Teammates get a computer of their own, which keeps working when yours is off
-              </li>
-              <li>
-                <Icon name="check" />
-                Your Claude or ChatGPT plan
-              </li>
-              <li>
-                <Icon name="check" />
-                Everything in Free, plus an email address for each teammate
-              </li>
-            </ul>
-            <AuthLink className={c('btn pri lg')} href={SIGN_UP} data-pebble-target>
-              Start with Cloud
-            </AuthLink>
-          </div>
+          ))}
           <PebbleRain />
         </div>
+        <p className={c('pr-note')}>
+          Teammates run on your own Claude or ChatGPT plan: we never bill you for AI usage. Switch
+          or cancel anytime.
+        </p>
       </div>
     </section>
   )
@@ -165,7 +197,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'What does Brigade cost?',
-    a: 'Brigade is free when teammates run on your own computer. Cloud is $99 a month per workspace and gives them a computer of their own that keeps working when yours is off. On top of that, you bring the Claude or ChatGPT plan you already pay for: we never bill you for AI usage.',
+    a: 'Brigade is free when teammates run on your own computer. To keep them working when yours is off, give them a cloud computer: Starter is $15 a month for 100 hours, and Max is $99 a month with no hour limit. On top of that, you bring the Claude or ChatGPT plan you already pay for: we never bill you for AI usage.',
   },
   {
     q: 'Which AI plans work?',
@@ -189,7 +221,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Can a teammate have its own email address?',
-    a: 'Yes, with Cloud. Turn on the Email App and each teammate gets an address of its own. It sends from it, and replies come back to the teammate that started the conversation, not to your inbox.',
+    a: 'Yes, with Starter or Max. Turn on the Email App and each teammate gets an address of its own. It sends from it, and replies come back to the teammate that started the conversation, not to your inbox.',
   },
   {
     q: 'Can my team see the work?',
@@ -205,17 +237,24 @@ export const FAQ: { q: string; a: string }[] = [
   },
 ]
 
-export function Faq() {
+/** Questions with their answers, the first open: the landing's FAQ by default. */
+export function Faq({
+  items = FAQ,
+  title = 'Questions, answered',
+}: {
+  items?: { q: string; a: string }[]
+  title?: string
+}) {
   return (
     <section aria-labelledby="faq-title" className={c('sec faq')}>
       <div className={c('wrap')}>
         <div className={c('side')}>
           <h2 className={c('h2')} id="faq-title">
-            Questions, answered
+            {title}
           </h2>
         </div>
         <div className={c('qs')}>
-          {FAQ.map(({ q, a }, i) => (
+          {items.map(({ q, a }, i) => (
             <details key={q} open={i === 0}>
               <summary>
                 {q}

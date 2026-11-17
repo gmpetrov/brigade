@@ -7,8 +7,8 @@ import { DownloadButton } from './download-button'
 import { c, Icon, SIGN_IN } from './parts'
 import { SiteAnalytics } from './site-analytics'
 
-/** The pricing band's Cloud plan, from any page. */
-const CLOUD = '/#pricing'
+/** The plans, from any page. */
+const CLOUD = '/pricing'
 
 export function Header() {
   return (
@@ -19,9 +19,9 @@ export function Header() {
         Brigade
       </Link>
       <nav aria-label="Main">
-        <a className={c('hide-m')} href="/#pricing">
+        <Link className={c('hide-m')} href="/pricing">
           Pricing
-        </a>
+        </Link>
         <AuthLink href={SIGN_IN}>Sign in</AuthLink>
         {/* 24/7 is Brigade Cloud's promise (free teammates stop when the computer sleeps), so
             it leads to the Cloud plan, never to a plain sign-up. */}

@@ -11,6 +11,7 @@ export const PUBLIC_PAGES = [
   '/changelog',
   '/compare',
   '/guides',
+  '/pricing',
 ] as const
 
 const pages = new Set<string>(PUBLIC_PAGES)

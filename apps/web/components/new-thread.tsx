@@ -645,7 +645,23 @@ export function NewThread({
 
   const link = 'font-medium text-primary hover:underline'
   let notice: React.ReactNode = null
-  if (loaded && !computer)
+  const hoursUsedUp = computers.data?.cloudHoursUsedUp
+  if (loaded && !computer && hoursUsedUp)
+    notice = (
+      <>
+        This month’s Starter hours are used up: the cloud computer sleeps until{' '}
+        {new Date(hoursUsedUp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.{' '}
+        <Link
+          href="/app/billing"
+          onClick={(e) => clickSettings(e, '/app/billing')}
+          className={link}
+        >
+          Upgrade to Max
+        </Link>{' '}
+        to keep going.
+      </>
+    )
+  else if (loaded && !computer)
     notice = (
       <>
         No computer is online.{' '}

@@ -64,6 +64,7 @@ import { UpdatePill } from '@/components/update-pill'
 import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Hint } from '@/components/ui/tooltip'
+import { CloudHoursBanner } from '@/components/cloud-hours-banner'
 import { DemoBanner } from '@/components/demo-banner'
 import { GuestBanner, SaveAccountDialog } from '@/components/save-account'
 import { DemoTour } from '@/components/demo-tour'
@@ -660,6 +661,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <SidebarFooter className="gap-3">
                 <DemoBanner place="sidebar" />
                 {data?.guest && <GuestBanner onSave={() => setSaving('save')} />}
+                <CloudHoursBanner admin={isAdmin(data)} />
                 <SaveAccountDialog
                   open={!!saving}
                   onOpenChange={(open) => !open && setSaving(undefined)}

@@ -100,6 +100,9 @@ model BillingSubscription {
   workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   /// "cloud"
   plan                 String
+  /// Which Cloud plan its Stripe price is (billing.ts PLANS): "cloud", or "starter" ($15, with a
+  /// monthly allowance of cloud computer hours). Follows the subscription's price.
+  tier                 String    @default("cloud")
   stripeCustomerId     String?
   stripeSubscriptionId String?
   /// Stripe's: active, trialing, past_due, canceled, unpaid, incomplete…

@@ -46,6 +46,8 @@ export const SAFE_KEYS = new Set([
   'kind',
   'provider',
   'plan',
+  // Which Cloud plan: cloud or starter (src/billing.ts PLANS).
+  'tier',
   'os',
   'via',
   'from',

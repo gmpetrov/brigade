@@ -134,7 +134,7 @@ That's why we built [Brigade](/), an open-source app that gives your company a t
 
 ![A teammate in Brigade opened a pull request and waits for a merge](/guides/brigade-thread-pr.webp "A Brigade teammate builds a change and opens a pull request; you merge it with one click.")
 
-It's free on your own computer, and Brigade Cloud ($99 a month per workspace) gives teammates a computer that keeps working when yours is off. If you're weighing it against either project, we keep honest side-by-side pages: [Brigade vs OpenClaw](/compare/openclaw) and [Brigade vs Hermes Agent](/compare/hermes-agent).
+It's free on your own computer, and Brigade Cloud (from $15 a month per workspace) gives teammates a computer that keeps working when yours is off. If you're weighing it against either project, we keep honest side-by-side pages: [Brigade vs OpenClaw](/compare/openclaw) and [Brigade vs Hermes Agent](/compare/hermes-agent).
 `,
   faq: [
     {

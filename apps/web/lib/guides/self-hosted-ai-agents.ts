@@ -101,7 +101,7 @@ You don't have to choose between "my own server" and "a black box". Plenty of pr
 That's the model we picked for [Brigade](/), an open-source app (MIT) that gives your company a team of AI teammates:
 
 - **Run it on your own computer for free**, or **self-host the whole stack** on one server with Docker Compose, or on Cloudflare.
-- **Or use Brigade Cloud** ($99 a month per workspace), which gives each teammate a computer of its own that keeps working when yours is off.
+- **Or use Brigade Cloud** (from $15 a month per workspace), which gives each teammate a computer of its own that keeps working when yours is off.
 - **Each teammate is the official Claude Code or Codex**, signed in with your own Claude or ChatGPT account, so the subscription you already pay for does the work and Brigade never bills you for AI usage.
 - **Approvals live outside the model.** For each teammate, you choose which actions in your Apps (an email, a refund, a merge) go on their own and which wait for your yes, and everything that needs you lands in one list on your phone.
 

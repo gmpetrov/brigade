@@ -5,7 +5,7 @@
 // with Brigade Cloud while billing is on, as the provider charges for each second heard.
 import { DICTATION_MAX_BYTES, type DictationResult, type DictationStatus } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { cloudEntitled } from './billing.js'
+import { planEntitled } from './billing.js'
 import { env } from './config.js'
 
 /** Where a recording is heard, and by which model: OpenRouter's name or Groq's own. */
@@ -65,7 +65,8 @@ export function audioName(type: string) {
 /** Whether the workspace's composers show a working microphone. */
 export async function dictationStatus(workspaceId: string): Promise<DictationStatus> {
   if (!transcriber()) return { available: false, reason: 'off' }
-  if (!(await cloudEntitled(workspaceId))) return { available: false, reason: 'plan' }
+  // The provider charges for each second heard: with a Brigade Cloud plan (Starter or Max).
+  if (!(await planEntitled(workspaceId))) return { available: false, reason: 'plan' }
   return { available: true }
 }
 

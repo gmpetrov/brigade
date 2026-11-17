@@ -144,6 +144,8 @@ export default function Computers() {
   const menuItems: { label: string; onSelect: () => void; danger?: boolean }[] = []
   // With billing on, the cloud computer comes with the workspace's Cloud plan.
   const planNeeded = !!computers.data?.billing && !computers.data.cloudEntitled
+  // On Starter, with this period's hours used up: asleep until it renews.
+  const hoursUsedUp = computers.data?.cloudHoursUsedUp
   if (cloud?.status === 'stopped' && !planNeeded)
     menuItems.push({
       label: 'Start',
@@ -205,9 +207,11 @@ export default function Computers() {
                       ? online(cloud)
                       : cloud.status === 'running'
                         ? 'Not connected'
-                        : planNeeded && cloud.status === 'stopped'
-                          ? 'Asleep · its Brigade Cloud plan ended'
-                          : STATUS[cloud.status],
+                        : hoursUsedUp && cloud.status === 'stopped'
+                          ? `Asleep · Starter’s hours are used up until ${new Date(hoursUsedUp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`
+                          : planNeeded && cloud.status === 'stopped'
+                            ? 'Asleep · its Brigade Cloud plan ended'
+                            : STATUS[cloud.status],
                   'shared',
                 )}
                 {underWay && replacement.error && (
@@ -235,7 +239,7 @@ export default function Computers() {
                 {!computers.data?.cloudAvailable
                   ? 'Not configured on this Brigade server'
                   : planNeeded
-                    ? 'Comes with Brigade Cloud, $99 a month'
+                    ? 'Comes with Brigade Cloud, from $15 a month'
                     : isAdmin(me)
                       ? 'Not created yet'
                       : 'Ask an owner or admin to create it'}
@@ -245,7 +249,7 @@ export default function Computers() {
           {computers.data?.cloudAvailable && planNeeded && (
             <Button asChild variant="outline">
               <Link href="/app/billing" onClick={(e) => clickSettings(e, '/app/billing')}>
-                {cloud ? 'Subscribe' : 'See plan'}
+                {hoursUsedUp ? 'Upgrade' : cloud ? 'Subscribe' : 'See plan'}
               </Link>
             </Button>
           )}

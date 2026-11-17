@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { DesktopNotReady, providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
-import { billingEnabled, cloudEntitled, requireCloudPlan } from './billing.js'
+import { billingEnabled, cloudAccess, cloudEntitled, requireCloudPlan } from './billing.js'
 import { defaults, env } from './config.js'
 import { Prisma, prisma } from './db.js'
 import { BEING_DELETED, beingDeleted, refuseWhileDeleting } from './deletion-fence.js'
@@ -408,8 +408,12 @@ export async function stopWithoutPlan(computer: {
   kind: string
   providerRef: unknown
 }) {
-  if (computer.kind !== 'cloud' || (await cloudEntitled(computer.workspaceId))) return false
-  console.log(`stopping ${computer.id}: its workspace has no Cloud plan`)
+  if (computer.kind !== 'cloud') return false
+  const access = await cloudAccess(computer.workspaceId)
+  if (access.ok) return false
+  console.log(
+    `stopping ${computer.id}: ${access.reason === 'hours' ? "its Starter plan's hours are used up" : 'its workspace has no Cloud plan'}`,
+  )
   state().keptAlive.delete(computer.id)
   await stopComputer(computer, { type: 'system', id: 'billing' }, { force: true })
   return true
@@ -456,7 +460,7 @@ export async function enforcePlans(workspaceId?: string) {
 /** In the hub: the minute's check of a computer whose workspace has no plan (enforcePlans). */
 export async function enforcePlan(computer: Parameters<typeof shutDown>[0]) {
   if (state().provisioning.has(computer.id)) return
-  console.log(`shutting ${computer.id} down: its workspace has no Cloud plan`)
+  console.log(`shutting ${computer.id} down: no Cloud plan, or Starter's hours used up`)
   await shutDown(computer).catch(async (error) =>
     console.error(`shutting ${computer.id} down failed: ${await providerReason(error)}`, error),
   )

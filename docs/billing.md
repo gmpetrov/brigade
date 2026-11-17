@@ -1,8 +1,10 @@
 # Billing
 
-Brigade is free on members' own machines. **Brigade Cloud**, $99 a month per workspace
-(€99 in the euro zone), adds the workspace's cloud computer and Brigade's own email
-addresses (see Email below). One subscription per
+Brigade is free on members' own machines (the Free plan). **Brigade Cloud** adds the
+workspace's cloud computer and Brigade's own email addresses (see Email below), in two plans:
+**Max**, $99 a month per workspace (€99 in the euro zone), and **Starter**, $15 a month (€15),
+the same with 100 hours of cloud computer a billing period, and without threads' own machines
+(see Starter below). In code, rows and events, Max's tier is still `cloud`. One subscription per
 workspace, paid by the owner or admin who subscribes. All of it is in
 `apps/api/src/billing.ts`.
 
@@ -62,12 +64,48 @@ workspace, paid by the owner or admin who subscribes. All of it is in
   not a workspace, and it saves each event's state as it comes, so a late event could
   bring back a canceled plan.
 
+## Starter
+
+Starter is a tier of the same plan: a `BillingSubscription` row of plan `cloud`
+whose `tier` is `starter`. The tier follows the subscription's price (`tierOfPrice`, by its
+lookup key `brigade_cloud_starter_monthly`), so a switch of price in Stripe's portal changes it
+on the same row, at the next reconcile.
+
+- **Hours.** The cloud computer runs 100 hours a billing period (`PLANS.starter.hours`): its VMs'
+  running time from the period's start (`starterUsage`, from the `VmRun` rows of
+  [vm-costs.md](vm-costs.md)), the 30 minutes before its idle stop included, as boat bills them.
+  Without a current period from Stripe (none yet, or a renewal not read), the calendar month in
+  UTC counts. Threads' machines are not counted (Starter has none).
+- **Used up**, the computer may not run (`cloudAccess` answers `hours`, so `cloudEntitled` is
+  false): the minute's check stops it like a computer without a plan (`enforcePlans`, forced),
+  it does not start again (`requireCloudPlan` answers 402 with when it comes back), and the work
+  sent to it waits in the hub until the period renews or the plan goes up. Its disk stays.
+  Computers says so, and a new thread points to Settings › Billing.
+- **Running low:** from 80% of the period's hours, a card at the foot of the sidebar
+  (`components/cloud-hours-banner.tsx`) shows the hours used and when they start over, with
+  Upgrade to Max for owners and admins; at 100%, that the cloud computer sleeps until then. It
+  cannot be dismissed. Its figures come with `GET /api/computers` (`cloudHours`), read again
+  every 5 minutes.
+- **The plan still stands:** email addresses, the Inbox and dictation work (`planEntitled`),
+  whatever the hours. Threads' own machines (`wantsMachine`, preview_machines) never come with
+  Starter.
+- **Upgrade:** Settings › Billing's Upgrade opens Stripe's portal at the confirmation of
+  Max's price for the same subscription (`startUpgrade`, a `subscription_update_confirm`
+  flow), which charges the difference for the rest of the period at once. Brigade's portal
+  settings allow moving between the two prices (`subscription_update`, set by `stripe:setup`).
+- Checkout takes `tier: 'starter'` (`BillingCheckout`); Settings › Billing shows Free, Starter
+  and Max side by side, and onboarding offers Starter in a line under Max. `GET /api/billing` gives the plan's
+  `tier` and, on Starter, its `hours` (used, included, when they start over).
+
 ## Setting up an account
 
 `pnpm --filter @brigade/api stripe:setup` with `STRIPE_SECRET_KEY` set makes, once:
-the product `brigade_cloud`, its price `brigade_cloud_monthly`, and Brigade's own
-customer portal settings (metadata `brigade=portal`, which the API uses rather than
-the account's default). A live key needs `--live`. A preview whose `STRIPE_SECRET_KEY`
+the product `brigade_cloud` (named Brigade Max), its price `brigade_cloud_monthly`, the product
+`brigade_cloud_starter` (Brigade Starter) and its price `brigade_cloud_starter_monthly` ($15,
+€15), renaming products made under another name, and
+Brigade's own customer portal settings (metadata `brigade=portal`, which the API uses rather
+than the account's default), with moving between the two prices allowed; portal settings made
+before Starter get that added. A live key needs `--live`. A preview whose `STRIPE_SECRET_KEY`
 preview variable is a test key runs it on start.
 
 The live account (Brigade, `acct_1TglYsRbMiIVQuK6`) is set up: product `brigade_cloud`,

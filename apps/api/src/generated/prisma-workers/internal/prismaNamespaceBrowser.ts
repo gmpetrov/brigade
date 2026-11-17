@@ -238,6 +238,7 @@ export const BillingSubscriptionScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   plan: 'plan',
+  tier: 'tier',
   stripeCustomerId: 'stripeCustomerId',
   stripeSubscriptionId: 'stripeSubscriptionId',
   status: 'status',

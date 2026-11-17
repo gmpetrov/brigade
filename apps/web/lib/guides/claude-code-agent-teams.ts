@@ -182,7 +182,7 @@ That's what we built [Brigade](/) for. It runs **the official Claude Code** (and
 
 ![A Brigade teammate built a change and opened a pull request](/guides/brigade-thread-pr.webp "In Brigade, a teammate builds the change and opens the pull request; you merge it from the thread.")
 
-It's open source (MIT) and free on your own computer, and Brigade Cloud ($99 a month per workspace) gives teammates a computer that keeps working when yours is off. See [Brigade vs Claude Code and Codex alone](/compare/claude-code) for the full comparison.
+It's open source (MIT) and free on your own computer, and Brigade Cloud (from $15 a month per workspace) gives teammates a computer that keeps working when yours is off. See [Brigade vs Claude Code and Codex alone](/compare/claude-code) for the full comparison.
 `,
   faq: [
     {

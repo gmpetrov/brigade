@@ -47,9 +47,13 @@ export const DeleteWorkspace = WorkspaceDeletionCode.extend({ code: z.string().m
 export const AccountDeletionCode = z.object({ email: z.string().max(320) })
 export const DeleteAccount = AccountDeletionCode.extend({ code: z.string().max(20) })
 
-/** Checkout for the Cloud plan, from Settings › Billing or onboarding, where it comes back to. */
+/**
+ * Checkout for a Cloud plan, from Settings › Billing or onboarding, where it comes back to:
+ * Brigade Cloud, or Brigade Cloud Starter (`tier: 'starter'`).
+ */
 export const BillingCheckout = z.object({
   from: z.enum(['billing', 'onboarding']).default('billing'),
+  tier: z.enum(['cloud', 'starter']).default('cloud'),
 })
 
 /**
@@ -60,6 +64,13 @@ export const BillingCheckout = z.object({
 export type BillingResponse = {
   enabled: boolean
   plan: {
+    /** Brigade Cloud, or Brigade Cloud Starter ($15, with hours of cloud computer a period). */
+    tier: 'cloud' | 'starter'
+    /**
+     * Starter's hours this period, while it is active: the cloud computer's running time since
+     * the period began, of `included`, starting over at `resetsAt`. Null on Brigade Cloud.
+     */
+    hours: { used: number; included: number; resetsAt: string } | null
     /** Stripe's status: active, trialing, past_due, canceled, unpaid… */
     status: string
     /** It gives the workspace its cloud computer now. */

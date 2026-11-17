@@ -1,7 +1,8 @@
-// Billing: one paid plan, Cloud, subscribed per workspace, which gives the workspace its
-// cloud computer. Brigade itself stays free on members' own machines. Stripe holds the
-// subscription; BillingSubscription rows follow it. Without STRIPE_SECRET_KEY billing is off
-// and every workspace has the cloud computer, as on a self-hosted Brigade.
+// Billing: a Brigade Cloud plan, subscribed per workspace, which gives the workspace its cloud
+// computer: Max ($99, tier `cloud`), or Starter ($15, with a monthly allowance of cloud computer
+// hours). Brigade itself stays free on members' own machines. Stripe holds the subscription;
+// BillingSubscription rows follow it. Without STRIPE_SECRET_KEY billing is off and every
+// workspace has the cloud computer, as on a self-hosted Brigade.
 //
 // One rule keeps the rows right: they only ever take Stripe's current state, read under a
 // lock on the workspace, never what an event says. Events come late, twice, out of order
@@ -15,6 +16,7 @@ import { env } from './config.js'
 import { prisma, type Prisma } from './db.js'
 import { noteFailure } from './ops/failures.js'
 import { recordAdConversion } from './google-ads.js'
+import { usedBy } from './vm-costs.js'
 
 export const billingEnabled = () => !!env.STRIPE_SECRET_KEY
 
@@ -39,6 +41,31 @@ export const billingTiming = { lockMs: 60_000 }
  * be more items on the same subscription.
  */
 export const CLOUD_PLAN = { name: 'cloud', lookupKey: 'brigade_cloud_monthly' }
+
+/**
+ * The Cloud plans, by tier, each a Stripe price found by its lookup key (scripts/stripe-setup.mjs).
+ * Both are rows of plan "cloud": the tier follows the subscription's price, so a switch in
+ * Stripe's portal changes it on the same row.
+ * - cloud: Max, $99 / €99 a month, the cloud computer without a limit of hours. Its code name
+ *   stays `cloud` (rows, events, the lookup key): only people see "Max".
+ * - starter: Starter, $15 / €15 a month: the same cloud computer for `hours` hours
+ *   a billing period (its VM's running time, src/vm-costs.ts), without threads'
+ *   own machines. Past them, the computer sleeps until the period renews or the plan goes up.
+ */
+export const PLANS = {
+  cloud: { lookupKey: CLOUD_PLAN.lookupKey, name: 'Max' },
+  starter: {
+    lookupKey: 'brigade_cloud_starter_monthly',
+    name: 'Starter',
+    hours: 100,
+  },
+} as const
+
+export type Tier = keyof typeof PLANS
+
+/** The tier of a Stripe price, by its lookup key: Cloud unless it is Starter's. */
+export const tierOfPrice = (lookupKey: string | null | undefined): Tier =>
+  lookupKey === PLANS.starter.lookupKey ? 'starter' : 'cloud'
 
 /**
  * The statuses that keep the cloud computer. past_due too: Stripe retries the payment for a
@@ -72,20 +99,122 @@ export function pickPlan<T extends { status: string; periodStart: Date | null }>
   )
 }
 
-/** Whether the workspace may have a cloud computer: always, unless billing is on. */
-export async function cloudEntitled(workspaceId: string) {
-  if (!billingEnabled()) return true
+/**
+ * The workspace's plan as it entitles it now: whether it has one (always, unless billing is on)
+ * and its tier. Not the hours of Starter: see cloudAccess.
+ */
+export async function planOf(workspaceId: string) {
+  if (!billingEnabled()) return { entitled: true, tier: 'cloud' as Tier, plan: null }
   const plan = await workspacePlan(workspaceId)
-  return !!plan && entitles(plan.status)
+  const entitled = !!plan && entitles(plan.status)
+  return { entitled, tier: (entitled ? plan.tier : 'cloud') as Tier, plan: entitled ? plan : null }
+}
+
+/** Whether the workspace has a Cloud plan (either tier): always, unless billing is on. */
+export async function planEntitled(workspaceId: string) {
+  return (await planOf(workspaceId)).entitled
+}
+
+const DAY_MS = 24 * 60 * 60_000
+
+/** The first of the month after `date`'s, in UTC. */
+const nextMonth = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1))
+
+/**
+ * Hours the workspace's cloud computer ran in [since, now): every VM it had (a replacement
+ * makes a new one), from the runs Brigade keeps of them (src/vm-costs.ts), the time before its
+ * idle stop included, as its provider bills it.
+ */
+export async function computerHours(workspaceId: string, since: Date, now = new Date()) {
+  const runs = await prisma.vmRun.findMany({
+    where: {
+      workspaceId,
+      kind: 'computer',
+      status: { not: 'void' },
+      startedAt: { lt: now },
+      OR: [{ stoppedAt: null }, { stoppedAt: { gt: since } }],
+    },
+    select: { start: true, status: true, startedAt: true, stoppedAt: true, size: true },
+  })
+  return runs.reduce((hours, run) => hours + usedBy(run, since, now, now).hours, 0)
+}
+
+export type StarterUsage = {
+  /** Hours the cloud computer ran since the period began. */
+  usedHours: number
+  includedHours: number
+  /** When the hours start over: the end of the period paid for. */
+  resetsAt: Date
+}
+
+/**
+ * A Starter plan's hours this billing period: from its start to now. Without one Stripe gave (or
+ * one older than a period, a renewal not read yet), the calendar month in UTC.
+ */
+export async function starterUsage(
+  workspaceId: string,
+  plan: { periodStart: Date | null; periodEnd: Date | null },
+  now = new Date(),
+): Promise<StarterUsage> {
+  const current =
+    plan.periodStart &&
+    plan.periodEnd &&
+    plan.periodStart <= now &&
+    plan.periodEnd > now &&
+    now.getTime() - plan.periodStart.getTime() < 32 * DAY_MS
+  const since = current
+    ? plan.periodStart!
+    : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  return {
+    usedHours: await computerHours(workspaceId, since, now),
+    includedHours: PLANS.starter.hours,
+    resetsAt: current ? plan.periodEnd! : nextMonth(now),
+  }
 }
 
 export const CLOUD_PLAN_REQUIRED =
   'The cloud computer comes with Brigade Cloud: subscribe in Settings › Billing'
 
-/** 402 unless the workspace has the Cloud plan. */
+const day = (date: Date) =>
+  date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })
+
+/** Why the cloud computer may not run: Starter's hours are used up until `resetsAt`. */
+export const hoursUsedUp = (resetsAt: Date) =>
+  `This month's ${PLANS.starter.hours} cloud computer hours of Starter are used up: the cloud computer sleeps until ${day(resetsAt)}, or upgrade to Max in Settings › Billing`
+
+export type CloudAccess =
+  | { ok: true }
+  | { ok: false; reason: 'plan'; message: string }
+  | { ok: false; reason: 'hours'; message: string; resetsAt: Date }
+
+/**
+ * Whether the workspace's cloud computer may run now: always without billing; with it, while
+ * the workspace has a Cloud plan and, on Starter, hours left this period.
+ */
+export async function cloudAccess(workspaceId: string, now = new Date()): Promise<CloudAccess> {
+  const { entitled, tier, plan } = await planOf(workspaceId)
+  if (!entitled) return { ok: false, reason: 'plan', message: CLOUD_PLAN_REQUIRED }
+  if (tier !== 'starter' || !plan) return { ok: true }
+  const usage = await starterUsage(workspaceId, plan, now)
+  if (usage.usedHours < usage.includedHours) return { ok: true }
+  return {
+    ok: false,
+    reason: 'hours',
+    message: hoursUsedUp(usage.resetsAt),
+    resetsAt: usage.resetsAt,
+  }
+}
+
+/** Whether the workspace may have its cloud computer running now (cloudAccess). */
+export async function cloudEntitled(workspaceId: string) {
+  return (await cloudAccess(workspaceId)).ok
+}
+
+/** 402 unless the workspace's cloud computer may run now, saying why (cloudAccess). */
 export async function requireCloudPlan(workspaceId: string) {
-  if (!(await cloudEntitled(workspaceId)))
-    throw new HTTPException(402, { message: CLOUD_PLAN_REQUIRED })
+  const access = await cloudAccess(workspaceId)
+  if (!access.ok) throw new HTTPException(402, { message: access.message })
 }
 
 /**
@@ -96,9 +225,9 @@ export async function requireCloudPlan(workspaceId: string) {
 export const EMAIL_PLAN_REQUIRED =
   'Email addresses come with Brigade Cloud: an owner or admin subscribes in Settings › Billing'
 
-/** 402 unless the workspace may use Brigade's email addresses. */
+/** 402 unless the workspace may use Brigade's email addresses: with either Cloud plan. */
 export async function requireEmailPlan(workspaceId: string) {
-  if (!(await cloudEntitled(workspaceId)))
+  if (!(await planEntitled(workspaceId)))
     throw new HTTPException(402, { message: EMAIL_PLAN_REQUIRED })
 }
 
@@ -138,6 +267,8 @@ export async function savePlan(
   const item = subscription.items.data[0]
   const state = {
     stripeSubscriptionId: subscription.id,
+    // Its price says which plan it is: a switch in the portal changes it here.
+    ...(item?.price && { tier: tierOfPrice(item.price.lookup_key) }),
     stripeCustomerId:
       typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
     status: subscription.status,
@@ -215,6 +346,7 @@ function trackPlanChange(
         {
           feature: 'billing',
           plan: CLOUD_PLAN.name,
+          tier: tierOfPrice(price?.lookup_key),
           status: after,
           ...(event === 'subscription_started' && price
             ? {
@@ -468,6 +600,8 @@ export async function startCheckout(input: {
   /** Where Checkout comes back to: Settings › Billing or onboarding. */
   from: 'billing' | 'onboarding'
   cancelUrl: string
+  /** Which plan: Max by default. */
+  tier?: Tier
 }) {
   const stripe = stripeClient!
   const { workspaceId, user } = input
@@ -490,10 +624,11 @@ export async function startCheckout(input: {
         const { committed } = await savePlan(tx, workspaceId, known, known.metadata.rowId)
         return { adopted: known, committed }
       }
+      const lookupKey = PLANS[input.tier ?? 'cloud'].lookupKey
       const [price] = (
-        await stripe.prices.list({ lookup_keys: [CLOUD_PLAN.lookupKey], active: true, limit: 1 })
+        await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 })
       ).data
-      if (!price) throw new Error(`No Stripe price has the lookup key ${CLOUD_PLAN.lookupKey}`)
+      if (!price) throw new Error(`No Stripe price has the lookup key ${lookupKey}`)
       // The row Checkout completes: an abandoned one is used again.
       const pending =
         (await tx.billingSubscription.findFirst({
@@ -556,6 +691,42 @@ export async function startCheckout(input: {
           ? 'This workspace already has Brigade Cloud'
           : 'This workspace has a subscription with an unpaid invoice: update the card in Manage billing',
   })
+}
+
+/**
+ * Stripe's portal, at the confirmation of the move from Starter to Max:
+ * its address. The portal shows what is paid now for the rest of the period and takes the card's
+ * confirmation; the subscription's price changes there, and the plan's tier follows it (savePlan),
+ * by the webhook or the Billing page's next read.
+ */
+export async function startUpgrade(workspaceId: string, returnUrl: string) {
+  const stripe = stripeClient!
+  const { plan, tier } = await planOf(workspaceId)
+  if (!plan?.stripeSubscriptionId || tier !== 'starter')
+    throw new HTTPException(409, { message: 'Only Starter can be upgraded to Max' })
+  const customer = await workspaceCustomerId(workspaceId)
+  if (!customer) throw new HTTPException(409, { message: 'Only Starter can be upgraded to Max' })
+  const subscription = await stripe.subscriptions.retrieve(plan.stripeSubscriptionId)
+  const item = subscription.items.data[0]
+  const [price] = (
+    await stripe.prices.list({ lookup_keys: [PLANS.cloud.lookupKey], active: true, limit: 1 })
+  ).data
+  if (!item) throw new Error(`${subscription.id} has no item to change`)
+  if (!price) throw new Error(`No Stripe price has the lookup key ${PLANS.cloud.lookupKey}`)
+  const session = await stripe.billingPortal.sessions.create({
+    customer,
+    configuration: await portalConfiguration(),
+    return_url: returnUrl,
+    flow_data: {
+      type: 'subscription_update_confirm',
+      subscription_update_confirm: {
+        subscription: subscription.id,
+        items: [{ id: item.id, price: price.id, quantity: 1 }],
+      },
+      after_completion: { type: 'redirect', redirect: { return_url: returnUrl } },
+    },
+  })
+  return session.url
 }
 
 /** How long an organization stays closed to Checkout once its deletion is decided. */

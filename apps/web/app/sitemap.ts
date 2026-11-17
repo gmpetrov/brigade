@@ -17,7 +17,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       .filter((path) => path !== '/legal' || OPERATOR.company)
       .map((path) => ({
         url: path === '/' ? `${SITE_URL}/` : `${SITE_URL}${path}`,
-        priority: path === '/' ? 1 : path === '/compare' || path === '/guides' ? 0.7 : 0.3,
+        priority:
+          path === '/'
+            ? 1
+            : path === '/compare' || path === '/guides' || path === '/pricing'
+              ? 0.7
+              : 0.3,
       })),
     // Each comparison (app/compare/[slug]).
     ...COMPARISONS.map((x) => ({ url: `${SITE_URL}/compare/${x.slug}`, priority: 0.7 })),

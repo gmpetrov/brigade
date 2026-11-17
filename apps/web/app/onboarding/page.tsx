@@ -625,9 +625,9 @@ function ConnectAI({
     }
   }
 
-  function subscribe() {
+  function subscribe(tier: 'cloud' | 'starter' = 'cloud') {
     setBusy(true)
-    void act(subscribeToCloud('onboarding')).then(() => setBusy(false))
+    void act(subscribeToCloud('onboarding', tier)).then(() => setBusy(false))
   }
 
   if (finishing)
@@ -695,11 +695,20 @@ function ConnectAI({
             Runs on your Claude or ChatGPT plan, so no API bill
           </li>
         </ul>
-        <Button size="lg" disabled={busy} onClick={subscribe}>
-          Get Brigade Cloud
+        <Button size="lg" disabled={busy} onClick={() => subscribe()}>
+          Get Max
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Ready in a few minutes. Cancel anytime.
+          Ready in a few minutes. Cancel anytime. Or{' '}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => subscribe('starter')}
+            className="font-medium text-primary hover:underline disabled:opacity-50"
+          >
+            start with Starter
+          </button>
+          : $15 a month for 100 hours.
         </p>
       </CardContent>
     </Card>
@@ -1070,7 +1079,7 @@ function ConnectAI({
                   Your teammates keep working when your computer sleeps
                 </p>
               </div>
-              <Button variant="outline" size="sm" disabled={busy} onClick={subscribe}>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => subscribe()}>
                 Start
               </Button>
             </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Apps } from '@/components/landing/apps'
-import { BuiltBy, FAQ, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
+import { BuiltBy, FAQ, Faq, FinalCall, Footer } from '@/components/landing/closing'
 // Hidden for now, to shorten the page; uncomment here and below to bring it back.
 // import { Control } from '@/components/landing/control'
 import { Header, Hero } from '@/components/landing/hero'
@@ -67,7 +67,20 @@ const jsonLd = {
         { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
         {
           '@type': 'Offer',
-          name: 'Cloud',
+          name: 'Starter',
+          price: '15',
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '15',
+            priceCurrency: 'USD',
+            unitText: 'MONTH',
+            billingDuration: 'P1M',
+          },
+        },
+        {
+          '@type': 'Offer',
+          name: 'Max',
           price: '99',
           priceCurrency: 'USD',
           priceSpecification: {
@@ -110,7 +123,6 @@ export default function Landing() {
         {/* "Hand off the work. Keep the decisions." Hidden for now, to shorten the page. */}
         {/* <Control /> */}
         <BuiltBy numbers={numbers} />
-        <Pricing />
         <Faq />
         <FinalCall />
       </main>

@@ -1917,9 +1917,152 @@ svg.os {
 }
 .plans {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
   position: relative;
+}
+/* Who the plan is for, under its price. */
+.who {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+/* What every plan shares, under them. */
+.pr-note {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+/* Two plans (/pricing's top): side by side down to phones. */
+.plans.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 640px) {
+  .plans.two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* /pricing: its heading centred over the cards, and less room before the comparison. */
+.pr-head.centered {
+  max-width: none;
+  margin-bottom: 56px;
+  text-align: center;
+}
+.pricing-page {
+  padding-bottom: 72px;
+}
+.pricing-page .plans.two {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.pricing-page .pr-note {
+  text-align: center;
+}
+.pt-sec {
+  padding-top: 24px;
+}
+.pt-title {
+  text-align: center;
+}
+
+/* /pricing's comparison (app/pricing/page.tsx), calm and plain: one rounded card, a row per
+   line, values centred under their plan in the text's own weight, the featured plan's column
+   softly tinted from its name to its button. */
+.pt-wrap {
+  margin-top: 48px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.pt {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.pt th,
+.pt td {
+  padding: 18px 24px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+  font-weight: 400;
+}
+.pt thead th {
+  border-top: 0;
+  padding-top: 24px;
+  padding-bottom: 20px;
+}
+.pt tbody th {
+  width: 34%;
+  text-align: left;
+  color: var(--foreground);
+}
+.pt-plan {
+  text-align: center;
+  color: var(--foreground);
+}
+.pt tr > .pt-plan:nth-child(2) {
+  border-left: 1px solid var(--border);
+}
+.pt-tint {
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+}
+.pt-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pt-price {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+/* The line that sets the plans apart: tinted across as Starter's column is down, the two
+   tints adding up where they cross. */
+.pt tr.pt-strong {
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+}
+.pt .pt-strong th,
+.pt .pt-strong td {
+  font-size: 16px;
+  font-weight: 700;
+}
+.pt-yes {
+  display: inline-flex;
+  vertical-align: middle;
+  color: var(--primary);
+}
+.pt-yes svg {
+  width: 18px;
+  height: 18px;
+}
+.pt-no {
+  color: var(--muted-foreground);
+}
+.pt tfoot th,
+.pt tfoot td {
+  padding-top: 22px;
+  padding-bottom: 24px;
+}
+@media (max-width: 640px) {
+  .pt {
+    font-size: 14px;
+  }
+  .pt th,
+  .pt td {
+    padding: 14px 12px;
+  }
+}
+/* Three cards stop fitting side by side: one under the other. */
+@media (max-width: 1099px) {
+  .plans {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .plan {
   background: var(--card);
@@ -1966,7 +2109,7 @@ svg.os {
   color: var(--muted-foreground);
 }
 .feat {
-  margin: 30px 0 34px;
+  margin: 26px 0 34px;
   display: flex;
   flex-direction: column;
   gap: 14px;

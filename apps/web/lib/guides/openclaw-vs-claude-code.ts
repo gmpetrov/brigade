@@ -86,7 +86,7 @@ That's the gap [Brigade](/) fills. Brigade is an open-source app that runs **the
 
 ![A Brigade teammate opened a pull request in a thread](/guides/brigade-thread-pr.webp "Ask a teammate in a thread; it builds the change and opens a pull request for you to merge.")
 
-It's free on your own computer; Brigade Cloud ($99 a month per workspace) gives teammates a computer that stays on. Compare it directly: [Brigade vs Claude Code and Codex alone](/compare/claude-code), [Brigade vs OpenClaw](/compare/openclaw), [Brigade vs Claude Cowork](/compare/claude-cowork).
+It's free on your own computer; Brigade Cloud (from $15 a month per workspace) gives teammates a computer that stays on. Compare it directly: [Brigade vs Claude Code and Codex alone](/compare/claude-code), [Brigade vs OpenClaw](/compare/openclaw), [Brigade vs Claude Cowork](/compare/claude-cowork).
 `,
   faq: [
     {

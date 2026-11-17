@@ -837,7 +837,7 @@ const plainTitle = (text: string) => plainItemText(text).slice(0, 120)
 
 const OFF = 'That is off in the demo workspace. Sign up to do it for real.'
 const CREATES =
-  /^\/(teammates|teammates\/team|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
+  /^\/(teammates|teammates\/team|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal|upgrade)|notifications\/devices)$/
 
 /** Gets the pattern's groups, the request's JSON body and its URL. */
 const sidebarOrder: Record<'teammates' | 'projects', string[]> = { teammates: [], projects: [] }

@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { personOfMember, trackLater } from '../analytics.js'
 import { audit } from '../audit.js'
-import { billingEnabled, cloudEntitled, requireCloudPlan } from '../billing.js'
+import { billingEnabled, cloudAccess, planOf, requireCloudPlan, starterUsage } from '../billing.js'
 import { cloudAvailable, createWorkspaceComputer, desktopUrl } from '../cloud.js'
 import { lastReplacement, replaceComputer } from '../cloud-replace.js'
 import { env } from '../config.js'
@@ -40,11 +40,24 @@ export const computers = new Hono<AppEnv>()
     })
     const served = await runnerBundle()
     const presence = await hubs.get(c.var.scope.workspaceId).presence(rows.map((r) => r.id))
+    const access = await cloudAccess(c.var.scope.workspaceId)
+    // On Starter, its hours this period, for the sidebar's card once they run low.
+    const { tier, plan } = await planOf(c.var.scope.workspaceId)
+    const usage =
+      tier === 'starter' && plan ? await starterUsage(c.var.scope.workspaceId, plan) : null
     return c.json({
       cloudAvailable: cloudAvailable(),
       // With billing on, the cloud computer comes with the workspace's Cloud plan.
       billing: billingEnabled(),
-      cloudEntitled: await cloudEntitled(c.var.scope.workspaceId),
+      cloudEntitled: access.ok,
+      // Starter's hours are used up: the cloud computer sleeps until then.
+      cloudHoursUsedUp:
+        !access.ok && access.reason === 'hours' ? access.resetsAt.toISOString() : null,
+      cloudHours: usage && {
+        used: Math.round(usage.usedHours * 10) / 10,
+        included: usage.includedHours,
+        resetsAt: usage.resetsAt.toISOString(),
+      },
       computers: await Promise.all(
         rows.map(async ({ providerRef: _ref, ...row }) => ({
           ...row,

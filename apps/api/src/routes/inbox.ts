@@ -10,7 +10,7 @@ import {
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { cloudEntitled } from '../billing.js'
+import { planEntitled } from '../billing.js'
 import { suggestName } from '../mail/addresses.js'
 import { addressOf } from '../mail/names.js'
 import { attachmentKey, directUploads, presignGet, streamObject } from '../bucket.js'
@@ -57,7 +57,7 @@ export const inbox = new Hono<AppEnv>()
   /** Whether the Inbox shows its paywall, and the teammate whose address it shows. */
   .get('/plan', async (c) => {
     const { db, scope } = c.var
-    if (await cloudEntitled(scope.workspaceId))
+    if (await planEntitled(scope.workspaceId))
       return c.json<InboxPlan>({ needed: false, teammate: null, address: null })
     const teammate = await db.teammate.findFirst({
       where: { archivedAt: null, kind: 'teammate' },

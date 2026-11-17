@@ -8,6 +8,8 @@ import {
   portalConfiguration,
   refreshPlan,
   startCheckout,
+  startUpgrade,
+  starterUsage,
   stripeClient,
   workspaceCustomerId,
 } from '../billing.js'
@@ -26,11 +28,23 @@ export const billing = new Hono<AppEnv>()
   .get('/', async (c) => {
     if (!billingEnabled()) return c.json<BillingResponse>({ enabled: false, plan: null })
     const plan = await refreshPlan(c.var.scope.workspaceId)
+    const active = !!plan && entitles(plan.status)
+    const tier = plan?.tier === 'starter' ? 'starter' : 'cloud'
+    const usage =
+      plan && active && tier === 'starter'
+        ? await starterUsage(c.var.scope.workspaceId, plan)
+        : null
     return c.json<BillingResponse>({
       enabled: true,
       plan: plan && {
+        tier,
+        hours: usage && {
+          used: Math.round(usage.usedHours * 10) / 10,
+          included: usage.includedHours,
+          resetsAt: usage.resetsAt.toISOString(),
+        },
         status: plan.status,
-        active: entitles(plan.status),
+        active,
         // Given by hand, with no Stripe subscription behind it: nothing to manage.
         complimentary: !plan.stripeSubscriptionId,
         periodEnd: plan.periodEnd?.toISOString() ?? null,
@@ -45,7 +59,7 @@ export const billing = new Hono<AppEnv>()
   .post('/checkout', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     await requireSavedAccount(c.var.userId, 'Brigade Cloud')
-    const { from } = await parseBody(c.req.raw, BillingCheckout)
+    const { from, tier } = await parseBody(c.req.raw, BillingCheckout)
     if (!billingEnabled())
       throw new HTTPException(409, { message: 'Billing is off on this server' })
     const user = await prisma.user.findUniqueOrThrow({ where: { id: c.var.userId } })
@@ -53,6 +67,7 @@ export const billing = new Hono<AppEnv>()
       workspaceId: c.var.scope.workspaceId,
       user,
       from,
+      tier,
       cancelUrl: pageOf[from](),
     })
     await audit({
@@ -60,7 +75,25 @@ export const billing = new Hono<AppEnv>()
       actor: { type: 'member', id: c.var.scope.memberId },
       action: 'billing.checkout_started',
       target: { type: 'workspace', id: c.var.scope.workspaceId },
-      track: { from },
+      track: { from, tier },
+    })
+    return c.json({ url })
+  })
+
+  /**
+   * From Starter to Max: Stripe's portal at the confirmation of the new
+   * price, for the workspace's own subscription. Its address, to open.
+   */
+  .post('/upgrade', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    if (!billingEnabled())
+      throw new HTTPException(409, { message: 'Billing is off on this server' })
+    const url = await startUpgrade(c.var.scope.workspaceId, `${billingPage()}?upgraded=1`)
+    await audit({
+      ...c.var.scope,
+      actor: { type: 'member', id: c.var.scope.memberId },
+      action: 'billing.upgrade_started',
+      target: { type: 'workspace', id: c.var.scope.workspaceId },
     })
     return c.json({ url })
   })

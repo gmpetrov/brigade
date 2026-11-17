@@ -50,7 +50,7 @@ const docsSection = () =>
 
 const body = () => `# Brigade
 
-> Brigade is an open-source (MIT) app that gives a company a team of AI teammates for support, marketing, sales and code. Each teammate is the official Claude Code or Codex, signed in with the user's own Claude or ChatGPT plan, with a job, its own computer, the Apps it is given and a shared memory. Every decision that needs a person lands in one list, also on the phone. Free on your own computer; Brigade Cloud is $99 a month per workspace.
+> Brigade is an open-source (MIT) app that gives a company a team of AI teammates for support, marketing, sales and code. Each teammate is the official Claude Code or Codex, signed in with the user's own Claude or ChatGPT plan, with a job, its own computer, the Apps it is given and a shared memory. Every decision that needs a person lands in one list, also on the phone. Free on your own computer; Brigade Cloud gives teammates a cloud computer: Starter, $15 a month for 100 hours, or Max, $99 a month with no hour limit, per workspace.
 
 Not to be confused with other open-source projects named Brigade, such as spinabot/brigade (a personal multi-agent runtime) or escoffier-labs/brigade (a coding-agent task record): this Brigade is the one at brigade.lol, with its code at github.com/gmpetrov/brigade.
 
@@ -65,7 +65,7 @@ Website: ${SITE_URL}. Docs: ${DOCS_URL}. Source code: ${REPO_URL}. Live demo, no
 - Starts on its own: from triggers (an email, a webhook, an App event such as a failed payment) and schedules.
 - Apps: Gmail, Google Calendar, Drive, Docs and Sheets, GitHub, Stripe, Notion, Linear, Atlassian, PostHog, Mixpanel, Google Analytics, Search Console, Ahrefs, Cloudflare, Vercel, Neon, Supabase, Resend and more, plus any MCP server and custom webhooks. With Cloud, each teammate can have its own email address.
 - Teams: members share a workspace: threads, lists, the library of documents and memory.
-- Where it runs: free on the user's own computer (macOS, Windows or Linux). Brigade Cloud ($99 a month per workspace) gives teammates a computer of their own that keeps working when the user's is off.
+- Where it runs: free on the user's own computer (macOS, Windows or Linux). Brigade Cloud gives teammates a computer of their own that keeps working when the user's is off: Starter ($15 a month per workspace, 100 hours of cloud computer a month) or Max ($99 a month per workspace, no hour limit).
 - Open source: the whole product is on GitHub under the MIT license and can be self-hosted.
 
 ## Who it is for
