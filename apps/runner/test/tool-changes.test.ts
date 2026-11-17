@@ -32,7 +32,17 @@ const OLD_ACT = 'Act on an element by its ref. Then take a new snapshot to check
 const NEW_ACT = 'Act on an element by its ref, or on several with steps. The window is read after.'
 
 /** computer_act as the runner before the update served it, and as the one after does. */
-const toolsOf = (updated: boolean): ToolSet => ({
+const toolsOf = (updated: boolean, granted = false): ToolSet => ({
+  // An App granted since (from a ticket, say): a tool the conversation never had.
+  ...(granted
+    ? {
+        neon_run_sql: tool({
+          description: 'Run one SQL statement on a Neon database.',
+          inputSchema: jsonSchema({ type: 'object', properties: { sql: { type: 'string' } } }),
+          execute: async () => 'ok',
+        }),
+      }
+    : {}),
   computer_act: tool({
     description: updated ? NEW_ACT : OLD_ACT,
     inputSchema: jsonSchema({
@@ -109,7 +119,7 @@ async function computer(harness: Harness) {
   const sandboxes: ReturnType<typeof createLocalSandboxSession>[] = []
 
   /** A runner, with its version of Brigade's tools: its sessions start as the real one's (begin). */
-  const runner = (updated: boolean) => {
+  const runner = (updated: boolean, granted = false) => {
     const thread = new HarnessThread(
       spec,
       work,
@@ -119,7 +129,7 @@ async function computer(harness: Harness) {
       async () => null,
       {} as never,
     )
-    const tools = toolsOf(updated)
+    const tools = toolsOf(updated, granted)
     Object.assign(thread, {
       attach: async function (this: {
         live?: unknown
@@ -281,6 +291,39 @@ test('Codex: after an update that changed a tool, the next message says what cha
     assert.match(inputs[1]!, /Now fill the form/)
     assert.doesNotMatch(inputs[2]!, /brigade-tool-changes/)
     for (const input of inputs) assert.doesNotMatch(input, /"text":"Continue\."/)
+  } finally {
+    await machine.done()
+  }
+})
+
+test('Codex: an App granted since its thread started goes on in a new session told the thread so far, never in a blank thread', async () => {
+  const machine = await computer('codex')
+  try {
+    const before = machine.runner(true)
+    await before.say('Investigate the stuck resume')
+    // The runner parks the session to give it the App's tools (agentKey), as after a ticket.
+    await before.stop()
+    await machine.runner(true, true).say('Neon is granted: read the thread events')
+    const requests = await machine.recorded()
+    const methods = requests.map((r) => r.method)
+    // Codex cannot give a thread new tools (thread/resume takes none): a new thread, with them.
+    const threads = requests.filter((r) => r.method === 'thread/start')
+    assert.equal(threads.length, 2, JSON.stringify(methods))
+    assert.ok(
+      threads[1].params.dynamicTools.some((t: { name: string }) => t.name === 'neon_run_sql'),
+      JSON.stringify(threads[1].params.dynamicTools),
+    )
+    const inputs = requests
+      .filter((r) => r.method === 'turn/start')
+      .map((r) => JSON.stringify(r.params.input))
+    assert.equal(inputs.length, 2, JSON.stringify(methods))
+    // That thread is told the conversation so far, then the message: not the message alone.
+    assert.match(
+      inputs[1]!,
+      /continues in a new session because your tools, skills or instructions changed/,
+    )
+    assert.match(inputs[1]!, /User: Investigate the stuck resume/)
+    assert.match(inputs[1]!, /Neon is granted: read the thread events/)
   } finally {
     await machine.done()
   }

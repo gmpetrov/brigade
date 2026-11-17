@@ -9,7 +9,7 @@ patchedDependencies:
     hash: c3c085cc3a258a9c6f701f7069b7f7ec8d0d6dc869eae5139d561c69734bba1c
     path: patches/@ai-sdk__harness-claude-code@1.0.180.patch
   '@ai-sdk/harness-codex@1.0.178':
-    hash: 5b6b51ab1bbbdba8c758324821c5fbd06988208cbcfef2a10c68b38aef7410e4
+    hash: 3ddc906500ea107db3230877f3abe68cc60812580045dcd0e4615b9fe9f96107
     path: patches/@ai-sdk__harness-codex@1.0.178.patch
   '@ai-sdk/harness@1.0.176':
     hash: 80e07662000e9acfafd6461cc9f0046ec980b88cb3c235550d7b28839ae6751a
@@ -234,7 +234,7 @@ importers:
         version: 1.0.180(patch_hash=c3c085cc3a258a9c6f701f7069b7f7ec8d0d6dc869eae5139d561c69734bba1c)(zod@4.6.7)
       '@ai-sdk/harness-codex':
         specifier: 1.0.178
-        version: 1.0.178(patch_hash=5b6b51ab1bbbdba8c758324821c5fbd06988208cbcfef2a10c68b38aef7410e4)(zod@4.6.7)
+        version: 1.0.178(patch_hash=3ddc906500ea107db3230877f3abe68cc60812580045dcd0e4615b9fe9f96107)(zod@4.6.7)
       '@brigade/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -7431,7 +7431,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@ai-sdk/harness-codex@1.0.178(patch_hash=5b6b51ab1bbbdba8c758324821c5fbd06988208cbcfef2a10c68b38aef7410e4)(zod@4.6.7)':
+  '@ai-sdk/harness-codex@1.0.178(patch_hash=3ddc906500ea107db3230877f3abe68cc60812580045dcd0e4615b9fe9f96107)(zod@4.6.7)':
     dependencies:
       '@ai-sdk/harness': 1.0.176(patch_hash=80e07662000e9acfafd6461cc9f0046ec980b88cb3c235550d7b28839ae6751a)(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/provider': 4.0.37

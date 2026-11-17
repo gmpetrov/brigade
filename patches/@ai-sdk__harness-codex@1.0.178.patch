@@ -355,10 +355,10 @@ index 61299ae437d9fb81e16f012f3b3f330b53abcfbc..631210060f6cedfa0846ba979ad48c3a
  
    ws@8.21.0: {}
 diff --git a/dist/index.js b/dist/index.js
-index 63f47e51d59442ffec84ff18e9d24c679f938519..028e3695f78816b33c03b0bb013d46a9e4db86d9 100644
+index 63f47e51d59442ffec84ff18e9d24c679f938519..07f00e7601e724416ea6c65766b6846619ab007b 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -739,7 +739,9 @@ function createSession({ sessionId, channel, proc, model, reasoningEffort, webSe
+@@ -739,9 +739,14 @@ function createSession({ sessionId, channel, proc, model, reasoningEffort, webSe
  			instructions,
  			tools
  		});
@@ -366,10 +366,16 @@ index 63f47e51d59442ffec84ff18e9d24c679f938519..028e3695f78816b33c03b0bb013d46a9
 +		// Brigade: "v3:" fingerprints (fingerprintCodexTurnConfiguration). A "v2:" one, saved before,
 +		// restarts nothing: it covered each tool's description and input too.
 +		const restartThread = latestThreadId != null && (skillsResult.changed || latestTurnConfigurationFingerprint?.startsWith("v3:") === true && latestTurnConfigurationFingerprint !== nextFingerprint);
++		// Brigade: a restarted thread starts without its conversation, and the model, told only
++		// the message at hand, carries on blind. Refused before anything is sent: the runner
++		// starts a new session told the thread so far (apps/runner/src/harness/codex-restart.ts).
++		if (restartThread) throw new Error(`Codex thread restart refused (CODEX_THREAD_RESTART): its ${skillsResult.changed ? "skills" : "tools or instructions"} changed since it started, and a new thread would have none of its conversation.`);
  		latestTurnConfigurationFingerprint = nextFingerprint;
- 		if (restartThread) pendingResumeThreadId = void 0;
+-		if (restartThread) pendingResumeThreadId = void 0;
  		return { restartThread };
-@@ -1071,15 +1073,22 @@ function createSession({ sessionId, channel, proc, model, reasoningEffort, webSe
+ 	};
+ 	const wireTurn = (turnOpts) => {
+@@ -1071,15 +1076,22 @@ function createSession({ sessionId, channel, proc, model, reasoningEffort, webSe
  		}
  	};
  }

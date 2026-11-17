@@ -343,8 +343,18 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   thread, without the conversation, whenever any tool's definition changed (its turn configuration fingerprint);
   the Codex patch makes that fingerprint cover the instructions and the tools' names only ("v3:"), and a "v2:" one
   saved before restarts nothing. A tool added or removed still starts a new Codex thread, as before: one it did not
-  start with cannot reach it otherwise. Tested in `apps/runner/test/tool-changes.test.ts`, through the patched
+  start with cannot reach it otherwise (told the thread so far: below). Tested in `apps/runner/test/tool-changes.test.ts`, through the patched
   bridges and their stand-ins.
+- **A Codex thread whose tools changed goes on in a new session told the thread so far, never in a blank thread**
+  (`apps/runner/src/harness/codex-restart.ts`). Codex gives a thread only the tools, instructions and skills of its
+  `thread/start`, so a tool added since (an App granted from a ticket, a second account) or a skill approved needs a new
+  Codex thread, which Codex's harness started silently, without the conversation. On Nov 17 a GPT-6.2 turn answering a
+  ticket that granted Neon came back in such a thread, told only that its `open_ticket` call was answered: it redid the
+  work it had finished and closed the thread, and never ran the investigation it was asked for. Brigade's patch on the
+  harness now refuses that restart before anything is sent (`CODEX_THREAD_RESTART`), and the runner treats it as a lost
+  conversation (`EventMapper.sessionLost`): the turn starts anew, its first message the thread so far, then what the turn
+  had to say (the ticket and its answer, or the person's message). Keeping the old thread was no option: it cannot call
+  the new tools. Changed definitions of tools it has still go in the same thread (above).
 - **Commands to runners** (`apps/api/src/runner-commands.ts`). Each command with a `commandId` (a message, a
   person's answer, a retry, a takeover) is a `RunnerCommand` row before it is sent. It is still sent at once; the row
   is the safety net. Runners from protocol 43 (`OUTBOX_PROTOCOL`) acknowledge each by id (`command.ack`) and ignore an

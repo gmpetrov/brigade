@@ -87,6 +87,7 @@ import {
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
+import { lostWhy } from './codex-restart.js'
 import {
   changedTools,
   toolChangesNote,
@@ -2010,7 +2011,7 @@ export class HarnessThread {
       if (mapper.error && !signal.aborted) {
         await this.drop()
         // Its conversation gone from this computer: the thread goes on in a new session (run).
-        if (mapper.lost) return lost(mapper.error)
+        if (mapper.lost) return lost(mapper.error, lostWhy(mapper.error))
         return { kind: 'done', result: { status: 'failed', error: mapper.error } }
       }
       if (signal.aborted) await this.endCommands(live)
@@ -2034,7 +2035,7 @@ export class HarnessThread {
       if (exhausted) return { kind: 'exhausted', resetsAt: exhausted.resetsAt }
       if (EventMapper.sessionLost(message)) {
         await this.drop()
-        return lost(message)
+        return lost(message, lostWhy(message))
       }
       this.emit({ type: 'error', message })
       await this.drop()

@@ -18,6 +18,7 @@ import {
   type TicketAnswer,
   type TokenCounts,
 } from '@brigade/contracts'
+import { codexRestartRefused } from './codex-restart.js'
 import { ASK_USER_TOOL, OPEN_TICKET_TOOL } from './tools.js'
 
 /** The AI SDK's name for a harness's built-in question tool. */
@@ -413,10 +414,12 @@ export class EventMapper {
 
   /**
    * Recognise Claude Code's answer to resuming a conversation it no longer has: it deletes
-   * those older than its cleanupPeriodDays setting (30 days by default).
+   * those older than its cleanupPeriodDays setting (30 days by default). Or Codex's harness
+   * refusing to start a thread over without its conversation (codex-restart.ts).
    */
   static sessionLost(message: string) {
-    return /No conversation found with session ID/i.test(message)
+    // Codex's: its thread can't go on with the tools it has now (codex-restart.ts).
+    return /No conversation found with session ID/i.test(message) || codexRestartRefused(message)
   }
 
   /** Recognise an out-of-usage error from either harness. */
