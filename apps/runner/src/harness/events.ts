@@ -492,8 +492,11 @@ export class EventMapper {
      * Elsewhere the block is only taken out of the reply.
      */
     private readonly closes = false,
-    /** App kinds closed to the thread's starter (spec.closedApps): a ticket for one is refused. */
-    private readonly closedApps: readonly string[] = [],
+    /**
+     * App kinds closed to the thread's starter, as its latest spec says (spec.closedApps): a
+     * ticket for one is refused. Read at each call, as Codex's ticket tool reads it.
+     */
+    private readonly closedApps: () => readonly string[] = () => [],
   ) {}
 
   /**
@@ -648,7 +651,7 @@ export class EventMapper {
         }
         // Brigade's ticket tool: a person answers every ask, then the turn continues.
         if (part.toolName === OPEN_TICKET_TOOL) {
-          const refused = ticketRefused(part.input, this.closedApps)
+          const refused = ticketRefused(part.input, this.closedApps())
           const ticket = refused ? undefined : ticketAsks(part.input)
           if (ticket)
             return this.emit({

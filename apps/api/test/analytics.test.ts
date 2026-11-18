@@ -553,7 +553,9 @@ test(
 
     const email = `guest-${run}@guest.brigade.invalid`
     emails.push(email)
-    const user = await prisma.user.create({ data: { email, name: 'Guest', guest: true } })
+    const user = await prisma.user.create({
+      data: { id: randomUUID(), email, name: 'Guest', guest: true },
+    })
     await analytics.recordSignup(user, {
       path: '/guest',
       body: {},

@@ -1,6 +1,7 @@
 import {
   APP_FEATURES,
   Effort,
+  type Feature,
   loginOf,
   PI_PROTOCOL,
   folderExceptions,
@@ -20,6 +21,7 @@ import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
 import { prisma, type ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
+import type { ConnectorKind } from './connectors/types.js'
 import { connectors } from './connectors/index.js'
 import { threadAddress } from './connectors/email.js'
 import { threadDesignSystems } from './designs.js'
@@ -307,9 +309,7 @@ export async function specFor(
   const features = await featuresOfMember(thread.startedByMemberId, thread.workspaceId)
   // Tools (docs/tools.md): for teammates of a thread whose starter has the feature.
   const tools = !passing && features.has('tools')
-  // Apps behind a feature its starter lacks (src/features.ts), as list_apps leaves them out: the
-  // runner refuses an access ticket for one, which nobody could grant from it.
-  const closedApps = Object.keys(APP_FEATURES).filter((kind) => !appOpen(kind, features))
+  const closedApps = await closedAppKinds(db, thread, features)
   // Missions (docs/missions.md): the mission the thread works for, when its starter has the feature.
   // Not in Chief's pass nor a playbook's run, which their own briefs steer.
   const mission = passing || playbook ? null : await threadInitiative(db, thread)
@@ -482,6 +482,30 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
  * Once another member asks, no member's own account shows, as none answers there
  * (connector-calls.ts). person: whose own accounts show; null, nobody's.
  */
+/**
+ * The App kinds behind a feature the thread's starter lacks (src/features.ts) with no account in
+ * the workspace a ticket could grant them from (one shown in the thread, as list_apps shows them):
+ * the runner refuses an access ticket for one, which nobody could grant. An account of it already
+ * connected, such as a mailbox an owner with the feature shared, stays askable.
+ */
+export async function closedAppKinds(
+  db: ScopedDb,
+  thread: { id: string; startedByMemberId: string },
+  features: Set<Feature>,
+) {
+  const closed = Object.keys(APP_FEATURES).filter((kind) => !appOpen(kind, features))
+  if (!closed.length) return []
+  const [accounts, { shown }] = await Promise.all([
+    db.connection.findMany({
+      where: { status: { not: 'removed' }, kind: { in: closed as ConnectorKind[] } },
+      select: { kind: true, reach: true, createdByMemberId: true },
+    }),
+    shownAccounts(db, thread),
+  ])
+  const connected = new Set(accounts.filter(shown).map((c) => c.kind as string))
+  return closed.filter((kind) => !connected.has(kind))
+}
+
 export async function shownAccounts(
   db: ScopedDb,
   thread: { id: string; startedByMemberId: string },

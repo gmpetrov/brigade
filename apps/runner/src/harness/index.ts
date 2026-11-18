@@ -418,6 +418,8 @@ function createAgent(
   /** Keeps a ticket or question Codex opened without waiting (codex-asks.ts). */
   openAsk: (call: WaitingCall) => Promise<void>,
   pi?: PiSetup,
+  /** The App kinds closed to the starter, from the thread's latest spec (spec.closedApps). */
+  closedApps: () => readonly string[] = () => spec.closedApps,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -569,7 +571,7 @@ function createAgent(
         [OPEN_TICKET_TOOL]: openTicketTool,
         // Codex ends its turn whatever a call waits on: its asks open, return at once and are
         // answered by a message (codex-asks.ts).
-        ...(codex ? asksWithoutWaiting(openAsk, spec.closedApps) : {}),
+        ...(codex ? asksWithoutWaiting(openAsk, closedApps) : {}),
         [SHOW_WIDGET_TOOL]: showWidgetTool,
         [WIDGET_GUIDE_TOOL]: widgetGuideTool,
         // A person's message given to the running turn, answered at once (steeredText in threads.ts).
@@ -1869,7 +1871,7 @@ export class HarnessThread {
       () => this.answering(),
       // A child reports, a playbook's run ends with its report, a schedule's run with its turn.
       !this.spec.parent && !this.spec.playbook && this.spec.origin !== 'schedule',
-      this.spec.closedApps,
+      () => this.spec.closedApps,
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
@@ -2683,6 +2685,8 @@ export class HarnessThread {
       onPi
         ? { instructions: text, skills: piSkills(this.workDir, skills), pi: await loadPi() }
         : undefined,
+      // Its latest spec's: an agent kept across turns sees a flag changed since it was made.
+      () => this.spec.closedApps,
     )
     const adopt = await this.takeHandedOver(account)
     const sandbox = createLocalSandboxSession({
