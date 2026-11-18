@@ -372,38 +372,35 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
     }
   })
 
-  test('a ticket may ask for a closed App only where an account of it is there to grant', async () => {
-    // Gmail and Drive closed to everyone, this test's rows, then the database's own put back:
-    // the runner refuses a ticket for a kind the thread's spec names in closedApps.
+  test('a ticket may ask for a closed App only where an active account of it is there to grant', async () => {
+    // A starter with none of the features (src/features.ts), given as such rather than through
+    // the database's flags, which other tests change: the runner refuses a ticket for a kind the
+    // thread's spec names in closedApps.
     const { closedAppKinds } = await import('../src/thread-spec.js')
-    const { featuresOfMember } = await import('../src/features.js')
-    const saved = await prisma.featureFlag.findMany({
-      where: { key: { in: ['gmail', 'google_drive'] } },
-    })
     const closed = async (member: string) => {
       const id = await thread(member, member)
-      return closedAppKinds(
-        db,
-        { id, startedByMemberId: member },
-        await featuresOfMember(member, ids.workspace),
-      )
+      return closedAppKinds(db, { id, startedByMemberId: member }, new Set())
     }
+    // Ada sees no Gmail account here (Bob's and Carol's are their own): neither can be granted.
+    const ada = await closed(ids.ada)
+    assert.ok(ada.includes('gmail') && ada.includes('google_drive'), ada.join(', '))
+    // Carol's own Gmail is there to grant: still askable; Drive, with no account, is not.
+    const carol = await closed(ids.carol)
+    assert.ok(!carol.includes('gmail') && carol.includes('google_drive'), carol.join(', '))
+    // An expired account can't be granted, and its Reconnect needs the feature: still closed.
+    const expired = await account({
+      key: 'gmail',
+      kind: 'gmail',
+      label: 'Gmail',
+      externalAccount: `ada-${suffix}@acme.test`,
+      by: ids.ada,
+      reach: 'mine',
+    })
     try {
-      for (const key of ['gmail', 'google_drive'])
-        await prisma.featureFlag.upsert({
-          where: { key },
-          create: { key, emails: [] },
-          update: { everyone: false, emails: [], workspaceIds: [] },
-        })
-      // Ada sees no Gmail account here (Bob's and Carol's are their own): neither can be granted.
-      const ada = await closed(ids.ada)
-      assert.ok(ada.includes('gmail') && ada.includes('google_drive'), ada.join(', '))
-      // Carol's own Gmail is there to grant: still askable; Drive, with no account, is not.
-      const carol = await closed(ids.carol)
-      assert.ok(!carol.includes('gmail') && carol.includes('google_drive'), carol.join(', '))
+      await db.connection.update({ where: { id: expired }, data: { status: 'needs_reauth' } })
+      assert.ok((await closed(ids.ada)).includes('gmail'))
     } finally {
-      await prisma.featureFlag.deleteMany({ where: { key: { in: ['gmail', 'google_drive'] } } })
-      for (const { updatedAt: _at, ...row } of saved) await prisma.featureFlag.create({ data: row })
+      await db.connection.delete({ where: { id: expired } })
     }
   })
 

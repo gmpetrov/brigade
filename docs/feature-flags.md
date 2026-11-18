@@ -74,7 +74,7 @@ too.
 - a teammate's `list_apps` does not offer it to connect, when the person its thread works for
   lacks it.
 - the thread's spec names it in `closedApps` when its starter lacks it and the workspace has no
-  account of it the thread could be granted (one shown there, as `list_apps` shows them), and the
+  active account of it the thread could be granted (one shown there, as `list_apps` shows them), and the
   runner refuses an access ticket that asks for it: the teammate gets back that the App is not
   open to the person's account yet, with why, instead of a ticket nobody could grant (it once asked
   a new member for Gmail, which they could not connect, and the ticket stayed open). A mailbox an

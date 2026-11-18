@@ -483,10 +483,11 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
  * (connector-calls.ts). person: whose own accounts show; null, nobody's.
  */
 /**
- * The App kinds behind a feature the thread's starter lacks (src/features.ts) with no account in
- * the workspace a ticket could grant them from (one shown in the thread, as list_apps shows them):
- * the runner refuses an access ticket for one, which nobody could grant. An account of it already
- * connected, such as a mailbox an owner with the feature shared, stays askable.
+ * The App kinds behind a feature the thread's starter lacks (src/features.ts) with no active
+ * account in the workspace a ticket could grant them from (one shown in the thread, as list_apps
+ * shows them): the runner refuses an access ticket for one, which nobody could grant. An account
+ * of it already connected, such as a mailbox an owner with the feature shared, stays askable; an
+ * expired one doesn't, since a grant needs it active and its Reconnect needs the feature.
  */
 export async function closedAppKinds(
   db: ScopedDb,
@@ -497,7 +498,7 @@ export async function closedAppKinds(
   if (!closed.length) return []
   const [accounts, { shown }] = await Promise.all([
     db.connection.findMany({
-      where: { status: { not: 'removed' }, kind: { in: closed as ConnectorKind[] } },
+      where: { status: 'active', kind: { in: closed as ConnectorKind[] } },
       select: { kind: true, reach: true, createdByMemberId: true },
     }),
     shownAccounts(db, thread),
