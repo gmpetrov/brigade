@@ -2,14 +2,14 @@
 import { GETTING_STARTED, newListItemId, setupMessage, type ListSummary } from '@brigade/contracts'
 import {
   Check,
-  Clock,
+  ChevronDown,
   Cloud,
   ExternalLink,
   Laptop,
   Moon,
-  ShieldCheck,
-  Terminal,
+  Timer,
   Wallet,
+  Terminal,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -19,12 +19,19 @@ import { StatusBadge } from '@/components/status-badge'
 import { SetupWorkspaceSwitcher } from '@/components/workspace-switcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   api,
   ApiError,
-  harnessLabel,
   subscribeToCloud,
   useApi,
   usableComputers,
@@ -295,6 +302,7 @@ export default function Onboarding() {
 type LinkCode = { command: string; expiresAt: string; appLink?: string; issuedAt: number }
 
 /** How long a machine may take to connect after its command before the page says what to look for. */
+const RELEASES_URL = 'https://github.com/gmpetrov/brigade/releases/latest'
 const SLOW_LINK_MS = 90_000
 
 /** Apple's mark, in the text color, for the Mac download. */
@@ -340,7 +348,7 @@ function CardHead({
   icon: React.ReactNode
   violet?: boolean
   title: React.ReactNode
-  meta: React.ReactNode
+  meta?: React.ReactNode
   aside?: React.ReactNode
 }) {
   return (
@@ -348,7 +356,7 @@ function CardHead({
       <Tile violet={violet}>{icon}</Tile>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="font-bold">{title}</p>
-        <p className="text-xs text-muted-foreground">{meta}</p>
+        {meta && <p className="text-xs text-muted-foreground">{meta}</p>}
       </div>
       {aside}
     </div>
@@ -412,6 +420,13 @@ function Command({ command }: { command: string }) {
 const PRICE = (
   <>
     $99<span className="text-xs font-medium text-muted-foreground"> / month</span>
+  </>
+)
+
+/** Cloud's entry plan, offered first in onboarding: 100 hours a month. */
+const STARTER_PRICE = (
+  <>
+    $15<span className="text-xs font-medium text-muted-foreground"> / month</span>
   </>
 )
 
@@ -680,36 +695,24 @@ function ConnectAI({
   const cloudCard = !offerCloud ? null : cloudCompact ? null : planNeeded ? (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        {cloudHead(<p className="text-xl font-extrabold tracking-tight">{PRICE}</p>)}
+        {cloudHead(<p className="text-xl font-extrabold tracking-tight">{STARTER_PRICE}</p>)}
         <ul className="flex flex-col gap-2 text-sm [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
           <li className="flex gap-2.5">
             <Moon aria-hidden />
-            Close your laptop. Your teammates keep working.
+            Works with your laptop closed
           </li>
           <li className="flex gap-2.5">
-            <Clock aria-hidden />
-            Schedules and triggers run on time, even at 3&nbsp;a.m.
+            <Timer aria-hidden />
+            100 hours of cloud computer a month
           </li>
           <li className="flex gap-2.5">
             <Wallet aria-hidden />
-            Runs on your Claude or ChatGPT plan, so no API bill
+            Uses your Claude or ChatGPT plan
           </li>
         </ul>
-        <Button size="lg" disabled={busy} onClick={() => subscribe()}>
-          Get Max
+        <Button size="lg" disabled={busy} onClick={() => subscribe('starter')}>
+          Start with Cloud
         </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          Ready in a few minutes. Cancel anytime. Or{' '}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => subscribe('starter')}
-            className="font-medium text-primary hover:underline disabled:opacity-50"
-          >
-            start with Starter
-          </button>
-          : $15 a month for 100 hours.
-        </p>
       </CardContent>
     </Card>
   ) : cloudUsable ? (
@@ -768,7 +771,6 @@ function ConnectAI({
     asks: string
     terminal: boolean
     label?: string
-    other?: { url: string; label: string }
   } | null =
     device === 'linux'
       ? {
@@ -777,7 +779,6 @@ function ConnectAI({
           icon: <Laptop />,
           url: LINUX_DEB_URL,
           label: 'Download Brigade for Linux (.deb)',
-          other: { url: LINUX_APPIMAGE_URL, label: 'Not Ubuntu or Debian? Get the AppImage' },
           meta: 'Uses the Claude or Codex login already on it. Your teammates work while it is on.',
           asks: 'Brigade asks before it installs anything.',
           terminal: true,
@@ -803,6 +804,18 @@ function ConnectAI({
               terminal: false,
             }
           : null
+  /** Every build of Brigade.app, for the download menu (as on the landing page's hero). */
+  const downloads = [
+    {
+      name: 'macOS',
+      detail: 'Apple Silicon and Intel · .dmg',
+      url: MAC_APP_URL,
+      icon: <AppleLogo />,
+    },
+    { name: 'Windows', detail: 'Installer · .exe', url: WINDOWS_APP_URL, icon: <WindowsLogo /> },
+    { name: 'Linux · Ubuntu, Debian', detail: '.deb', url: LINUX_DEB_URL, icon: <Laptop /> },
+    { name: 'Linux · other', detail: '.AppImage', url: LINUX_APPIMAGE_URL, icon: <Laptop /> },
+  ]
   const until = link && new Date(link.expiresAt).toLocaleTimeString([], { timeStyle: 'short' })
   const expired = !!link && Date.parse(link.expiresAt) <= now
   const slow = !!link && now - link.issuedAt >= SLOW_LINK_MS
@@ -850,10 +863,10 @@ function ConnectAI({
     <Card className={cn(!link && 'bg-transparent shadow-none')}>
       <CardContent className="flex flex-col gap-4">
         <CardHead
-          icon={app.icon}
-          title={`Run them on this ${app.name}`}
-          meta={app.meta}
-          aside={free}
+          icon={<Laptop />}
+          title="Run them on your computer"
+          meta="Free · works while your computer is on"
+          aside={cloudCard ? undefined : free}
         />
         {inApp && !terminal ? (
           <>
@@ -865,36 +878,49 @@ function ConnectAI({
           </>
         ) : !link ? (
           <>
-            <Button variant="outline" size="lg" asChild>
-              <a href={app.url} onClick={() => void getLink()}>
-                {app.icon}
-                {app.label ?? `Download Brigade for ${app.os}`}
-              </a>
-            </Button>
-            {app.other && (
-              <a
-                href={app.other.url}
-                onClick={() => void getLink()}
-                className="text-center text-xs text-muted-foreground underline underline-offset-4"
-              >
-                {app.other.label}
-              </a>
-            )}
-            {app.terminal && (
-              <button
-                type="button"
-                className="text-center text-xs text-muted-foreground"
-                onClick={() => {
-                  setTerminal(true)
-                  void getLink()
-                }}
-              >
-                Prefer a terminal?{' '}
-                <span className="text-foreground underline underline-offset-4">
-                  Get the install command
-                </span>
-              </button>
-            )}
+            {/* A split button like the landing hero's (components/landing/download-button.tsx),
+                sized as the Starter CTA: this system's build, and the others in the menu. */}
+            <div className="flex w-full">
+              <Button size="lg" variant="outline" className="flex-1 rounded-r-none" asChild>
+                <a href={app.url} onClick={() => void getLink()}>
+                  {app.icon}
+                  {app.label ?? `Download Brigade for ${app.os}`}
+                </a>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-l-none border-l-0 px-3 has-[>svg]:px-3"
+                    aria-label="Other platforms"
+                  >
+                    <ChevronDown />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Download Brigade.app</DropdownMenuLabel>
+                  {downloads.map((d) => (
+                    <DropdownMenuItem key={d.url} asChild>
+                      <a href={d.url} onClick={() => void getLink()}>
+                        {d.icon}
+                        <span className="flex flex-col">
+                          <span className="font-medium">{d.name}</span>
+                          <span className="text-xs text-muted-foreground">{d.detail}</span>
+                        </span>
+                      </a>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a href={RELEASES_URL} target="_blank" rel="noreferrer">
+                      <ExternalLink />
+                      All releases on GitHub
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </>
         ) : terminal || !link.appLink ? (
           <>
@@ -1029,30 +1055,7 @@ function ConnectAI({
   ) : null
 
   return (
-    <Shell
-      title="Give your teammates a computer"
-      description="They work on a computer of their own, using your Claude or ChatGPT plan. Use Brigade Cloud, your own computer, or both."
-    >
-      <div className="-mt-3 flex justify-center gap-2">
-        {(['claude_code', 'codex'] as const).map((harness) => (
-          <span
-            key={harness}
-            className="inline-flex h-7 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-semibold"
-          >
-            <HarnessLogo harness={harness} className="size-3.5" />
-            {harnessLabel(harness)}
-          </span>
-        ))}
-      </div>
-
-      <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm text-accent-foreground">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
-        <p>
-          You sign in on the vendor&apos;s own page. Brigade never sees your password, and the login
-          stays on the computer.
-        </p>
-      </div>
-
+    <Shell title="Give your teammates a computer">
       {signingIn.map((a) => (
         <AccountCard key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
       ))}
