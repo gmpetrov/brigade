@@ -68,9 +68,10 @@ Brigade.app's window knows nothing of the site, so a guest (docs/guests.md) woul
 `direct`. The site's download button (`components/landing/download-button.tsx`) sends the
 visit's source with a beacon to `POST /api/downloads` (no session; plain-text JSON), and the API
 keeps it 3 days under a keyed hash of the visitor's IP address, never the address itself
-(`DownloadSource`, `src/download-source.ts`; one row a visitor, the latest download's). When
+(`DownloadSource`, `src/download-source.ts`; one row a visitor, the latest download's: a direct
+one clears it). When
 Brigade.app makes a guest whose sign-up says nothing of where they came from, a download from the
-same address in those days gives it, once, marked `fromDownload: true` on `User.attribution` and
+same address in those days gives it, once (claimed and deleted in one statement), marked `fromDownload: true` on `User.attribution` and
 `signup_from_download` on the person. A guess: one address can be several people. A Google ad's
 click id is not kept for it, so such a guest is never reported to Google Ads.
 

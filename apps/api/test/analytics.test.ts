@@ -571,3 +571,26 @@ test(
     assert.equal(await prisma.downloadSource.count({ where: { visitor: visitorOf(ip)! } }), 0)
   },
 )
+
+test(
+  'a direct download clears an earlier source, and two guests at once take a download once',
+  { skip },
+  async () => {
+    const { rememberDownload, takeDownloadSource, visitorOf } =
+      await import('../src/download-source.js')
+    const ip = `198.51.100.${Math.floor(Math.random() * 200) + 1}`
+    const count = () => prisma.downloadSource.count({ where: { visitor: visitorOf(ip)! } })
+    // Someone else on the address downloads later, from nowhere in particular: no campaign then.
+    await rememberDownload(ip, { utm_source: 'macaiapps', lp: '/' })
+    await rememberDownload(ip, { lp: '/' })
+    assert.equal(await count(), 0)
+    assert.equal(await takeDownloadSource(ip), undefined)
+
+    // Two guests at the same moment: one takes it, the other nothing.
+    await rememberDownload(ip, { utm_source: 'macaiapps', lp: '/' })
+    const taken = await Promise.all([takeDownloadSource(ip), takeDownloadSource(ip)])
+    assert.equal(taken.filter(Boolean).length, 1)
+    assert.equal(taken.find(Boolean)?.source, 'macaiapps')
+    assert.equal(await count(), 0)
+  },
+)

@@ -29,14 +29,18 @@ export const unknownSource = (source: SignupSource) =>
   source.channel === 'direct' && !source.source && !source.referrer && !source.adClick
 
 /**
- * Keep where a download's visit came from, by its visitor. Nothing kept for a visit that says
- * nothing (direct) or without an address. Rows older than DOWNLOAD_DAYS go at the same time.
+ * Keep where a download's visit came from, by its visitor: the latest download's. A visit that
+ * says nothing (direct) clears what an earlier one from the address left, so a later guest is
+ * not credited to someone else's campaign. Rows older than DOWNLOAD_DAYS go at the same time.
  */
 export async function rememberDownload(ip: string | undefined, raw: unknown) {
   const visitor = visitorOf(ip)
   if (!visitor) return false
   const source = parseSignupSource(raw)
-  if (unknownSource(source)) return false
+  if (unknownSource(source)) {
+    await prisma.downloadSource.deleteMany({ where: { visitor } })
+    return false
+  }
   const { adClick: _, ...kept } = source
   await prisma.downloadSource.upsert({
     where: { visitor },
@@ -49,13 +53,18 @@ export async function rememberDownload(ip: string | undefined, raw: unknown) {
   return true
 }
 
-/** The source of a download from this address in the last DOWNLOAD_DAYS, taken once. */
+/**
+ * The source of a download from this address in the last DOWNLOAD_DAYS, taken once: claimed
+ * and deleted in one statement, so two guests at once never both take it, and a download kept
+ * after the claim stays for the next.
+ */
 export async function takeDownloadSource(ip: string | undefined) {
   const visitor = visitorOf(ip)
   if (!visitor) return undefined
-  const row = await prisma.downloadSource.findUnique({ where: { visitor } })
-  if (!row) return undefined
-  await prisma.downloadSource.delete({ where: { visitor } }).catch(() => undefined)
-  if (row.createdAt.getTime() < Date.now() - DOWNLOAD_DAYS * 86_400_000) return undefined
-  return row.source as SignupSource
+  const since = new Date(Date.now() - DOWNLOAD_DAYS * 86_400_000)
+  const rows = await prisma.$queryRaw<{ source: SignupSource }[]>`
+    DELETE FROM "DownloadSource"
+    WHERE "visitor" = ${visitor} AND "createdAt" >= ${since}
+    RETURNING "source"`
+  return rows[0]?.source
 }
