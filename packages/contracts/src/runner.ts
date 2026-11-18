@@ -287,6 +287,12 @@ export const ThreadSpec = z.object({
    * teammates may restyle the starter's dashboard (theme_read, theme_set…). Older APIs leave it out.
    */
   themes: z.boolean().default(false),
+  /**
+   * The App kinds closed to its starter (a feature they lack, src/features.ts in the API): list_apps
+   * leaves them out, and the runner refuses an access ticket that asks for one, which nobody could
+   * grant. Older APIs leave it out: none closed.
+   */
+  closedApps: z.array(z.string()).default([]),
   mission: z
     .object({
       id: z.string(),

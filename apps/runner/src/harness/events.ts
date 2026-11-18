@@ -119,6 +119,31 @@ export const INVALID_TICKET =
   '(approval: title, draft; decision: question; access: kind, what; action: title; input: question). ' +
   'An app.repository is for kind github only, as owner/name.'
 
+/** The error for a ticket that asks for Apps closed to the thread's starter (spec.closedApps). */
+export const closedAppsTicket = (kinds: string[]) =>
+  `Not opened: ${kinds.join(', ')} ${kinds.length > 1 ? 'are' : 'is'} not open to this person's Brigade account yet. ` +
+  'Brigade opens some Apps to people gradually (Gmail and Google Drive once Google ends its security review of ' +
+  "Brigade), so nobody could grant it from a ticket. Don't ask for it again: tell the person in a line that " +
+  "it isn't available to their account yet, and do the work another way (an App list_apps offers, or what " +
+  'they paste or forward to you).'
+
+/**
+ * Why open_ticket's input can't open a ticket a person can answer, if it can't: invalid, or an
+ * access ask for an App closed to the thread's starter.
+ */
+export function ticketRefused(input: unknown, closedApps: readonly string[] = []) {
+  const ticket = ticketAsks(input)
+  if (!ticket) return INVALID_TICKET
+  const closed = [
+    ...new Set(
+      ticket.asks.flatMap((a) =>
+        a.type === 'access' && a.app && closedApps.includes(a.app.kind) ? [a.app.kind] : [],
+      ),
+    ),
+  ]
+  return closed.length ? closedAppsTicket(closed) : undefined
+}
+
 /** open_ticket's input as a ticket; ids filled in where the model left them out. */
 export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | undefined {
   const raw = input as { title?: string; asks?: Record<string, unknown>[] } | undefined
@@ -467,6 +492,8 @@ export class EventMapper {
      * Elsewhere the block is only taken out of the reply.
      */
     private readonly closes = false,
+    /** App kinds closed to the thread's starter (spec.closedApps): a ticket for one is refused. */
+    private readonly closedApps: readonly string[] = [],
   ) {}
 
   /**
@@ -621,7 +648,8 @@ export class EventMapper {
         }
         // Brigade's ticket tool: a person answers every ask, then the turn continues.
         if (part.toolName === OPEN_TICKET_TOOL) {
-          const ticket = ticketAsks(part.input)
+          const refused = ticketRefused(part.input, this.closedApps)
+          const ticket = refused ? undefined : ticketAsks(part.input)
           if (ticket)
             return this.emit({
               at,
@@ -634,7 +662,7 @@ export class EventMapper {
           this.rejected.push({
             toolCallId: part.toolCallId,
             toolName: part.toolName,
-            error: INVALID_TICKET,
+            error: refused ?? INVALID_TICKET,
           })
         }
         this.emit({

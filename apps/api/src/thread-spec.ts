@@ -1,4 +1,5 @@
 import {
+  APP_FEATURES,
   Effort,
   loginOf,
   PI_PROTOCOL,
@@ -25,7 +26,7 @@ import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
 import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { wantsMachine } from './preview-machines.js'
-import { featuresOfMember } from './features.js'
+import { appOpen, featuresOfMember } from './features.js'
 import { gitAccess } from './git.js'
 import { specItems } from './lists.js'
 import { folderRules } from './library-folders.js'
@@ -303,23 +304,23 @@ export async function specFor(
   // A machine of its own (the preview_machines feature, which its starter turned on): its preview
   // runs there, and its teammates get the tools to run heavy commands there. Not in Chief's pass.
   const machine = !passing && thread.computer.kind === 'cloud' && (await wantsMachine(thread))
+  const features = await featuresOfMember(thread.startedByMemberId, thread.workspaceId)
   // Tools (docs/tools.md): for teammates of a thread whose starter has the feature.
-  const tools =
-    !passing && (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('tools')
+  const tools = !passing && features.has('tools')
+  // Apps behind a feature its starter lacks (src/features.ts), as list_apps leaves them out: the
+  // runner refuses an access ticket for one, which nobody could grant from it.
+  const closedApps = Object.keys(APP_FEATURES).filter((kind) => !appOpen(kind, features))
   // Missions (docs/missions.md): the mission the thread works for, when its starter has the feature.
   // Not in Chief's pass nor a playbook's run, which their own briefs steer.
   const mission = passing || playbook ? null : await threadInitiative(db, thread)
-  const missions =
-    !passing &&
-    !playbook &&
-    (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('missions')
+  const missions = !passing && !playbook && features.has('missions')
   // Themes (docs/themes.md): the starter's own look, in a thread they started, when they have it,
   // while nobody else asks there (the API checks again at each call).
   const themes =
     !passing &&
     !playbook &&
     thread.origin === 'member' &&
-    (await featuresOfMember(thread.startedByMemberId, thread.workspaceId)).has('themes') &&
+    features.has('themes') &&
     (await shownAccounts(db, thread)).person === thread.startedByMemberId
   // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
   const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computerId)
@@ -407,6 +408,7 @@ export async function specFor(
     // Older runners ignore them, and offer no mission tools.
     missions,
     themes,
+    closedApps,
     mission,
     playbook: playbook
       ? {

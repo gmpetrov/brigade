@@ -569,7 +569,7 @@ function createAgent(
         [OPEN_TICKET_TOOL]: openTicketTool,
         // Codex ends its turn whatever a call waits on: its asks open, return at once and are
         // answered by a message (codex-asks.ts).
-        ...(codex ? asksWithoutWaiting(openAsk) : {}),
+        ...(codex ? asksWithoutWaiting(openAsk, spec.closedApps) : {}),
         [SHOW_WIDGET_TOOL]: showWidgetTool,
         [WIDGET_GUIDE_TOOL]: widgetGuideTool,
         // A person's message given to the running turn, answered at once (steeredText in threads.ts).
@@ -1869,6 +1869,7 @@ export class HarnessThread {
       () => this.answering(),
       // A child reports, a playbook's run ends with its report, a schedule's run with its turn.
       !this.spec.parent && !this.spec.playbook && this.spec.origin !== 'schedule',
+      this.spec.closedApps,
     )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the

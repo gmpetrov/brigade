@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ticketAsks, ticketResult } from '../src/harness/events.js'
+import type { AgentEvent } from '@brigade/contracts'
+import {
+  closedAppsTicket,
+  EventMapper,
+  INVALID_TICKET,
+  ticketAsks,
+  ticketRefused,
+  ticketResult,
+} from '../src/harness/events.js'
 
 test('an App access ask keeps its App and access, and is named after it', () => {
   const ticket = ticketAsks({
@@ -136,4 +144,41 @@ test('something else in place of a ticket reaches the teammate as what to do ins
     (ticketResult(asks, { action: 'declined' }) as { instead?: string }).instead,
     undefined,
   )
+})
+
+test('a ticket for an App closed to the thread’s starter is refused, with why', () => {
+  const ticket = {
+    title: 'Mail for Hugo',
+    asks: [
+      { type: 'access', kind: 'connection', app: { kind: 'gmail', scope: 'read_write' } },
+      { type: 'access', kind: 'connection', app: { kind: 'google_calendar', scope: 'read' } },
+    ],
+  }
+  assert.equal(ticketRefused(ticket, ['gmail', 'google_drive']), closedAppsTicket(['gmail']))
+  assert.match(closedAppsTicket(['gmail']), /gmail is not open to this person's Brigade account/)
+  assert.equal(ticketRefused(ticket, ['google_drive']), undefined)
+  assert.equal(ticketRefused(ticket), undefined)
+  assert.equal(ticketRefused({ title: 'Nothing' }, ['gmail']), INVALID_TICKET)
+})
+
+test('Claude Code’s call of open_ticket for a closed App opens nothing and gets the reason back', () => {
+  const events: AgentEvent[] = []
+  const mapper = new EventMapper(
+    (event) => events.push(event),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    false,
+    ['gmail'],
+  )
+  const input = {
+    title: 'Mail for Hugo',
+    asks: [{ type: 'access', kind: 'connection', app: { kind: 'gmail', scope: 'read_write' } }],
+  }
+  mapper.map({ type: 'tool-call', toolCallId: 'c1', toolName: 'open_ticket', input } as never)
+  assert.ok(!events.some((e) => e.type === 'ticket.opened'))
+  assert.deepEqual(mapper.rejected, [
+    { toolCallId: 'c1', toolName: 'open_ticket', error: closedAppsTicket(['gmail']) },
+  ])
 })

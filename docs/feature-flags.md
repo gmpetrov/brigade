@@ -73,6 +73,10 @@ too.
 - `POST /api/connections/google` refuses to start its sign-in (403);
 - a teammate's `list_apps` does not offer it to connect, when the person its thread works for
   lacks it.
+- the thread's spec names it in `closedApps` when its starter lacks it, and the runner refuses an
+  access ticket that asks for it: the teammate gets back that the App is not open to the person's
+  account yet, with why, instead of a ticket nobody could grant (it once asked a new member for
+  Gmail, which they could not connect, and the ticket stayed open).
 
 Accounts already connected keep working, for everyone the workspace gives them to.
 

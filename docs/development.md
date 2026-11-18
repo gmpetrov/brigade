@@ -179,6 +179,10 @@ what the code does: change them in the same pull request as a change they descri
 Search engines should know the docs by their www.brigade.lol address, not Mintlify's: `docs.json`'s
 `seo.metatags.canonical` is `https://www.brigade.lol/docs` (Mintlify appends each page's path without the `/docs` prefix, so the base must carry it), and the site's own `sitemap.xml` and `llms.txt` list the docs' pages
 from `docs.json`'s navigation (`apps/web/lib/docs-pages.ts`).
+The docs' own indexes for AI agents, `/docs/llms.txt` and `/docs/llms-full.txt`, are not proxied as they
+are: Mintlify writes every link in them on its subdomain (`brigade.mintlify.dev`), which teammates then
+followed and quoted to people. The site serves both itself (`apps/web/app/docs/llms*.txt`,
+`apps/web/lib/docs-index.ts`), fetched from Mintlify with those links on www.brigade.lol.
 
 ## Search engines and AI assistants
 

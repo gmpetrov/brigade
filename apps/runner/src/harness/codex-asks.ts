@@ -9,7 +9,7 @@
 // once the turn is over, and their answer comes as a message of its own (answerLater).
 import { tool, type Tool } from 'ai'
 import type { WaitingCall } from './closed-turn.js'
-import { askUserQuestions, INVALID_TICKET, ticketAsks } from './events.js'
+import { askUserQuestions, ticketAsks, ticketRefused } from './events.js'
 import { ASK_USER_TOOL, askUserTool, OPEN_TICKET_TOOL, openTicketTool } from './tools.js'
 
 const STILL_OPEN =
@@ -47,6 +47,8 @@ function described(base: Pick<Tool, 'description'>, waits: string, instead: stri
  */
 export function asksWithoutWaiting(
   open: (call: WaitingCall) => Promise<void>,
+  /** App kinds closed to the thread's starter (spec.closedApps): a ticket for one is refused. */
+  closedApps: readonly string[] = [],
 ): Record<string, Tool> {
   return {
     [OPEN_TICKET_TOOL]: tool({
@@ -57,8 +59,9 @@ export function asksWithoutWaiting(
         'Open a ticket for a person. It does not wait for them: it opens, and their answer comes later as a message of its own.',
       ),
       execute: async (input, { toolCallId }) => {
+        const refused = ticketRefused(input, closedApps)
         const ticket = ticketAsks(input)
-        if (!ticket) throw new Error(INVALID_TICKET)
+        if (refused || !ticket) throw new Error(refused)
         await opened(open, { toolCallId, toolName: OPEN_TICKET_TOOL, input })
         return { opened: true, note: `Your ticket "${ticket.title}" is open. ${STILL_OPEN}` }
       },
