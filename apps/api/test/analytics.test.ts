@@ -536,3 +536,38 @@ test("a person's first event of a kind says first, the next ones do not", { skip
   )
   assert.equal(events().find((e) => e.event === 'thread_interrupted')!.properties.first, undefined)
 })
+
+test(
+  "a guest of Brigade.app takes the source of the site's download from the same address",
+  { skip },
+  async () => {
+    const { rememberDownload, visitorOf } = await import('../src/download-source.js')
+    const ip = `203.0.113.${Math.floor(Math.random() * 200) + 1}`
+    // A visit that says nothing is not kept; one from a directory is, by a hash of its address.
+    assert.equal(await rememberDownload(ip, { lp: '/' }), false)
+    assert.equal(await rememberDownload(ip, { utm_source: 'macaiapps', lp: '/' }), true)
+    const row = await prisma.downloadSource.findUniqueOrThrow({
+      where: { visitor: visitorOf(ip)! },
+    })
+    assert.ok(!row.visitor.includes(ip), 'the address itself is never kept')
+
+    const email = `guest-${run}@guest.brigade.invalid`
+    emails.push(email)
+    const user = await prisma.user.create({ data: { email, name: 'Guest', guest: true } })
+    await analytics.recordSignup(user, {
+      path: '/guest',
+      body: {},
+      headers: new Headers({ 'cf-connecting-ip': ip }),
+    })
+    const saved = await prisma.user.findUniqueOrThrow({ where: { id: user.id } })
+    assert.deepEqual(saved.attribution, {
+      channel: 'other',
+      source: 'macaiapps',
+      landingPage: '/',
+      fromDownload: true,
+      method: 'guest',
+    })
+    // Taken once: the next guest from that address is direct.
+    assert.equal(await prisma.downloadSource.count({ where: { visitor: visitorOf(ip)! } }), 0)
+  },
+)

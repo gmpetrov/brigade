@@ -20,6 +20,7 @@ import { env } from './config.js'
 import { onScopedWrite, prisma, Prisma } from './db.js'
 import { recordAdConversion } from './google-ads.js'
 import { parseSignupSource, signupProperties } from './signup-source.js'
+import { ipOf, takeDownloadSource, unknownSource } from './download-source.js'
 
 export type { AnalyticsProps } from './analytics-events.js'
 
@@ -391,11 +392,13 @@ export function signupMethod(path: string | undefined) {
 /**
  * Keep where the person came from on the user, once (a user that has it keeps it), and send
  * `signed_up` with it. The sign-up page sends it with the code (`signupSource` in the body),
- * or through Google's round trip (the OAuth state's `additionalData.signupSource`).
+ * or through Google's round trip (the OAuth state's `additionalData.signupSource`). A guest of
+ * Brigade.app, whose window knows nothing of the site, takes the source of a download from the
+ * same address (src/download-source.ts).
  */
 export async function recordSignup(
   user: { id: string; email: string },
-  context: { path?: string; body?: unknown } | null,
+  context: { path?: string; body?: unknown; headers?: Headers; request?: Request } | null,
 ) {
   const body = (context?.body ?? {}) as Record<string, unknown>
   let raw = body.signupSource
@@ -403,8 +406,14 @@ export async function recordSignup(
     const state = await getOAuthState<{ signupSource?: unknown }>().catch(() => null)
     raw = state?.signupSource
   }
-  const source = parseSignupSource(raw)
   const method = signupMethod(context?.path)
+  let source = parseSignupSource(raw)
+  if (method === 'guest' && unknownSource(source)) {
+    const downloaded = await takeDownloadSource(
+      ipOf(context?.headers ?? context?.request?.headers),
+    ).catch(() => undefined)
+    if (downloaded) source = { ...downloaded, fromDownload: true }
+  }
   const { count } = await prisma.user.updateMany({
     where: { id: user.id, attribution: { equals: Prisma.DbNull } },
     data: { attribution: { ...source, method } },

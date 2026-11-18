@@ -53,6 +53,13 @@ export type User = Prisma.UserModel
  */
 export type AnalyticsFirst = Prisma.AnalyticsFirstModel
 /**
+ * Model DownloadSource
+ * Where a visitor who downloaded Brigade.app from the site came from (src/download-source.ts):
+ * the app's guest sign-up from the same address within a few days takes it. One row a visitor,
+ * the latest download's; old rows are deleted as new ones come.
+ */
+export type DownloadSource = Prisma.DownloadSourceModel
+/**
  * Model AdConversion
  * A conversion of a person who came from a Google ad (src/google-ads.ts): their sign-up, then
  * their first subscription. Kept with what it counts (in the same transaction), sent to Google

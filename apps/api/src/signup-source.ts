@@ -38,6 +38,12 @@ export type SignupSource = {
    * reported to Google Ads with them (src/google-ads.ts). Never sent to PostHog.
    */
   adClick?: AdClick
+  /**
+   * Taken from the site's download button rather than the sign-up itself: a guest of
+   * Brigade.app whose address downloaded it from the site in the days before
+   * (src/download-source.ts). A guess, since one address can be several people.
+   */
+  fromDownload?: true
 }
 
 export type AdClick = { gclid?: string; gbraid?: string; wbraid?: string }
@@ -178,5 +184,6 @@ export function signupProperties(source: SignupSource, method: string) {
     ...(source.campaign && { signup_campaign: source.campaign }),
     ...(source.referrer && { signup_referrer: source.referrer }),
     ...(source.landingPage && { signup_landing_page: source.landingPage }),
+    ...(source.fromDownload && { signup_from_download: true }),
   }
 }

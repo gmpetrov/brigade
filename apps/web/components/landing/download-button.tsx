@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { API_URL } from '@/lib/config'
 import { detectDevice } from '@/lib/device'
 import { LINUX_APPIMAGE_URL, LINUX_DEB_URL } from '@/lib/linux-app'
 import { MAC_APP_URL } from '@/lib/mac-app'
+import { visitSource } from '@/lib/signup-source'
 import { WINDOWS_APP_URL } from '@/lib/windows-app'
 import { c, Icon } from './parts'
 
@@ -67,6 +69,22 @@ const ITEMS: { os?: Os; name: string; detail: string; url: string; mark: ReactNo
 ]
 
 /**
+ * Tell the API where this visit came from, for the guest Brigade.app makes from the same
+ * address (apps/api/src/download-source.ts): the app's window knows nothing of the site. A
+ * beacon, so leaving for the download does not cut it; plain text, so no preflight.
+ */
+function noteDownload() {
+  try {
+    navigator.sendBeacon(
+      `${API_URL}/api/downloads`,
+      new Blob([JSON.stringify(visitSource())], { type: 'text/plain' }),
+    )
+  } catch {
+    // Nothing to do: the guest is then direct.
+  }
+}
+
+/**
  * The hero's download: a split button that names the visitor's system and downloads its
  * Brigade.app (lib/mac-app.ts, windows-app.ts, linux-app.ts), and a menu with the other builds.
  * The page is prerendered, so it reads "Download free" until the browser says which system it
@@ -128,7 +146,7 @@ export function DownloadButton() {
       }}
     >
       <div className={c('split')}>
-        <a className={c('split-main')} href={main?.url ?? RELEASES_URL}>
+        <a className={c('split-main')} href={main?.url ?? RELEASES_URL} onClick={noteDownload}>
           {main?.mark ?? <Icon name="download" />}
           {main?.label ?? 'Download free'}
         </a>
@@ -168,7 +186,10 @@ export function DownloadButton() {
               role="menuitem"
               href={item.url}
               aria-current={item.os && item.os === os ? 'true' : undefined}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                noteDownload()
+                setOpen(false)
+              }}
             >
               {item.mark}
               <span className={c('dl-t')}>

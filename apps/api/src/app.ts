@@ -76,6 +76,7 @@ import { captureError, isTracked } from './error-tracking.js'
 import { noteFailure } from './ops/failures.js'
 import { openAlerts } from './ops/alerts.js'
 import { safeEqual } from './ops/send.js'
+import { ipOf, rememberDownload } from './download-source.js'
 
 export const app = new Hono()
 
@@ -211,6 +212,21 @@ app.get('/api/billing/return', async (c) => {
   )
   const page = c.req.query('to') === 'onboarding' ? '/onboarding' : '/app/billing'
   return c.redirect(`${env.WEB_URL[0]}${page}?subscribed=1`)
+})
+// The site's download button: where the visit came from, for the app's guest sign-up from the
+// same address (src/download-source.ts). No session; a beacon's plain-text JSON body.
+app.post('/api/downloads', async (c) => {
+  const text = await c.req.text().catch(() => '')
+  let raw: unknown = null
+  try {
+    raw = text.length <= 4_000 ? JSON.parse(text) : null
+  } catch {
+    raw = null
+  }
+  await rememberDownload(ipOf(c.req.raw.headers), raw).catch((error: unknown) =>
+    console.warn(`download source not kept: ${String(error)}`),
+  )
+  return c.body(null, 204)
 })
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))

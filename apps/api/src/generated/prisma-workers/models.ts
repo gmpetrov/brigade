@@ -10,6 +10,7 @@
  */
 export type * from './models/User.js'
 export type * from './models/AnalyticsFirst.js'
+export type * from './models/DownloadSource.js'
 export type * from './models/AdConversion.js'
 export type * from './models/BillingSubscription.js'
 export type * from './models/AuthSession.js'

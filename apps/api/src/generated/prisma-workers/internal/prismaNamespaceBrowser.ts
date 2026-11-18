@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   AnalyticsFirst: 'AnalyticsFirst',
+  DownloadSource: 'DownloadSource',
   AdConversion: 'AdConversion',
   BillingSubscription: 'BillingSubscription',
   AuthSession: 'AuthSession',
@@ -213,6 +214,15 @@ export const AnalyticsFirstScalarFieldEnum = {
 } as const
 
 export type AnalyticsFirstScalarFieldEnum = (typeof AnalyticsFirstScalarFieldEnum)[keyof typeof AnalyticsFirstScalarFieldEnum]
+
+
+export const DownloadSourceScalarFieldEnum = {
+  visitor: 'visitor',
+  source: 'source',
+  createdAt: 'createdAt'
+} as const
+
+export type DownloadSourceScalarFieldEnum = (typeof DownloadSourceScalarFieldEnum)[keyof typeof DownloadSourceScalarFieldEnum]
 
 
 export const AdConversionScalarFieldEnum = {

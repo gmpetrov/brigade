@@ -62,8 +62,12 @@ export function sourceOf(
   if (known.lp) return known
   const query = new URLSearchParams(location.search)
   const ref = externalReferrer(referrer, location.hostname)
+  // A directory's own tag (`?via=macaiapps`, `?ref=producthunt`) stands for utm_source when the
+  // link has none.
+  const tag = query.get('utm_source') ? undefined : (query.get('via') ?? query.get('ref'))
   return {
     ...carried(`?${new URLSearchParams([...query].filter(([k]) => k.startsWith('utm_')))}`),
+    ...(tag && { utm_source: tag.slice(0, 200) }),
     ...(ref && { ref }),
     lp: location.pathname,
     ...(CLICK_IDS.some((id) => query.has(id)) && { paid: '1' }),

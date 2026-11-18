@@ -34,6 +34,21 @@ test('the first page reads utm, the external referrer, its path and a paid click
   })
 })
 
+test("a directory's own tag (?via=, ?ref=) stands for utm_source when there is none", () => {
+  assert.deepEqual(sourceOf(at('https://www.brigade.lol/?via=macaiapps'), ''), {
+    utm_source: 'macaiapps',
+    lp: '/',
+  })
+  assert.deepEqual(sourceOf(at('https://www.brigade.lol/?ref=producthunt'), ''), {
+    utm_source: 'producthunt',
+    lp: '/',
+  })
+  assert.deepEqual(sourceOf(at('https://www.brigade.lol/?utm_source=hn&via=macaiapps'), ''), {
+    utm_source: 'hn',
+    lp: '/',
+  })
+})
+
 test("Brigade's own pages are no referrer", () => {
   assert.equal(externalReferrer('https://www.brigade.lol/privacy', 'www.brigade.lol'), undefined)
   assert.equal(externalReferrer('https://demo.brigade.lol/app', 'www.brigade.lol'), undefined)

@@ -399,6 +399,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   AnalyticsFirst: 'AnalyticsFirst',
+  DownloadSource: 'DownloadSource',
   AdConversion: 'AdConversion',
   BillingSubscription: 'BillingSubscription',
   AuthSession: 'AuthSession',
@@ -533,7 +534,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "adConversion" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "toolState" | "theme" | "themeAsset" | "themeChange" | "toolAccount" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "desktopDevice" | "desktopMessage" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "mailMute" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull" | "initiative" | "initiativeAction" | "initiativeOutput" | "initiativeValue"
+    modelProps: "user" | "analyticsFirst" | "downloadSource" | "adConversion" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "chiefDecision" | "chiefPass" | "goal" | "goalMeasurement" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "coldEventChunk" | "threadEventVolume" | "workspaceEventDay" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "libraryShare" | "toolState" | "theme" | "themeAsset" | "themeChange" | "toolAccount" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewMachine" | "vmRun" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "desktopDevice" | "desktopMessage" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "mailMute" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement" | "featureFlag" | "specPull" | "initiative" | "initiativeAction" | "initiativeOutput" | "initiativeValue"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -682,6 +683,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AnalyticsFirstCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AnalyticsFirstCountAggregateOutputType> | number
+        }
+      }
+    }
+    DownloadSource: {
+      payload: Prisma.$DownloadSourcePayload<ExtArgs>
+      fields: Prisma.DownloadSourceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DownloadSourceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DownloadSourceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        findFirst: {
+          args: Prisma.DownloadSourceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DownloadSourceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        findMany: {
+          args: Prisma.DownloadSourceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>[]
+        }
+        create: {
+          args: Prisma.DownloadSourceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        createMany: {
+          args: Prisma.DownloadSourceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DownloadSourceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>[]
+        }
+        delete: {
+          args: Prisma.DownloadSourceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        update: {
+          args: Prisma.DownloadSourceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        deleteMany: {
+          args: Prisma.DownloadSourceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DownloadSourceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DownloadSourceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>[]
+        }
+        upsert: {
+          args: Prisma.DownloadSourceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DownloadSourcePayload>
+        }
+        aggregate: {
+          args: Prisma.DownloadSourceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDownloadSource>
+        }
+        groupBy: {
+          args: Prisma.DownloadSourceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DownloadSourceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DownloadSourceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DownloadSourceCountAggregateOutputType> | number
         }
       }
     }
@@ -9555,6 +9630,15 @@ export const AnalyticsFirstScalarFieldEnum = {
 export type AnalyticsFirstScalarFieldEnum = (typeof AnalyticsFirstScalarFieldEnum)[keyof typeof AnalyticsFirstScalarFieldEnum]
 
 
+export const DownloadSourceScalarFieldEnum = {
+  visitor: 'visitor',
+  source: 'source',
+  createdAt: 'createdAt'
+} as const
+
+export type DownloadSourceScalarFieldEnum = (typeof DownloadSourceScalarFieldEnum)[keyof typeof DownloadSourceScalarFieldEnum]
+
+
 export const AdConversionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -12667,6 +12751,7 @@ export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaC
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   analyticsFirst?: Prisma.AnalyticsFirstOmit
+  downloadSource?: Prisma.DownloadSourceOmit
   adConversion?: Prisma.AdConversionOmit
   billingSubscription?: Prisma.BillingSubscriptionOmit
   authSession?: Prisma.AuthSessionOmit

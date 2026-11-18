@@ -59,6 +59,21 @@ address instead (`lib/signup-source.ts`):
    (`src/signup-source.ts`), keeps them on `User.attribution` once, never changed after, and
    sends `signed_up`.
 
+A directory's own tag in the first page's address (`?via=macaiapps`, `?ref=producthunt`) stands
+for `utm_source` when the link has none.
+
+### Downloads
+
+Brigade.app's window knows nothing of the site, so a guest (docs/guests.md) would always be
+`direct`. The site's download button (`components/landing/download-button.tsx`) sends the
+visit's source with a beacon to `POST /api/downloads` (no session; plain-text JSON), and the API
+keeps it 3 days under a keyed hash of the visitor's IP address, never the address itself
+(`DownloadSource`, `src/download-source.ts`; one row a visitor, the latest download's). When
+Brigade.app makes a guest whose sign-up says nothing of where they came from, a download from the
+same address in those days gives it, once, marked `fromDownload: true` on `User.attribution` and
+`signup_from_download` on the person. A guess: one address can be several people. A Google ad's
+click id is not kept for it, so such a guest is never reported to Google Ads.
+
 The channel is `utm_source`'s when there is one, else the referrer's:
 
 | Referrer                                                         | Channel              |

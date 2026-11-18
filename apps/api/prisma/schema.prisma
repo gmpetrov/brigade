@@ -61,6 +61,19 @@ model AnalyticsFirst {
   @@id([userId, event])
 }
 
+/// Where a visitor who downloaded Brigade.app from the site came from (src/download-source.ts):
+/// the app's guest sign-up from the same address within a few days takes it. One row a visitor,
+/// the latest download's; old rows are deleted as new ones come.
+model DownloadSource {
+  /// A keyed hash of the visitor's IP address, never the address itself.
+  visitor   String   @id
+  /// The visit's source, as src/signup-source.ts parsed it.
+  source    Json
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// A conversion of a person who came from a Google ad (src/google-ads.ts): their sign-up, then
 /// their first subscription. Kept with what it counts (in the same transaction), sent to Google
 /// Ads by the `ad-conversions` job from `sendAfter`; Google takes it (`requestId`, `sentAt`),
