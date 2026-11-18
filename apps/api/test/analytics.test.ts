@@ -586,6 +586,11 @@ test(
     assert.equal(await count(), 0)
     assert.equal(await takeDownloadSource(ip), undefined)
 
+    // An unreadable beacon leaves what was kept.
+    await rememberDownload(ip, { utm_source: 'macaiapps', lp: '/' })
+    await rememberDownload(ip, null)
+    assert.equal(await count(), 1)
+
     // Two guests at the same moment: one takes it, the other nothing.
     await rememberDownload(ip, { utm_source: 'macaiapps', lp: '/' })
     const taken = await Promise.all([takeDownloadSource(ip), takeDownloadSource(ip)])

@@ -35,7 +35,8 @@ export const unknownSource = (source: SignupSource) =>
  */
 export async function rememberDownload(ip: string | undefined, raw: unknown) {
   const visitor = visitorOf(ip)
-  if (!visitor) return false
+  // A body that is no object (unreadable, too long) says nothing either way: what was kept stays.
+  if (!visitor || !raw || typeof raw !== 'object') return false
   const source = parseSignupSource(raw)
   if (unknownSource(source)) {
     await prisma.downloadSource.deleteMany({ where: { visitor } })
