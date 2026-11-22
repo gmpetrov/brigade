@@ -264,6 +264,7 @@ type Command = Extract<
       | 'thread.answer'
       | 'thread.ticket'
       | 'thread.interrupt'
+      | 'thread.computer.stop'
       | 'thread.queued'
       | 'thread.retry'
   }
@@ -544,6 +545,13 @@ export class Threads {
         thread.controller?.abort()
       // Stopped, a failed turn is not tried again on its own either.
       if (thread) this.settleFailure(thread)
+      return
+    }
+    if (command.type === 'thread.computer.stop') {
+      const thread = this.threads.get(command.sessionId)
+      const running = thread?.running
+      if (running && (!command.turnId || running.turnId === command.turnId))
+        void thread.harnesses.get(running.teammateId)?.harness.stopComputer()
       return
     }
     if (command.type === 'thread.queued') return this.queued(command)

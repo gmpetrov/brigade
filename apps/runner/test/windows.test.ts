@@ -180,6 +180,8 @@ test("Windows' computer use asks agent-desktop as the Mac's helper is asked", as
     env: () => ({}),
     screenshotPath: () => ({ path: 'images/x.png', absolute: '/x.png' }),
     share: () => undefined,
+    seen: () => undefined,
+    acted: () => undefined,
   })
   assert.deepEqual(await computer.request('apps', {}), {
     apps: [

@@ -18,6 +18,8 @@ function computer(answer: (call: Call) => Promise<unknown>) {
     env: () => ({ PATH: '/opt/homebrew/bin:/usr/bin' }),
     screenshotPath: () => ({ path: 'images/x.png', absolute: '/work/thread/images/x.png' }),
     share: () => undefined,
+    seen: () => undefined,
+    acted: () => undefined,
   }
   return { use, calls }
 }

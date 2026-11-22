@@ -606,6 +606,7 @@ async function start() {
       case 'thread.answer':
       case 'thread.ticket':
       case 'thread.interrupt':
+      case 'thread.computer.stop':
       case 'thread.queued':
       case 'thread.retry':
         try {

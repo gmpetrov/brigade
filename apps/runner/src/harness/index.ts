@@ -2,7 +2,7 @@
 // the experimental AI SDK harness packages (spec: "keep every import inside
 // one module of the runner package").
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, join } from 'node:path'
@@ -747,6 +747,12 @@ const askKeptMs = () => Number(process.env.BRIGADE_ASK_KEPT_MS) || 10_000
 /** How long a harness may take to let go of its turn when the runner hands it over. */
 const HAND_OVER_MS = 20_000
 
+/** After the teammate acts on the member's Mac, how long until a glance at its screen: the app has redrawn. */
+const GLANCE_MS = 600
+/** Glances of the member's Mac for the thread's panel, in the working folder; the latest few are kept. */
+const GLANCES = '.brigade-screen'
+const GLANCES_KEPT = 10
+
 /**
  * How long an answered turn may wait on work in the background, by the bridge's word, with none
  * running as the runner sees it, before the runner ends it (staleWait): counted from the later
@@ -859,6 +865,13 @@ export class HarnessThread {
   private readonly key: string
   /** Prompts so far: each is its own computer-use session, which the person can stop. */
   private prompts = 0
+  /** The computer-use session stopped from the thread's panel. */
+  private computerStopped: string | undefined
+  /** The next glance at the member's Mac, after the teammate's latest action there. */
+  private glanceTimer: NodeJS.Timeout | undefined
+  private glancing = false
+  /** The display the teammate last looked at: glances show it too. */
+  private display = 0
   /** The tool calls of the run under way, and those that failed (turn.completed). */
   private toolStats = { calls: 0, errors: 0 }
   /** Writes of the state file, in order. */
@@ -2264,33 +2277,35 @@ export class HarnessThread {
     const client = computerUseClient()
     /** On Linux, the helper reads apps through the runner's agent-desktop: its path goes along. */
     const withAgentDesktop = async (method: string, signal?: AbortSignal) => {
-      if (!linux || ['status', 'cancel', 'run', 'capture'].includes(method)) return {}
+      if (!linux || ['status', 'cancel', 'stop', 'run', 'capture'].includes(method)) return {}
       const binary = await ensureAgentDesktop(signal ? { signal } : {}).catch(() => undefined)
       return binary ? { agentDesktop: binary.path } : {}
     }
     return {
-      request: async (method, params, signal, options) =>
-        client
-          ? client.request(
-              method,
-              {
-                ...params,
-                ...(await withAgentDesktop(method, signal)),
-                session: { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name },
-              },
-              signal,
-              options,
-            )
-          : Promise.reject(
-              new ComputerUseError(
-                'not_installed',
-                linux
-                  ? 'Brigade.app is not installed on this computer, or has never been opened. Ask the ' +
-                      'person to install Brigade.app for Linux and open it, then try again.'
-                  : 'Brigade Computer Use is not installed on this Mac. Ask the person to install Brigade.app ' +
-                      '(it includes it), then try again.',
-              ),
-            ),
+      request: async (method, params, signal, options) => {
+        const session = this.computerSession()
+        if (this.computerStopped === session.id)
+          throw new ComputerUseError(
+            'stopped',
+            "The person pressed Stop in the thread's panel. Don't use the computer again in this turn: " +
+              'say so, and wait for their next message.',
+          )
+        if (!client)
+          throw new ComputerUseError(
+            'not_installed',
+            linux
+              ? 'Brigade.app is not installed on this computer, or has never been opened. Ask the ' +
+                  'person to install Brigade.app for Linux and open it, then try again.'
+              : 'Brigade Computer Use is not installed on this Mac. Ask the person to install Brigade.app ' +
+                  '(it includes it), then try again.',
+          )
+        return client.request(
+          method,
+          { ...params, ...(await withAgentDesktop(method, signal)), session },
+          signal,
+          options,
+        )
+      },
       ...this.computerBase(),
     }
   }
@@ -2311,7 +2326,74 @@ export class HarnessThread {
           toolCallId,
           prompt: 'Screenshot of the screen',
         }),
+      seen: (path, display) => {
+        clearTimeout(this.glanceTimer)
+        this.display = display
+        this.emit({ type: 'computer.screen', path })
+      },
+      acted: () => {
+        if (!computerUseClient()) return
+        clearTimeout(this.glanceTimer)
+        this.glanceTimer = setTimeout(() => void this.glance(), GLANCE_MS)
+      },
     }
+  }
+
+  /** Who acts on the member's Mac: this turn, by the teammate's name (the pill shows it). */
+  private computerSession() {
+    return { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name }
+  }
+
+  /**
+   * The member's Mac just after the teammate acted on it, for the thread's panel: smaller than
+   * a screenshot it takes, and the teammate never sees it.
+   */
+  private async glance() {
+    const client = computerUseClient()
+    const session = this.computerSession()
+    if (!client || this.computerStopped === session.id) return
+    // One at a time: the action after it gets its own.
+    if (this.glancing) {
+      this.glanceTimer = setTimeout(() => void this.glance(), GLANCE_MS)
+      return
+    }
+    this.glancing = true
+    try {
+      const dir = join(this.workDir, GLANCES)
+      const name = new Date().toISOString().replace(/[:.]/g, '-')
+      let path = `${GLANCES}/${name}.jpg`
+      const shot = (await client.request('screenshot', {
+        path: join(this.workDir, path),
+        display: this.display,
+        format: 'jpeg',
+        maxWidth: 1440,
+        session,
+      })) as { format?: string }
+      // A helper from before JPEG wrote a PNG.
+      if (shot.format !== 'jpeg') {
+        const png = `${GLANCES}/${name}.png`
+        await rename(join(this.workDir, path), join(this.workDir, png))
+        path = png
+      }
+      this.emit({ type: 'computer.screen', path, glance: true })
+      const old = (await readdir(dir)).sort().slice(0, -GLANCES_KEPT)
+      await Promise.all(old.map((file) => rm(join(dir, file), { force: true })))
+    } catch {
+      // Stopped, busy with another thread, or no permission: the teammate's own calls say so.
+    } finally {
+      this.glancing = false
+    }
+  }
+
+  /** Stop from the thread's panel: no more computer use in this turn, as with the pill's Stop. */
+  async stopComputer() {
+    const session = this.computerSession()
+    this.computerStopped = session.id
+    clearTimeout(this.glanceTimer)
+    // Hides the pill. A helper from before this has no stop: its pill hides by itself.
+    await computerUseClient()
+      ?.request('stop', { session })
+      .catch(() => {})
   }
 
   /**

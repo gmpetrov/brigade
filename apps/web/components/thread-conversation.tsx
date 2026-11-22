@@ -69,7 +69,7 @@ import {
 } from '@/components/dictation'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { useTouchScreen } from '@/components/desktop-touch'
-import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
+import { ComputerPanel, ExpandedComputer, useMacScreen } from '@/components/computer-panel'
 import { TeachTask } from '@/components/teach-task'
 import { AskedDocument, DocumentsButton, useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
@@ -348,6 +348,7 @@ export function ThreadConversation({
     if (opened && delivered) pendingThreads.delivered(id)
   }, [opened, delivered, id])
   const outputs = useThreadOutputs(events)
+  const macScreen = useMacScreen(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
   const repositories = useThreadRepositories(events)
@@ -1632,6 +1633,8 @@ export function ThreadConversation({
             }
             details={details}
             onChange={() => void thread.reload()}
+            screen={t.computer.kind === 'cloud' ? undefined : macScreen}
+            turnId={busy ? turnId : undefined}
           />
         )}
 

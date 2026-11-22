@@ -461,6 +461,8 @@ function fakeComputer(run: (command: string) => Promise<Record<string, unknown>>
     env: () => ({ PATH: '/usr/bin' }),
     screenshotPath: () => ({ path: 'images/x.png', absolute: '/work/thread/images/x.png' }),
     share: () => undefined,
+    seen: () => undefined,
+    acted: () => undefined,
   }
   return { computer, calls }
 }

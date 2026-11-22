@@ -3852,7 +3852,14 @@ export type ComputerUse = {
   screenshotPath: () => { path: string; absolute: string }
   /** Show a screenshot in the thread, like a generated image. */
   share: (path: string, toolCallId: string) => void
+  /** The teammate took a screenshot (of `display`): the thread's panel shows it. */
+  seen: (path: string, display: number) => void
+  /** The teammate acted on the screen: the thread's panel shows a glance at it shortly after. */
+  acted: () => void
 }
+
+/** Requests that change what is on screen. */
+const ACTIONS = new Set(['move', 'click', 'drag', 'scroll', 'type', 'key', 'open_app'])
 
 /** computer_run: the helper's own bounds (apps/computer-use-macos Run.swift). */
 const COMMAND_TIMEOUT_DEFAULT = 120
@@ -3906,6 +3913,16 @@ export function computerUseTools(
    */
   system: 'mac' | 'windows' | 'linux' = process.platform === 'linux' ? 'linux' : 'mac',
 ): Record<string, Tool> {
+  // The thread's panel glances at the screen shortly after each action, however it was asked.
+  const raw = computer
+  computer = {
+    ...raw,
+    request: async (method, params, signal, options) => {
+      const result = await raw.request(method, params, signal, options)
+      if (ACTIONS.has(method)) raw.acted()
+      return result
+    },
+  }
   const windows = system === 'windows'
   const linux = system === 'linux'
   const about = windows ? ABOUT_WINDOWS : linux ? ABOUT_COMPUTER_LINUX : ABOUT_MAC
@@ -3953,7 +3970,19 @@ export function computerUseTools(
         'Keys for a named app need agent-desktop, which this runner does not have: leave app out to send ' +
           'them to the app in front (bring it there with computer_open_app and check it with computer_apps).',
       )
-    return appInput
+    const input = appInput
+    const after = async <T>(result: Promise<T>) => {
+      const value = await result
+      computer.acted()
+      return value
+    }
+    return {
+      ...input,
+      press: (app: string, key: string, signal?: AbortSignal) =>
+        after(input.press(app, key, signal)),
+      type: (app: string, text: string, signal?: AbortSignal) =>
+        after(input.type(app, text, signal)),
+    }
   }
   const tools: Record<string, Tool> = {
     computer_screenshot: tool({
@@ -3980,6 +4009,7 @@ export function computerUseTools(
           abortSignal,
         )) as Record<string, unknown>
         if (input.share) computer.share(path, toolCallId)
+        computer.seen(path, input.display ?? 0)
         return {
           path,
           width: shot.width,

@@ -66,6 +66,15 @@ final class Sessions {
     active = nil
     indicator.hide()
   }
+
+  /// Stop from Brigade (the thread's panel): that turn only, as the pill's Stop does.
+  func stop(_ session: [String: Any]?) throws {
+    guard let id = session?["id"] as? String, !id.isEmpty else {
+      throw HelperError("invalid_request", "session.id is required")
+    }
+    stopped.insert(id)
+    if active?.id == id { stop() }
+  }
 }
 
 func number(_ value: Any?) -> Double? {
@@ -99,6 +108,10 @@ func makeHandler(_ sessions: Sessions) -> Handler {
       }
       return try await Capture.interactive(to: path)
     }
+    if method == "stop" {
+      try await MainActor.run { try sessions.stop(params["session"] as? [String: Any]) }
+      return ["ok": true]
+    }
     if method == "cancel" {
       guard let id = (params["session"] as? [String: Any])?["id"] as? String else {
         throw HelperError("invalid_request", "session.id is required")
@@ -112,7 +125,11 @@ func makeHandler(_ sessions: Sessions) -> Handler {
       guard let path = params["path"] as? String, path.hasPrefix("/") else {
         throw HelperError("invalid_argument", "an absolute path is required")
       }
-      return try await Screen.screenshot(display: Int(number(params["display"]) ?? 0), to: path)
+      return try await Screen.screenshot(
+        display: Int(number(params["display"]) ?? 0),
+        to: path,
+        jpeg: params["format"] as? String == "jpeg",
+        maxWidth: number(params["maxWidth"]).map { Int($0) })
     case "move":
       try Input.move(to: try point(params))
       return ["ok": true]
