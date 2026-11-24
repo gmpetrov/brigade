@@ -105,13 +105,21 @@ export function ModelSelect({
         className={cn(
           inline
             ? // Like the line of text it replaces: no box until hovered.
-              '-ml-1 max-w-full gap-1 border-0 bg-transparent px-1 py-0 text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground data-[size=default]:h-5 dark:bg-transparent dark:hover:bg-muted [&>svg:last-child]:size-3'
+              // and no focus ring: focused from the keyboard, it takes the hover's look.
+              '-ml-1 max-w-full shrink-0 gap-1 border-0 bg-transparent px-1 py-0 text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-0 data-[size=default]:h-5 dark:bg-transparent dark:hover:bg-muted [&>svg:last-child]:size-3'
             : 'w-full sm:w-80',
         )}
       >
-        <SelectValue>
+        {/* Inline, the model's name is short and the line has room: never cut nor faded. */}
+        <SelectValue
+          className={cn(
+            inline && 'max-h-none! gap-1.5! overflow-visible! [animation:none]! [mask-image:none]!',
+          )}
+        >
           <HarnessLogo harness={value.harness} className={inline ? 'size-3' : undefined} />
-          <span className="truncate">{modelLabel(value.harness, value.model)}</span>
+          <span className={inline ? 'whitespace-nowrap' : 'truncate'}>
+            {modelLabel(value.harness, value.model)}
+          </span>
           {!inline && (
             <span className="text-muted-foreground">· {harnessLabel(value.harness)}</span>
           )}
