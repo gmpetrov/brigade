@@ -207,6 +207,20 @@ jobs:
           AZURE_SIGNING_PROFILE: brigade
           AZURE_SIGNING_PUBLISHER: CHAINDESK
         run: apps/desktop/scripts/build.sh
+      # The signing tool lets a failed timestamp pass (SignTool exit code 2): an untimestamped
+      # signature stops being valid when the short-lived certificate expires, and installed apps
+      # then refuse the update. Publish only a valid, timestamped CHAINDESK signature.
+      - name: Check the signatures
+        shell: pwsh
+        run: |
+          $files = @('apps/desktop/release/out/Brigade-Setup.exe', 'apps/desktop/release/out/win-unpacked/Brigade.exe')
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature -FilePath $f
+            Write-Host "$f : $($sig.Status) / $($sig.SignerCertificate.Subject) / timestamp: $($sig.TimeStamperCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { throw "$f is not validly signed: $($sig.StatusMessage)" }
+            if ($sig.SignerCertificate.Subject -notmatch '(^|, )CN=CHAINDESK(,|$)') { throw "$f is signed by $($sig.SignerCertificate.Subject), not CHAINDESK" }
+            if (-not $sig.TimeStamperCertificate) { throw "$f has no timestamp" }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: windows
