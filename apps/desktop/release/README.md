@@ -42,13 +42,14 @@ resource group `brigade-signing`:
 The release's windows job runs in the `desktop-release` GitHub environment and signs in to Azure
 with GitHub's OIDC token: the managed identity trusts only
 `repo:gmpetrov/brigade:environment:desktop-release`, so no secret is stored. That subject names the
-environment, not the ref, so the environment itself must be locked down in the repository's
+environment, not the ref, so the environment itself is locked down in the repository's
 settings, or any workflow on any branch could declare it and sign as CHAINDESK:
 
 - Settings → Environments → `desktop-release` → Deployment branches and tags: **Selected branches
   and tags**, with only the tag rule `desktop-v*`.
-- Settings → Rules → Rulesets: a tag ruleset on `desktop-v*` that only admins may bypass, so only
-  they can create, move or delete release tags.
+- Settings → Rules → Rulesets: the tag ruleset "release tags" on `desktop-v*` restricts creating,
+  updating and deleting those tags; only repository admins and the Brigade Production app (which
+  pushes a release tag when a person asks for one) may bypass it.
 
 The values are in `desktop-release.yml`; without `AZURE_SIGNING_ENDPOINT` the installer would be
 built unsigned.
