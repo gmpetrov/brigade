@@ -26,6 +26,29 @@ export function proxyVarsIn(lines: string): Record<string, string> {
   return vars
 }
 
+/**
+ * `extra` over `env`, where a proxy variable the caller gives (a preview's, a terminal's) stands
+ * for both its cases: the inherited one of the other case goes, or curl, which reads the
+ * lower-case one first, would keep the shell's proxy and send a host the caller bypasses to it.
+ */
+export function withCallerProxy(
+  env: Record<string, string>,
+  extra: Record<string, string>,
+): Record<string, string> {
+  const given = Object.keys(extra).filter((key) => PROXY_VARS.test(key))
+  if (given.length === 0) return { ...env, ...extra }
+  const names = new Set(given.map((key) => key.toLowerCase()))
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env))
+    if (!names.has(key.toLowerCase())) out[key] = value
+  Object.assign(out, extra)
+  for (const key of given) {
+    for (const other of [key.toLowerCase(), key.toUpperCase()])
+      if (!(other in extra)) out[other] = extra[key]!
+  }
+  return out
+}
+
 /** Always straight: the computer itself, whatever the system's list leaves out. */
 const LOCAL = ['localhost', '127.0.0.1', '::1']
 

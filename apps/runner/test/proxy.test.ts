@@ -4,7 +4,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { personShell } from '../src/harness/env.js'
-import { namesProxy, parseScutilProxy, proxyVarsIn, withSystemProxy } from '../src/harness/proxy.js'
+import {
+  namesProxy,
+  parseScutilProxy,
+  proxyVarsIn,
+  withCallerProxy,
+  withSystemProxy,
+} from '../src/harness/proxy.js'
 
 /** What `scutil --proxy` prints with a VPN app's system proxy on (HTTP and HTTPS on one port). */
 const SYSTEM = `<dictionary> {
@@ -121,4 +127,29 @@ test("a caller's own proxy or no_proxy, in either case, is never undone by the s
   const bypass = withSystemProxy({ PATH: '/bin', NO_PROXY: 'db.internal' }, system)
   assert.equal(bypass.no_proxy, bypass.NO_PROXY)
   assert.ok(bypass.no_proxy!.split(',').includes('db.internal'))
+})
+
+test("a caller's proxy stands for both cases over the shell's", () => {
+  // The shell's lower-case proxy, inherited; a preview's upper-case one, given: curl reads the
+  // lower-case first, so the shell's would have sent db.internal to its proxy.
+  const env = withCallerProxy(
+    { PATH: '/bin', https_proxy: 'http://127.0.0.1:31511', no_proxy: 'localhost' },
+    { HTTPS_PROXY: 'http://127.0.0.1:31512', NO_PROXY: 'db.internal' },
+  )
+  assert.deepEqual(env, {
+    PATH: '/bin',
+    HTTPS_PROXY: 'http://127.0.0.1:31512',
+    https_proxy: 'http://127.0.0.1:31512',
+    NO_PROXY: 'db.internal',
+    no_proxy: 'db.internal',
+  })
+  // Both cases given: each kept as given. None given: a plain merge.
+  assert.deepEqual(withCallerProxy({ http_proxy: 'a' }, { http_proxy: 'b', HTTP_PROXY: 'c' }), {
+    http_proxy: 'b',
+    HTTP_PROXY: 'c',
+  })
+  assert.deepEqual(withCallerProxy({ https_proxy: 'a', HOME: '/h' }, { HOME: '/t' }), {
+    https_proxy: 'a',
+    HOME: '/t',
+  })
 })

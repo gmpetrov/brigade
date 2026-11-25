@@ -8,7 +8,7 @@ import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { agentDesktopBinary, shellQuote } from '../agent-desktop.js'
 import { pathKey } from '../windows.js'
-import { namesProxy, proxyVarsIn, withSystemProxy } from './proxy.js'
+import { namesProxy, proxyVarsIn, withCallerProxy, withSystemProxy } from './proxy.js'
 
 /** API keys never reach a harness. */
 const API_KEYS =
@@ -139,5 +139,5 @@ export function harnessEnv(extra: Record<string, string> = {}): Record<string, s
   env.PATH = [SHIM_DIR, dirname(process.execPath), path].filter(Boolean).join(delimiter)
   // On a Mac, the system's proxy when nothing names one, the caller's included: a proxy or
   // no_proxy of its own wins, in both cases, as curl reads the lower-case one first (harness/proxy.ts).
-  return withSystemProxy({ ...env, ...extra })
+  return withSystemProxy(withCallerProxy(env, extra))
 }
