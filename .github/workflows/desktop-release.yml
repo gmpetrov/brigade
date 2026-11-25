@@ -14,11 +14,10 @@
 # notarization), APPLE_API_KEY_ID, APPLE_API_ISSUER, TAURI_SIGNING_PRIVATE_KEY and
 # TAURI_SIGNING_PRIVATE_KEY_PASSWORD (signs latest.json's archive for the Tauri apps; its public
 # key is in their tauri.conf.json, kept in git history).
-# Windows signing (Azure Artifact Signing), skipped while AZURE_SIGNING_ENDPOINT is unset: the
-# secrets AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET (an app registration with the
-# Artifact Signing Certificate Profile Signer role), and the variables AZURE_SIGNING_ENDPOINT
-# (the account's region endpoint, e.g. https://weu.codesigning.azure.net), AZURE_SIGNING_ACCOUNT,
-# AZURE_SIGNING_PROFILE and AZURE_SIGNING_PUBLISHER (the certificate's subject CN).
+# Windows signing (Azure Artifact Signing, apps/desktop/release/README.md): no secret. The windows
+# job signs in to Azure with GitHub's OIDC token as the managed identity brigade-release-signer,
+# which trusts only jobs in the desktop-release environment and may only sign with the account's
+# certificate profile.
 name: Release Brigade.app
 
 on:
@@ -173,6 +172,11 @@ jobs:
     if: github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 40
+    # The managed identity that signs trusts this environment's OIDC tokens only.
+    environment: desktop-release
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -186,18 +190,20 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @brigade/desktop...
-      # Signed with Azure Artifact Signing once its variables are set (electron-builder.config.cjs);
-      # unsigned before that, and SmartScreen warns.
+      # The signing tool (TrustedSigning, run by electron-builder) uses this Azure CLI session.
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: 7e98d4f3-14bf-4b30-afd0-c1ee7a1ac724
+          tenant-id: 70aff69b-d507-4845-b12c-93d487912271
+          subscription-id: b8f74853-8e4a-4d43-a4ed-2c4077fdbb84
       - name: Build and sign
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
-          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
-          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
-          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+          AZURE_SIGNING_ENDPOINT: https://neu.codesigning.azure.net
+          AZURE_SIGNING_ACCOUNT: brigadesigning
+          AZURE_SIGNING_PROFILE: brigade
+          AZURE_SIGNING_PUBLISHER: CHAINDESK
         run: apps/desktop/scripts/build.sh
       - uses: actions/upload-artifact@v4
         with:

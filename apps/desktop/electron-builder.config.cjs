@@ -2,9 +2,8 @@
 // macOS (.dmg to install, .zip for updates), an installer for Windows, an AppImage and a .deb for
 // Linux, and the latest*.yml files installed apps read to update (src/updates.ts).
 // Windows is signed with Azure Artifact Signing (formerly Trusted Signing) when the release sets
-// its account: AZURE_SIGNING_ENDPOINT, _ACCOUNT, _PROFILE and _PUBLISHER, with AZURE_TENANT_ID,
-// AZURE_CLIENT_ID and AZURE_CLIENT_SECRET for the app registration that may sign. Without them,
-// the installer is built unsigned.
+// its account: AZURE_SIGNING_ENDPOINT, _ACCOUNT, _PROFILE and _PUBLISHER, signed in to Azure
+// beforehand (desktop-release.yml). Without them, the installer is built unsigned.
 const azure = process.env.AZURE_SIGNING_ENDPOINT
   ? {
       endpoint: process.env.AZURE_SIGNING_ENDPOINT,
