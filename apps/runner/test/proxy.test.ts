@@ -84,3 +84,41 @@ test("the login shell's proxy comes with its PATH, whatever the shell prints aro
   })
   assert.deepEqual(proxyVarsIn('http_proxy=\n'), {})
 })
+
+test("a network interface's own proxy stays its own", () => {
+  // Nothing at the top level; en1's settings, under __SCOPED__, are for connections on en1 only.
+  const scoped = `<dictionary> {
+  ExceptionsList : <array> {
+    0 : localhost
+  }
+  __SCOPED__ : <dictionary> {
+    en1 : <dictionary> {
+      ExceptionsList : <array> {
+        0 : intranet.corp
+      }
+      HTTPSEnable : 1
+      HTTPSPort : 3128
+      HTTPSProxy : 10.0.0.1
+    }
+  }
+}
+`
+  assert.equal(parseScutilProxy(scoped), undefined)
+  // Beside a top-level one, the top level's, with its exceptions alone.
+  const both = scoped.replace(
+    '  __SCOPED__',
+    '  HTTPEnable : 1\n  HTTPPort : 7890\n  HTTPProxy : 127.0.0.1\n  __SCOPED__',
+  )
+  assert.equal(parseScutilProxy(both)?.HTTPS_PROXY, 'http://127.0.0.1:7890')
+  assert.equal(parseScutilProxy(both)?.NO_PROXY, 'localhost,127.0.0.1,::1')
+})
+
+test("a caller's own proxy or no_proxy, in either case, is never undone by the system's", () => {
+  const system = () => parseScutilProxy(SYSTEM)
+  // As harnessEnv merges them: the runner's environment, then what the caller gives.
+  const own = { PATH: '/bin', HTTPS_PROXY: 'http://10.0.0.1:3128' }
+  assert.deepEqual(withSystemProxy(own, system), own)
+  const bypass = withSystemProxy({ PATH: '/bin', NO_PROXY: 'db.internal' }, system)
+  assert.equal(bypass.no_proxy, bypass.NO_PROXY)
+  assert.ok(bypass.no_proxy!.split(',').includes('db.internal'))
+})

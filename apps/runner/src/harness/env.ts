@@ -137,6 +137,7 @@ export function harnessEnv(extra: Record<string, string> = {}): Record<string, s
   const path = env[key]
   delete env[key]
   env.PATH = [SHIM_DIR, dirname(process.execPath), path].filter(Boolean).join(delimiter)
-  // On a Mac, the system's proxy when nothing names one (harness/proxy.ts).
-  return { ...withSystemProxy(env), ...extra }
+  // On a Mac, the system's proxy when nothing names one, the caller's included: a proxy or
+  // no_proxy of its own wins, in both cases, as curl reads the lower-case one first (harness/proxy.ts).
+  return withSystemProxy({ ...env, ...extra })
 }

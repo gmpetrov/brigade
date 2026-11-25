@@ -34,7 +34,9 @@ const LOCAL = ['localhost', '127.0.0.1', '::1']
  * None for a SOCKS proxy or a proxy script (PAC) alone: Claude Code takes neither.
  */
 export function parseScutilProxy(text: string): Record<string, string> | undefined {
-  const value = (key: string) => text.match(new RegExp(`^\\s*${key} : (.+)$`, 'm'))?.[1]?.trim()
+  // The top level alone, two spaces in: a dictionary nested in it (`__SCOPED__`, a network
+  // interface's own settings) holds keys of the same names, for that interface only.
+  const value = (key: string) => text.match(new RegExp(`^  ${key} : (.+)$`, 'm'))?.[1]?.trim()
   const proxy = (kind: 'HTTPS' | 'HTTP') => {
     const host = value(`${kind}Proxy`)
     const port = value(`${kind}Port`)
@@ -46,8 +48,8 @@ export function parseScutilProxy(text: string): Record<string, string> | undefin
   const http = proxy('HTTP') ?? https
   // Hosts the system sends straight ("*.local", "169.254/16"): no_proxy takes names and
   // suffixes, so a wildcard becomes its suffix and a network range is left out.
-  const block = text.match(/ExceptionsList : <array> \{([\s\S]*?)\}/)?.[1] ?? ''
-  const exceptions = [...block.matchAll(/^\s*\d+ : (.+)$/gm)]
+  const block = text.match(/^  ExceptionsList : <array> \{\n([\s\S]*?)^  \}/m)?.[1] ?? ''
+  const exceptions = [...block.matchAll(/^    \d+ : (.+)$/gm)]
     .map((m) => m[1]!.trim().replace(/^\*\./, '.'))
     .filter((host) => host && !host.includes('/') && !host.includes('*'))
   const none = [...new Set([...LOCAL, ...exceptions])].join(',')
@@ -61,7 +63,11 @@ export function parseScutilProxy(text: string): Record<string, string> | undefin
   }
 }
 
-/** How long a read of the system's proxy is kept: a VPN app turned on comes in that soon. */
+/**
+ * How long a read of the system's proxy is kept: a process started later sees a VPN app turned on
+ * that soon. One running keeps the environment it started with (a warm thread's harness), so a
+ * proxy changed since reaches it once it starts again.
+ */
 const KEEP_MS = 30_000
 let read: { at: number; vars: Record<string, string> | undefined } | undefined
 
