@@ -1,0 +1,136 @@
+// A Mac's proxy, for what the runner starts. Brigade.app starts the runner from Finder, without
+// the person's shell, and Node reads neither the shell's `https_proxy` nor macOS's system proxy:
+// on a Mac that reaches the internet only through a proxy set in System Settings (as a VPN app's
+// "system proxy" mode does), the app's window got through and Claude Code, under the runner, was
+// refused at once ("Connection refused") on every turn. Harness processes get the person's
+// proxy as environment variables, which Claude Code and Codex both read.
+import { execFileSync } from 'node:child_process'
+
+/** The variables a proxy is set with, in either case: curl reads only the lower-case ones. */
+export const PROXY_VARS = /^(https?|all|no)_proxy$/i
+
+/** Whether the environment names a proxy already (a `no_proxy` alone names none). */
+export const namesProxy = (env: Record<string, string | undefined>) =>
+  Object.entries(env).some(([key, value]) => value && PROXY_VARS.test(key) && !/^no_/i.test(key))
+
+/** The proxy variables among `KEY=value` lines (what `env` prints). */
+export function proxyVarsIn(lines: string): Record<string, string> {
+  const vars: Record<string, string> = {}
+  for (const line of lines.split('\n')) {
+    const at = line.indexOf('=')
+    if (at <= 0) continue
+    const key = line.slice(0, at)
+    const value = line.slice(at + 1).trim()
+    if (PROXY_VARS.test(key) && value) vars[key] = value
+  }
+  return vars
+}
+
+/**
+ * `extra` over `env`, where on a Mac a proxy variable the caller gives (a preview's, a terminal's) stands
+ * for both its cases: the inherited one of the other case goes, or curl, which reads the
+ * lower-case one first, would keep the shell's proxy and send a host the caller bypasses to it.
+ */
+export function withCallerProxy(
+  env: Record<string, string>,
+  extra: Record<string, string>,
+  platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+  // Only on a Mac, where the shell's proxy is brought in (usePersonPath): elsewhere what a
+  // caller gives stays exactly as given, as before.
+  const given =
+    platform === 'darwin' ? Object.keys(extra).filter((key) => PROXY_VARS.test(key)) : []
+  if (given.length === 0) return { ...env, ...extra }
+  const names = new Set(given.map((key) => key.toLowerCase()))
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env))
+    if (!names.has(key.toLowerCase())) out[key] = value
+  Object.assign(out, extra)
+  for (const key of given) {
+    for (const other of [key.toLowerCase(), key.toUpperCase()])
+      if (!(other in extra)) out[other] = extra[key]!
+  }
+  return out
+}
+
+/** Always straight: the computer itself, whatever the system's list leaves out. */
+const LOCAL = ['localhost', '127.0.0.1', '::1']
+
+/**
+ * The proxy of `scutil --proxy`'s answer, as variables: its HTTPS proxy, else its HTTP one.
+ * None for a SOCKS proxy or a proxy script (PAC) alone: Claude Code takes neither.
+ */
+export function parseScutilProxy(text: string): Record<string, string> | undefined {
+  // The top level alone, two spaces in: a dictionary nested in it (`__SCOPED__`, a network
+  // interface's own settings) holds keys of the same names, for that interface only.
+  const value = (key: string) => text.match(new RegExp(`^  ${key} : (.+)$`, 'm'))?.[1]?.trim()
+  const proxy = (kind: 'HTTPS' | 'HTTP') => {
+    const host = value(`${kind}Proxy`)
+    const port = value(`${kind}Port`)
+    if (value(`${kind}Enable`) !== '1' || !host) return undefined
+    return `http://${host.includes(':') ? `[${host}]` : host}${port ? `:${port}` : ''}`
+  }
+  const https = proxy('HTTPS') ?? proxy('HTTP')
+  if (!https) return undefined
+  const http = proxy('HTTP') ?? https
+  // Hosts the system sends straight ("*.local", "169.254/16"): no_proxy takes names and
+  // suffixes, so a wildcard becomes its suffix and a network range is left out.
+  const block = text.match(/^  ExceptionsList : <array> \{\n([\s\S]*?)^  \}/m)?.[1] ?? ''
+  const exceptions = [...block.matchAll(/^    \d+ : (.+)$/gm)]
+    .map((m) => m[1]!.trim().replace(/^\*\./, '.'))
+    .filter((host) => host && !host.includes('/') && !host.includes('*'))
+  const none = [...new Set([...LOCAL, ...exceptions])].join(',')
+  return {
+    HTTPS_PROXY: https,
+    https_proxy: https,
+    HTTP_PROXY: http,
+    http_proxy: http,
+    NO_PROXY: none,
+    no_proxy: none,
+  }
+}
+
+/**
+ * How long a read of the system's proxy is kept: a process started later sees a VPN app turned on
+ * that soon. One running keeps the environment it started with (a warm thread's harness), so a
+ * proxy changed since reaches it once it starts again.
+ */
+const KEEP_MS = 30_000
+let read: { at: number; vars: Record<string, string> | undefined } | undefined
+
+/** macOS's system proxy now, as variables; none off a Mac or with none set. */
+export function systemProxy(now = Date.now()): Record<string, string> | undefined {
+  if (process.platform !== 'darwin') return undefined
+  if (read && now - read.at < KEEP_MS) return read.vars
+  let vars: Record<string, string> | undefined
+  try {
+    const out = execFileSync('/usr/sbin/scutil', ['--proxy'], {
+      encoding: 'utf8',
+      timeout: 2000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    vars = parseScutilProxy(out)
+  } catch {}
+  read = { at: now, vars }
+  return vars
+}
+
+/**
+ * The environment with the system's proxy added, unless it names one already: the runner's own,
+ * or the person's shell's (usePersonPath), which win as they would in their terminal.
+ */
+export function withSystemProxy(
+  env: Record<string, string>,
+  system: () => Record<string, string> | undefined = systemProxy,
+): Record<string, string> {
+  if (namesProxy(env)) return env
+  const vars = system()
+  if (!vars) return env
+  // Hosts the person sends straight already stay straight.
+  const own = [env.NO_PROXY, env.no_proxy].filter(Boolean).join(',')
+  const none = [...new Set([...own.split(','), ...vars.NO_PROXY!.split(',')])]
+    .map((host) => host.trim())
+    .filter(Boolean)
+    .join(',')
+  return { ...env, ...vars, NO_PROXY: none, no_proxy: none }
+}

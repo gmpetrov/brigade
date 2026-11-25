@@ -8,6 +8,7 @@ import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { agentDesktopBinary, shellQuote } from '../agent-desktop.js'
 import { pathKey } from '../windows.js'
+import { namesProxy, proxyVarsIn, withCallerProxy, withSystemProxy } from './proxy.js'
 
 /** API keys never reach a harness. */
 const API_KEYS =
@@ -64,12 +65,26 @@ export function ensureAgentDesktopShim(
 }
 
 const MARK = '__BRIGADE_PATH__'
+const PROXY_MARK = '__BRIGADE_PROXY__'
+
+/**
+ * What the login shell answers `printf … "$PATH"; env`: its PATH, and the proxy it sets
+ * (`export https_proxy=…` in ~/.zshrc), between their marks, whatever it prints around them.
+ */
+export function personShell(out: string): { path: string; proxy: Record<string, string> } {
+  return {
+    path: out.split(MARK)[1] ?? '',
+    proxy: proxyVarsIn(out.split(PROXY_MARK)[1] ?? ''),
+  }
+}
 
 /**
  * On a Mac, where the person's shell finds commands, before what the runner was given:
  * Brigade.app starts it from Finder with a short PATH, and the harness CLIs live
  * elsewhere (claude in ~/.local/bin, a Node version manager's bin). Asks the login
  * shell, then adds the places installers use, so `claude` and `codex` are found.
+ * The proxy that shell sets comes along, unless the runner was given one: in a terminal,
+ * `claude` would go through it (harness/proxy.ts).
  */
 export function usePersonPath(): void {
   if (process.platform !== 'darwin') return
@@ -77,10 +92,12 @@ export function usePersonPath(): void {
   try {
     const out = execFileSync(
       process.env.SHELL || '/bin/zsh',
-      ['-ilc', `printf '${MARK}%s${MARK}' "$PATH"`],
+      ['-ilc', `printf '${MARK}%s${MARK}${PROXY_MARK}' "$PATH"; env; printf '${PROXY_MARK}'`],
       { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] },
     )
-    shellPath = out.split(MARK)[1] ?? ''
+    const shell = personShell(out)
+    shellPath = shell.path
+    if (!namesProxy(process.env)) Object.assign(process.env, shell.proxy)
   } catch {}
   const home = homedir()
   const dirs = [
@@ -120,5 +137,7 @@ export function harnessEnv(extra: Record<string, string> = {}): Record<string, s
   const path = env[key]
   delete env[key]
   env.PATH = [SHIM_DIR, dirname(process.execPath), path].filter(Boolean).join(delimiter)
-  return { ...env, ...extra }
+  // On a Mac, the system's proxy when nothing names one, the caller's included: a proxy or
+  // no_proxy of its own wins, in both cases, as curl reads the lower-case one first (harness/proxy.ts).
+  return withSystemProxy(withCallerProxy(env, extra))
 }

@@ -46,6 +46,16 @@ Open in Brigade** opens a `brigade://link?code=…&api=…` link, the app asks b
 running from the menu bar. The runner still updates itself from the API's bundle; the app updates itself from
 GitHub Releases (`apps/desktop/release`). Logs: `~/.brigade/logs/runner.log`.
 
+Started from Finder, the runner has neither the person's shell nor their proxy, and Node, which Claude Code runs
+on, ignores macOS's system proxy: on a Mac that reaches the internet only through a VPN app's system proxy, Claude
+Code was refused on every turn while Brigade.app got through. So on a Mac the runner asks the login shell for its
+PATH and any proxy it exports (`https_proxy` in `~/.zshrc`), and with none named, harness processes get the system
+proxy as `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` (`apps/runner/src/harness/proxy.ts`). That is `scutil --proxy`'s
+top level, not a network interface's own settings, read as each process starts, at most every 30 seconds: a harness
+already running keeps the proxy it started with, so a change reaches a warm thread once its harness starts again. A
+proxy or `no_proxy` that the runner, the person's shell or the caller names wins over the system's. A SOCKS proxy or
+a proxy script (PAC) alone is not passed on: Claude Code takes neither.
+
 A Mac can be linked to several workspaces and runs for one at a time, picked in the menu's **Workspace** submenu
 (`apps/desktop/src/workspaces.ts`). Each has a runner home of its own, since a home holds a workspace's
 link, outbox, library mirror and thread folders: the first one linked keeps `~/.brigade`, the others get
