@@ -28,23 +28,36 @@ and offer "Restart to update" (`src/updates.ts`).
 ## Signing on Windows
 
 The Windows installer and app are signed with Azure Artifact Signing (Microsoft's managed
-code-signing service, about $10 a month on its Basic plan) once the release has its account:
+code-signing service, Basic plan) under the publisher name **CHAINDESK**, the company Microsoft
+validated. Everything lives in the Azure subscription "Brigade signing" of georgesm.petrov@gmail.com,
+resource group `brigade-signing`:
 
-1. An Artifact Signing account on a paid Azure subscription, in a supported region, with the
-   company's **Public** identity validation completed and a **Public Trust** certificate profile.
-   Individuals can only validate in the US or Canada, so a company validates (the EU is eligible).
-2. An app registration (Microsoft Entra) with a client secret, given the _Artifact Signing
-   Certificate Profile Signer_ role on the account.
-3. In the repository's Actions settings, the secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`,
-   `AZURE_CLIENT_SECRET` and the variables `AZURE_SIGNING_ENDPOINT` (e.g.
-   `https://weu.codesigning.azure.net` for West Europe), `AZURE_SIGNING_ACCOUNT`,
-   `AZURE_SIGNING_PROFILE` and `AZURE_SIGNING_PUBLISHER` (the certificate's CN, the validated
-   company name).
+| What                                              | Value                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| Artifact Signing account (North Europe)           | `brigadesigning`, endpoint `https://neu.codesigning.azure.net` |
+| Certificate profile (Public Trust)                | `brigade`, subject `CN=CHAINDESK, O=CHAINDESK, L=Paris, C=FR`  |
+| Identity validation (organization, until 02/2029) | `64136cc0-9bcd-4e3f-bd9c-0e80caed1e7e`                         |
+| Managed identity that signs                       | `brigade-release-signer` (Certificate Profile Signer role)     |
 
-Without `AZURE_SIGNING_ENDPOINT` the installer is built unsigned. Apps installed unsigned update to
-a signed one; from then on, each update's installer must be signed by `AZURE_SIGNING_PUBLISHER`,
-so changing that name (a new company validation) needs care. Signing removes "Unknown publisher",
-but SmartScreen may still warn until downloads build the app's reputation.
+The release's windows job runs in the `desktop-release` GitHub environment and signs in to Azure
+with GitHub's OIDC token: the managed identity trusts only
+`repo:gmpetrov/brigade:environment:desktop-release`, so no secret is stored. That subject names the
+environment, not the ref, so the environment itself is locked down in the repository's
+settings, or any workflow on any branch could declare it and sign as CHAINDESK:
+
+- Settings → Environments → `desktop-release` → Deployment branches and tags: **Selected branches
+  and tags**, with only the tag rule `desktop-v*`.
+- Settings → Rules → Rulesets: the tag ruleset "release tags" on `desktop-v*` restricts creating,
+  updating and deleting those tags; only repository admins and the Brigade Production app (which
+  pushes a release tag when a person asks for one) may bypass it.
+
+The values are in `desktop-release.yml`; without `AZURE_SIGNING_ENDPOINT` the installer would be
+built unsigned.
+
+Apps installed unsigned update to a signed one; from then on, each update's installer must be
+signed by CHAINDESK, so a new company validation needs care. Renew the identity validation before
+it expires, or signing stops. Signing removes "Unknown publisher", but SmartScreen may still warn
+until downloads build the app's reputation.
 
 ## From the Tauri app
 
