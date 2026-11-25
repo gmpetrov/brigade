@@ -41,8 +41,17 @@ resource group `brigade-signing`:
 
 The release's windows job runs in the `desktop-release` GitHub environment and signs in to Azure
 with GitHub's OIDC token: the managed identity trusts only
-`repo:gmpetrov/brigade:environment:desktop-release`, so no secret is stored. The values are in
-`desktop-release.yml`; without `AZURE_SIGNING_ENDPOINT` the installer would be built unsigned.
+`repo:gmpetrov/brigade:environment:desktop-release`, so no secret is stored. That subject names the
+environment, not the ref, so the environment itself must be locked down in the repository's
+settings, or any workflow on any branch could declare it and sign as CHAINDESK:
+
+- Settings → Environments → `desktop-release` → Deployment branches and tags: **Selected branches
+  and tags**, with only the tag rule `desktop-v*`.
+- Settings → Rules → Rulesets: a tag ruleset on `desktop-v*` that only admins may bypass, so only
+  they can create, move or delete release tags.
+
+The values are in `desktop-release.yml`; without `AZURE_SIGNING_ENDPOINT` the installer would be
+built unsigned.
 
 Apps installed unsigned update to a signed one; from then on, each update's installer must be
 signed by CHAINDESK, so a new company validation needs care. Renew the identity validation before

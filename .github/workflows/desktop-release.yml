@@ -172,7 +172,9 @@ jobs:
     if: github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 40
-    # The managed identity that signs trusts this environment's OIDC tokens only.
+    # The managed identity that signs trusts this environment's OIDC tokens only. The environment
+    # accepts only desktop-v* tags, and a tag ruleset lets only admins create them: both are
+    # repository settings (apps/desktop/release/README.md), required before a release signs.
     environment: desktop-release
     permissions:
       contents: read
