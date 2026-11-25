@@ -135,6 +135,7 @@ test("a caller's proxy stands for both cases over the shell's", () => {
   const env = withCallerProxy(
     { PATH: '/bin', https_proxy: 'http://127.0.0.1:31511', no_proxy: 'localhost' },
     { HTTPS_PROXY: 'http://127.0.0.1:31512', NO_PROXY: 'db.internal' },
+    'darwin',
   )
   assert.deepEqual(env, {
     PATH: '/bin',
@@ -144,12 +145,31 @@ test("a caller's proxy stands for both cases over the shell's", () => {
     no_proxy: 'db.internal',
   })
   // Both cases given: each kept as given. None given: a plain merge.
-  assert.deepEqual(withCallerProxy({ http_proxy: 'a' }, { http_proxy: 'b', HTTP_PROXY: 'c' }), {
-    http_proxy: 'b',
-    HTTP_PROXY: 'c',
-  })
-  assert.deepEqual(withCallerProxy({ https_proxy: 'a', HOME: '/h' }, { HOME: '/t' }), {
+  assert.deepEqual(
+    withCallerProxy({ http_proxy: 'a' }, { http_proxy: 'b', HTTP_PROXY: 'c' }, 'darwin'),
+    {
+      http_proxy: 'b',
+      HTTP_PROXY: 'c',
+    },
+  )
+  assert.deepEqual(withCallerProxy({ https_proxy: 'a', HOME: '/h' }, { HOME: '/t' }, 'darwin'), {
     https_proxy: 'a',
     HOME: '/t',
+  })
+})
+
+test('off a Mac, what a caller gives is merged as it was', () => {
+  // An upper-case HTTP_PROXY alone: curl's plain HTTP requests, which read only http_proxy,
+  // keep going straight on Linux, as before.
+  assert.deepEqual(
+    withCallerProxy({ PATH: '/bin' }, { HTTP_PROXY: 'http://127.0.0.1:31512' }, 'linux'),
+    {
+      PATH: '/bin',
+      HTTP_PROXY: 'http://127.0.0.1:31512',
+    },
+  )
+  assert.deepEqual(withCallerProxy({ https_proxy: 'a' }, { HTTPS_PROXY: 'b' }, 'win32'), {
+    https_proxy: 'a',
+    HTTPS_PROXY: 'b',
   })
 })

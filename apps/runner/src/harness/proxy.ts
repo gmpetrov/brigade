@@ -27,15 +27,19 @@ export function proxyVarsIn(lines: string): Record<string, string> {
 }
 
 /**
- * `extra` over `env`, where a proxy variable the caller gives (a preview's, a terminal's) stands
+ * `extra` over `env`, where on a Mac a proxy variable the caller gives (a preview's, a terminal's) stands
  * for both its cases: the inherited one of the other case goes, or curl, which reads the
  * lower-case one first, would keep the shell's proxy and send a host the caller bypasses to it.
  */
 export function withCallerProxy(
   env: Record<string, string>,
   extra: Record<string, string>,
+  platform: NodeJS.Platform = process.platform,
 ): Record<string, string> {
-  const given = Object.keys(extra).filter((key) => PROXY_VARS.test(key))
+  // Only on a Mac, where the shell's proxy is brought in (usePersonPath): elsewhere what a
+  // caller gives stays exactly as given, as before.
+  const given =
+    platform === 'darwin' ? Object.keys(extra).filter((key) => PROXY_VARS.test(key)) : []
   if (given.length === 0) return { ...env, ...extra }
   const names = new Set(given.map((key) => key.toLowerCase()))
   const out: Record<string, string> = {}
