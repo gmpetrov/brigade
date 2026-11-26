@@ -40,8 +40,10 @@ resource group `brigade-signing`:
 | Managed identity that signs                       | `brigade-release-signer` (Certificate Profile Signer role)     |
 
 The release's windows job runs in the `desktop-release` GitHub environment and signs in to Azure
-with GitHub's OIDC token: the managed identity trusts only
-`repo:gmpetrov/brigade:environment:desktop-release`, so no secret is stored. That subject names the
+with GitHub's OIDC token: the managed identity trusts only the `desktop-release` environment of
+this repository, so no secret is stored. GitHub sends this repository's subject with its numeric
+IDs, `repo:gmpetrov@4693180/brigade@1410448250:environment:desktop-release`; the identity's
+federated credentials also keep the plain `repo:gmpetrov/brigade:environment:desktop-release`. That subject names the
 environment, not the ref, so the environment itself is locked down in the repository's
 settings, or any workflow on any branch could declare it and sign as CHAINDESK:
 
