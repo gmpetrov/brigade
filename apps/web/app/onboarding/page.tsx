@@ -439,13 +439,11 @@ function Command({ command }: { command: string }) {
   )
 }
 
-const PRICE = (
-  <>
-    $99<span className="text-xs font-medium text-muted-foreground"> / month</span>
-  </>
-)
-
-/** Cloud's entry plan, offered first in onboarding: 100 hours a month. */
+/**
+ * Cloud's entry plan, the only one onboarding offers, in its card and in its one line: 100 hours
+ * a month. Max is chosen later in Billing; the line once offered it at $99, and people after a
+ * $15 plan met eight times the price.
+ */
 const STARTER_PRICE = (
   <>
     $15<span className="text-xs font-medium text-muted-foreground"> / month</span>
@@ -1094,12 +1092,17 @@ function ConnectAI({
                 <Cloud />
               </Tile>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <p className="text-sm font-semibold">Brigade Cloud · {PRICE}</p>
+                <p className="text-sm font-semibold">Brigade Cloud · {STARTER_PRICE}</p>
                 <p className="text-xs text-muted-foreground">
                   Your teammates keep working when your computer sleeps
                 </p>
               </div>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => subscribe()}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => subscribe('starter')}
+              >
                 Start
               </Button>
             </div>
