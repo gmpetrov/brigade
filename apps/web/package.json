@@ -77,7 +77,7 @@
   "devDependencies": {
     "@brigade/eslint-config": "workspace:*",
     "@opennextjs/cloudflare": "1.20.7",
-    "@types/node": "24.19.2",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "10.14.0",
