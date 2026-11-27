@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ToolManifest, toolFolderOf, toolManifestPaths, toolName } from '../dist/index.js'
+import {
+  ToolManifest,
+  newestManifest,
+  toolFolderOf,
+  toolManifestPaths,
+  toolName,
+} from '../dist/index.js'
 
 test('an app is the folder its path is in, or is', () => {
   assert.equal(toolFolderOf('a/review.webapp/app.js'), 'a/review.webapp')
@@ -38,4 +44,18 @@ test('tool.json is lenient: a bad entry is left out, not the manifest', () => {
     { kind: 'posthog', access: 'read_write' },
   ])
   assert.deepEqual(parsed.hosts, ['https://api.example.com'])
+})
+
+test('of an app.json and a tool.json, the one saved last counts; app.json when saved at once', () => {
+  const at = (path, ms) => ({ path, updatedAt: new Date(ms) })
+  const app = at('a.webapp/app.json', 1)
+  assert.equal(
+    newestManifest('a.webapp', [app, at('a.webapp/tool.json', 2)]).path,
+    'a.webapp/tool.json',
+  )
+  assert.equal(
+    newestManifest('a.webapp', [at('a.webapp/tool.json', 1), app]).path,
+    'a.webapp/app.json',
+  )
+  assert.equal(newestManifest('a.webapp', [at('a.webapp/other.json', 9)]), undefined)
 })

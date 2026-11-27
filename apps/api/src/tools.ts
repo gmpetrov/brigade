@@ -18,6 +18,7 @@ import {
   ToolManifest,
   toolFolderOf,
   toolManifestPaths,
+  newestManifest,
   addToHead,
   elementSelectScript,
   LIBRARY_READ_MAX,
@@ -61,13 +62,12 @@ import { toolBridgeScript } from './tool-bridge.js'
 // A tool's folder
 // ---------------------------------------------------------------------------
 
-/** An app's manifest: its `app.json`, else its `tool.json` from before the rename. */
+/** An app's manifest row: the one saved last (newestManifest). */
 async function manifestRow(db: ScopedDb, folder: string) {
-  for (const path of toolManifestPaths(folder)) {
-    const row = await libraryRow(db, path)
-    if (row) return row
-  }
-  return undefined
+  const rows = await db.document.findMany({
+    where: { kind: 'library', deletedAt: null, path: { in: toolManifestPaths(folder) } },
+  })
+  return newestManifest(folder, rows)
 }
 
 const libraryRow = (db: ScopedDb, path: string) =>
@@ -124,12 +124,7 @@ async function toolAt(db: ScopedDb, scope: Scope, path: string): Promise<Tool> {
   const rows = await toolRows(db, folder)
   const entry = rows.find((r) => r.path === `${folder}/${TOOL_ENTRY}`)
   if (!entry) throw new HTTPException(404, { message: `The app has no ${TOOL_ENTRY} yet` })
-  const manifest = await readManifest(
-    scope,
-    toolManifestPaths(folder)
-      .map((at) => rows.find((r) => r.path === at))
-      .find(Boolean),
-  )
+  const manifest = await readManifest(scope, newestManifest(folder, rows))
   return { folder, rows, entry, manifest, codeHash: codeHashOf(folder, rows) }
 }
 

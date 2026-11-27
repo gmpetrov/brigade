@@ -1750,6 +1750,16 @@ export function libraryTools(options: {
             input,
           }),
       })
+      // Their names before apps were renamed from tools (docs/apps.md): a conversation from before
+      // the rename may still call them. Remove once those have gone quiet.
+      tools.save_tool = {
+        ...tools.save_app,
+        description: 'The old name of save_app: call save_app instead.',
+      } as Tool
+      tools.read_tool_state = {
+        ...tools.read_app_state,
+        description: 'The old name of read_app_state: call read_app_state instead.',
+      } as Tool
     }
     tools.check_design = tool({
       description:

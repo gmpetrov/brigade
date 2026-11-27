@@ -80,14 +80,14 @@ library in threads whose starter has the feature. An app is a folder on the team
 
 `check_design` renders it like a design, with the bridge added as outside Brigade
 (`brigade.inBrigade` false: the app shows sample data). `save_app` saves the folder to a library
-path ending in `.tool` (with a `thumbnail.png` when Chrome is there) and returns the mention of its
-`index.html`, labelled with the folder, which opens the app. `read_app_state` gives the teammate a
+path ending in `.webapp` (with a `thumbnail.png` when Chrome is there) and returns the mention of its
+`index.html`, labelled with the folder, which opens the app. `read_app_state` gives the teammate an
 app's shared state and the own state of the person the thread works for.
 
 ## The bridge
 
 The sandbox host adds a script first in the head of an app's pages (`toolBridgeScript`,
-`@brigade/contracts` app.ts). It gives the page `window.brigade`:
+`@brigade/contracts` tool.ts). It gives the page `window.brigade`:
 
 | Call                                      | What it does                                                                                                 |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -169,6 +169,6 @@ person's session (`/api/tools/*`).
   section (`apps/runner/src/instructions.ts`), the bridge in `check_design` (`src/design-shot.ts`).
 - Dashboard: `components/tool-view.tsx`, `lib/tool-host.ts`, `components/tool-gallery.tsx`, and
   apps in `components/library-browser.tsx` and `components/file-panel.tsx`.
-- Sample: the Acme workspace's `Projects/Fall launch/visual-review.tool` (`prisma/seed-tool.ts`).
+- Sample: the Acme workspace's `Projects/Fall launch/visual-review.webapp` (`prisma/seed-tool.ts`).
 - Tests: `apps/api/test/tools.test.ts`, `apps/web/test/tool-host.test.ts`,
   `apps/runner/test/save-tool.test.ts`, `packages/contracts/test/tool.test.mjs`.

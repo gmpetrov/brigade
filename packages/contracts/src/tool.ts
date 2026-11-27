@@ -47,6 +47,22 @@ export const toolManifestPaths = (folder: string) => [
   `${folder}/${LEGACY_TOOL_MANIFEST}`,
 ]
 
+/**
+ * Of an app's manifests (`app.json`, and `tool.json` from before the rename), the one saved last:
+ * a runner from before the rename saves `tool.json` beside an `app.json` saved since, and what
+ * it says (the folders it reads) must win. `app.json` when both were saved at once.
+ */
+export function newestManifest<T extends { path: string; updatedAt: Date }>(
+  folder: string,
+  rows: readonly T[],
+): T | undefined {
+  const found = toolManifestPaths(folder).flatMap((at) => rows.filter((r) => r.path === at))
+  return found.reduce<T | undefined>(
+    (best, row) => (!best || row.updatedAt.getTime() > best.updatedAt.getTime() ? row : best),
+    undefined,
+  )
+}
+
 /** An App a tool asks for: its kind (`github`, `posthog`…) and whether it changes things there. */
 export const ToolAppNeed = z.object({
   kind: z.string().trim().min(1).max(100),

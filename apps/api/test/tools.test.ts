@@ -326,13 +326,19 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
   test('an app under its new names: a .webapp folder with app.json', async () => {
     const folder = 'Film/board.webapp'
     await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
-    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board' }))
-    // A tool.json left beside it is not read: app.json comes first.
+    // A tool.json saved before the app.json is not read: the manifest saved last counts.
     await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name' }))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board' }))
     const view = await post('/view', { path: `${folder}/index.html` })
     assert.equal(view.status, 200)
     assert.equal(view.body.folder, folder)
     assert.equal(view.body.manifest.title, 'Clip board')
+    // A runner from before the rename saves tool.json after it: what it says counts now.
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Saved since' }))
+    const again = await post('/view', { path: folder })
+    assert.equal(again.body.manifest.title, 'Saved since')
   })
 
   test('files: the folders its manifest lists, each with an address on the sandbox host', async () => {

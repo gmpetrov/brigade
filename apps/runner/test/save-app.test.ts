@@ -45,7 +45,14 @@ test('only teammates of a thread whose starter has apps get them', () => {
   assert.equal(toolsOf({}).tools.save_app, undefined)
   assert.equal(toolsOf({ tools: false }).tools.read_app_state, undefined)
   assert.ok(toolsOf({ tools: true }).tools.save_app)
-  assert.equal(toolsOf({ tools: true }).tools.save_tool, undefined)
+})
+
+test('save_tool and read_tool_state, their names before the rename, still work', async () => {
+  const { asked, run } = toolsOf({ tools: true })
+  await run('save_tool', { folder: '/w', path: 'film/review.webapp' })
+  await run('read_tool_state', { path: 'film/review.webapp' })
+  assert.deepEqual(asked.at(-1), { name: 'tool_state', path: 'film/review.webapp' })
+  assert.ok(asked.some((o) => o.name === 'save' && o.path === 'film/review.webapp/app.json'))
 })
 
 test('saving an app saves its folder and names it by its page', async () => {
