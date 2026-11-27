@@ -18,7 +18,7 @@
     "boat": "tsx scripts/boat.ts"
   },
   "dependencies": {
-    "@boatdev/sdk": "1.10.0",
+    "@boatdev/sdk": "1.13.0",
     "@brigade/contracts": "workspace:*"
   },
   "devDependencies": {
