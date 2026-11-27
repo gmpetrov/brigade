@@ -29,6 +29,124 @@ export type ChangelogRelease = {
 
 export const RELEASES: ChangelogRelease[] = [
   {
+    slug: '2026-11-27',
+    version: '0.7.0',
+    title: 'Chief’s first meeting, Profile and a signed Windows app',
+    summary:
+      'Getting started is shorter and ends on Chief’s first meeting: tell it what you build and it does a first job, then proposes your team, and each new teammate greets you with jobs to start with. Change your name and picture in Settings › Profile, pick a teammate’s model under its name, and send feedback from your menu. Brigade.app for Windows is now signed.',
+    sections: [
+      {
+        heading: 'Highlights',
+        items: [
+          {
+            title: 'Chief’s first meeting',
+            text: 'Onboarding no longer asks what you are building: your first workspace is made at once, named after you, and renamable in Settings › Workspace. It ends on Chief’s first meeting, where Chief asks for your website, your repository or a line on what you build, does a first small job you can see, and proposes your team. In Brigade.app, onboarding links your computer as soon as you agree and skips the questions.',
+            prs: [972, 973, 987, 996],
+          },
+          {
+            title: 'A teammate’s first meeting',
+            text: 'Before a teammate’s first thread, it greets you with three jobs to start with, chosen for its role, and Connect apps. Pick a job and the thread starts at once, or write something else in place.',
+            prs: [982],
+          },
+          {
+            title: 'Profile',
+            text: 'Settings › Profile: change your name and picture and see your email. A name you chose stays after a Google sign-in, Delete my account moves there, and the top row of your menu shows your email and opens Profile.',
+            prs: [989],
+          },
+          {
+            title: 'Teammates over the page',
+            text: 'A teammate’s settings open in a dialog over the page you are on, and so does the new-teammate form, which then lands you on a new thread with the teammate. Owners and admins pick a teammate’s model from the line under its name, in its panel and in a thread’s.',
+            prs: [984, 988, 979, 981, 983],
+          },
+        ],
+      },
+      {
+        heading: 'Improvements',
+        items: [
+          {
+            title: 'Feedback and docs',
+            text: 'Give feedback from your menu: write a message, attach files, and it reaches the team. Documentation sits beside it and Keyboard shortcuts.',
+            prs: [985, 990],
+          },
+          {
+            title: 'Teammates',
+            text: 'A teammate passes word on to another thread it works in, archived ones too, instead of asking you to copy it there, and says why when it may not. Asked about Brigade itself, teammates check Brigade’s docs first.',
+            prs: [947, 949, 954],
+          },
+          {
+            title: 'Sign-in on a Mac',
+            text: 'Sign in with Claude works on a Mac with only the Claude app, a retry reuses its card instead of adding one, and a Claude login already on the Mac is found and used when yours does not work. Chief moves to Codex when that is the only login ready, Codex sign-ins work with older Codex versions, and on a Mac that reaches the internet through a VPN app’s HTTP or HTTPS proxy, Claude Code and Codex go through it too.',
+            prs: [975, 976, 962, 992],
+          },
+          {
+            title: 'Brigade Cloud where you need it',
+            text: 'A teammate with no computer to run on offers Wake it up on Cloud instead of an error, and the Cloud offers in onboarding, a teammate’s panel and the Inbox are Starter at $15 a month.',
+            prs: [978, 979, 996],
+          },
+          {
+            title: 'Faster and calmer',
+            text: 'Ask on a file opens at once, the side panel resizes smoothly beside a long library, the dashboard reads in Geist, and the composer drops its purple focus border.',
+            prs: [970, 955, 951, 950],
+          },
+          {
+            title: 'Site',
+            text: 'A redesigned landing page, with a live demo tour that also plays on phones.',
+          },
+        ],
+      },
+      {
+        heading: 'Fixes',
+        items: [
+          {
+            title: 'Your edits stay',
+            text: 'A teammate no longer saves a library file over edits a person made since its last save: it starts again from the library’s copy.',
+            prs: [969],
+          },
+          {
+            title: 'Quiet turns',
+            text: 'A turn whose model sends nothing for 20 minutes, with no tool or approval running, stops with an error in the thread instead of hanging.',
+            prs: [958],
+          },
+          {
+            title: 'Reconnect',
+            text: 'Reconnect from a ticket answers the ticket once the account is back, without adding a second nameless account, and Neon accounts show their name again.',
+            prs: [948],
+          },
+          {
+            title: 'Threads',
+            text: 'A thread opened again no longer flashes Not delivered on a message that was sent, and the home page no longer breaks on a reply cut off in transit.',
+            prs: [971, 953],
+          },
+          {
+            title: 'Brigade.app sign-in',
+            text: 'Brigade.app’s sign-in window signs you in through your browser, without the in-app links that led nowhere.',
+            prs: [961],
+          },
+        ],
+      },
+      {
+        heading: 'Brigade.app',
+        items: [
+          {
+            title: '0.4.8',
+            text: 'Opened from the website’s onboarding, Brigade.app signs in to the workspace whose teammates the computer runs, and says whose teammates a new link would stop.',
+            prs: [956],
+          },
+          {
+            title: '0.4.9',
+            text: 'Connect in the setup checklist links this computer in the app’s own window instead of the browser, and a new install opens the dashboard rather than the checklist.',
+            prs: [974],
+          },
+          {
+            title: '0.4.10',
+            text: 'Brigade.app for Windows, its installer and the app, is signed with a timestamped CHAINDESK signature.',
+            prs: [993, 994],
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: '2026-11-20',
     version: '0.6.0',
     title: 'Brigade.app everywhere, Snooze and Starter',
