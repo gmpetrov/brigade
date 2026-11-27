@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -38,7 +38,7 @@ const { tools: toolRoutes } = await import('../src/routes/tools.js')
 const { toolPages } = await import('../src/tools.js')
 
 const app = new Hono()
-app.route('/api/tools', toolRoutes)
+app.route('/api/apps', toolRoutes)
 app.route('/t', toolPages)
 app.route('/v', designFiles)
 app.onError((error, c) =>
@@ -61,7 +61,7 @@ const getSession = auth.api.getSession
 
 const post = async (path: string, body: unknown, who: Person = 'ada') => {
   as = who
-  const response = await app.request(`/api/tools${path}`, {
+  const response = await app.request(`/api/apps${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -74,7 +74,7 @@ const page = (url: string) => {
   return app.request(pathname, { headers: { host: designHost } })
 }
 
-const TOOL = 'Film/review.tool'
+const TOOL = 'Film/review.webapp'
 
 describe('tools', { skip: !database && 'no database answers' }, () => {
   let db: ReturnType<typeof scoped>
@@ -199,7 +199,7 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
     await save(`${TOOL}/app.js`, 'console.log(1)')
     await save(
-      `${TOOL}/tool.json`,
+      `${TOOL}/app.json`,
       JSON.stringify({
         title: 'Clip review',
         reads: ['Film/clips'],
@@ -323,26 +323,11 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
   })
 
-  test('the hash says which file is the manifest: a .tool moved to .webapp is allowed again', async () => {
-    const { codeHashOf } = await import('../src/tools.js')
-    const rows = (folder: string) => [
-      { path: `${folder}/index.html`, sha256: 'a' },
-      { path: `${folder}/app.json`, sha256: 'b' },
-      { path: `${folder}/tool.json`, sha256: 'c' },
-    ]
-    const before = createHash('sha256')
-      .update(['app.json\nb', 'index.html\na', 'tool.json\nc'].join('\n'))
-      .digest('hex')
-    // As before the rename for a .tool folder, so what was allowed stays allowed.
-    assert.equal(codeHashOf('x/r.tool', rows('x/r.tool')), before)
-    assert.notEqual(codeHashOf('x/r.webapp', rows('x/r.webapp')), before)
-  })
-
-  test('an app under its new names reads its app.json only', async () => {
+  test('an app reads its app.json only', async () => {
     const folder = 'Film/board.webapp'
     await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
     await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board', reads: ['Film/clips'] }))
-    // A tool.json in a .webapp folder is just a file: it changes nothing.
+    // A tool.json beside it is just a file: it changes nothing.
     await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name', reads: [] }))
     const view = await post('/view', { path: `${folder}/index.html` })
     assert.equal(view.status, 200)

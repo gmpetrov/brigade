@@ -11,7 +11,6 @@ import type { AddressInfo } from 'node:net'
 import { basename, extname, join, resolve, sep } from 'node:path'
 import {
   addToHead,
-  LEGACY_TOOL_MANIFEST,
   TOOL_MANIFEST,
   toolBridgeScript,
   BOARD_HEIGHT_MAX,
@@ -91,7 +90,7 @@ const TYPES: Record<string, string> = {
  */
 async function serve(folder: string, style: string) {
   const root = resolve(folder)
-  const tool = [TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].some((f) => existsSync(join(root, f)))
+  const tool = existsSync(join(root, TOOL_MANIFEST))
   const server = createServer((req, res) => {
     void (async () => {
       const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname)

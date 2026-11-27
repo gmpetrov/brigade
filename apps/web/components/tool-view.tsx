@@ -104,7 +104,7 @@ export function ToolPanel({
 
   const load = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body: { path: folder } })
+      const next = await api<ToolView>('/apps/view', { body: { path: folder } })
       setView(next)
       setError(undefined)
       return next
@@ -117,7 +117,7 @@ export function ToolPanel({
   // The view again (accounts changed) without reloading the page: its address stays.
   const refresh = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body: { path: folder } })
+      const next = await api<ToolView>('/apps/view', { body: { path: folder } })
       setView((was) => (was ? { ...next, url: was.url } : next))
     } catch {
       // The page keeps what it had.
@@ -533,7 +533,7 @@ function ToolAccounts({
               size="sm"
               className="self-start"
               disabled={busy || !view.mayAttach}
-              onClick={() => void run('/tools/accounts/allow', { path: view.folder })}
+              onClick={() => void run('/apps/accounts/allow', { path: view.folder })}
             >
               Allow the changed app
             </Button>
@@ -579,7 +579,7 @@ function ToolAccounts({
                         variant="ghost"
                         disabled={busy}
                         onClick={() =>
-                          void run('/tools/accounts/detach', {
+                          void run('/apps/accounts/detach', {
                             path: view.folder,
                             connectionId: a.connectionId,
                           })
@@ -602,7 +602,7 @@ function ToolAccounts({
                       variant="outline"
                       disabled={busy}
                       onClick={() =>
-                        void run('/tools/accounts', {
+                        void run('/apps/accounts', {
                           path: view.folder,
                           connectionId: a.connectionId,
                           access: need.access,

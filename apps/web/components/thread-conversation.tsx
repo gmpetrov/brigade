@@ -174,7 +174,6 @@ import {
   type EventGap,
 } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
-import { hasApps } from '@/lib/apps-feature'
 
 /** What the threads panel's bar shows of a thread: who leads it, its title and state. */
 export type ThreadHeading = {
@@ -560,7 +559,7 @@ export function ThreadConversation({
   // A library tool beside it (its folder, as its mention names it, or its page): kept as the
   // preview is, so back from another thread its page is as it was left, not loaded again.
   const keptTool = useMemo(() => {
-    if (!file || !hasApps(me.features)) return undefined
+    if (!file || !(me.features?.includes('apps') ?? false)) return undefined
     const path = file.path.trim().replace(/\/+$/, '')
     if (path.startsWith('/')) return undefined
     const tool = toolFolderOf(path)

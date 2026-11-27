@@ -23,7 +23,7 @@ process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 process.env.GOOGLE_CLIENT_ID ??= 'test-google-client'
 process.env.GOOGLE_CLIENT_SECRET ??= 'test-google-secret'
 
-const { opens, appOpen, withLegacyNames } = await import('../src/features.js')
+const { opens, appOpen } = await import('../src/features.js')
 const { prisma } = await import('../src/db.js')
 const database = await Promise.race([
   prisma.$queryRaw`select 1`.then(() => true),
@@ -202,9 +202,3 @@ describe(
     })
   },
 )
-
-test('a dashboard from before a rename still finds the feature under its old name', () => {
-  // apps was tools (docs/apps.md): an older dashboard shows apps only for `tools`.
-  assert.deepEqual(withLegacyNames(['gmail', 'apps']), ['gmail', 'apps', 'tools'])
-  assert.deepEqual(withLegacyNames(['gmail']), ['gmail'])
-})

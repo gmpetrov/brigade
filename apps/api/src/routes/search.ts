@@ -139,7 +139,7 @@ function bundleOf(path: string, tools: boolean): Omit<Bundle, 'text' | 'snippet'
   return undefined
 }
 
-/** Its manifest: an app's by its folder's suffix (toolManifestFile), a design's design.json. */
+/** Its manifest: an app's app.json, a design's design.json. */
 const manifestsOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
   b.kind === 'tool' ? [toolManifestPath(b.folder)] : [`${b.folder}/${DESIGN_MANIFEST}`]
 const entryOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>

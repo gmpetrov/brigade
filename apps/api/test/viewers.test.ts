@@ -29,3 +29,9 @@ test('a viewer starts, writes and changes nothing', () => {
   assert.equal(viewerMay('PUT', '/api/me/auto-merge'), false)
   assert.equal(viewerMay('POST', '/api/accounts'), false)
 })
+
+test('a viewer opens an app and keeps its own state in it, under /api/apps', () => {
+  for (const route of ['view', 'files', 'state']) assert.ok(viewerMay('POST', `/api/apps/${route}`))
+  for (const route of ['call', 'accounts', 'accounts/allow'])
+    assert.ok(!viewerMay('POST', `/api/apps/${route}`))
+})

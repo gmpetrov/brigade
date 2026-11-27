@@ -107,7 +107,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
     case 'files.list': {
       const folder = text(p.folder)
       if (!folder) throw new Refused('Name a library folder')
-      return api('/tools/files', { path, folder })
+      return api('/apps/files', { path, folder })
     }
     case 'state.get':
     case 'state.list':
@@ -127,7 +127,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
         ...(op === 'set' ? { value: p.value ?? null } : {}),
         ...(version !== undefined && (op === 'set' || op === 'delete') ? { version } : {}),
       }
-      return (await api<{ result: unknown }>('/tools/state', body)).result
+      return (await api<{ result: unknown }>('/apps/state', body)).result
     }
     case 'apps.list':
       return view.accounts.map((a) => ({
@@ -143,7 +143,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const account = accountFor(view.accounts, p.account)
       const why = unusable(account, p.account)
       if (why) throw why
-      return api('/tools/operations', { path, connectionId: account!.connectionId })
+      return api('/apps/operations', { path, connectionId: account!.connectionId })
     }
     case 'apps.call': {
       const account = accountFor(view.accounts, p.account)
@@ -154,7 +154,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const call = { path, connectionId: account!.connectionId, operation, input: p.input ?? {} }
       let result: ToolCallResult
       try {
-        result = await api<ToolCallResult>('/tools/call', call)
+        result = await api<ToolCallResult>('/apps/call', call)
       } catch (error) {
         // A write: the person confirms it here first, then it goes again, confirmed.
         if (!(error instanceof ApiError) || error.status !== 428) throw error
@@ -166,7 +166,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
           input: call.input,
         })
         if (!yes) throw new Refused('The person did not allow it', 'declined')
-        result = await api<ToolCallResult>('/tools/call', { ...call, confirmed: true })
+        result = await api<ToolCallResult>('/apps/call', { ...call, confirmed: true })
       }
       if (!result.ok) throw new Refused(result.error, 'app_error')
       return result.output

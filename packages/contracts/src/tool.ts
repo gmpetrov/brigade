@@ -1,6 +1,6 @@
 // Apps (docs/apps.md), called tools in the code: small web apps that live in the
-// library. An app is a folder named `<name>.webapp` holding `app.json` and `index.html`
-// (`<name>.tool` holding `tool.json` before they were renamed, still one); teammates make
+// library. An app is a folder named `<name>.webapp` holding `app.json` and `index.html`;
+// teammates make
 // them in threads, people open them in a sandboxed frame served from the same
 // separate origin as designs. Unlike a design, an app works: through a bridge to
 // the dashboard around it, it lists library folders it declares, keeps state
@@ -12,12 +12,8 @@ import { LibraryPath } from './library.js'
 
 /** An app's folder ends with this. */
 export const TOOL_SUFFIX = '.webapp'
-/** What an app's folder ended with before apps were renamed from tools: still opens as one. */
-export const LEGACY_TOOL_SUFFIX = '.tool'
-/** A `.webapp` folder's manifest, at its top. */
+/** Every app has one, at the top of its folder. */
 export const TOOL_MANIFEST = 'app.json'
-/** A `.tool` folder's manifest, from before the rename (toolManifestFile). */
-export const LEGACY_TOOL_MANIFEST = 'tool.json'
 /** The page an app opens on. */
 export const TOOL_ENTRY = 'index.html'
 /** Written by `save_app` when the computer can render the app: the gallery's picture. */
@@ -25,32 +21,21 @@ export const TOOL_THUMBNAIL = 'thumbnail.png'
 /** Files a teammate saves in one app. */
 export const TOOL_FILES_MAX = 200
 
-const SUFFIXES = [TOOL_SUFFIX, LEGACY_TOOL_SUFFIX]
-const suffixOf = (name: string) => SUFFIXES.find((s) => name.endsWith(s) && name.length > s.length)
-
 /** The app folder a library path is in or is ("a/b.webapp" for "a/b.webapp/app.js"), if any. */
 export function toolFolderOf(path: string): string | undefined {
   const parts = path.split('/')
-  const at = parts.findIndex((p) => suffixOf(p) !== undefined)
+  const at = parts.findIndex((p) => p.endsWith(TOOL_SUFFIX) && p.length > TOOL_SUFFIX.length)
   return at < 0 ? undefined : parts.slice(0, at + 1).join('/')
 }
 
 /** An app's own name: its folder's, without the suffix. */
 export const toolName = (folder: string) => {
   const name = folder.split('/').pop()!
-  return name.slice(0, -(suffixOf(name) ?? '').length || undefined)
+  return name.endsWith(TOOL_SUFFIX) ? name.slice(0, -TOOL_SUFFIX.length) : name
 }
 
-/**
- * An app's manifest: its folder's suffix says which. A `.webapp` folder has `app.json`; a `.tool`
- * folder, from before the rename, keeps `tool.json`. One file each, so an app never has two that
- * disagree.
- */
-export const toolManifestFile = (folder: string) =>
-  folder.endsWith(LEGACY_TOOL_SUFFIX) ? LEGACY_TOOL_MANIFEST : TOOL_MANIFEST
-
-/** The library path of an app's manifest (toolManifestFile). */
-export const toolManifestPath = (folder: string) => `${folder}/${toolManifestFile(folder)}`
+/** The library path of an app's manifest. */
+export const toolManifestPath = (folder: string) => `${folder}/${TOOL_MANIFEST}`
 
 /** An App a tool asks for: its kind (`github`, `posthog`…) and whether it changes things there. */
 export const ToolAppNeed = z.object({
@@ -67,7 +52,7 @@ export const ToolHost = z
   .max(200)
   .regex(/^https:\/\/[a-z0-9.-]+(:\d+)?$/i, 'An https origin, without a path')
 
-/** `tool.json`, written by the teammate. Lenient: a tool with a bad entry still opens. */
+/** `app.json`, written by the teammate. Lenient: an app with a bad entry still opens. */
 export const ToolManifest = z.object({
   title: z.string().max(200).optional(),
   description: z.string().max(2000).optional(),

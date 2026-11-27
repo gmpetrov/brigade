@@ -28,7 +28,7 @@ const account = (over: Partial<ToolAccount> = {}): ToolAccount => ({
 const view = (accounts: ToolAccount[] = [account()]): ToolView => ({
   url: 'https://designs.example/t/x/index.html',
   bridgeKey: 'k3y',
-  folder: 'Film/review.tool',
+  folder: 'Film/review.webapp',
   manifest: { title: 'Review' },
   toolId: 'doc1',
   thread: { id: 'th1', title: 'Film', mayPrompt: true },
@@ -52,9 +52,9 @@ function host(options: { accounts?: ToolAccount[]; yes?: boolean; threadId?: str
       api: async <T>(path: string, body: unknown) => {
         calls.push({ path, body })
         const b = body as { confirmed?: boolean }
-        if (path === '/tools/call' && !b.confirmed)
+        if (path === '/apps/call' && !b.confirmed)
           throw new ApiError('A person confirms each write first', 428)
-        return (path === '/tools/call' ? { ok: true, output: { done: 1 } } : { result: 'r' }) as T
+        return (path === '/apps/call' ? { ok: true, output: { done: 1 } } : { result: 'r' }) as T
       },
       confirm: async (what: ToolConfirm) => {
         asked.push(what)
@@ -136,7 +136,10 @@ test('a message to the thread goes as the person, said to come from the tool, on
   assert.deepEqual(h.calls, [
     { path: '/threads/th1/messages', body: { text: toolMessage(view(), 'Approved: a.mp4') } },
   ])
-  assert.match(toolMessage(view(), 'x'), /^From the app @\[Film\/review\.tool\]\(document:doc1\):/)
+  assert.match(
+    toolMessage(view(), 'x'),
+    /^From the app @\[Film\/review\.webapp\]\(document:doc1\):/,
+  )
 
   const declined = host({ yes: false })
   await answer(declined.host, ask('thread.send', { text: 'hi' }))
@@ -152,23 +155,30 @@ test('state and files go to the API for this tool, whatever path the page names'
   const h = host()
   await answer(h.host, ask('state.set', { shared: true, key: 'k', value: [1], version: 2 }))
   await answer(h.host, ask('state.list', { shared: false, prefix: 'clip:', after: 'clip:9' }))
-  await answer(h.host, ask('files.list', { folder: 'Film/clips', path: 'Other/evil.tool' }))
+  await answer(h.host, ask('files.list', { folder: 'Film/clips', path: 'Other/evil.webapp' }))
   assert.deepEqual(h.calls, [
     {
-      path: '/tools/state',
-      body: { op: 'set', path: 'Film/review.tool', shared: true, key: 'k', value: [1], version: 2 },
+      path: '/apps/state',
+      body: {
+        op: 'set',
+        path: 'Film/review.webapp',
+        shared: true,
+        key: 'k',
+        value: [1],
+        version: 2,
+      },
     },
     {
-      path: '/tools/state',
+      path: '/apps/state',
       body: {
         op: 'list',
-        path: 'Film/review.tool',
+        path: 'Film/review.webapp',
         shared: false,
         prefix: 'clip:',
         after: 'clip:9',
       },
     },
-    { path: '/tools/files', body: { path: 'Film/review.tool', folder: 'Film/clips' } },
+    { path: '/apps/files', body: { path: 'Film/review.webapp', folder: 'Film/clips' } },
   ])
 })
 

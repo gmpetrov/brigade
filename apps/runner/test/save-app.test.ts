@@ -48,14 +48,7 @@ test('only teammates of a thread whose starter has apps get them', () => {
   assert.equal(toolsOf({}).tools.save_app, undefined)
   assert.equal(toolsOf({ tools: false }).tools.read_app_state, undefined)
   assert.ok(toolsOf({ tools: true }).tools.save_app)
-})
-
-test('save_tool and read_tool_state, their names before the rename, still work', async () => {
-  const { asked, run } = toolsOf({ tools: true })
-  await run('save_tool', { folder: '/w', path: 'film/review.webapp' })
-  await run('read_tool_state', { path: 'film/review.webapp' })
-  assert.deepEqual(asked.at(-1), { name: 'tool_state', path: 'film/review.webapp' })
-  assert.ok(asked.some((o) => o.name === 'save' && o.path === 'film/review.webapp/app.json'))
+  assert.equal(toolsOf({ tools: true }).tools.save_tool, undefined)
 })
 
 test('saving an app saves its folder and names it by its page', async () => {
@@ -82,38 +75,20 @@ test('saving an app saves its folder and names it by its page', async () => {
   assert.match(result.accounts, /github/)
 })
 
-test('an app saved before the rename saves again under its .tool path, with its tool.json', async () => {
-  const { asked, run } = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
-  const result = (await run('save_app', { folder: '/w', path: 'film/review.tool' })) as {
-    path: string
-  }
-  assert.equal(result.path, 'film/review.tool')
+test('every file is saved as it is, a tool.json too', async () => {
+  const { asked, run } = toolsOf({ tools: true, files: ['index.html', 'app.json', 'tool.json'] })
+  await run('save_app', { folder: '/w', path: 'a.webapp' })
   assert.deepEqual(
     asked.map((o) => o.path),
-    ['film/review.tool/index.html', 'film/review.tool/tool.json'],
-  )
-})
-
-test('every file is saved as it is; a .webapp with only a tool.json gets it as app.json too', async () => {
-  const both = toolsOf({ tools: true, files: ['index.html', 'app.json', 'tool.json'] })
-  await both.run('save_app', { folder: '/w', path: 'a.webapp' })
-  // A tool.json beside app.json is just a file of the app (data it loads, say): saved as it is.
-  assert.deepEqual(
-    both.asked.map((o) => o.path),
     ['a.webapp/index.html', 'a.webapp/app.json', 'a.webapp/tool.json'],
   )
-  const old = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
-  await old.run('save_app', { folder: '/w', path: 'a.webapp' })
-  assert.deepEqual(
-    old.asked.map((o) => o.path),
-    ['a.webapp/index.html', 'a.webapp/tool.json', 'a.webapp/app.json'],
-  )
-  assert.equal(old.read.at(-1), '/w/tool.json')
 })
 
 test('an app needs its path, page and a valid app.json; nothing is saved otherwise', async () => {
   for (const [options, input, error] of [
     [{}, { folder: '/w', path: 'film/review' }, /must end in "<name>\.webapp"/],
+    [{}, { folder: '/w', path: 'film/review.tool' }, /must end in/],
+    [{ files: ['index.html', 'tool.json'] }, { folder: '/w', path: 'a.webapp' }, /no app\.json/],
     [{}, { folder: '/w', path: 'film/.webapp' }, /must end in/],
     [{}, { folder: '/w', path: 'a.webapp/b.webapp' }, /must end in/],
     [{ files: ['index.html'] }, { folder: '/w', path: 'a.webapp' }, /no app\.json/],

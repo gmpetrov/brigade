@@ -1,5 +1,5 @@
-// Tools (docs/apps.md): small web apps saved in the library as `<name>.tool`
-// folders. Their pages run the teammate's script, so like designs they are
+// Apps (docs/apps.md, tools in the code): small web apps saved in the library as
+// `<name>.webapp` folders. Their pages run the teammate's script, so like designs they are
 // served only from DESIGN_URL, under a short-lived signed address, as sandboxed
 // documents with no cookies. What a tool does beyond its page goes through the
 // dashboard around it (src/tool-bridge.ts), which calls the routes here with the
@@ -18,8 +18,6 @@ import {
   ToolManifest,
   toolFolderOf,
   toolManifestPath,
-  toolManifestFile,
-  LEGACY_TOOL_MANIFEST,
   addToHead,
   elementSelectScript,
   LIBRARY_READ_MAX,
@@ -75,7 +73,7 @@ const toolRows = (db: ScopedDb, folder: string) =>
 
 type Row = Awaited<ReturnType<typeof toolRows>>[number]
 
-/** `tool.json`, parsed leniently; null when missing or unreadable. */
+/** `app.json`, parsed leniently; null when missing or unreadable. */
 async function readManifest(scope: Scope, row: Row | null | undefined) {
   if (!row) return null
   try {
@@ -99,10 +97,9 @@ export const codeHashOf = (folder: string, rows: { path: string; sha256: string 
         .map((r) => `${r.path.slice(folder.length + 1)}\n${r.sha256}`)
         .sort()
         .join('\n') +
-        // Which file is its manifest (toolManifestFile) is part of what runs: a `.tool` folder
-        // moved to `.webapp` reads another one. Hashed as before for `.tool` folders, so what
-        // was allowed before the rename stays allowed.
-        (toolManifestFile(folder) === LEGACY_TOOL_MANIFEST ? '' : `\nmanifest\n${TOOL_MANIFEST}`),
+        // Which file is its manifest: kept from when apps could also be `.tool` folders read
+        // through `tool.json`, so that what was allowed since stays allowed.
+        `\nmanifest\n${TOOL_MANIFEST}`,
     )
     .digest('hex')
 
