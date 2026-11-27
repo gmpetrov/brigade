@@ -40,8 +40,8 @@ export const RELEASES: ChangelogRelease[] = [
         items: [
           {
             title: 'Chief’s first meeting',
-            text: 'Onboarding no longer asks what you are building: your first workspace is made at once, named after you, and renamable in Settings › Workspace. It ends on Chief’s first meeting, where Chief asks for your website, your repository or a line on what you build, does a first small job you can see, and proposes your team, or a starter team in one click. In Brigade.app, onboarding links your computer as soon as you agree and skips the questions, and opening onboarding in the browser and the app at once makes one setup thread, not two.',
-            prs: [972, 973, 987, 980, 996],
+            text: 'Onboarding no longer asks what you are building: your first workspace is made at once, named after you, and renamable in Settings › Workspace. It ends on Chief’s first meeting, where Chief asks for your website, your repository or a line on what you build, does a first small job you can see, and proposes your team. In Brigade.app, onboarding links your computer as soon as you agree and skips the questions.',
+            prs: [972, 973, 987, 996],
           },
           {
             title: 'A teammate’s first meeting',
@@ -75,7 +75,7 @@ export const RELEASES: ChangelogRelease[] = [
           },
           {
             title: 'Sign-in on a Mac',
-            text: 'Sign in with Claude works on a Mac with only the Claude app, a retry reuses its card instead of adding one, and a Claude login already on the Mac is found and used when yours does not work. Chief moves to Codex when that is the only login ready, Codex sign-ins work with older Codex versions, and on a Mac that reaches the internet through a VPN app’s proxy, Claude Code and Codex go through it too.',
+            text: 'Sign in with Claude works on a Mac with only the Claude app, a retry reuses its card instead of adding one, and a Claude login already on the Mac is found and used when yours does not work. Chief moves to Codex when that is the only login ready, Codex sign-ins work with older Codex versions, and on a Mac that reaches the internet through a VPN app’s HTTP or HTTPS proxy, Claude Code and Codex go through it too.',
             prs: [975, 976, 962, 992],
           },
           {
