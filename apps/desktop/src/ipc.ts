@@ -14,12 +14,22 @@ import { linkInProgress } from './links.js'
 import { dashboardFrame, kindOf, setFrameColors, setNarrow, type WindowKind } from './windows.js'
 
 /** The bridge's version: the dashboard checks it before using what came later. */
-export const BRIDGE_VERSION = 2
+export const BRIDGE_VERSION = 3
 
-function from(event: IpcMainEvent | IpcMainInvokeEvent): WindowKind | undefined {
+/** The kind of Brigade window a request comes from, from its top frame on the dashboard's site. */
+function senderKind(event: IpcMainEvent | IpcMainInvokeEvent): WindowKind | undefined {
   const frame = event.senderFrame
   if (!frame || frame !== event.sender.mainFrame || !onDashboard(frame.url)) return undefined
   return kindOf(event.sender)
+}
+
+/**
+ * The dashboard or new thread window a request comes from. An installed app's window
+ * (app-windows.ts) gets none of this: only `info`, and its badge there.
+ */
+function from(event: IpcMainEvent | IpcMainInvokeEvent): Exclude<WindowKind, 'app'> | undefined {
+  const kind = senderKind(event)
+  return kind === 'app' ? undefined : kind
 }
 
 /** `linked`: the name of the workspace the runner runs for, when there is one. */
@@ -49,6 +59,15 @@ export function registerBridge() {
     .then((name) => (userName = name))
     .catch(() => {})
   ipcMain.on('brigade:info', (event) => {
+    if (senderKind(event) === 'app') {
+      event.returnValue = {
+        window: 'app',
+        platform: process.platform,
+        version: app.getVersion(),
+        bridge: BRIDGE_VERSION,
+      }
+      return
+    }
     const kind = from(event)
     event.returnValue = kind
       ? {

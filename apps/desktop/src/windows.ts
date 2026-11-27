@@ -19,7 +19,8 @@ import { confirm } from './dialogs.js'
 import { attachFind, placeFind, setFindTheme } from './find.js'
 import { dashboard, loadSettings, onDashboard, updateSettings } from './settings.js'
 
-export type WindowKind = 'main' | 'capture'
+/** The dashboard, the new thread window (capture.ts), and an installed app's (app-windows.ts). */
+export type WindowKind = 'main' | 'capture' | 'app'
 
 const kinds = new WeakMap<WebContents, WindowKind>()
 export const kindOf = (contents: WebContents) => kinds.get(contents)

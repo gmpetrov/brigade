@@ -4,7 +4,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 type Info = {
-  window: 'main' | 'capture'
+  /** `app`: an installed app's window (app-windows.ts), which gets `info` and its badge only. */
+  window: 'main' | 'capture' | 'app'
   platform: string
   version: string
   bridge: number
@@ -80,7 +81,24 @@ if (info?.window === 'main') {
   })
 }
 
-if (info)
+/** An installed app as the dashboard sees it (installed-apps.ts). */
+type InstalledApp = {
+  appId: string
+  path: string
+  name: string
+  workspaceId: string
+  workspaceName: string
+}
+
+if (info?.window === 'app')
+  contextBridge.exposeInMainWorld('brigadeDesktop', {
+    info,
+    apps: {
+      /** The app's own count on its Dock icon (macOS); 0 clears it. */
+      setBadge: (count: number) => ipcRenderer.send('brigade:apps:badge', count),
+    },
+  })
+else if (info)
   contextBridge.exposeInMainWorld('brigadeDesktop', {
     info,
     captures: {
@@ -119,6 +137,24 @@ if (info)
       enable: (device: { api: string; deviceId: string; token: string }) =>
         ipcRenderer.invoke('brigade:notifications:enable', device),
       disable: () => ipcRenderer.invoke('brigade:notifications:disable'),
+    },
+    /** Library apps installed on this computer, each in a window of its own (app-windows.ts). */
+    apps: {
+      installed: () => ipcRenderer.invoke('brigade:apps:installed'),
+      /** Asks the person first; null when they said no. */
+      install: (input: {
+        appId: string
+        path: string
+        title: string
+        iconPng: Uint8Array
+        workspaceId: string
+        workspaceName: string
+      }) => ipcRenderer.invoke('brigade:apps:install', input),
+      open: (appId: string) => ipcRenderer.invoke('brigade:apps:open', appId),
+      /** Asks the person first; whether it was uninstalled. */
+      uninstall: (appId: string) => ipcRenderer.invoke('brigade:apps:uninstall', appId),
+      onChanged: (handle: (apps: InstalledApp[]) => void) =>
+        listen('brigade:apps:changed', (apps) => handle(apps as InstalledApp[])),
     },
     providerSignIn: {
       start: () => ipcRenderer.invoke('brigade:provider-sign-in:start'),
