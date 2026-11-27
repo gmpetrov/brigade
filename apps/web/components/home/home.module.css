@@ -124,6 +124,10 @@
   font-size: 16px;
   font-weight: 500;
 }
+/* Phones only (the sign-up in the download's place: hero.tsx, HeroActions). */
+.btn.show-s {
+  display: none;
+}
 
 /* ─── The entrance ─────────────────────────────────────────────────────────────────── */
 
@@ -195,6 +199,9 @@
 @media (max-width: 640px) {
   .hide-s {
     display: none;
+  }
+  .btn.show-s {
+    display: inline-flex;
   }
   .nav-l {
     padding: 0 7px;

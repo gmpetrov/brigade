@@ -54,6 +54,8 @@ export function ctaTarget(href: string) {
     return 'install'
   if (url.pathname === '/sign-up') return 'sign_up'
   if (url.pathname === '/sign-in') return 'sign_in'
+  // The bar's Get your 24/7 AI team, and the plans' links, lead here before the sign-up.
+  if (url.pathname === '/pricing') return 'pricing'
   return undefined
 }
 

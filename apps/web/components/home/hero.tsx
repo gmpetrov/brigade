@@ -92,7 +92,9 @@ export function Hero() {
 /**
  * The page's two calls to action: the download, and a star on GitHub whose star shows on
  * hover. In the hero, and again in the closing call (landing/closing.tsx), where `menuUp`
- * opens the download menu upward so the section's edge does not cut it off.
+ * opens the download menu upward so the section's edge does not cut it off. On a phone there
+ * is nothing to download: the sign-up takes the download's place. Without it, a phone's
+ * download led to the releases on GitHub, and both buttons left the site.
  */
 export function HeroActions({
   className,
@@ -105,7 +107,12 @@ export function HeroActions({
 }) {
   return (
     <div className={className ? `${h('hero-cta')} ${className}` : h('hero-cta')} style={style}>
-      <DownloadButton menuUp={menuUp} />
+      <div className={h('hide-s')}>
+        <DownloadButton menuUp={menuUp} />
+      </div>
+      <AuthLink className={h('btn pri lg show-s')} href="/sign-up">
+        Get started free
+      </AuthLink>
       <a className={h('btn grey lg star')} href={REPO_URL}>
         <Icon name="star" />
         <span>Star on GitHub</span>
