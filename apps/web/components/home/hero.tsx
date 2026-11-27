@@ -12,9 +12,6 @@ import { SiteAnalytics } from '@/components/landing/site-analytics'
 import { REPO_URL } from '@/lib/github-proof'
 import { h } from './parts'
 
-/** The plans: 24/7 is Brigade Cloud's promise, so it leads there, never to a plain sign-up. */
-const CLOUD = '/pricing'
-
 /** The bar on top, scrolling away with the page. */
 export function Header() {
   return (
@@ -38,12 +35,14 @@ export function Header() {
           <AuthLink className={h('nav-l')} href="/sign-in">
             Sign in
           </AuthLink>
-          <a className={h('btn pri')} href={CLOUD}>
+          {/* Straight to the sign-up: onboarding offers Brigade Cloud first, so the plans page
+              was a step that changed nothing (it once led there, and few went on). */}
+          <AuthLink className={h('btn pri')} href="/sign-up">
             {/* One run of text, so the button's gap doesn't land inside it. */}
             <span>
               <span className={h('hide-s')}>Get your </span>24/7 AI team
             </span>
-          </a>
+          </AuthLink>
         </nav>
       </div>
     </header>
@@ -92,7 +91,9 @@ export function Hero() {
 /**
  * The page's two calls to action: the download, and a star on GitHub whose star shows on
  * hover. In the hero, and again in the closing call (landing/closing.tsx), where `menuUp`
- * opens the download menu upward so the section's edge does not cut it off.
+ * opens the download menu upward so the section's edge does not cut it off. On a phone there
+ * is nothing to download: the sign-up takes the download's place. Without it, a phone's
+ * download led to the releases on GitHub, and both buttons left the site.
  */
 export function HeroActions({
   className,
@@ -105,7 +106,12 @@ export function HeroActions({
 }) {
   return (
     <div className={className ? `${h('hero-cta')} ${className}` : h('hero-cta')} style={style}>
-      <DownloadButton menuUp={menuUp} />
+      <div className={h('hide-s')}>
+        <DownloadButton menuUp={menuUp} />
+      </div>
+      <AuthLink className={h('btn pri lg show-s')} href="/sign-up">
+        Get started free
+      </AuthLink>
       <a className={h('btn grey lg star')} href={REPO_URL}>
         <Icon name="star" />
         <span>Star on GitHub</span>
