@@ -1,5 +1,5 @@
 // Apps (docs/apps.md), called tools in the code: small web apps that live in the
-// library. An app is a folder named `<name>.app` holding `app.json` and `index.html`
+// library. An app is a folder named `<name>.webapp` holding `app.json` and `index.html`
 // (`<name>.tool` and `tool.json` before they were renamed, still read); teammates make
 // them in threads, people open them in a sandboxed frame served from the same
 // separate origin as designs. Unlike a design, an app works: through a bridge to
@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { LibraryPath } from './library.js'
 
 /** An app's folder ends with this. */
-export const TOOL_SUFFIX = '.app'
+export const TOOL_SUFFIX = '.webapp'
 /** What an app's folder ended with before apps were renamed from tools: still opens as one. */
 export const LEGACY_TOOL_SUFFIX = '.tool'
 /** Every app has one, at the top of its folder. */
@@ -28,7 +28,7 @@ export const TOOL_FILES_MAX = 200
 const SUFFIXES = [TOOL_SUFFIX, LEGACY_TOOL_SUFFIX]
 const suffixOf = (name: string) => SUFFIXES.find((s) => name.endsWith(s) && name.length > s.length)
 
-/** The app folder a library path is in or is ("a/b.app" for "a/b.app/app.js"), if any. */
+/** The app folder a library path is in or is ("a/b.webapp" for "a/b.webapp/app.js"), if any. */
 export function toolFolderOf(path: string): string | undefined {
   const parts = path.split('/')
   const at = parts.findIndex((p) => suffixOf(p) !== undefined)

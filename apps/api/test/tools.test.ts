@@ -323,8 +323,8 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
   })
 
-  test('an app under its new names: a .app folder with app.json', async () => {
-    const folder = 'Film/board.app'
+  test('an app under its new names: a .webapp folder with app.json', async () => {
+    const folder = 'Film/board.webapp'
     await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
     await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board' }))
     // A tool.json left beside it is not read: app.json comes first.

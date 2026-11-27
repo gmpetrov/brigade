@@ -14,9 +14,11 @@ Apps were called tools until 27 Nov 2026; the code still calls them tools (`Tool
 `tool-view.tsx`, `toolFolderOf`), since `App` there already names connected apps (the `App`
 model, `/api/connections/apps`). What people and teammates see says app:
 
-- An app is a library folder named `<name>.app` with `app.json`. A folder named `<name>.tool`
+- An app is a library folder named `<name>.webapp` with `app.json`. A folder named `<name>.tool`
   with `tool.json`, saved before the rename, still opens as one, and `save_app` saves to it again
   under its old path, so its state and attached accounts stay (both keyed by its `index.html`).
+  Not `.app`: Finder takes a folder so named for an application (the library's copies are on
+  Macs), and `.app` is also a domain ending people name folders with.
 - Teammates save one with `save_app` and read its state with `read_app_state`, following the
   `brigade-apps` skill. The thread spec still carries the feature as `tools`.
 - The feature is `apps`: a migration copied the `tools` row, which stays for the API before it.

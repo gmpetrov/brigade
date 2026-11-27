@@ -1123,7 +1123,7 @@ export async function seedWorkspace(
   for (const [name, svg] of Object.entries(SAMPLE_VISUALS))
     await file(`Projects/Fall launch/visuals/${name}`, svg, asMaya)
   const fromNewsletter = { sessionId: newsletter.id }
-  const reviewTool = 'Projects/Fall launch/visual-review.app'
+  const reviewTool = 'Projects/Fall launch/visual-review.webapp'
   await saveLibraryFile(
     db,
     scope,

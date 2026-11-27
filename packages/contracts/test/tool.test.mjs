@@ -3,14 +3,16 @@ import { test } from 'node:test'
 import { ToolManifest, toolFolderOf, toolManifestPaths, toolName } from '../dist/index.js'
 
 test('an app is the folder its path is in, or is', () => {
-  assert.equal(toolFolderOf('a/review.app/app.js'), 'a/review.app')
-  assert.equal(toolFolderOf('a/review.app'), 'a/review.app')
-  assert.equal(toolFolderOf('a/.app/x'), undefined)
-  assert.equal(toolName('a/clip-review.app'), 'clip-review')
+  assert.equal(toolFolderOf('a/review.webapp/app.js'), 'a/review.webapp')
+  assert.equal(toolFolderOf('a/review.webapp'), 'a/review.webapp')
+  assert.equal(toolFolderOf('a/.webapp/x'), undefined)
+  assert.equal(toolName('a/clip-review.webapp'), 'clip-review')
   assert.equal(toolName('a/plain'), 'plain')
-  assert.deepEqual(toolManifestPaths('a/review.app'), [
-    'a/review.app/app.json',
-    'a/review.app/tool.json',
+  // A folder ending in .app (a macOS bundle, or a domain such as acme.app) is not one.
+  assert.equal(toolFolderOf('Sites/acme.app/index.html'), undefined)
+  assert.deepEqual(toolManifestPaths('a/review.webapp'), [
+    'a/review.webapp/app.json',
+    'a/review.webapp/tool.json',
   ])
 })
 

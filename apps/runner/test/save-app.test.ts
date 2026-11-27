@@ -55,7 +55,7 @@ test('saving an app saves its folder and names it by its page', async () => {
   })
   const result = (await run('save_app', {
     folder: '/work/review',
-    path: 'film/review.app/',
+    path: 'film/review.webapp/',
   })) as {
     path: string
     files: number
@@ -64,11 +64,11 @@ test('saving an app saves its folder and names it by its page', async () => {
   }
   assert.deepEqual(
     asked.map((o) => o.path),
-    ['film/review.app/index.html', 'film/review.app/app.json', 'film/review.app/app.js'],
+    ['film/review.webapp/index.html', 'film/review.webapp/app.json', 'film/review.webapp/app.js'],
   )
-  assert.equal(result.path, 'film/review.app')
+  assert.equal(result.path, 'film/review.webapp')
   assert.equal(result.files, 3)
-  assert.equal(result.mention, '@[film/review.app](document:id-index.html)')
+  assert.equal(result.mention, '@[film/review.webapp](document:id-index.html)')
   assert.match(result.accounts, /github/)
 })
 
@@ -86,13 +86,13 @@ test('an app saved before the rename saves again under its .tool path, with its 
 
 test('an app needs its path, page and a valid app.json; nothing is saved otherwise', async () => {
   for (const [options, input, error] of [
-    [{}, { folder: '/w', path: 'film/review' }, /must end in "<name>\.app"/],
-    [{}, { folder: '/w', path: 'film/.app' }, /must end in/],
-    [{}, { folder: '/w', path: 'a.app/b.app' }, /must end in/],
-    [{ files: ['index.html'] }, { folder: '/w', path: 'a.app' }, /no app\.json/],
-    [{ files: ['app.json'] }, { folder: '/w', path: 'a.app' }, /no index\.html/],
-    [{ manifest: '{"title": 5}' }, { folder: '/w', path: 'a.app' }, /app\.json is not valid/],
-    [{ manifest: 'not json' }, { folder: '/w', path: 'a.app' }, /not valid/],
+    [{}, { folder: '/w', path: 'film/review' }, /must end in "<name>\.webapp"/],
+    [{}, { folder: '/w', path: 'film/.webapp' }, /must end in/],
+    [{}, { folder: '/w', path: 'a.webapp/b.webapp' }, /must end in/],
+    [{ files: ['index.html'] }, { folder: '/w', path: 'a.webapp' }, /no app\.json/],
+    [{ files: ['app.json'] }, { folder: '/w', path: 'a.webapp' }, /no index\.html/],
+    [{ manifest: '{"title": 5}' }, { folder: '/w', path: 'a.webapp' }, /app\.json is not valid/],
+    [{ manifest: 'not json' }, { folder: '/w', path: 'a.webapp' }, /not valid/],
   ] as const) {
     const { asked, run } = toolsOf({ tools: true, ...options })
     await assert.rejects(run('save_app', input), error)
@@ -102,8 +102,8 @@ test('an app needs its path, page and a valid app.json; nothing is saved otherwi
 
 test('reading an app’s state asks the API for that app', async () => {
   const { asked, run } = toolsOf({ tools: true })
-  await run('read_app_state', { path: 'film/review.app/' })
-  assert.deepEqual(asked, [{ name: 'tool_state', path: 'film/review.app' }])
+  await run('read_app_state', { path: 'film/review.webapp/' })
+  assert.deepEqual(asked, [{ name: 'tool_state', path: 'film/review.webapp' }])
 })
 
 test('the apps skill and section come with the feature only', () => {
