@@ -336,8 +336,8 @@ export async function specFor(
   // runs there, and its teammates get the tools to run heavy commands there. Not in Chief's pass.
   const machine = !passing && thread.computer.kind === 'cloud' && (await wantsMachine(thread))
   const features = await featuresOfMember(thread.startedByMemberId, thread.workspaceId)
-  // Tools (docs/tools.md): for teammates of a thread whose starter has the feature.
-  const tools = !passing && features.has('tools')
+  // Apps (docs/apps.md; `tools` on the wire): for teammates of a thread whose starter has the feature.
+  const tools = !passing && features.has('apps')
   const closedApps = await closedAppKinds(db, thread, features)
   // The harnesses its teammates may run on, named in the instructions (Questions about Brigade).
   const harnesses: TeammateHarness[] = [

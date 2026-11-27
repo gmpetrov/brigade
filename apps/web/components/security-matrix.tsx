@@ -390,7 +390,7 @@ export function AccessMatrix({
             </tr>
 
             {section(
-              'Apps',
+              'Connected apps',
               <Link
                 href="/app/connections"
                 onClick={(e) => clickSettings(e, '/app/connections')}

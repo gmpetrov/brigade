@@ -1119,16 +1119,16 @@ export async function seedWorkspace(
     'Data/customers.csv',
     'name,email,plan,seats,mrr\nGlobex,ops@globex.test,pro,18,342\nInitech,it@initech.test,business,40,1560\nUmbrella,billing@umbrella.test,pro,7,133\nHooli,team@hooli.test,business,95,3705\n',
   )
-  // A tool (docs/tools.md) Maya made in the newsletter's thread: a review board for the visuals.
+  // A tool (docs/apps.md) Maya made in the newsletter's thread: a review board for the visuals.
   for (const [name, svg] of Object.entries(SAMPLE_VISUALS))
     await file(`Projects/Fall launch/visuals/${name}`, svg, asMaya)
   const fromNewsletter = { sessionId: newsletter.id }
-  const reviewTool = 'Projects/Fall launch/visual-review.tool'
+  const reviewTool = 'Projects/Fall launch/visual-review.webapp'
   await saveLibraryFile(
     db,
     scope,
     asMaya,
-    { path: `${reviewTool}/tool.json`, bytes: new TextEncoder().encode(SAMPLE_TOOL_MANIFEST) },
+    { path: `${reviewTool}/app.json`, bytes: new TextEncoder().encode(SAMPLE_TOOL_MANIFEST) },
     fromNewsletter,
   )
   await saveLibraryFile(

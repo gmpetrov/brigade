@@ -1,8 +1,26 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ToolManifest, toolFolderOf, toolName } from '../dist/index.js'
+import {
+  ToolManifest,
+  toolFolderOf,
+  toolManifestFile,
+  toolManifestPath,
+  toolName,
+} from '../dist/index.js'
 
-test('a tool is the folder its path is in, or is', () => {
+test('an app is the folder its path is in, or is', () => {
+  assert.equal(toolFolderOf('a/review.webapp/app.js'), 'a/review.webapp')
+  assert.equal(toolFolderOf('a/review.webapp'), 'a/review.webapp')
+  assert.equal(toolFolderOf('a/.webapp/x'), undefined)
+  assert.equal(toolName('a/clip-review.webapp'), 'clip-review')
+  assert.equal(toolName('a/plain'), 'plain')
+  // A folder ending in .app (a macOS bundle, or a domain such as acme.app) is not one.
+  assert.equal(toolFolderOf('Sites/acme.app/index.html'), undefined)
+  assert.equal(toolManifestPath('a/review.webapp'), 'a/review.webapp/app.json')
+  assert.equal(toolManifestFile('a/review.tool'), 'tool.json')
+})
+
+test('an app saved as a tool before the rename is still one', () => {
   assert.equal(toolFolderOf('a/review.tool/app.js'), 'a/review.tool')
   assert.equal(toolFolderOf('a/review.tool'), 'a/review.tool')
   assert.equal(toolFolderOf('review.tool/x/y.png'), 'review.tool')

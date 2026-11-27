@@ -45,10 +45,10 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
   let restore: () => void
   const email = `${user}@test.local`
   let flagBefore: Awaited<ReturnType<typeof prisma.featureFlag.findUnique>> = null
-  /** Whether the member has tools (docs/tools.md): off for everyone, or as before and for them. */
+  /** Whether the member has tools (docs/apps.md): off for everyone, or as before and for them. */
   const setTools = (on: boolean) =>
     prisma.featureFlag.update({
-      where: { key: 'tools' },
+      where: { key: 'apps' },
       data: on
         ? {
             everyone: flagBefore?.everyone ?? false,
@@ -148,10 +148,10 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     )
     await file(`${design}/index.html`, 'text/html', '<h1>Choose your plan</h1>')
     await file(`${design}/knobs.json`, 'application/json', '{"accent": "flamingo"}')
-    flagBefore = await prisma.featureFlag.findUnique({ where: { key: 'tools' } })
+    flagBefore = await prisma.featureFlag.findUnique({ where: { key: 'apps' } })
     await prisma.featureFlag.upsert({
-      where: { key: 'tools' },
-      create: { key: 'tools', emails: [email] },
+      where: { key: 'apps' },
+      create: { key: 'apps', emails: [email] },
       update: { emails: [...(flagBefore?.emails ?? []), email] },
     })
     // Same names elsewhere: never shown here.
@@ -174,7 +174,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     if (flagBefore) {
       const { key, ...rest } = flagBefore
       await prisma.featureFlag.update({ where: { key }, data: rest })
-    } else await prisma.featureFlag.deleteMany({ where: { key: 'tools' } })
+    } else await prisma.featureFlag.deleteMany({ where: { key: 'apps' } })
     await prisma.workspace.deleteMany({ where: { id: { in: workspaces } } })
     await prisma.member.deleteMany({ where: { organizationId: { in: orgs } } })
     await prisma.organization.deleteMany({ where: { id: { in: orgs } } })
@@ -274,7 +274,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
         [
           'Projects/Brigade/social/launch-tracker.tool',
           'Launch campaign tracker',
-          'Tool · Projects/Brigade/social',
+          'App · Projects/Brigade/social',
         ],
       ],
     )

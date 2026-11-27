@@ -136,7 +136,7 @@ test('a message to the thread goes as the person, said to come from the tool, on
   assert.deepEqual(h.calls, [
     { path: '/threads/th1/messages', body: { text: toolMessage(view(), 'Approved: a.mp4') } },
   ])
-  assert.match(toolMessage(view(), 'x'), /^From the tool @\[Film\/review\.tool\]\(document:doc1\):/)
+  assert.match(toolMessage(view(), 'x'), /^From the app @\[Film\/review\.tool\]\(document:doc1\):/)
 
   const declined = host({ yes: false })
   await answer(declined.host, ask('thread.send', { text: 'hi' }))

@@ -1,4 +1,4 @@
-// Tools (docs/tools.md), from the dashboard: a tool's address on the sandbox origin, the accounts
+// Tools (docs/apps.md), from the dashboard: a tool's address on the sandbox origin, the accounts
 // attached to it, and what its page asks the dashboard for (state, library files, App calls).
 // Hidden, as if it did not exist, from people without the tools feature.
 import {
@@ -26,7 +26,7 @@ import {
 } from '../tools.js'
 
 const requireTools: MiddlewareHandler<AppEnv> = async (c, next) => {
-  requireFeature(await featuresOfUser(c.var.scope.userId, c.var.scope.workspaceId), 'tools')
+  requireFeature(await featuresOfUser(c.var.scope.userId, c.var.scope.workspaceId), 'apps')
   await next()
 }
 

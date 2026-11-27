@@ -413,7 +413,7 @@ export function AppAccessAsk({
               // Signed in with a key: the access alone would not allow it, nor renew a key refused.
               <Button size="sm" variant="outline" asChild>
                 <Link href="/app/connections" target="_blank" rel="noreferrer">
-                  Connect {name} again in Apps
+                  Connect {name} again in Connected apps
                 </Link>
               </Button>
             ) : (
@@ -490,7 +490,7 @@ export function AppAccessAsk({
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/app/connections" target="_blank" rel="noreferrer">
-                Add {name} in Apps
+                Add {name} in Connected apps
               </Link>
             </Button>
             {decline}

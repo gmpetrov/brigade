@@ -1,4 +1,4 @@
-// Tools (docs/tools.md): small web apps saved in the library as `<name>.tool`
+// Tools (docs/apps.md): small web apps saved in the library as `<name>.tool`
 // folders. Their pages run the teammate's script, so like designs they are
 // served only from DESIGN_URL, under a short-lived signed address, as sandboxed
 // documents with no cookies. What a tool does beyond its page goes through the
@@ -17,6 +17,9 @@ import {
   TOOL_THUMBNAIL,
   ToolManifest,
   toolFolderOf,
+  toolManifestPath,
+  toolManifestFile,
+  LEGACY_TOOL_MANIFEST,
   addToHead,
   elementSelectScript,
   LIBRARY_READ_MAX,
@@ -95,7 +98,11 @@ export const codeHashOf = (folder: string, rows: { path: string; sha256: string 
         .filter((r) => r.path !== `${folder}/${TOOL_THUMBNAIL}`)
         .map((r) => `${r.path.slice(folder.length + 1)}\n${r.sha256}`)
         .sort()
-        .join('\n'),
+        .join('\n') +
+        // Which file is its manifest (toolManifestFile) is part of what runs: a `.tool` folder
+        // moved to `.webapp` reads another one. Hashed as before for `.tool` folders, so what
+        // was allowed before the rename stays allowed.
+        (toolManifestFile(folder) === LEGACY_TOOL_MANIFEST ? '' : `\nmanifest\n${TOOL_MANIFEST}`),
     )
     .digest('hex')
 
@@ -110,13 +117,13 @@ type Tool = {
 /** The tool a library path is in, or is: its folder, files, page and manifest. */
 async function toolAt(db: ScopedDb, scope: Scope, path: string): Promise<Tool> {
   const folder = toolFolderOf(path)
-  if (!folder) throw new HTTPException(400, { message: 'That is not in a tool folder' })
+  if (!folder) throw new HTTPException(400, { message: 'That is not in an app folder' })
   const rows = await toolRows(db, folder)
   const entry = rows.find((r) => r.path === `${folder}/${TOOL_ENTRY}`)
-  if (!entry) throw new HTTPException(404, { message: `The tool has no ${TOOL_ENTRY} yet` })
+  if (!entry) throw new HTTPException(404, { message: `The app has no ${TOOL_ENTRY} yet` })
   const manifest = await readManifest(
     scope,
-    rows.find((r) => r.path === `${folder}/${TOOL_MANIFEST}`),
+    rows.find((r) => r.path === toolManifestPath(folder)),
   )
   return { folder, rows, entry, manifest, codeHash: codeHashOf(folder, rows) }
 }
@@ -342,7 +349,7 @@ export async function attachToolAccount(
   if (!connection) throw new HTTPException(404, { message: 'Account not found' })
   if (!askedFor(tool.manifest, connection))
     throw new HTTPException(400, {
-      message: `The tool does not ask for ${appName(connection)} in its ${TOOL_MANIFEST}`,
+      message: `The app does not ask for ${appName(connection)} in its ${TOOL_MANIFEST}`,
     })
   if (!mayAttachAccount(scope, connection))
     throw new HTTPException(403, {
@@ -409,7 +416,7 @@ export async function approveToolChange(db: ScopedDb, scope: WorkspaceScope, pat
   const mine = attached.filter((a) => mayAttachAccount(scope, a.connection))
   if (attached.length > 0 && mine.length === 0)
     throw new HTTPException(403, {
-      message: "Only the members who may attach this tool's accounts can allow it again",
+      message: "Only the members who may attach this app's accounts can allow it again",
     })
   if (mine.length === 0) return 0
   await db.toolAccount.updateMany({
@@ -569,7 +576,7 @@ export async function toolState(
     ])
     if (live >= TOOL_STATE_KEYS_MAX || rows >= TOOL_STATE_ROWS_MAX)
       throw new HTTPException(413, {
-        message: `A tool keeps at most ${TOOL_STATE_KEYS_MAX} keys for each person, and as many shared`,
+        message: `An app keeps at most ${TOOL_STATE_KEYS_MAX} keys for each person, and as many shared`,
       })
   }
   const create = async () => {
@@ -663,7 +670,7 @@ export async function toolFiles(
   const folder = input.folder.replace(/\/+$/, '')
   if (!readable(tool, folder))
     throw new HTTPException(403, {
-      message: `The tool reads ${folder} only once its ${TOOL_MANIFEST} lists it in "reads"`,
+      message: `The app reads ${folder} only once its ${TOOL_MANIFEST} lists it in "reads"`,
     })
   const rows = await db.document.findMany({
     where: { kind: 'library', deletedAt: null, path: { startsWith: `${folder}/` } },
@@ -713,7 +720,7 @@ async function callableAccount(
     },
   })
   if (!attached || attached.connection.status === 'removed')
-    throw new HTTPException(404, { message: 'That account is not attached to this tool' })
+    throw new HTTPException(404, { message: 'That account is not attached to this app' })
   const connection = attached.connection
   if (!usableBy(connection, scope.memberId))
     throw new HTTPException(403, {
@@ -721,10 +728,10 @@ async function callableAccount(
     })
   if (attached.codeHash !== tool.codeHash)
     throw new HTTPException(409, {
-      message: 'The tool changed since this account was attached: allow it again to use it',
+      message: 'The app changed since this account was attached: allow it again to use it',
       res: Response.json(
         {
-          error: 'The tool changed since this account was attached: allow it again to use it',
+          error: 'The app changed since this account was attached: allow it again to use it',
           code: 'tool_changed',
         },
         { status: 409 },
@@ -732,7 +739,7 @@ async function callableAccount(
     })
   if (connection.status !== 'active')
     throw new HTTPException(409, {
-      message: `The sign-in of ${connection.externalAccount ?? connection.label} expired: its owner reconnects it in Apps`,
+      message: `The sign-in of ${connection.externalAccount ?? connection.label} expired: its owner reconnects it in Connected apps`,
     })
   return { attached, connection }
 }
@@ -770,7 +777,7 @@ async function operationOf(
 }
 
 /** Files go to an App only from a thread. */
-const noFiles = () => Promise.reject(new Error('Files are not available to tools'))
+const noFiles = () => Promise.reject(new Error('Files are not available to apps'))
 
 /**
  * Call an attached account's operation for the member viewing a tool. A write needs the account
@@ -782,13 +789,13 @@ export async function callToolOperation(
   input: ToolCall,
 ): Promise<ToolCallResult> {
   if (scope.role === 'viewer')
-    throw new HTTPException(403, { message: 'Viewers cannot use the Apps of tools' })
+    throw new HTTPException(403, { message: 'Viewers cannot use the connected apps of apps' })
   if (!calls.take(scope.memberId))
-    throw new HTTPException(429, { message: 'Too many calls from tools: wait a minute' })
+    throw new HTTPException(429, { message: 'Too many calls from apps: wait a minute' })
   const tool = await toolAt(db, scope, input.path)
   const { attached, connection } = await callableAccount(db, scope, tool, input.connectionId)
   if (connectors[connection.kind]?.auth === 'brigade')
-    throw new HTTPException(400, { message: `${appName(connection)} is not available to tools` })
+    throw new HTTPException(400, { message: `${appName(connection)} is not available to apps` })
   if (connection.app.disabledTools.includes(input.operation))
     throw new HTTPException(403, { message: `${input.operation} is turned off for this App` })
   const operation = await operationOf(db, scope, connection, input.operation)
@@ -797,7 +804,7 @@ export async function callToolOperation(
       message: `${appName(connection)} has no operation ${input.operation}`,
     })
   if (operation.files)
-    throw new HTTPException(400, { message: `${input.operation} sends files: not from a tool` })
+    throw new HTTPException(400, { message: `${input.operation} sends files: not from an app` })
   if (operation.write && attached.access !== 'read_write')
     throw new HTTPException(403, {
       message: `${input.operation} changes things: the account is attached to read only`,
@@ -925,13 +932,13 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   if (separateHost && c.req.header('host') !== designHost) return c.text('Not found', 404)
   const token = c.req.param('token')
   const claim = readToolToken(token)
-  if (!claim) return c.text('This link has expired. Open the tool again.', 410)
+  if (!claim) return c.text('This link has expired. Open the app again.', 410)
   const rest = askedFile(c.req.path, `/t/${c.req.param('token')}/`)
   if (!rest) return c.text('Not found', 404)
   const scope = { organizationId: claim.o, workspaceId: claim.w }
   const db = scoped(scope)
   const folder = claim.p
-  const manifest = await readManifest(scope, await libraryRow(db, `${folder}/${TOOL_MANIFEST}`))
+  const manifest = await readManifest(scope, await libraryRow(db, toolManifestPath(folder)))
   if (rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1) {
     const path = rest.slice(1).join('/')
     if (!readable({ folder, manifest }, path)) return c.text('Not found', 404)

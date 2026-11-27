@@ -303,7 +303,7 @@ function ConnectList({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3.5">
-      <p className="text-sm font-semibold">Apps this team needs</p>
+      <p className="text-sm font-semibold">Connected apps this team needs</p>
       <ul className="flex flex-col gap-2">
         {kinds.map((kind) => {
           const connection = connectionOf(data, kind)

@@ -548,20 +548,22 @@ function designs(spec: ThreadSpec) {
   ].join('\n\n')
 }
 
-/** Tools (docs/tools.md): for teammates who can save to the library, where the thread's starter has them. */
+/** Tools (docs/apps.md): for teammates who can save to the library, where the thread's starter has them. */
 const canMakeTools = (spec: ThreadSpec) => spec.tools && canSaveToLibrary(spec)
 
-const TOOLS_SKILL = `${BUILTIN_SKILL_PREFIX}tools`
+const TOOLS_SKILL = `${BUILTIN_SKILL_PREFIX}apps`
 
-/** Tools: when to make one, here; how, in `brigade-tools`. */
+/** Apps (tools in the code): when to make one, here; how, in `brigade-apps`. */
 function toolsSection(spec: ThreadSpec) {
   if (!canMakeTools(spec)) return ''
   return [
-    '## Tools',
+    '## Apps you make',
     'When people need to work with something rather than look at it (a dashboard for a campaign, a board to review and ' +
-      'approve generated clips, a tracker, a form that feeds a thread), make a tool: a small web app saved in the library, ' +
+      'approve generated clips, a tracker, a form that feeds a thread), make an app: a small web app saved in the library, ' +
       'which people open beside a page or a thread. It reads library folders, keeps state, calls App accounts people ' +
-      `attach to it and sends messages to its thread. Read the \`${TOOLS_SKILL}\` skill before you make or change one.`,
+      `attach to it and sends messages to its thread. Read the \`${TOOLS_SKILL}\` skill before you make or change one. ` +
+      'People see these as apps (Library → Apps), and the accounts they connect as connected apps: use those words ' +
+      'when you write to people.',
   ].join('\n\n')
 }
 
@@ -569,10 +571,11 @@ function toolsSection(spec: ThreadSpec) {
 function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
   if (!canMakeTools(spec)) return []
   const instructions = [
-    '# Tools',
-    'A tool is a small web app in the library: a dashboard, a review board, a tracker, a form. People open it beside a ' +
+    '# Apps you make',
+    'An app is a small web app in the library: a dashboard, a review board, a tracker, a form. People open it beside a ' +
       'page or a thread and work in it. Unlike a design, it works: through `window.brigade` it lists library folders, ' +
-      'keeps state, calls App accounts and writes to its thread. A design is for looking at; a tool is for doing.',
+      'keeps state, calls App accounts and writes to its thread. A design is for looking at; an app is for doing. ' +
+      'People see the App accounts it calls as connected apps.',
     '## The folder',
     `Make it in a folder on this computer with \`${TOOL_ENTRY}\` and \`${TOOL_MANIFEST}\` at its top, and its scripts, ` +
       'styles and assets beside them, linked by relative paths. Its scripts run only from its own files or written in ' +
@@ -592,11 +595,11 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       '- `reads`: library folders it lists and loads (its own folder always). Nothing else of the library reaches it.\n' +
       "- `apps`: Apps it calls, by kind (`github`, `posthog`, `stripe`, `gmail`, a custom server's prefix…). `access` " +
       'is `read` (default) or `read_write` when it changes things there. A person attaches an account of each from the ' +
-      "tool's Accounts button; until then, and again after each save that changes the tool, its calls are refused.\n" +
+      "app's Accounts button; until then, and again after each save that changes the app, its calls are refused.\n" +
       '- `hosts`: public APIs its script calls directly with `fetch`, needing no account. Anything else it calls goes ' +
       'through `window.brigade`.',
     '## window.brigade',
-    'Brigade adds it to every page of the tool. Each call returns a Promise and may reject with an `Error` (its ' +
+    'Brigade adds it to every page of the app. Each call returns a Promise and may reject with an `Error` (its ' +
       '`code` says why when it matters). Opened outside Brigade (as `check_design` renders it), `brigade.inBrigade` ' +
       'is false and every call rejects: show sample data then, so the screenshots show the real layout.\n\n' +
       '```js\n' +
@@ -608,7 +611,7 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       'await brigade.state.list("clip:")                    // { entries, next }: keys starting so, about 1 MB a page\n' +
       'await brigade.state.list("clip:", { after: next })   // the next page\n' +
       'await brigade.state.delete("ratings")\n' +
-      'await brigade.shared.get("decisions")                // the same, shared by everyone who opens the tool\n' +
+      'await brigade.shared.get("decisions")                // the same, shared by everyone who opens the app\n' +
       'await brigade.shared.set("decisions", next, { version })  // only over the version read; else rejects with code "conflict"\n' +
       'await brigade.apps.list()                            // [{ connectionId, kind, app, account, access, usable, changed }]\n' +
       'await brigade.apps.operations("github")              // [{ name, description, write, inputSchema }]\n' +
@@ -622,28 +625,29 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       '(`github_list_pull_requests`); `apps.operations` lists them with their input schemas. Its result is what the App ' +
       'returned. A write (an operation that changes something) needs `"access": "read_write"` and Brigade asks the person ' +
       'to confirm each one in its own dialog: call writes only from a click.\n' +
-      '- `thread.send` writes in the thread that saved the tool last, as the person, once they confirm. Use it to hand ' +
-      'work back ("send my picks"): it is how you learn what they did. You can also read a tool\'s state yourself with ' +
-      '`read_tool_state`.\n' +
+      '- `thread.send` writes in the thread that saved the app last, as the person, once they confirm. Use it to hand ' +
+      'work back ("send my picks"): it is how you learn what they did. You can also read an app\'s state yourself with ' +
+      '`read_app_state`.\n' +
       '- Show a quiet message when an account is missing or not usable (`apps.list`: `usable` false is a personal ' +
-      'account of someone else; `changed` true waits for someone to allow the tool again).',
-    'A person can also pick elements in the tool and say what should change on each: their message carries a ' +
-      "`<preview-element>` block for each, its `page` the tool's file in the library (`<folder>/index.html`), with " +
-      "its selector, text, HTML and their `note`, and a picture of it attached. Change the tool's files for it, " +
+      'account of someone else; `changed` true waits for someone to allow the app again).',
+    'A person can also pick elements in the app and say what should change on each: their message carries a ' +
+      "`<preview-element>` block for each, its `page` the app's file in the library (`<folder>/index.html`), with " +
+      "its selector, text, HTML and their `note`, and a picture of it attached. Change the app's files for it, " +
       'not the page it drew.',
     '## Saving',
     'Check it with `check_design` on the folder (it renders like a design: screenshots and the errors its page logged), ' +
-      `open the screenshots and fix what is off. Then save it with \`save_tool\` to a library path ending in \`${TOOL_SUFFIX}\`, ` +
-      'next to the work it belongs to, and name it in your reply by the `mention` `save_tool` returns: it opens the ' +
-      'tool beside the thread. Saving again replaces it; the library keeps earlier versions. ' +
-      `Before you change a saved tool, copy its files from \`${libraryDir}/<path>/\` over your working copy.`,
+      `open the screenshots and fix what is off. Then save it with \`save_app\` to a library path ending in \`${TOOL_SUFFIX}\` ` +
+      '(one saved before under `.tool`, with a `tool.json`, keeps its path and manifest), next to the work it belongs to, and name it in your reply by the `mention` `save_app` returns: it opens the ' +
+      'app beside the thread. Saving again replaces it; the library keeps earlier versions. ' +
+      `Before you change a saved app, copy its files from \`${libraryDir}/<path>/\` over your working copy.`,
   ].join('\n\n')
   return [
     {
       name: TOOLS_SKILL,
       description:
-        'Make, change, check and save a tool: a small web app in the library (a dashboard, a review board, a tracker) ' +
-        'that lists library folders, keeps state, calls App accounts and writes to its thread. Read before any tool work.',
+        'Make, change, check and save an app: a small web app in the library (a dashboard, a review board, a ' +
+        'tracker) that lists library folders, keeps state, calls App accounts and writes to its thread. Read before ' +
+        'any work on one.',
       instructions,
       files: [],
       refs: [],
@@ -1362,7 +1366,8 @@ const APP_ACCOUNTS =
   'its tools reach you in this thread; check the account in their description before you use them, then finish ' +
   'the task. When your tools reach the account but a call is refused for a permission it lacks, one the person ' +
   "allows on the provider's consent page (such as Cloudflare's), open the same ask with `permission` naming it: " +
-  'the ticket reconnects the account in one click, so do not write the steps yourself.'
+  'the ticket reconnects the account in one click, so do not write the steps yourself. People see Apps as ' +
+  'connected apps (their page in Brigade is Connected apps): call them so when you write to people.'
 
 /**
  * The accounts granted here that this turn cannot use (ConnectorGrant.unavailable): said, so that

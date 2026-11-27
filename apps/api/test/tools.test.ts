@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -9,7 +9,7 @@ import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { sessionStub } from './session-stub.js'
 
-// Tools (src/tools.ts, docs/tools.md), through the API's own routes: a tool's page on the sandbox
+// Tools (src/tools.ts, docs/apps.md), through the API's own routes: a tool's page on the sandbox
 // host, its state, the library folders it reads, and App accounts attached to it, called for the
 // member viewing it (an MCP server of the test's own answers). Against the API's development
 // database (apps/api/.env), in an organization of its own removed at the end; skipped when none
@@ -156,12 +156,12 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     db = scoped(scope)
     // The feature, for this workspace.
     flagBefore = await prisma.featureFlag.findUnique({
-      where: { key: 'tools' },
+      where: { key: 'apps' },
       select: { workspaceIds: true },
     })
     await prisma.featureFlag.upsert({
-      where: { key: 'tools' },
-      create: { key: 'tools', workspaceIds: [workspaceId], note: 'tools.test' },
+      where: { key: 'apps' },
+      create: { key: 'apps', workspaceIds: [workspaceId], note: 'tools.test' },
       update: { workspaceIds: [...(flagBefore?.workspaceIds ?? []), workspaceId] },
     })
     const notesApp = await db.app.create({
@@ -221,10 +221,10 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     server.close()
     if (flagBefore)
       await prisma.featureFlag.update({
-        where: { key: 'tools' },
+        where: { key: 'apps' },
         data: { workspaceIds: flagBefore.workspaceIds },
       })
-    else await prisma.featureFlag.deleteMany({ where: { key: 'tools' } })
+    else await prisma.featureFlag.deleteMany({ where: { key: 'apps' } })
     await prisma.toolAccount.deleteMany({ where: { organizationId: org } })
     await prisma.toolState.deleteMany({ where: { organizationId: org } })
     await prisma.connection.deleteMany({ where: { organizationId: org } })
@@ -240,14 +240,14 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
 
   test('hidden from people without the feature', async () => {
     await prisma.featureFlag.update({
-      where: { key: 'tools' },
+      where: { key: 'apps' },
       data: { workspaceIds: flagBefore?.workspaceIds ?? [] },
     })
     try {
       assert.equal((await post('/view', { path: TOOL })).status, 404)
     } finally {
       await prisma.featureFlag.update({
-        where: { key: 'tools' },
+        where: { key: 'apps' },
         data: { workspaceIds: [...(flagBefore?.workspaceIds ?? []), workspaceId] },
       })
     }
@@ -321,6 +321,35 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
       (await app.request(`/v/${token}/index.html`, { headers: { host: designHost } })).status,
       410,
     )
+  })
+
+  test('the hash says which file is the manifest: a .tool moved to .webapp is allowed again', async () => {
+    const { codeHashOf } = await import('../src/tools.js')
+    const rows = (folder: string) => [
+      { path: `${folder}/index.html`, sha256: 'a' },
+      { path: `${folder}/app.json`, sha256: 'b' },
+      { path: `${folder}/tool.json`, sha256: 'c' },
+    ]
+    const before = createHash('sha256')
+      .update(['app.json\nb', 'index.html\na', 'tool.json\nc'].join('\n'))
+      .digest('hex')
+    // As before the rename for a .tool folder, so what was allowed stays allowed.
+    assert.equal(codeHashOf('x/r.tool', rows('x/r.tool')), before)
+    assert.notEqual(codeHashOf('x/r.webapp', rows('x/r.webapp')), before)
+  })
+
+  test('an app under its new names reads its app.json only', async () => {
+    const folder = 'Film/board.webapp'
+    await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
+    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board', reads: ['Film/clips'] }))
+    // A tool.json in a .webapp folder is just a file: it changes nothing.
+    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name', reads: [] }))
+    const view = await post('/view', { path: `${folder}/index.html` })
+    assert.equal(view.status, 200)
+    assert.equal(view.body.folder, folder)
+    assert.equal(view.body.manifest.title, 'Clip board')
+    assert.deepEqual(view.body.manifest.reads, ['Film/clips'])
+    assert.equal((await post('/files', { path: folder, folder: 'Film/clips' })).status, 200)
   })
 
   test('files: the folders its manifest lists, each with an address on the sandbox host', async () => {

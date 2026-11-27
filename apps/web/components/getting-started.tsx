@@ -54,7 +54,7 @@ export function GettingStarted({ threads }: { threads: ThreadSummary[] | undefin
         : 'Send Chief your website: it does a first job for you and suggests your team.',
     },
     {
-      label: 'Connect a tool your team works in',
+      label: 'Connect an app your team works in',
       done: connections.data.connections.some((c) => c.status !== 'removed'),
       href: '/app/connections',
       action: 'Connect',

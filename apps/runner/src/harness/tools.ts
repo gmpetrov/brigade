@@ -27,6 +27,9 @@ import {
   TOOL_FILES_MAX,
   TOOL_MANIFEST,
   TOOL_SUFFIX,
+  LEGACY_TOOL_MANIFEST,
+  toolFolderOf,
+  toolManifestFile,
   ToolManifest,
   designFolderOf,
   DesignManifest,
@@ -1217,7 +1220,7 @@ export function libraryTools(options: {
     folder: string,
     options: { viewports?: string[]; shots?: boolean; thumbnail?: boolean },
   ) => Promise<{ screenshots: string[]; errors: string[]; thumbnail?: string }>
-  /** Tools (docs/tools.md): the thread's starter has them. */
+  /** Tools (docs/apps.md): the thread's starter has them. */
   tools?: boolean
 }): Record<string, Tool> {
   /** A folder's files on this computer, as paths relative to it, without dotfiles and node_modules. */
@@ -1237,8 +1240,10 @@ export function libraryTools(options: {
     designs: string[],
     call: { toolCallId: string; toolName: string; input: unknown },
     onSaved?: (file: string, output: unknown) => void,
+    /** The file of the folder each is saved from, when not its own (an app's manifests). */
+    sourceOf: (file: string) => string = (file) => file,
   ) => {
-    const sources = new Map(files.map((f) => [f, `${folder}/${f}`]))
+    const sources = new Map(files.map((f) => [f, `${folder}/${sourceOf(f)}`]))
     for (const design of designs) {
       const at = (file: string) => (design ? `${design}/${file}` : file)
       if (sources.has(at(DESIGN_THUMBNAIL)) || !sources.has(at(DESIGN_ENTRY))) continue
@@ -1652,11 +1657,11 @@ export function libraryTools(options: {
       },
     })
     if (options.tools) {
-      tools.save_tool = tool({
+      tools.save_app = tool({
         description:
-          'Save a tool (a small web app people use in Brigade: a dashboard, a review board, a tracker) to the library. ' +
+          'Save an app (a small web app people use in Brigade: a dashboard, a review board, a tracker) to the library. ' +
           `Make it in a folder on this computer with ${TOOL_ENTRY} and ${TOOL_MANIFEST} at its top, then pass the folder. ` +
-          'Every file in it is saved; saving again replaces them. Read the `brigade-tools` skill first.',
+          'Every file in it is saved; saving again replaces them. Read the `brigade-apps` skill first.',
         inputSchema: jsonSchema<{ folder: string; path: string }>({
           type: 'object',
           properties: {
@@ -1674,38 +1679,49 @@ export function libraryTools(options: {
         }),
         execute: async (input, { toolCallId }) => {
           const path = input.path.replace(/\/+$/, '')
-          if (!path.endsWith(TOOL_SUFFIX) || path.split('/').pop() === TOOL_SUFFIX)
+          // An app saved before the rename keeps its `.tool` folder, so its state and accounts stay.
+          if (toolFolderOf(path) !== path)
             throw new Error(`The library path must end in "<name>${TOOL_SUFFIX}"`)
           const files = await folderFiles(input.folder)
-          for (const needed of [TOOL_ENTRY, TOOL_MANIFEST])
-            if (!files.includes(needed)) throw new Error(`The folder has no ${needed} at its top`)
+          if (!files.includes(TOOL_ENTRY))
+            throw new Error(`The folder has no ${TOOL_ENTRY} at its top`)
+          // Its manifest is the file its path's suffix names (toolManifestFile): `app.json`, or
+          // `tool.json` for a `.tool` app from before the rename. Every file is saved as it is;
+          // when the folder has only the other one, that is saved under the manifest's name too.
+          const manifestName = toolManifestFile(path)
+          const manifestFile = [manifestName, TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) =>
+            files.includes(f),
+          )
+          if (!manifestFile) throw new Error(`The folder has no ${manifestName} at its top`)
+          const uploads = files.includes(manifestName) ? files : [...files, manifestName]
           if (files.length > TOOL_FILES_MAX)
             throw new Error(
-              `A tool can have up to ${TOOL_FILES_MAX} files; this folder has ${files.length}`,
+              `An app can have up to ${TOOL_FILES_MAX} files; this folder has ${files.length}`,
             )
           const folder = input.folder.replace(/\/+$/, '')
           const manifest = await options
-            .readFile(`${folder}/${TOOL_MANIFEST}`)
+            .readFile(`${folder}/${manifestFile}`)
             .then((bytes) => ToolManifest.safeParse(JSON.parse(bytes.toString('utf8'))))
             .catch((error: unknown) => ({ success: false as const, error }))
           if (!manifest.success)
             throw new Error(
-              `${TOOL_MANIFEST} is not valid: ${errorMessage(manifest.error)}. Nothing was saved.`,
+              `${manifestFile} is not valid: ${errorMessage(manifest.error)}. Nothing was saved.`,
             )
           let mention: string | undefined
           const saved = await saveFolder(
             folder,
             path,
-            files,
+            uploads,
             [''],
-            { toolCallId, toolName: 'save_tool', input },
+            { toolCallId, toolName: 'save_app', input },
             (file, output) => {
-              // Its page's mention, labelled with the tool: it opens the tool from your reply.
+              // Its page's mention, labelled with the app: it opens the app from your reply.
               const id = /\(document:([^)\s]+)\)/.exec(
                 String((output as { mention?: unknown } | null)?.mention ?? ''),
               )?.[1]
               if (file === TOOL_ENTRY && id) mention = `@[${path}](document:${id})`
             },
+            (file) => (file === manifestName ? manifestFile : file),
           )
           const apps = manifest.data.apps ?? []
           return {
@@ -1715,23 +1731,23 @@ export function libraryTools(options: {
             ...(apps.length
               ? {
                   accounts:
-                    `It asks for ${apps.map((a) => a.kind).join(', ')}: a person attaches an account of each from the tool's ` +
+                    `It asks for ${apps.map((a) => a.kind).join(', ')}: a person attaches an account of each from the app's ` +
                     'Accounts button. Its calls to an account wait until then, and again after each save that changes it.',
                 }
               : {}),
           }
         },
       })
-      tools.read_tool_state = tool({
+      tools.read_app_state = tool({
         description:
-          'Read the state a tool in the library keeps: its shared keys, and the own keys of the person this thread works for ' +
+          'Read the state an app in the library keeps: its shared keys, and the own keys of the person this thread works for ' +
           '(what they picked, rated or noted in it). Read only.',
         inputSchema: jsonSchema<{ path: string }>({
           type: 'object',
           properties: {
             path: {
               type: 'string',
-              description: `The tool's library path, ending in "${TOOL_SUFFIX}"`,
+              description: `The app's library path, ending in "${TOOL_SUFFIX}"`,
             },
           },
           required: ['path'],
@@ -1740,14 +1756,24 @@ export function libraryTools(options: {
           options.call({
             operation: { name: 'tool_state', path: input.path.replace(/\/+$/, '') },
             toolCallId,
-            toolName: 'read_tool_state',
+            toolName: 'read_app_state',
             input,
           }),
       })
+      // Their names before apps were renamed from tools (docs/apps.md): a conversation from before
+      // the rename may still call them. Remove once those have gone quiet.
+      tools.save_tool = {
+        ...tools.save_app,
+        description: 'The old name of save_app: call save_app instead.',
+      } as Tool
+      tools.read_tool_state = {
+        ...tools.read_app_state,
+        description: 'The old name of read_app_state: call read_app_state instead.',
+      } as Tool
     }
     tools.check_design = tool({
       description:
-        'Render a design (or tool) folder on this computer with Chrome, before you hand it over: screenshots at its viewports ' +
+        'Render a design (or app) folder on this computer with Chrome, before you hand it over: screenshots at its viewports ' +
         '(one per slide for a deck) and the errors its page logged (scripts, files that failed to load). ' +
         'Open the screenshots to look at them, fix what is off, and check again.',
       inputSchema: jsonSchema<{ folder: string; viewports?: ('desktop' | 'tablet' | 'mobile')[] }>({
