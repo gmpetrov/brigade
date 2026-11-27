@@ -54,6 +54,8 @@ export function ctaTarget(href: string) {
     return 'install'
   if (url.pathname === '/sign-up') return 'sign_up'
   if (url.pathname === '/sign-in') return 'sign_in'
+  // The Pricing links in the bar and in the page.
+  if (url.pathname === '/pricing') return 'pricing'
   return undefined
 }
 
