@@ -40,7 +40,7 @@ export const RELEASES: ChangelogRelease[] = [
         items: [
           {
             title: 'Chief’s first meeting',
-            text: 'Onboarding ends in a thread with Chief, which speaks first: send your website or repository, or a line on what you build. In the same turn, Chief says what it understood, does a small first job you can see and proposes a team, and once you create it, each new teammate starts a first job in a thread of its own. The “What are you building?” screen is gone: your first workspace is made at once, named after you and renamable in Settings.',
+            text: 'Onboarding ends in a thread with Chief, which speaks first: send your website or repository, or a line on what you build. In the same turn, Chief says what it understood, does a small first job you can see and proposes a team, and once you create it, it starts each new teammate on a first job in a thread of its own. The “What are you building?” screen is gone: your first workspace is made at once, named after you and renamable in Settings.',
             prs: [987, 972, 980],
           },
           {
@@ -60,7 +60,7 @@ export const RELEASES: ChangelogRelease[] = [
           },
           {
             title: 'Give feedback',
-            text: 'Give feedback from your menu: write to the Brigade team and attach files. Documentation sits beside it.',
+            text: 'Give feedback from your menu: write to the Brigade team and attach files (not for viewers). Documentation sits beside it.',
             prs: [985, 990],
           },
         ],
@@ -124,7 +124,7 @@ export const RELEASES: ChangelogRelease[] = [
           },
           {
             title: 'Threads',
-            text: 'A message sent just before leaving a thread no longer shows Not delivered when you come back, and a reply the dashboard cannot read no longer breaks the thread list.',
+            text: 'A message sent just before leaving a thread no longer flashes Not delivered while the thread loads again, and a reply the dashboard cannot read no longer breaks the thread list.',
             prs: [971, 953],
           },
         ],
