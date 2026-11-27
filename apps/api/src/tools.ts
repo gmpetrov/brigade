@@ -18,6 +18,8 @@ import {
   ToolManifest,
   toolFolderOf,
   toolManifestPath,
+  toolManifestFile,
+  LEGACY_TOOL_MANIFEST,
   addToHead,
   elementSelectScript,
   LIBRARY_READ_MAX,
@@ -96,7 +98,11 @@ export const codeHashOf = (folder: string, rows: { path: string; sha256: string 
         .filter((r) => r.path !== `${folder}/${TOOL_THUMBNAIL}`)
         .map((r) => `${r.path.slice(folder.length + 1)}\n${r.sha256}`)
         .sort()
-        .join('\n'),
+        .join('\n') +
+        // Which file is its manifest (toolManifestFile) is part of what runs: a `.tool` folder
+        // moved to `.webapp` reads another one. Hashed as before for `.tool` folders, so what
+        // was allowed before the rename stays allowed.
+        (toolManifestFile(folder) === LEGACY_TOOL_MANIFEST ? '' : `\nmanifest\n${TOOL_MANIFEST}`),
     )
     .digest('hex')
 

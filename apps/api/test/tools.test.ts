@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -321,6 +321,21 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
       (await app.request(`/v/${token}/index.html`, { headers: { host: designHost } })).status,
       410,
     )
+  })
+
+  test('the hash says which file is the manifest: a .tool moved to .webapp is allowed again', async () => {
+    const { codeHashOf } = await import('../src/tools.js')
+    const rows = (folder: string) => [
+      { path: `${folder}/index.html`, sha256: 'a' },
+      { path: `${folder}/app.json`, sha256: 'b' },
+      { path: `${folder}/tool.json`, sha256: 'c' },
+    ]
+    const before = createHash('sha256')
+      .update(['app.json\nb', 'index.html\na', 'tool.json\nc'].join('\n'))
+      .digest('hex')
+    // As before the rename for a .tool folder, so what was allowed stays allowed.
+    assert.equal(codeHashOf('x/r.tool', rows('x/r.tool')), before)
+    assert.notEqual(codeHashOf('x/r.webapp', rows('x/r.webapp')), before)
   })
 
   test('an app under its new names reads its app.json only', async () => {

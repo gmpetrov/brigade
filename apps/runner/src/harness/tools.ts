@@ -1685,19 +1685,15 @@ export function libraryTools(options: {
           const files = await folderFiles(input.folder)
           if (!files.includes(TOOL_ENTRY))
             throw new Error(`The folder has no ${TOOL_ENTRY} at its top`)
-          // Its manifest, under the name its path's suffix says (toolManifestFile): `app.json`,
-          // or `tool.json` for a `.tool` app from before the rename. Written from either file of
-          // the folder, the one of that name first; the other name is not saved, so the app has
-          // one manifest only.
+          // Its manifest is the file its path's suffix names (toolManifestFile): `app.json`, or
+          // `tool.json` for a `.tool` app from before the rename. Every file is saved as it is;
+          // when the folder has only the other one, that is saved under the manifest's name too.
           const manifestName = toolManifestFile(path)
           const manifestFile = [manifestName, TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) =>
             files.includes(f),
           )
           if (!manifestFile) throw new Error(`The folder has no ${manifestName} at its top`)
-          const uploads = [
-            ...files.filter((f) => f !== TOOL_MANIFEST && f !== LEGACY_TOOL_MANIFEST),
-            manifestName,
-          ]
+          const uploads = files.includes(manifestName) ? files : [...files, manifestName]
           if (files.length > TOOL_FILES_MAX)
             throw new Error(
               `An app can have up to ${TOOL_FILES_MAX} files; this folder has ${files.length}`,
