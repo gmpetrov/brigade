@@ -17,11 +17,10 @@ model, `/api/connections/apps`). What people and teammates see says app:
 - An app is a library folder named `<name>.webapp` with `app.json`. A folder named `<name>.tool`
   with `tool.json`, saved before the rename, still opens as one, and `save_app` saves to it again
   under its old path, so its state and attached accounts stay (both keyed by its `index.html`).
-  When a folder has both `app.json` and `tool.json` (an older runner saved one beside the
-  other), the app's title is `app.json`'s, and what it reads, calls and reaches is only what both
-  allow (`combinedManifest`): neither can widen the other, whichever was saved last, and a change
-  to either changes the code hash its accounts were attached under. `save_app` writes `app.json`,
-  and `tool.json` too, the same, when the app has one.
+  The folder's suffix says which manifest it has (`toolManifestFile`): `app.json` for
+  `.webapp`, `tool.json` for `.tool`. The other file, if one is there, is just a file, so an app
+  never has two manifests that disagree. `save_app` writes that one only, from either file of the
+  teammate's folder.
   Not `.app`: Finder takes a folder so named for an application (the library's copies are on
   Macs), and `.app` is also a domain ending people name folders with.
 - Teammates save one with `save_app` and read its state with `read_app_state`, following the

@@ -1,6 +1,6 @@
 // Apps (docs/apps.md), called tools in the code: small web apps that live in the
 // library. An app is a folder named `<name>.webapp` holding `app.json` and `index.html`
-// (`<name>.tool` and `tool.json` before they were renamed, still read); teammates make
+// (`<name>.tool` holding `tool.json` before they were renamed, still one); teammates make
 // them in threads, people open them in a sandboxed frame served from the same
 // separate origin as designs. Unlike a design, an app works: through a bridge to
 // the dashboard around it, it lists library folders it declares, keeps state
@@ -14,9 +14,9 @@ import { LibraryPath } from './library.js'
 export const TOOL_SUFFIX = '.webapp'
 /** What an app's folder ended with before apps were renamed from tools: still opens as one. */
 export const LEGACY_TOOL_SUFFIX = '.tool'
-/** Every app has one, at the top of its folder. */
+/** A `.webapp` folder's manifest, at its top. */
 export const TOOL_MANIFEST = 'app.json'
-/** The manifest's name before the rename: read when an app has no `app.json`. */
+/** A `.tool` folder's manifest, from before the rename (toolManifestFile). */
 export const LEGACY_TOOL_MANIFEST = 'tool.json'
 /** The page an app opens on. */
 export const TOOL_ENTRY = 'index.html'
@@ -41,11 +41,16 @@ export const toolName = (folder: string) => {
   return name.slice(0, -(suffixOf(name) ?? '').length || undefined)
 }
 
-/** Where an app's manifest may be, in the order it is read: `app.json`, else `tool.json`. */
-export const toolManifestPaths = (folder: string) => [
-  `${folder}/${TOOL_MANIFEST}`,
-  `${folder}/${LEGACY_TOOL_MANIFEST}`,
-]
+/**
+ * An app's manifest: its folder's suffix says which. A `.webapp` folder has `app.json`; a `.tool`
+ * folder, from before the rename, keeps `tool.json`. One file each, so an app never has two that
+ * disagree.
+ */
+export const toolManifestFile = (folder: string) =>
+  folder.endsWith(LEGACY_TOOL_SUFFIX) ? LEGACY_TOOL_MANIFEST : TOOL_MANIFEST
+
+/** The library path of an app's manifest (toolManifestFile). */
+export const toolManifestPath = (folder: string) => `${folder}/${toolManifestFile(folder)}`
 
 /** An App a tool asks for: its kind (`github`, `posthog`…) and whether it changes things there. */
 export const ToolAppNeed = z.object({
@@ -86,36 +91,6 @@ export const ToolManifest = z.object({
     .optional(),
 })
 export type ToolManifest = z.infer<typeof ToolManifest>
-
-/**
- * What an app may do when its folder has both manifests: `app.json`, and a `tool.json` from
- * before the rename. Its title and description come from `app.json`; what it reads, calls and
- * reaches is only what both allow, so neither can widen the other (an older runner saving
- * `tool.json` after an `app.json`, or the reverse). `save_app` writes both the same, so this
- * changes nothing then. A manifest that is there but unreadable (null) allows nothing; one that
- * is not there (undefined) leaves the other as it is.
- */
-export function combinedManifest(
-  app: ToolManifest | null | undefined,
-  legacy: ToolManifest | null | undefined,
-): ToolManifest | null {
-  if (app === undefined) return legacy ?? null
-  if (legacy === undefined) return app
-  if (app === null) return null
-  const reads = new Set(legacy?.reads ?? [])
-  const hosts = new Set(legacy?.hosts ?? [])
-  const needs = new Map((legacy?.apps ?? []).map((need) => [need.kind, need]))
-  return {
-    ...app,
-    reads: (app.reads ?? []).filter((folder) => reads.has(folder)),
-    hosts: (app.hosts ?? []).filter((host) => hosts.has(host)),
-    apps: (app.apps ?? []).flatMap((need) => {
-      const other = needs.get(need.kind)
-      if (!other) return []
-      return [{ ...need, access: other.access === 'read' ? ('read' as const) : need.access }]
-    }),
-  }
-}
 
 export const OpenToolView = z.object({ path: LibraryPath })
 

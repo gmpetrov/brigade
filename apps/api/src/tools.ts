@@ -17,8 +17,7 @@ import {
   TOOL_THUMBNAIL,
   ToolManifest,
   toolFolderOf,
-  toolManifestPaths,
-  combinedManifest,
+  toolManifestPath,
   addToHead,
   elementSelectScript,
   LIBRARY_READ_MAX,
@@ -61,19 +60,6 @@ import { toolBridgeScript } from './tool-bridge.js'
 // ---------------------------------------------------------------------------
 // A tool's folder
 // ---------------------------------------------------------------------------
-
-/**
- * An app's manifest, from the rows of its folder's manifests: `app.json`, and `tool.json` from
- * before the rename, combined when both are there (combinedManifest).
- */
-async function manifestOf(scope: Scope, folder: string, rows: readonly Row[]) {
-  const [appPath, legacyPath] = toolManifestPaths(folder)
-  const read = (path: string | undefined) => {
-    const row = rows.find((r) => r.path === path)
-    return row ? readManifest(scope, row) : Promise.resolve(undefined)
-  }
-  return combinedManifest(await read(appPath), await read(legacyPath))
-}
 
 const libraryRow = (db: ScopedDb, path: string) =>
   db.document.findFirst({ where: { kind: 'library', deletedAt: null, path } })
@@ -129,7 +115,10 @@ async function toolAt(db: ScopedDb, scope: Scope, path: string): Promise<Tool> {
   const rows = await toolRows(db, folder)
   const entry = rows.find((r) => r.path === `${folder}/${TOOL_ENTRY}`)
   if (!entry) throw new HTTPException(404, { message: `The app has no ${TOOL_ENTRY} yet` })
-  const manifest = await manifestOf(scope, folder, rows)
+  const manifest = await readManifest(
+    scope,
+    rows.find((r) => r.path === toolManifestPath(folder)),
+  )
   return { folder, rows, entry, manifest, codeHash: codeHashOf(folder, rows) }
 }
 
@@ -943,13 +932,7 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   const scope = { organizationId: claim.o, workspaceId: claim.w }
   const db = scoped(scope)
   const folder = claim.p
-  const manifest = await manifestOf(
-    scope,
-    folder,
-    await db.document.findMany({
-      where: { kind: 'library', deletedAt: null, path: { in: toolManifestPaths(folder) } },
-    }),
-  )
+  const manifest = await readManifest(scope, await libraryRow(db, toolManifestPath(folder)))
   if (rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1) {
     const path = rest.slice(1).join('/')
     if (!readable({ folder, manifest }, path)) return c.text('Not found', 404)

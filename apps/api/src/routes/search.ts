@@ -13,7 +13,7 @@ import {
   SCORE,
   titleScore,
   TOOL_ENTRY,
-  toolManifestPaths,
+  toolManifestPath,
   toolFolderOf,
   toolName,
   type SearchResult,
@@ -139,9 +139,9 @@ function bundleOf(path: string, tools: boolean): Omit<Bundle, 'text' | 'snippet'
   return undefined
 }
 
-/** Where its manifest may be: an app's `app.json`, else its `tool.json` from before the rename. */
+/** Its manifest: an app's by its folder's suffix (toolManifestFile), a design's design.json. */
 const manifestsOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
-  b.kind === 'tool' ? toolManifestPaths(b.folder) : [`${b.folder}/${DESIGN_MANIFEST}`]
+  b.kind === 'tool' ? [toolManifestPath(b.folder)] : [`${b.folder}/${DESIGN_MANIFEST}`]
 const entryOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
   `${b.folder}/${b.kind === 'tool' ? TOOL_ENTRY : DESIGN_ENTRY}`
 
@@ -431,7 +431,6 @@ export const search = new Hono<AppEnv>()
       ).map((d) => [d.path, readManifest(d.text)]),
     )
     const designsAndTools: SearchResult[] = [...bundles.values()].flatMap((b) => {
-      // An app's title is its app.json's, else its tool.json's (combinedManifest).
       const { title: given, description } =
         manifestsOf(b)
           .map((path) => manifests.get(path))

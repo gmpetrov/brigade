@@ -82,37 +82,33 @@ test('saving an app saves its folder and names it by its page', async () => {
   assert.match(result.accounts, /github/)
 })
 
-test('an app saved before the rename saves again under its .tool path, its tool.json as app.json too', async () => {
-  const { asked, run, read } = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
+test('an app saved before the rename saves again under its .tool path, with its tool.json', async () => {
+  const { asked, run } = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
   const result = (await run('save_app', { folder: '/w', path: 'film/review.tool' })) as {
     path: string
   }
   assert.equal(result.path, 'film/review.tool')
   assert.deepEqual(
     asked.map((o) => o.path),
-    ['film/review.tool/index.html', 'film/review.tool/app.json', 'film/review.tool/tool.json'],
+    ['film/review.tool/index.html', 'film/review.tool/tool.json'],
   )
-  // Both manifests the same: from its tool.json.
-  assert.deepEqual(read.filter((f) => f.endsWith('.json')).slice(-2), [
-    '/w/tool.json',
-    '/w/tool.json',
-  ])
 })
 
-test('with both manifests in the folder, both are saved from its app.json', async () => {
-  const { asked, read, run } = toolsOf({
-    tools: true,
-    files: ['index.html', 'app.json', 'tool.json'],
-  })
-  await run('save_app', { folder: '/w', path: 'a.webapp' })
+test('one manifest only, named by the path: a .webapp gets app.json, from tool.json if need be', async () => {
+  const both = toolsOf({ tools: true, files: ['index.html', 'app.json', 'tool.json'] })
+  await both.run('save_app', { folder: '/w', path: 'a.webapp' })
   assert.deepEqual(
-    asked.map((o) => o.path),
-    ['a.webapp/index.html', 'a.webapp/app.json', 'a.webapp/tool.json'],
+    both.asked.map((o) => o.path),
+    ['a.webapp/index.html', 'a.webapp/app.json'],
   )
-  assert.deepEqual(read.filter((f) => f.endsWith('.json')).slice(-2), [
-    '/w/app.json',
-    '/w/app.json',
-  ])
+  assert.equal(both.read.at(-1), '/w/app.json')
+  const old = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
+  await old.run('save_app', { folder: '/w', path: 'a.webapp' })
+  assert.deepEqual(
+    old.asked.map((o) => o.path),
+    ['a.webapp/index.html', 'a.webapp/app.json'],
+  )
+  assert.equal(old.read.at(-1), '/w/tool.json')
 })
 
 test('an app needs its path, page and a valid app.json; nothing is saved otherwise', async () => {

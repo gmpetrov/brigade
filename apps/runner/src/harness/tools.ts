@@ -1,7 +1,6 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
-import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { setTimeout as wait } from 'node:timers/promises'
 import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
@@ -30,6 +29,7 @@ import {
   TOOL_SUFFIX,
   LEGACY_TOOL_MANIFEST,
   toolFolderOf,
+  toolManifestFile,
   ToolManifest,
   designFolderOf,
   DesignManifest,
@@ -1685,19 +1685,18 @@ export function libraryTools(options: {
           const files = await folderFiles(input.folder)
           if (!files.includes(TOOL_ENTRY))
             throw new Error(`The folder has no ${TOOL_ENTRY} at its top`)
-          // Its manifest: `app.json`, or the `tool.json` of an app made before the rename.
-          const manifestFile = [TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) => files.includes(f))
-          if (!manifestFile) throw new Error(`The folder has no ${TOOL_MANIFEST} at its top`)
-          // Saved as app.json, and as tool.json too when the app has one (here, or in the library
-          // from before the rename), both the same: Brigade lets an app with both do only what
-          // both allow, so a stale one would hold it back.
-          const legacy =
-            files.includes(LEGACY_TOOL_MANIFEST) ||
-            existsSync(join(options.libraryDir, path, LEGACY_TOOL_MANIFEST))
-          const manifests = [TOOL_MANIFEST, ...(legacy ? [LEGACY_TOOL_MANIFEST] : [])]
+          // Its manifest, under the name its path's suffix says (toolManifestFile): `app.json`,
+          // or `tool.json` for a `.tool` app from before the rename. Written from either file of
+          // the folder, the one of that name first; the other name is not saved, so the app has
+          // one manifest only.
+          const manifestName = toolManifestFile(path)
+          const manifestFile = [manifestName, TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) =>
+            files.includes(f),
+          )
+          if (!manifestFile) throw new Error(`The folder has no ${manifestName} at its top`)
           const uploads = [
             ...files.filter((f) => f !== TOOL_MANIFEST && f !== LEGACY_TOOL_MANIFEST),
-            ...manifests,
+            manifestName,
           ]
           if (files.length > TOOL_FILES_MAX)
             throw new Error(
@@ -1726,7 +1725,7 @@ export function libraryTools(options: {
               )?.[1]
               if (file === TOOL_ENTRY && id) mention = `@[${path}](document:${id})`
             },
-            (file) => (manifests.includes(file) ? manifestFile : file),
+            (file) => (file === manifestName ? manifestFile : file),
           )
           const apps = manifest.data.apps ?? []
           return {
