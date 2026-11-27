@@ -125,7 +125,7 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   - **Use keeps it alive.** Any request through the proxy counts as use, so a
     preview someone is using does not expire.
   - **Picking elements** (`apps/runner/src/preview-select.ts`, its script in contracts'
-    `element-select.ts`, which tools' pages get too: docs/tools.md), as in Claude.
+    `element-select.ts`, which apps' pages get too: docs/apps.md), as in Claude.
     Each page navigation is asked for uncompressed and gets
     `<script src="/__brigade/select.js">` right after its `<head>` (the proxy
     serves that path itself; same origin, so a `script-src 'self'` policy allows

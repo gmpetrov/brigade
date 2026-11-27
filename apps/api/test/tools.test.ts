@@ -9,7 +9,7 @@ import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
 import { sessionStub } from './session-stub.js'
 
-// Tools (src/tools.ts, docs/tools.md), through the API's own routes: a tool's page on the sandbox
+// Tools (src/tools.ts, docs/apps.md), through the API's own routes: a tool's page on the sandbox
 // host, its state, the library folders it reads, and App accounts attached to it, called for the
 // member viewing it (an MCP server of the test's own answers). Against the API's development
 // database (apps/api/.env), in an organization of its own removed at the end; skipped when none
@@ -156,12 +156,12 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     db = scoped(scope)
     // The feature, for this workspace.
     flagBefore = await prisma.featureFlag.findUnique({
-      where: { key: 'tools' },
+      where: { key: 'apps' },
       select: { workspaceIds: true },
     })
     await prisma.featureFlag.upsert({
-      where: { key: 'tools' },
-      create: { key: 'tools', workspaceIds: [workspaceId], note: 'tools.test' },
+      where: { key: 'apps' },
+      create: { key: 'apps', workspaceIds: [workspaceId], note: 'tools.test' },
       update: { workspaceIds: [...(flagBefore?.workspaceIds ?? []), workspaceId] },
     })
     const notesApp = await db.app.create({
@@ -221,10 +221,10 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     server.close()
     if (flagBefore)
       await prisma.featureFlag.update({
-        where: { key: 'tools' },
+        where: { key: 'apps' },
         data: { workspaceIds: flagBefore.workspaceIds },
       })
-    else await prisma.featureFlag.deleteMany({ where: { key: 'tools' } })
+    else await prisma.featureFlag.deleteMany({ where: { key: 'apps' } })
     await prisma.toolAccount.deleteMany({ where: { organizationId: org } })
     await prisma.toolState.deleteMany({ where: { organizationId: org } })
     await prisma.connection.deleteMany({ where: { organizationId: org } })
@@ -240,14 +240,14 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
 
   test('hidden from people without the feature', async () => {
     await prisma.featureFlag.update({
-      where: { key: 'tools' },
+      where: { key: 'apps' },
       data: { workspaceIds: flagBefore?.workspaceIds ?? [] },
     })
     try {
       assert.equal((await post('/view', { path: TOOL })).status, 404)
     } finally {
       await prisma.featureFlag.update({
-        where: { key: 'tools' },
+        where: { key: 'apps' },
         data: { workspaceIds: [...(flagBefore?.workspaceIds ?? []), workspaceId] },
       })
     }
@@ -321,6 +321,18 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
       (await app.request(`/v/${token}/index.html`, { headers: { host: designHost } })).status,
       410,
     )
+  })
+
+  test('an app under its new names: a .app folder with app.json', async () => {
+    const folder = 'Film/board.app'
+    await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
+    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board' }))
+    // A tool.json left beside it is not read: app.json comes first.
+    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name' }))
+    const view = await post('/view', { path: `${folder}/index.html` })
+    assert.equal(view.status, 200)
+    assert.equal(view.body.folder, folder)
+    assert.equal(view.body.manifest.title, 'Clip board')
   })
 
   test('files: the folders its manifest lists, each with an address on the sandbox host', async () => {

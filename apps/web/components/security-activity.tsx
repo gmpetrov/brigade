@@ -18,7 +18,7 @@ import { api, type AccessOverview, type ActivityItem, type ActivityPage } from '
 const CATEGORIES = [
   { value: 'all', label: 'Everything' },
   { value: 'credentials', label: 'Secrets' },
-  { value: 'connections', label: 'Apps' },
+  { value: 'connections', label: 'Connected apps' },
   { value: 'approvals', label: 'Approvals' },
   { value: 'teammates', label: 'Teammates' },
   { value: 'members', label: 'Members' },

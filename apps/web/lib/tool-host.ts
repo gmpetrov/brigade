@@ -1,4 +1,4 @@
-// The dashboard's side of a tool's bridge (docs/tools.md): what its page asks
+// The dashboard's side of a tool's bridge (docs/apps.md): what its page asks
 // for, checked and made with the person's session. The page's origin is opaque,
 // so a message counts only when it comes from the tool's own frame; what it
 // says is checked here again, as anything a teammate's script sends could be.
@@ -82,10 +82,10 @@ class Refused extends Error {
 /** Why an account cannot be called now, or null. */
 function unusable(account: ToolAccount | undefined, ref: unknown) {
   if (!account)
-    return new Refused(`No account ${String(ref)} is attached to this tool`, 'no_account')
+    return new Refused(`No account ${String(ref)} is attached to this app`, 'no_account')
   if (account.changed)
     return new Refused(
-      'The tool changed since this account was attached: allow it again from Accounts',
+      'The app changed since this account was attached: allow it again from Accounts',
       'tool_changed',
     )
   if (!account.usable)
@@ -176,7 +176,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       if (!message) throw new Refused('Write something to send')
       if (message.length > TOOL_MESSAGE_MAX)
         throw new Refused(`A message takes at most ${TOOL_MESSAGE_MAX} characters`)
-      if (!host.threadId) throw new Refused('This tool has no thread you can write in', 'no_thread')
+      if (!host.threadId) throw new Refused('This app has no thread you can write in', 'no_thread')
       const yes = await host.confirm({
         kind: 'message',
         thread: view.thread?.title ?? 'its thread',
@@ -191,7 +191,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
 
 /** A message from a tool, as the thread reads it: said to come from the tool, by its mention. */
 export const toolMessage = (view: Pick<ToolView, 'folder' | 'toolId'>, message: string) =>
-  `From the tool ${formatMention({ kind: 'document', id: view.toolId, label: view.folder })}:\n\n${message}`
+  `From the app ${formatMention({ kind: 'document', id: view.toolId, label: view.folder })}:\n\n${message}`
 
 /** Answer one call of the page. */
 export async function answer(host: ToolHost, request: ToolBridgeRequest): Promise<ToolAnswer> {

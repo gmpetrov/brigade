@@ -976,7 +976,7 @@ export function PlaybookSheet({ id }: { id: string }) {
       )}
 
       {p.apps.length > 0 && (
-        <Section title="Apps">
+        <Section title="Connected apps">
           {p.apps.map((a) => (
             <Row key={a.name}>
               <AppRowBody app={a} />

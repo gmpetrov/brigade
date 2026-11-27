@@ -45,11 +45,12 @@ export const FEATURES = {
       'the pass only recommends, and teammates still ask.',
     default: false,
   },
-  tools: {
+  apps: {
     description:
-      'Tools (docs/tools.md): small web apps teammates make and save in the library, which people ' +
-      'open beside a page or a thread. A tool lists library folders, keeps state, calls App ' +
-      'accounts attached to it and sends messages to its thread. Being tried by the team first.',
+      'Apps (docs/apps.md): small web apps teammates make and save in the library, which people ' +
+      'open beside a page or a thread. An app lists library folders, keeps state, calls App ' +
+      'accounts (connected apps) attached to it and sends messages to its thread. Being tried by ' +
+      'the team first. Was `tools` before the rename.',
     default: false,
   },
   google_ads: {

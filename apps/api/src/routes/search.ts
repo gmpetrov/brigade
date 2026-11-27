@@ -13,7 +13,7 @@ import {
   SCORE,
   titleScore,
   TOOL_ENTRY,
-  TOOL_MANIFEST,
+  toolManifestPaths,
   toolFolderOf,
   toolName,
   type SearchResult,
@@ -139,8 +139,9 @@ function bundleOf(path: string, tools: boolean): Omit<Bundle, 'text' | 'snippet'
   return undefined
 }
 
-const manifestOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
-  `${b.folder}/${b.kind === 'tool' ? TOOL_MANIFEST : DESIGN_MANIFEST}`
+/** Where its manifest may be: an app's `app.json`, else its `tool.json` from before the rename. */
+const manifestsOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
+  b.kind === 'tool' ? toolManifestPaths(b.folder) : [`${b.folder}/${DESIGN_MANIFEST}`]
 const entryOf = (b: Pick<Bundle, 'kind' | 'folder'>) =>
   `${b.folder}/${b.kind === 'tool' ? TOOL_ENTRY : DESIGN_ENTRY}`
 
@@ -284,7 +285,7 @@ export const search = new Hono<AppEnv>()
       searchDocuments(scope, { query, limit: EACH * 2, memberId: scope.memberId }),
       featuresOfMember(scope.memberId, scope.workspaceId),
     ])
-    const tools = features.has('tools')
+    const tools = features.has('apps')
     const [threads, tickets, pulls] = await Promise.all([
       db.session
         .findMany({
@@ -331,7 +332,7 @@ export const search = new Hono<AppEnv>()
       if (bundle) {
         // Its manifest or its page, as people read them; never its code.
         const entry = hit.path === entryOf(bundle)
-        if (!entry && hit.path !== manifestOf(bundle)) continue
+        if (!entry && !manifestsOf(bundle).includes(hit.path)) continue
         const found = bundles.get(bundle.folder)
         bundles.set(bundle.folder, {
           ...bundle,
@@ -420,7 +421,7 @@ export const search = new Hono<AppEnv>()
       (bundles.size
         ? await db.document.findMany({
             where: {
-              path: { in: [...bundles.values()].map(manifestOf) },
+              path: { in: [...bundles.values()].flatMap(manifestsOf) },
               kind: 'library',
               deletedAt: null,
             },
@@ -430,7 +431,10 @@ export const search = new Hono<AppEnv>()
       ).map((d) => [d.path, readManifest(d.text)]),
     )
     const designsAndTools: SearchResult[] = [...bundles.values()].flatMap((b) => {
-      const { title: given, description } = manifests.get(manifestOf(b)) ?? {}
+      const { title: given, description } =
+        manifestsOf(b)
+          .map((path) => manifests.get(path))
+          .find(Boolean) ?? {}
       const name = b.kind === 'tool' ? toolName(b.folder) : designName(b.folder)
       const title = given ?? name
       const named = Math.max(score(title), score(name))
@@ -441,7 +445,7 @@ export const search = new Hono<AppEnv>()
           kind: b.kind,
           id: b.folder,
           title,
-          detail: [b.kind === 'tool' ? 'Tool' : 'Design', parent].filter(Boolean).join(' · '),
+          detail: [b.kind === 'tool' ? 'App' : 'Design', parent].filter(Boolean).join(' · '),
           snippet: b.snippet ?? description?.slice(0, DESCRIPTION_CHARS) ?? null,
           score: named > SCORE.near ? named : SCORE.text,
         }),

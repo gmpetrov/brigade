@@ -1,5 +1,5 @@
 'use client'
-// Every tool in the library (docs/tools.md), newest first: its picture (the
+// Every tool in the library (docs/apps.md), newest first: its picture (the
 // thumbnail save_tool renders), name, folder and who changed it last. Opens
 // in the document panel, beside the page, where it minimizes as a document does.
 import {
@@ -9,7 +9,7 @@ import {
   toolName,
   type LibraryFile,
 } from '@brigade/contracts'
-import { Wrench } from 'lucide-react'
+import { AppWindow } from 'lucide-react'
 import { useMemo } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
@@ -54,13 +54,13 @@ export function ToolGallery({ tree }: { tree: LibraryTree | undefined }) {
           aria-hidden
           className="flex size-11 items-center justify-center rounded-md bg-primary/15 text-primary"
         >
-          <Wrench className="size-5" />
+          <AppWindow className="size-5" />
         </span>
-        <p className="font-semibold">No tools yet.</p>
+        <p className="font-semibold">No apps yet.</p>
         <p className="max-w-md text-sm text-muted-foreground">
           Ask a teammate for a small app to work in: a dashboard for a campaign, a board to review
           and approve generated clips, a tracker. It builds it in the library, where it reads your
-          files, keeps what you do in it and calls the Apps you attach.
+          files, keeps what you do in it and calls the connected apps you attach.
         </p>
       </Card>
     )
@@ -88,7 +88,7 @@ export function ToolGallery({ tree }: { tree: LibraryTree | undefined }) {
                       className="size-full object-cover object-top transition group-hover:scale-[1.02]"
                     />
                   ) : (
-                    <Wrench aria-hidden className="size-8 text-muted-foreground/60" />
+                    <AppWindow aria-hidden className="size-8 text-muted-foreground/60" />
                   )}
                 </span>
                 <span className="flex flex-col gap-0.5 px-4 py-3">

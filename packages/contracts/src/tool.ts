@@ -1,34 +1,51 @@
-// Tools (docs/tools.md): small web apps that live in the library. A tool is a
-// folder named `<name>.tool` holding `tool.json` and `index.html`; teammates make
+// Apps (docs/apps.md), called tools in the code: small web apps that live in the
+// library. An app is a folder named `<name>.app` holding `app.json` and `index.html`
+// (`<name>.tool` and `tool.json` before they were renamed, still read); teammates make
 // them in threads, people open them in a sandboxed frame served from the same
-// separate origin as designs. Unlike a design, a tool works: through a bridge to
+// separate origin as designs. Unlike a design, an app works: through a bridge to
 // the dashboard around it, it lists library folders it declares, keeps state
-// (the viewer's own, and shared), calls App accounts people attached to it, and
-// sends messages to its thread. The dashboard asks the person before anything
-// that changes something outside the tool.
+// (the viewer's own, and shared), calls App accounts (connected apps) people attached
+// to it, and sends messages to its thread. The dashboard asks the person before anything
+// that changes something outside the app.
 import { z } from 'zod'
 import { LibraryPath } from './library.js'
 
-/** A tool's folder ends with this. */
-export const TOOL_SUFFIX = '.tool'
-/** Every tool has one, at the top of its folder. */
-export const TOOL_MANIFEST = 'tool.json'
-/** The page a tool opens on. */
+/** An app's folder ends with this. */
+export const TOOL_SUFFIX = '.app'
+/** What an app's folder ended with before apps were renamed from tools: still opens as one. */
+export const LEGACY_TOOL_SUFFIX = '.tool'
+/** Every app has one, at the top of its folder. */
+export const TOOL_MANIFEST = 'app.json'
+/** The manifest's name before the rename: read when an app has no `app.json`. */
+export const LEGACY_TOOL_MANIFEST = 'tool.json'
+/** The page an app opens on. */
 export const TOOL_ENTRY = 'index.html'
-/** Written by `save_tool` when the computer can render the tool: the gallery's picture. */
+/** Written by `save_app` when the computer can render the app: the gallery's picture. */
 export const TOOL_THUMBNAIL = 'thumbnail.png'
-/** Files a teammate saves in one tool. */
+/** Files a teammate saves in one app. */
 export const TOOL_FILES_MAX = 200
 
-/** The tool folder a library path is in or is ("a/b.tool" for "a/b.tool/app.js"), if any. */
+const SUFFIXES = [TOOL_SUFFIX, LEGACY_TOOL_SUFFIX]
+const suffixOf = (name: string) => SUFFIXES.find((s) => name.endsWith(s) && name.length > s.length)
+
+/** The app folder a library path is in or is ("a/b.app" for "a/b.app/app.js"), if any. */
 export function toolFolderOf(path: string): string | undefined {
   const parts = path.split('/')
-  const at = parts.findIndex((p) => p.endsWith(TOOL_SUFFIX) && p.length > TOOL_SUFFIX.length)
+  const at = parts.findIndex((p) => suffixOf(p) !== undefined)
   return at < 0 ? undefined : parts.slice(0, at + 1).join('/')
 }
 
-/** A tool's own name: its folder's, without the suffix. */
-export const toolName = (folder: string) => folder.split('/').pop()!.slice(0, -TOOL_SUFFIX.length)
+/** An app's own name: its folder's, without the suffix. */
+export const toolName = (folder: string) => {
+  const name = folder.split('/').pop()!
+  return name.slice(0, -(suffixOf(name) ?? '').length || undefined)
+}
+
+/** Where an app's manifest may be, in the order it is read: `app.json`, else `tool.json`. */
+export const toolManifestPaths = (folder: string) => [
+  `${folder}/${TOOL_MANIFEST}`,
+  `${folder}/${LEGACY_TOOL_MANIFEST}`,
+]
 
 /** An App a tool asks for: its kind (`github`, `posthog`…) and whether it changes things there. */
 export const ToolAppNeed = z.object({
@@ -243,7 +260,7 @@ export type ToolBridgeRequest = z.infer<typeof ToolBridgeRequest>
 /** A message a tool sends to its thread, at most this long. */
 export const TOOL_MESSAGE_MAX = 20_000
 
-// The script the sandbox host adds first to a tool's pages (docs/tools.md): it
+// The script the sandbox host adds first to a tool's pages (docs/apps.md): it
 // gives the page `window.brigade`, whose calls go to the dashboard around it,
 // since the page's origin is opaque and it reaches nothing of the API itself.
 // The dashboard checks each call, makes it with the person's session, asks the

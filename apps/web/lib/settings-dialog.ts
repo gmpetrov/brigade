@@ -109,7 +109,7 @@ export const SETTINGS_SECTIONS = [
   },
   {
     section: 'connections',
-    label: 'Apps',
+    label: 'Connected apps',
     group: 'Teammates',
     keywords: 'connections connect integrations mcp triggers github gmail',
     settings: [],

@@ -67,6 +67,7 @@ import { isMac, useIsMac } from '@/lib/platform'
 import { openIntent, prepareDocument } from '@/lib/prepare-document'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
+import { hasApps } from '@/lib/apps-feature'
 
 export type OpenDocument = {
   target: EditTarget
@@ -465,11 +466,7 @@ export function DocumentPanel() {
   // A tool (its folder, as its mention names it, or its page) opens as the tool, not as its
   // `index.html`; minimized, it is kept hidden, its page as it was when it is back.
   const tool = target.kind === 'library' && path ? toolFolderOf(path) : undefined
-  if (
-    tool &&
-    (path === tool || path === `${tool}/index.html`) &&
-    (me.features?.includes('tools') ?? false)
-  )
+  if (tool && (path === tool || path === `${tool}/index.html`) && hasApps(me.features))
     return (
       <ToolPanel
         key={tool}

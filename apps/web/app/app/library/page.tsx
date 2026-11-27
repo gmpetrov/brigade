@@ -38,6 +38,7 @@ import {
   type SearchHit,
   type Teammate,
 } from '@/lib/api'
+import { hasApps } from '@/lib/apps-feature'
 
 /** The workspace's shared files and memory, and one search over both. */
 export default function LibraryPage() {
@@ -48,7 +49,7 @@ export default function LibraryPage() {
   )
 }
 
-type Tab = 'files' | 'designs' | 'tools' | 'memory' | 'trash'
+type Tab = 'files' | 'designs' | 'apps' | 'memory' | 'trash'
 
 function LibraryView() {
   const params = useSearchParams()
@@ -80,9 +81,10 @@ function LibraryView() {
   const folder = params.get('folder') ?? ''
   const focus = params.get('file') ?? undefined
   const focusDesign = params.get('design') ?? undefined
-  const focusTool = params.get('tool') ?? undefined
-  // Tools (docs/tools.md), for people who have them.
-  const tools = me.data?.features?.includes('tools') ?? false
+  // ?app=<folder> opens an app (?tool= before apps were renamed from tools).
+  const focusTool = params.get('app') ?? params.get('tool') ?? undefined
+  // Apps (docs/apps.md), for people who have them.
+  const tools = hasApps(me.data?.features)
   const setFolder = useCallback(
     (path: string) => {
       setCreating(null)
@@ -94,6 +96,12 @@ function LibraryView() {
   )
   useEffect(() => {
     const asked = focus || focusDesign || focusTool ? 'files' : params.get('tab')
+    // Apps were Tools before the rename: an old ?tab=tools still opens them.
+    if (asked === 'tools') {
+      setTab('apps')
+      setQuery('')
+      return
+    }
     // Design systems were a tab of their own: they open beside the designs now.
     if (asked === 'design-systems') {
       setTab('designs')
@@ -101,7 +109,7 @@ function LibraryView() {
       setQuery('')
       return
     }
-    const tabs: Tab[] = ['files', 'designs', 'tools', 'memory', 'trash']
+    const tabs: Tab[] = ['files', 'designs', 'apps', 'memory', 'trash']
     if (!tabs.includes(asked as Tab)) return
     setTab(asked as Tab)
     setQuery('')
@@ -237,7 +245,7 @@ function LibraryView() {
               <TabsTrigger value="files">Files</TabsTrigger>
               <TabsTrigger value="memory">Memory</TabsTrigger>
               <TabsTrigger value="designs">Designs</TabsTrigger>
-              {tools && <TabsTrigger value="tools">Tools</TabsTrigger>}
+              {tools && <TabsTrigger value="apps">Apps</TabsTrigger>}
               <TabsTrigger value="trash">Trash</TabsTrigger>
             </TabsList>
             {tab === 'files' && <LibraryViewSwitch view={view} className="ml-auto shrink-0" />}
@@ -270,7 +278,7 @@ function LibraryView() {
             <DesignGallery tree={tree.data} />
           </TabsContent>
           {tools && (
-            <TabsContent value="tools" className="flex flex-col gap-4 pt-2">
+            <TabsContent value="apps" className="flex flex-col gap-4 pt-2">
               <ToolGallery tree={tree.data} />
             </TabsContent>
           )}

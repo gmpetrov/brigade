@@ -263,7 +263,7 @@ export function DeleteWorkspace() {
           'Its threads, tasks, schedules and every file in them',
           'Its library, memory, skills and projects',
           'Its teammates and their email addresses',
-          'Its Apps, disconnected, and its secrets',
+          'Its connected apps, disconnected, and its secrets',
           'Its cloud computer, destroyed with its disk',
           'Its email domains, removed',
           ...(last ? ['Its organization, as it is the organization’s last workspace'] : []),
@@ -318,8 +318,8 @@ export function DeleteAccount() {
         title="Delete your account?"
         description="Your account is deleted for good, with:"
         goes={[
-          'Every organization you are alone in, with all of its workspaces: their threads, files, library, teammates, Apps, cloud computer and email domains',
-          'In organizations shared with others: the threads you started, with their files, your schedules and tasks, and the Apps you connected for yourself',
+          'Every organization you are alone in, with all of its workspaces: their threads, files, library, teammates, connected apps, cloud computer and email domains',
+          'In organizations shared with others: the threads you started, with their files, your schedules and tasks, and the apps you connected for yourself',
           'Your sign-ins, devices and notifications',
         ]}
         confirm={me.user.email}

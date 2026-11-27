@@ -1,4 +1,4 @@
-// The sample workspace's tool (docs/tools.md): a review board for the fall launch's visuals.
+// The sample workspace's tool (docs/apps.md): a review board for the fall launch's visuals.
 // It lists them from the library, keeps each person's notes and the team's decisions, and sends
 // the decisions to its thread. Plain HTML, as a teammate makes one.
 

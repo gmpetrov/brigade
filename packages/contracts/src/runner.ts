@@ -273,7 +273,7 @@ export const ThreadSpec = z.object({
    */
   machine: z.boolean().default(false),
   /**
-   * The thread's starter has Tools (the tools feature, docs/tools.md): its teammates may make
+   * The thread's starter has Tools (the tools feature, docs/apps.md): its teammates may make
    * them. Older APIs leave it out: none.
    */
   tools: z.boolean().default(false),
@@ -747,7 +747,7 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       /** Propose a skill, or a change to one: it waits for a person's approval in a ticket. */
       z.object({ name: z.literal('skill_proposal'), proposal: SkillProposal }),
       /**
-       * A tool's state (docs/tools.md): its shared keys, and those of the person the thread works
+       * A tool's state (docs/apps.md): its shared keys, and those of the person the thread works
        * for. Read only.
        */
       z.object({ name: z.literal('tool_state'), path: LibraryPath }),

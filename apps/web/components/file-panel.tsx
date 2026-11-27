@@ -42,6 +42,7 @@ import { Button } from '@/components/ui/button'
 import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { draftKey, getDraft, setDraft } from '@/lib/code-drafts'
 import { API_URL } from '@/lib/config'
+import { hasApps } from '@/lib/apps-feature'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
 
@@ -75,7 +76,7 @@ type FilePanelProps = {
 export function FilePanel(props: FilePanelProps) {
   const { me } = useDashboard()
   const folder = props.path.trim().replace(/\/+$/, '')
-  const tools = me.features?.includes('tools') ?? false
+  const tools = hasApps(me.features)
   if (tools && !folder.startsWith('/') && toolFolderOf(folder) === folder)
     return <ToolPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
   if (!folder.startsWith('/') && designFolderOf(folder) === folder)
@@ -200,7 +201,7 @@ function ThreadFilePanel({
   /** A file of a library tool: the tool shows instead, for people who have tools. */
   const [tool, setTool] = useState<string>()
   const { me } = useDashboard()
-  const tools = me.features?.includes('tools') ?? false
+  const tools = hasApps(me.features)
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
   const [editOpen, setEditOpen] = useState(false)

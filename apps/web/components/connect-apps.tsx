@@ -257,7 +257,7 @@ function Catalog({
     <>
       <div className={cn('flex flex-col gap-4 pb-4', dialog && 'px-6 pt-6')}>
         <div className="flex items-center gap-3">
-          <Title dialog={dialog}>{dialog ? 'Connect apps' : 'Apps'}</Title>
+          <Title dialog={dialog}>{dialog ? 'Connect apps' : 'Connected apps'}</Title>
           {added.length > 0 && (
             <button
               type="button"
@@ -378,7 +378,7 @@ function Connected({
           className="-ml-2 flex flex-1 items-center gap-1 self-center rounded-md px-1 py-1 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
         >
           <ChevronLeft className="size-4" aria-hidden />
-          {dialog ? 'Connect apps' : 'Apps'}
+          {dialog ? 'Connect apps' : 'Connected apps'}
         </button>
         <span className="hidden flex-1 sm:block" />
         {onClose && <CloseButton label="Close Connect apps" title="Close" onClick={onClose} />}
@@ -395,7 +395,7 @@ function Connected({
           )}
         </div>
         {data && added.length === 0 && (
-          <p className="py-6 text-sm text-muted-foreground">No Apps yet.</p>
+          <p className="py-6 text-sm text-muted-foreground">No connected apps yet.</p>
         )}
         {data && (
           <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">

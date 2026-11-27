@@ -82,7 +82,7 @@ export function ProjectRepositories() {
         {project.repositories.some((r) => r.reachable === false) && (
           <p className="text-sm text-muted-foreground">
             A repository is not reachable when no GitHub connection reaches it any more: reconnect
-            GitHub on Apps, or add it to the GitHub App&apos;s installation.
+            GitHub in Connected apps, or add it to the GitHub App&apos;s installation.
           </p>
         )}
         <div className="flex flex-wrap items-center gap-2">

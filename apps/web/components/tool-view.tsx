@@ -1,5 +1,5 @@
 'use client'
-// A tool (docs/tools.md) beside the page or a thread: its page in a sandboxed
+// A tool (docs/apps.md) beside the page or a thread: its page in a sandboxed
 // frame from the sandbox origin, and the dashboard's side of its bridge
 // (lib/tool-host.ts). What the page asks goes to the API with the person's
 // session; a write to an App and a message to the thread wait for the person
@@ -10,6 +10,7 @@
 // in a new one, its mention in the reply box.
 import { PreviewElement, toolName, type ToolView } from '@brigade/contracts'
 import {
+  AppWindow,
   ChevronDown,
   ExternalLink,
   KeyRound,
@@ -20,7 +21,6 @@ import {
   SquareMousePointer,
   RotateCw,
   TriangleAlert,
-  Wrench,
   X,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -263,7 +263,7 @@ export function ToolPanel({
 
   return (
     <SidePanel
-      aria-label={`Tool ${title}`}
+      aria-label={`App ${title}`}
       hidden={hidden}
       onClose={onClose}
       raiseKey={folder}
@@ -282,9 +282,9 @@ export function ToolPanel({
                 variant="ghost"
                 size="sm"
                 className="min-w-0 shrink justify-start gap-1.5 px-1.5"
-                tooltip="About this tool"
+                tooltip="About this app"
               >
-                <Wrench aria-hidden className="shrink-0 text-muted-foreground" />
+                <AppWindow aria-hidden className="shrink-0 text-muted-foreground" />
                 <span className="truncate font-semibold">{title}</span>
                 <ChevronDown aria-hidden className="shrink-0 text-muted-foreground" />
               </Button>
@@ -292,7 +292,7 @@ export function ToolPanel({
             <DropdownMenuContent align="start" className="w-80">
               <DropdownMenuLabel className="flex flex-col gap-1.5 font-normal">
                 <span className="text-xs break-words text-muted-foreground">
-                  Tool
+                  App
                   {view?.teammate && ` · by ${view.teammate.name}`}
                   {parent && <span className="font-mono"> · {parent}</span>}
                 </span>
@@ -310,7 +310,7 @@ export function ToolPanel({
               <DropdownMenuSeparator />
               {libraryLink && (
                 <DropdownMenuItem asChild>
-                  <Link href={`/app/library?tool=${encodeURIComponent(folder)}`}>
+                  <Link href={`/app/library?app=${encodeURIComponent(folder)}`}>
                     <Library aria-hidden />
                     Open in the library
                   </Link>
@@ -342,8 +342,8 @@ export function ToolPanel({
                 select.on
                   ? 'Stop selecting (Esc)'
                   : picker
-                    ? 'Select elements in the tool and say what should change on each, then send them together'
-                    : `Select elements in the tool: opens its thread with ${discussion?.teammate?.name ?? 'its teammate'} first`
+                    ? 'Select elements in the app and say what should change on each, then send them together'
+                    : `Select elements in the app: opens its thread with ${discussion?.teammate?.name ?? 'its teammate'} first`
               }
               className={cn(select.on && 'bg-primary/12 text-primary hover:text-primary')}
               onClick={() => {
@@ -359,7 +359,7 @@ export function ToolPanel({
               type="button"
               variant="ghost"
               size="sm"
-              tooltip={`Talk about this tool with ${discussion.teammate.name}`}
+              tooltip={`Talk about this app with ${discussion.teammate.name}`}
               aria-label={`Ask ${discussion.teammate.name}`}
               onClick={() => void ask()}
             >
@@ -374,9 +374,9 @@ export function ToolPanel({
               size="sm"
               tooltip={
                 changed
-                  ? 'The tool changed: allow its accounts again'
+                  ? 'The app changed: allow its accounts again'
                   : missing
-                    ? `${missing} App${missing > 1 ? 's' : ''} to attach`
+                    ? `${missing} account${missing > 1 ? 's' : ''} to attach`
                     : 'Accounts it uses'
               }
               onClick={() => setAccountsOpen(true)}
@@ -406,7 +406,7 @@ export function ToolPanel({
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            aria-label="Close tool"
+            aria-label="Close app"
           >
             <X aria-hidden />
           </Button>
@@ -459,8 +459,8 @@ function Confirm({ asking, onAnswer }: { asking: Asking; onAnswer: (yes: boolean
           </DialogTitle>
           <DialogDescription>
             {what.kind === 'write'
-              ? `The tool asks to run ${what.operation} with ${what.account}.`
-              : `The tool asks to send this message to ${what.thread}, in your name.`}
+              ? `The app asks to run ${what.operation} with ${what.account}.`
+              : `The app asks to send this message to ${what.thread}, in your name.`}
           </DialogDescription>
         </DialogHeader>
         {what.kind === 'write' ? (
@@ -519,14 +519,14 @@ function ToolAccounts({
         <DialogHeader>
           <DialogTitle>Accounts</DialogTitle>
           <DialogDescription>
-            Attach accounts only to tools you trust: the tool’s code sees what they return.
+            Attach accounts only to apps you trust: the app’s code sees what they return.
           </DialogDescription>
         </DialogHeader>
         {changed && (
           <div className="flex flex-col gap-2 rounded-md bg-muted p-3 text-sm">
             <p>
-              The tool changed since its accounts were attached: its calls wait until someone who
-              may attach them allows it again.
+              The app changed since its accounts were attached: its calls wait until someone who may
+              attach them allows it again.
             </p>
             <Button
               type="button"
@@ -535,7 +535,7 @@ function ToolAccounts({
               disabled={busy || !view.mayAttach}
               onClick={() => void run('/tools/accounts/allow', { path: view.folder })}
             >
-              Allow the changed tool
+              Allow the changed app
             </Button>
           </div>
         )}
@@ -615,8 +615,8 @@ function ToolAccounts({
                 ))}
                 {attached.length === 0 && offered.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No account of {name} you may attach. Connect one in Apps, or ask the member who
-                    connected one.
+                    No account of {name} you may attach. Connect one in Connected apps, or ask the
+                    member who connected one.
                   </p>
                 )}
               </section>

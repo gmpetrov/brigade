@@ -266,6 +266,8 @@ app.route('/api/themes', themeRoutes)
 app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)
+// Apps (docs/apps.md), under their name since the rename; /api/tools for dashboards from before it.
+app.route('/api/apps', tools)
 app.route('/api/tools', tools)
 app.route('/api/attachments', attachments)
 app.route('/api/feedback', feedback)

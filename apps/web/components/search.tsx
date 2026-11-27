@@ -21,7 +21,7 @@ import {
   Plug,
   Search as SearchIcon,
   UserRound,
-  Wrench,
+  AppWindow,
   X,
   Zap,
   type LucideIcon,
@@ -64,9 +64,9 @@ const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
   { kind: 'automation', label: 'Routines', icon: CalendarClock },
   { kind: 'file', label: 'Library', icon: FileText },
   { kind: 'design', label: 'Designs', icon: Palette },
-  { kind: 'tool', label: 'Tools', icon: Wrench },
+  { kind: 'tool', label: 'Apps', icon: AppWindow },
   { kind: 'memory', label: 'Memory', icon: Brain },
-  { kind: 'connection', label: 'Apps', icon: Plug },
+  { kind: 'connection', label: 'Connected apps', icon: Plug },
   { kind: 'trigger', label: 'Triggers', icon: Zap },
   { kind: 'credential', label: 'Secrets', icon: KeyRound },
   { kind: 'account', label: 'AI accounts', icon: UserRound },
@@ -102,7 +102,7 @@ function hrefOf(r: SearchResult) {
     case 'design':
       return `/app/library?design=${encodeURIComponent(r.id)}`
     case 'tool':
-      return `/app/library?tool=${encodeURIComponent(r.id)}`
+      return `/app/library?app=${encodeURIComponent(r.id)}`
     case 'memory':
       return '/app/library?tab=memory'
     case 'connection':

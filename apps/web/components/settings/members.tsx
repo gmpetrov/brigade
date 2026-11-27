@@ -42,7 +42,11 @@ const ROLES: { value: Role; label: string; description: string }[] = [
     description: 'Sees threads, tasks and files, changes nothing',
   },
   { value: 'member', label: 'Member', description: 'Starts threads and works with teammates' },
-  { value: 'admin', label: 'Admin', description: 'Also manages teammates, Apps, billing' },
+  {
+    value: 'admin',
+    label: 'Admin',
+    description: 'Also manages teammates, connected apps, billing',
+  },
   { value: 'owner', label: 'Owner', description: 'Also deletes workspaces' },
 ]
 const roleLabel = (role: string) => ROLES.find((r) => r.value === role)?.label ?? role

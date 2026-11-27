@@ -45,7 +45,7 @@ const SECTIONS = [
   { id: 'general', label: 'General' },
   { id: 'repositories', label: 'Repositories' },
   { id: 'code-review', label: 'Code review' },
-  { id: 'apps', label: 'Apps' },
+  { id: 'apps', label: 'Connected apps' },
   { id: 'email', label: 'Email' },
   { id: 'memory', label: 'Memory' },
   { id: 'archive', label: 'Archive or delete' },
@@ -640,7 +640,7 @@ function AppsSection() {
         <p className="text-sm text-muted-foreground">
           {usable.length
             ? 'Each App has one account: there is nothing to choose.'
-            : 'No Apps connected yet.'}
+            : 'No connected apps yet.'}
         </p>
       ) : (
         <ul className="flex flex-col divide-y rounded-xl border">

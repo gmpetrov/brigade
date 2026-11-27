@@ -287,7 +287,7 @@ export function ActivationCard({
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <span className="text-xs text-muted-foreground">Apps</span>
+        <span className="text-xs text-muted-foreground">Connected apps</span>
         <AppList apps={p.apps} />
       </section>
 

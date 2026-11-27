@@ -35,7 +35,7 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
-  Wrench,
+  AppWindow,
 } from 'lucide-react'
 import {
   useEffect,
@@ -94,6 +94,7 @@ import { openIntent } from '@/lib/prepare-document'
 import { fileIcon } from '@/components/file-icon'
 import { folderSuggestions, splitTyped } from '@/lib/library-path'
 import { cn } from '@/lib/utils'
+import { hasApps } from '@/lib/apps-feature'
 
 export { contentUrl }
 
@@ -185,8 +186,8 @@ export function LibraryBrowser({
   /** The design open beside the page: its folder. */
   const [design, setDesign] = useState<string>()
   const { me } = useDashboard()
-  /** Tools (docs/tools.md) show as tools for people who have them; as folders for the others. */
-  const tools = me.features?.includes('tools') ?? false
+  /** Tools (docs/apps.md) show as tools for people who have them; as folders for the others. */
+  const tools = hasApps(me.features)
   const isTool = (path: string) => tools && toolFolderOf(path) === path
   const [renaming, setRenaming] = useState<string>()
   const [access, setAccess] = useState<string>()
@@ -361,7 +362,7 @@ export function LibraryBrowser({
     // The options offered for a design: one row, opening them side by side.
     const set = isDesign || toolRow ? [] : optionsIn(tree.files, f.path)
     const isSet = set.length > 0
-    const Icon = toolRow ? Wrench : isDesign || isSet ? Palette : guarded ? FolderLock : Folder
+    const Icon = toolRow ? AppWindow : isDesign || isSet ? Palette : guarded ? FolderLock : Folder
     return (
       <div key={f.path} className={LAZY_ROW}>
         <div
@@ -404,7 +405,7 @@ export function LibraryBrowser({
             <span className="text-xs text-muted-foreground">
               {flat && `${parentOf(f.path) || 'Library'} · `}
               {isDesign && 'Design · '}
-              {toolRow && 'Tool · '}
+              {toolRow && 'App · '}
               {isDesign &&
                 tree.files.some((file) => file.shared && file.path === `${f.path}/index.html`) &&
                 `${PUBLIC_LINK} · `}
@@ -424,8 +425,8 @@ export function LibraryBrowser({
           <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
             {toolRow && (
               <DropdownMenuItem onSelect={() => openTool(f.path)}>
-                <Wrench aria-hidden />
-                Open tool
+                <AppWindow aria-hidden />
+                Open app
               </DropdownMenuItem>
             )}
             {(isDesign || isSet) && (
