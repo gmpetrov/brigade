@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   ToolManifest,
-  newestManifest,
+  combinedManifest,
   toolFolderOf,
   toolManifestPaths,
   toolName,
@@ -46,16 +46,34 @@ test('tool.json is lenient: a bad entry is left out, not the manifest', () => {
   assert.deepEqual(parsed.hosts, ['https://api.example.com'])
 })
 
-test('of an app.json and a tool.json, the one saved last counts; app.json when saved at once', () => {
-  const at = (path, ms) => ({ path, updatedAt: new Date(ms) })
-  const app = at('a.webapp/app.json', 1)
-  assert.equal(
-    newestManifest('a.webapp', [app, at('a.webapp/tool.json', 2)]).path,
-    'a.webapp/tool.json',
-  )
-  assert.equal(
-    newestManifest('a.webapp', [at('a.webapp/tool.json', 1), app]).path,
-    'a.webapp/app.json',
-  )
-  assert.equal(newestManifest('a.webapp', [at('a.webapp/other.json', 9)]), undefined)
+test('with both manifests, an app gets only what both allow; with one, that one', () => {
+  const app = {
+    title: 'New',
+    reads: ['Film/clips', 'Film/secret'],
+    hosts: ['https://a.example.com', 'https://b.example.com'],
+    apps: [
+      { kind: 'github', access: 'read_write' },
+      { kind: 'notes', access: 'read' },
+    ],
+  }
+  const legacy = {
+    title: 'Old',
+    reads: ['Film/clips'],
+    hosts: ['https://a.example.com'],
+    apps: [{ kind: 'github', access: 'read' }],
+  }
+  assert.deepEqual(combinedManifest(app, legacy), {
+    title: 'New',
+    reads: ['Film/clips'],
+    hosts: ['https://a.example.com'],
+    apps: [{ kind: 'github', access: 'read' }],
+  })
+  // Either way round: neither widens the other.
+  assert.deepEqual(combinedManifest(legacy, app).apps, [{ kind: 'github', access: 'read' }])
+  assert.equal(combinedManifest(app, undefined), app)
+  assert.equal(combinedManifest(undefined, legacy), legacy)
+  assert.equal(combinedManifest(undefined, undefined), null)
+  // One there but unreadable allows nothing.
+  assert.equal(combinedManifest(null, legacy), null)
+  assert.deepEqual(combinedManifest(app, null).reads, [])
 })

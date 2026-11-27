@@ -15,13 +15,16 @@ type Operation = { name: string; path: string }
 /** The library tools of a teammate whose thread's starter has apps (`tools` in its spec), or not. */
 function toolsOf(options: { tools?: boolean; manifest?: string; files?: string[] }) {
   const asked: Operation[] = []
+  const read: string[] = []
   const tools = libraryTools({
     access: 'read_write',
     libraryDir: '/library',
-    readFile: async (file) =>
+    readFile: async (file) => (
+      read.push(file),
       Buffer.from(
         /(app|tool)\.json$/.test(file) ? (options.manifest ?? '{"title":"Review"}') : '<p>Hi</p>',
-      ),
+      )
+    ),
     stageFile: async () => {
       throw new Error('not here')
     },
@@ -38,7 +41,7 @@ function toolsOf(options: { tools?: boolean; manifest?: string; files?: string[]
   })
   const run = (name: string, input: object) =>
     tools[name]!.execute!(input, { toolCallId: 'c1', messages: [] } as never)
-  return { tools, asked, run }
+  return { tools, asked, read, run }
 }
 
 test('only teammates of a thread whose starter has apps get them', () => {
@@ -71,7 +74,7 @@ test('saving an app saves its folder and names it by its page', async () => {
   }
   assert.deepEqual(
     asked.map((o) => o.path),
-    ['film/review.webapp/index.html', 'film/review.webapp/app.json', 'film/review.webapp/app.js'],
+    ['film/review.webapp/index.html', 'film/review.webapp/app.js', 'film/review.webapp/app.json'],
   )
   assert.equal(result.path, 'film/review.webapp')
   assert.equal(result.files, 3)
@@ -79,16 +82,37 @@ test('saving an app saves its folder and names it by its page', async () => {
   assert.match(result.accounts, /github/)
 })
 
-test('an app saved before the rename saves again under its .tool path, with its tool.json', async () => {
-  const { asked, run } = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
+test('an app saved before the rename saves again under its .tool path, its tool.json as app.json too', async () => {
+  const { asked, run, read } = toolsOf({ tools: true, files: ['index.html', 'tool.json'] })
   const result = (await run('save_app', { folder: '/w', path: 'film/review.tool' })) as {
     path: string
   }
   assert.equal(result.path, 'film/review.tool')
   assert.deepEqual(
     asked.map((o) => o.path),
-    ['film/review.tool/index.html', 'film/review.tool/tool.json'],
+    ['film/review.tool/index.html', 'film/review.tool/app.json', 'film/review.tool/tool.json'],
   )
+  // Both manifests the same: from its tool.json.
+  assert.deepEqual(read.filter((f) => f.endsWith('.json')).slice(-2), [
+    '/w/tool.json',
+    '/w/tool.json',
+  ])
+})
+
+test('with both manifests in the folder, both are saved from its app.json', async () => {
+  const { asked, read, run } = toolsOf({
+    tools: true,
+    files: ['index.html', 'app.json', 'tool.json'],
+  })
+  await run('save_app', { folder: '/w', path: 'a.webapp' })
+  assert.deepEqual(
+    asked.map((o) => o.path),
+    ['a.webapp/index.html', 'a.webapp/app.json', 'a.webapp/tool.json'],
+  )
+  assert.deepEqual(read.filter((f) => f.endsWith('.json')).slice(-2), [
+    '/w/app.json',
+    '/w/app.json',
+  ])
 })
 
 test('an app needs its path, page and a valid app.json; nothing is saved otherwise', async () => {

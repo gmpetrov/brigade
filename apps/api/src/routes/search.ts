@@ -14,7 +14,6 @@ import {
   titleScore,
   TOOL_ENTRY,
   toolManifestPaths,
-  newestManifest,
   toolFolderOf,
   toolName,
   type SearchResult,
@@ -426,16 +425,17 @@ export const search = new Hono<AppEnv>()
               kind: 'library',
               deletedAt: null,
             },
-            select: { path: true, text: true, updatedAt: true },
+            select: { path: true, text: true },
           })
         : []
-      ).map((d) => [d.path, { path: d.path, updatedAt: d.updatedAt, ...readManifest(d.text) }]),
+      ).map((d) => [d.path, readManifest(d.text)]),
     )
     const designsAndTools: SearchResult[] = [...bundles.values()].flatMap((b) => {
-      // An app's manifest saved last (newestManifest), as the app itself reads it.
-      const found = manifestsOf(b).flatMap((path) => manifests.get(path) ?? [])
+      // An app's title is its app.json's, else its tool.json's (combinedManifest).
       const { title: given, description } =
-        (b.kind === 'tool' ? newestManifest(b.folder, found) : found[0]) ?? {}
+        manifestsOf(b)
+          .map((path) => manifests.get(path))
+          .find(Boolean) ?? {}
       const name = b.kind === 'tool' ? toolName(b.folder) : designName(b.folder)
       const title = given ?? name
       const named = Math.max(score(title), score(name))

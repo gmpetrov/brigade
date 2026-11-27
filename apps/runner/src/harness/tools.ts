@@ -1,6 +1,7 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
-import { resolve } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { setTimeout as wait } from 'node:timers/promises'
 import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
@@ -1239,8 +1240,10 @@ export function libraryTools(options: {
     designs: string[],
     call: { toolCallId: string; toolName: string; input: unknown },
     onSaved?: (file: string, output: unknown) => void,
+    /** The file of the folder each is saved from, when not its own (an app's manifests). */
+    sourceOf: (file: string) => string = (file) => file,
   ) => {
-    const sources = new Map(files.map((f) => [f, `${folder}/${f}`]))
+    const sources = new Map(files.map((f) => [f, `${folder}/${sourceOf(f)}`]))
     for (const design of designs) {
       const at = (file: string) => (design ? `${design}/${file}` : file)
       if (sources.has(at(DESIGN_THUMBNAIL)) || !sources.has(at(DESIGN_ENTRY))) continue
@@ -1685,6 +1688,17 @@ export function libraryTools(options: {
           // Its manifest: `app.json`, or the `tool.json` of an app made before the rename.
           const manifestFile = [TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) => files.includes(f))
           if (!manifestFile) throw new Error(`The folder has no ${TOOL_MANIFEST} at its top`)
+          // Saved as app.json, and as tool.json too when the app has one (here, or in the library
+          // from before the rename), both the same: Brigade lets an app with both do only what
+          // both allow, so a stale one would hold it back.
+          const legacy =
+            files.includes(LEGACY_TOOL_MANIFEST) ||
+            existsSync(join(options.libraryDir, path, LEGACY_TOOL_MANIFEST))
+          const manifests = [TOOL_MANIFEST, ...(legacy ? [LEGACY_TOOL_MANIFEST] : [])]
+          const uploads = [
+            ...files.filter((f) => f !== TOOL_MANIFEST && f !== LEGACY_TOOL_MANIFEST),
+            ...manifests,
+          ]
           if (files.length > TOOL_FILES_MAX)
             throw new Error(
               `An app can have up to ${TOOL_FILES_MAX} files; this folder has ${files.length}`,
@@ -1702,16 +1716,17 @@ export function libraryTools(options: {
           const saved = await saveFolder(
             folder,
             path,
-            files,
+            uploads,
             [''],
             { toolCallId, toolName: 'save_app', input },
             (file, output) => {
-              // Its page's mention, labelled with the tool: it opens the tool from your reply.
+              // Its page's mention, labelled with the app: it opens the app from your reply.
               const id = /\(document:([^)\s]+)\)/.exec(
                 String((output as { mention?: unknown } | null)?.mention ?? ''),
               )?.[1]
               if (file === TOOL_ENTRY && id) mention = `@[${path}](document:${id})`
             },
+            (file) => (manifests.includes(file) ? manifestFile : file),
           )
           const apps = manifest.data.apps ?? []
           return {

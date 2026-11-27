@@ -47,22 +47,6 @@ export const toolManifestPaths = (folder: string) => [
   `${folder}/${LEGACY_TOOL_MANIFEST}`,
 ]
 
-/**
- * Of an app's manifests (`app.json`, and `tool.json` from before the rename), the one saved last:
- * a runner from before the rename saves `tool.json` beside an `app.json` saved since, and what
- * it says (the folders it reads) must win. `app.json` when both were saved at once.
- */
-export function newestManifest<T extends { path: string; updatedAt: Date }>(
-  folder: string,
-  rows: readonly T[],
-): T | undefined {
-  const found = toolManifestPaths(folder).flatMap((at) => rows.filter((r) => r.path === at))
-  return found.reduce<T | undefined>(
-    (best, row) => (!best || row.updatedAt.getTime() > best.updatedAt.getTime() ? row : best),
-    undefined,
-  )
-}
-
 /** An App a tool asks for: its kind (`github`, `posthog`…) and whether it changes things there. */
 export const ToolAppNeed = z.object({
   kind: z.string().trim().min(1).max(100),
@@ -102,6 +86,36 @@ export const ToolManifest = z.object({
     .optional(),
 })
 export type ToolManifest = z.infer<typeof ToolManifest>
+
+/**
+ * What an app may do when its folder has both manifests: `app.json`, and a `tool.json` from
+ * before the rename. Its title and description come from `app.json`; what it reads, calls and
+ * reaches is only what both allow, so neither can widen the other (an older runner saving
+ * `tool.json` after an `app.json`, or the reverse). `save_app` writes both the same, so this
+ * changes nothing then. A manifest that is there but unreadable (null) allows nothing; one that
+ * is not there (undefined) leaves the other as it is.
+ */
+export function combinedManifest(
+  app: ToolManifest | null | undefined,
+  legacy: ToolManifest | null | undefined,
+): ToolManifest | null {
+  if (app === undefined) return legacy ?? null
+  if (legacy === undefined) return app
+  if (app === null) return null
+  const reads = new Set(legacy?.reads ?? [])
+  const hosts = new Set(legacy?.hosts ?? [])
+  const needs = new Map((legacy?.apps ?? []).map((need) => [need.kind, need]))
+  return {
+    ...app,
+    reads: (app.reads ?? []).filter((folder) => reads.has(folder)),
+    hosts: (app.hosts ?? []).filter((host) => hosts.has(host)),
+    apps: (app.apps ?? []).flatMap((need) => {
+      const other = needs.get(need.kind)
+      if (!other) return []
+      return [{ ...need, access: other.access === 'read' ? ('read' as const) : need.access }]
+    }),
+  }
+}
 
 export const OpenToolView = z.object({ path: LibraryPath })
 

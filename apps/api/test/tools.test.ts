@@ -323,22 +323,21 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
   })
 
-  test('an app under its new names: a .webapp folder with app.json', async () => {
+  test('an app under its new names, and with both manifests only what both allow', async () => {
     const folder = 'Film/board.webapp'
     await save(`${folder}/index.html`, '<!doctype html><p>Board</p>')
-    // A tool.json saved before the app.json is not read: the manifest saved last counts.
-    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name' }))
-    await new Promise((resolve) => setTimeout(resolve, 5))
-    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board' }))
+    await save(`${folder}/app.json`, JSON.stringify({ title: 'Clip board', reads: ['Film/clips'] }))
     const view = await post('/view', { path: `${folder}/index.html` })
     assert.equal(view.status, 200)
     assert.equal(view.body.folder, folder)
     assert.equal(view.body.manifest.title, 'Clip board')
-    // A runner from before the rename saves tool.json after it: what it says counts now.
-    await new Promise((resolve) => setTimeout(resolve, 5))
-    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Saved since' }))
-    const again = await post('/view', { path: folder })
-    assert.equal(again.body.manifest.title, 'Saved since')
+    assert.equal((await post('/files', { path: folder, folder: 'Film/clips' })).status, 200)
+    // A tool.json beside it (an older runner's save) that reads nothing: it reads nothing.
+    await save(`${folder}/tool.json`, JSON.stringify({ title: 'Old name', reads: [] }))
+    const both = await post('/view', { path: folder })
+    assert.equal(both.body.manifest.title, 'Clip board')
+    assert.deepEqual(both.body.manifest.reads, [])
+    assert.equal((await post('/files', { path: folder, folder: 'Film/clips' })).status, 403)
   })
 
   test('files: the folders its manifest lists, each with an address on the sandbox host', async () => {
