@@ -2830,7 +2830,7 @@ export function ThreadItems({
               </div>
             )
           }
-          // What the parent's teammate wrote later: who, above their words.
+          // What another thread of the tree wrote (its parent, a sub-thread, a sibling): who, above their words.
           const parent = item.brigade === 'parent' ? fromParent(item.text) : null
           return (
             <div
@@ -2840,7 +2840,7 @@ export function ThreadItems({
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">
                 {parent
-                  ? `${parent.from} wrote from the parent thread “${parent.parentTitle}”`
+                  ? `${parent.from} wrote from ${parent.relation === 'child' ? 'a sub-thread' : parent.relation === 'sibling' ? 'a sibling thread' : parent.relation === 'tree' ? 'a thread of this tree' : 'the parent thread'} “${parent.parentTitle}”`
                   : item.brigade === 'report'
                     ? 'Reports from sub-threads'
                     : item.brigade === 'follow'

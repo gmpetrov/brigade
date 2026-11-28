@@ -238,6 +238,12 @@ export const ThreadSpec = z.object({
   /** Set in a child thread: the thread it was started from, which its report goes to. */
   parent: z.object({ id: z.string(), title: z.string() }).nullish(),
   /**
+   * SUBTHREADS_PROTOCOL: where the thread sits in its tree (docs/sub-threads.md): its level (0 at
+   * the top, 1 a sub-thread, 2 a sub-thread's) and the thread at the top. An API that sends it takes
+   * start_child's new fields, needs_parent and follow_thread on any thread; an older one, none.
+   */
+  tree: z.object({ level: z.number().int().min(0), rootId: z.string() }).nullish(),
+  /**
    * The person of the thread has Chief's daily pass on, and Chief acts on their rules (the
    * chief_acts feature, docs/chief-answers.md): Chief may answer their teammates' questions in their
    * name. Teammates are told what such an answer is. Unset: nothing of it, as before.

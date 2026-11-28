@@ -39,7 +39,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { childNote, FOLLOWERS_PER_THREAD } = await import('@brigade/contracts')
 const { prisma, scoped } = await import('../src/db.js')
-const { handleChildCall, noteChildEvents, settleOverdueChildren } =
+const { handleChildCall, noteChildEvents, noteFollowedEvents, settleOverdueChildren } =
   await import('../src/children.js')
 
 type Row = Awaited<ReturnType<typeof prisma.session.create>>
@@ -200,14 +200,23 @@ test('follow_thread refuses what it may not follow', { skip }, async () => {
   await refused(mail, mail.id, /cannot follow itself/)
   await refused(mail, 'no-such-thread', /No thread of this workspace/)
   await refused(root, fix.id, /your own child/)
-  // A run's root thread is no child: it ends with no report.
-  await refused(mail, root.id, /Only a child thread/)
-  // A thread outside a playbook, or in a dry run.
-  await refused(await thread({}), fix.id, /for a playbook’s run/)
-  await refused(await runThread(support, { dryRun: true }), fix.id, /for a playbook’s run/)
+  // Another run's root thread: not of its tree, nor another run's child.
+  await refused(mail, root.id, /of your own tree, or a child thread of another run/)
+  // A thread outside a playbook, not in that tree nor at the top with it; or a dry run, which
+  // follows no other run.
+  await refused(await thread({}), fix.id, /only a thread you may write in/)
+  await refused(
+    await runThread(support, { dryRun: true }),
+    fix.id,
+    /only a thread you may write in/,
+  )
   // Another playbook's run, or a child outside any playbook.
-  await refused(await runThread(otherPlaybook), fix.id, /same playbook/)
-  await refused(mail, (await thread({ parentId: (await thread({})).id })).id, /same playbook/)
+  await refused(await runThread(otherPlaybook), fix.id, /another run of this same playbook/)
+  await refused(
+    mail,
+    (await thread({ parentId: (await thread({})).id })).id,
+    /another run of this same playbook/,
+  )
   // Another workspace's thread is not found at all.
   const elsewhere = await prisma.session.findFirst({
     where: { workspaceId: { not: scope.workspaceId } },
@@ -418,5 +427,415 @@ test(
     )
     // Outside a playbook, list_children is as it was.
     assert.equal((await call(await thread({}), { name: 'list_children' })).fromOtherRuns, undefined)
+  },
+)
+
+// Sub-threads (docs/sub-threads.md): follow_thread on any thread the teammate may write in.
+
+test('a sub-thread follows its sibling, and is woken by its report', { skip }, async () => {
+  const top = await thread({})
+  const build = await thread({ title: 'Build the desktop app', parentId: top.id })
+  const notes_ = await thread({ title: 'Write the release notes', parentId: top.id })
+  const out = await follow(notes_, build)
+  assert.equal(out.error, undefined, JSON.stringify(out))
+  assert.equal(out.following.waitingForIt, true)
+  await reports(build, 'Built: Brigade-0.9.dmg.')
+  const [note, ...more] = await notes(notes_)
+  assert.equal(more.length, 0)
+  assert.match(note!, /^The thread you follow “Build the desktop app”/)
+  assert.match(note!, /Brigade-0\.9\.dmg/)
+  // Its own parent still waits for both, as before: the sibling heard it only by following it.
+  assert.equal((await notes(top)).length, 0)
+})
+
+test(
+  'a thread at the top it is a teammate of tells its follower when its turn ends',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: ship the importer' })
+    const watcher = await thread({ title: 'Launch plan' })
+    // Not a teammate of it yet: not a thread it may write in.
+    assert.match((await follow(watcher, builder)).error ?? '', /only a thread you may write in/)
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    await prisma.sessionEvent.create({
+      data: {
+        ...scope,
+        sessionId: builder.id,
+        seq: 1,
+        type: 'message.done',
+        at: new Date(),
+        data: { type: 'message.done', text: 'Opened #31: the importer.' },
+      },
+    })
+    const ended = { seq: 2, event: { type: 'turn.completed', at: new Date().toISOString() } }
+    await noteFollowedEvents(builder, [ended])
+    // The same end seen twice wakes it once.
+    await noteFollowedEvents(builder, [ended])
+    const [note, ...more] = await notes(watcher)
+    assert.equal(more.length, 0)
+    assert.match(note!, /^The thread you follow “Builder: ship the importer”/)
+    assert.match(note!, /Opened #31/)
+    // Its next turn's end is news again: a later end, whatever came between.
+    await noteFollowedEvents(builder, [
+      {
+        seq: 4,
+        event: { type: 'turn.completed', at: new Date(Date.now() + 60_000).toISOString() },
+      },
+    ])
+    assert.equal((await notes(watcher)).length, 2)
+  },
+)
+
+test('the sweep wakes a top thread’s follower its turn’s end did not reach', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: ship the exporter' })
+  const watcher = await thread({ title: 'Release plan' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const ended = new Date(Date.now() + 1_000)
+  await prisma.sessionEvent.createMany({
+    data: [
+      {
+        ...scope,
+        sessionId: builder.id,
+        seq: 1,
+        type: 'message.done',
+        at: ended,
+        data: { type: 'message.done', text: 'Opened #40: the exporter.' },
+      },
+      {
+        ...scope,
+        sessionId: builder.id,
+        seq: 2,
+        type: 'turn.completed',
+        at: ended,
+        data: { type: 'turn.completed', at: ended.toISOString() },
+      },
+    ],
+  })
+  // Its own delivery never ran (an API restart): a few minutes later, the sweep brings it, once.
+  await prisma.session.update({
+    where: { id: builder.id },
+    data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
+  })
+  await settleOverdueChildren(scope.workspaceId)
+  await settleOverdueChildren(scope.workspaceId)
+  const [note, ...more] = await notes(watcher)
+  assert.equal(more.length, 0)
+  assert.match(note!, /Opened #40/)
+})
+
+test(
+  'a top thread’s second turn end reaches its follower, with no message seen between',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: ship the importer v2' })
+    const watcher = await thread({ title: 'Release plan v2' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const end = async (seq: number, at: Date, text: string) => {
+      await prisma.sessionEvent.createMany({
+        data: [
+          {
+            ...scope,
+            sessionId: builder.id,
+            seq,
+            type: 'message.done',
+            at,
+            data: { type: 'message.done', text },
+          },
+          {
+            ...scope,
+            sessionId: builder.id,
+            seq: seq + 1,
+            type: 'turn.completed',
+            at,
+            data: { type: 'turn.completed', at: at.toISOString() },
+          },
+        ],
+      })
+      return { seq: seq + 1, event: { type: 'turn.completed', at: at.toISOString() } }
+    }
+    const first = new Date(Date.now() - 8 * 60_000)
+    // Followed before either end.
+    await prisma.threadFollow.updateMany({
+      where: { sessionId: builder.id },
+      data: { createdAt: new Date(first.getTime() - 60_000) },
+    })
+    await noteFollowedEvents(builder, [await end(1, first, 'Opened #50.')])
+    assert.equal((await notes(watcher)).length, 1)
+    // A second turn ends; its message's reset never ran (a restart): the sweep brings it, once.
+    await end(3, new Date(first.getTime() + 60_000), 'Merged #50.')
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq: 4, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    await settleOverdueChildren(scope.workspaceId)
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[1]!, /Merged #50/)
+  },
+)
+
+test('two turn ends that come in together each bring their own answer', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: two turns' })
+  const watcher = await thread({ title: 'Watching two turns' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const first = new Date(Date.now() + 1_000)
+  const second = new Date(first.getTime() + 60_000)
+  const event = (seq: number, type: string, at: Date, text?: string) => ({
+    ...scope,
+    sessionId: builder.id,
+    seq,
+    type,
+    at,
+    data: text ? { type, text } : { type, at: at.toISOString() },
+  })
+  await prisma.sessionEvent.createMany({
+    data: [
+      event(1, 'message.done', first, 'First answer.'),
+      event(2, 'turn.completed', first),
+      event(3, 'message.done', second, 'Second answer.'),
+      event(4, 'turn.completed', second),
+    ],
+  })
+  await noteFollowedEvents(builder, [
+    { seq: 2, event: { type: 'turn.completed', at: first.toISOString() } },
+    { seq: 4, event: { type: 'turn.completed', at: second.toISOString() } },
+  ])
+  const [one, two, ...more] = await notes(watcher)
+  assert.equal(more.length, 0)
+  assert.match(one!, /First answer\./)
+  assert.match(two!, /Second answer\./)
+})
+
+test('the sweep reaches a missed follower behind many that are up to date', { skip }, async () => {
+  // A hundred and five followed threads at the top whose followers heard their last turn.
+  const watcher = await thread({ title: 'Watching many' })
+  const old = new Date(Date.now() - 10 * 60_000)
+  const many = await Promise.all(
+    Array.from({ length: 105 }, (_, i) => thread({ title: `Up to date ${i}` })),
+  )
+  await prisma.session.updateMany({
+    where: { id: { in: many.map((t) => t.id) } },
+    data: { status: 'idle', lastSeq: 5, updatedAt: old },
+  })
+  await prisma.threadFollow.createMany({
+    data: many.map((t) => ({
+      ...scope,
+      sessionId: t.id,
+      followerId: watcher.id,
+      createdAt: new Date(old.getTime() - 60_000),
+      deliveredAt: old,
+      deliveredSeq: 5,
+    })),
+  })
+  // And one whose last turn its follower never heard.
+  const missed = await thread({ title: 'Builder: missed' })
+  const late = await thread({ title: 'Late follower' })
+  const ended = new Date(Date.now() - 6 * 60_000)
+  await prisma.sessionEvent.createMany({
+    data: [
+      {
+        ...scope,
+        sessionId: missed.id,
+        seq: 1,
+        type: 'message.done',
+        at: ended,
+        data: { type: 'message.done', text: 'Shipped #77.' },
+      },
+      {
+        ...scope,
+        sessionId: missed.id,
+        seq: 2,
+        type: 'turn.completed',
+        at: ended,
+        data: { type: 'turn.completed', at: ended.toISOString() },
+      },
+    ],
+  })
+  await prisma.threadFollow.create({
+    data: {
+      ...scope,
+      sessionId: missed.id,
+      followerId: late.id,
+      createdAt: new Date(ended.getTime() - 60_000),
+    },
+  })
+  await prisma.session.update({
+    where: { id: missed.id },
+    data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
+  })
+  await settleOverdueChildren(scope.workspaceId)
+  const [note] = await notes(late)
+  assert.match(note ?? '', /Shipped #77/)
+  assert.equal((await notes(watcher)).length, 0)
+})
+
+test(
+  'a turn end with a slow clock still reaches the follower: by sequence, not time',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: slow clock' })
+    const watcher = await thread({ title: 'Watching a slow clock' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const event = (seq: number, type: string, at: Date, text?: string) => ({
+      ...scope,
+      sessionId: builder.id,
+      seq,
+      type,
+      at,
+      data: text ? { type, text } : { type, at: at.toISOString() },
+    })
+    const now = new Date()
+    await prisma.sessionEvent.createMany({
+      data: [event(1, 'message.done', now, 'First.'), event(2, 'turn.completed', now)],
+    })
+    await noteFollowedEvents(builder, [
+      { seq: 2, event: { type: 'turn.completed', at: now.toISOString() } },
+    ])
+    // The sweep finds it up to date and marks it so.
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    assert.equal((await notes(watcher)).length, 1)
+    // The next turn ends on a machine whose clock is ten minutes slow: still news.
+    const slow = new Date(Date.now() - 10 * 60_000)
+    await prisma.sessionEvent.createMany({
+      data: [event(3, 'message.done', slow, 'Second.'), event(4, 'turn.completed', slow)],
+    })
+    await noteFollowedEvents(builder, [
+      { seq: 4, event: { type: 'turn.completed', at: slow.toISOString() } },
+    ])
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[1]!, /Second\./)
+  },
+)
+
+test('the sweep brings every missed turn end in order, and none past a gap', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: many ends' })
+  const watcher = await thread({ title: 'Watching many ends' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const at = new Date(Date.now() - 10 * 60_000)
+  const event = (seq: number, type: string, text?: string) => ({
+    ...scope,
+    sessionId: builder.id,
+    seq,
+    type,
+    at,
+    data: text ? { type, text } : { type, at: at.toISOString() },
+  })
+  // Two turns ended in one batch the hub checkpointed (lastSeq 4), then stopped before telling
+  // anyone; a third end is stored past a gap (seq 5 missing), so lastSeq stays at 4.
+  await prisma.sessionEvent.createMany({
+    data: [
+      event(1, 'message.done', 'One.'),
+      event(2, 'turn.completed'),
+      event(3, 'message.done', 'Two.'),
+      event(4, 'turn.completed'),
+      event(6, 'message.done', 'Three.'),
+      event(7, 'turn.completed'),
+    ],
+  })
+  const idle = (lastSeq: number) =>
+    prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+  await idle(4)
+  await settleOverdueChildren(scope.workspaceId)
+  let all = await notes(watcher)
+  assert.equal(all.length, 2)
+  assert.match(all[0]!, /One\./)
+  assert.match(all[1]!, /Two\./)
+  // The gap filled: lastSeq moves on, and the third end comes, once.
+  await prisma.sessionEvent.create({ data: event(5, 'message.user') })
+  await idle(7)
+  await settleOverdueChildren(scope.workspaceId)
+  await settleOverdueChildren(scope.workspaceId)
+  all = await notes(watcher)
+  assert.equal(all.length, 3)
+  assert.match(all[2]!, /Three\./)
+})
+
+test(
+  'a first turn end whose wake-up fails holds the later ones, which come in order',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: failing first' })
+    const watcher = await thread({ title: 'Watching a failure' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const at = new Date(Date.now() - 10 * 60_000)
+    const event = (seq: number, type: string, text?: string) => ({
+      ...scope,
+      sessionId: builder.id,
+      seq,
+      type,
+      at,
+      data: text ? { type, text } : { type, at: at.toISOString() },
+    })
+    await prisma.sessionEvent.createMany({
+      data: [
+        event(1, 'message.done', 'First.'),
+        event(2, 'turn.completed'),
+        event(3, 'message.done', 'Second.'),
+        event(4, 'turn.completed'),
+      ],
+    })
+    // The database refuses the follower's first wake-up once.
+    const name = `fail_first_${id.replace(/-/g, '_')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Wakeup" FOR EACH ROW WHEN (NEW."sessionId" = '${watcher.id}' AND NEW.note LIKE '%First.%') EXECUTE FUNCTION ${name}()`,
+    )
+    try {
+      // Both ends in one live batch: the second must not get ahead of the first.
+      await noteFollowedEvents(builder, [
+        { seq: 2, event: { type: 'turn.completed', at: at.toISOString() } },
+        { seq: 4, event: { type: 'turn.completed', at: at.toISOString() } },
+      ])
+      // Nor in a later batch of its own.
+      await noteFollowedEvents(builder, [
+        { seq: 4, event: { type: 'turn.completed', at: at.toISOString() } },
+      ])
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Wakeup"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
+    assert.equal((await notes(watcher)).length, 0)
+    // The sweep brings both, in order.
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq: 4, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[0]!, /First\./)
+    assert.match(all[1]!, /Second\./)
   },
 )

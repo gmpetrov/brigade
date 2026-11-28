@@ -65,7 +65,14 @@ import {
   threadTopicFiles,
   type MemorySnapshot,
 } from '../memory-layers.js'
-import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
+import {
+  backup,
+  checkout,
+  gitEnv,
+  pushForSubthread,
+  type BundleStore,
+  type CheckoutInput,
+} from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { copyIncluded } from '../repo-settings.js'
 import {
@@ -525,10 +532,13 @@ function createAgent(
         ...appTools(callSchedule, { playbook: !!spec.playbook }),
         // Lists' items (docs/lists.md): read, attach to this thread, tick, add.
         ...listTools(callSchedule),
-        // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.
+        // Sub-threads (docs/sub-threads.md): started from a thread above the last level, where its
+        // API says the tree (spec.tree); followed from any thread it may write in, a playbook's
+        // run another run's child too. A dry run waits for nothing.
         ...childTools(callSchedule, {
           child: !!spec.parent,
-          follow: !!spec.playbook && !spec.playbook.dryRun,
+          follow: spec.playbook ? !spec.playbook.dryRun : !!spec.tree,
+          ...(spec.tree && !spec.playbook?.dryRun ? { tree: spec.tree } : {}),
         }),
         // Reviews of its pull requests, a child thread's too, which reports once its review is done; a
         // playbook decides.
@@ -2758,17 +2768,27 @@ export class HarnessThread {
           : result
       },
       async (call) =>
-        reportWithFiles(this.reportsWhenDone(await this.themeFileCall(call)), {
-          read: (file, max) => this.readFile(file, max, 'Files sent with a report'),
-          upload: (name, bytes) =>
-            this.context.uploadFile({
-              sessionId: this.spec.sessionId,
-              teammateId: this.spec.teammate.id,
-              name,
-              bytes,
-            }),
-          send: this.context.callSchedule,
-        }),
+        reportWithFiles(
+          await this.subthreadBranches(this.reportsWhenDone(await this.themeFileCall(call))),
+          {
+            read: (file, max) =>
+              this.readFile(
+                file,
+                max,
+                call.operation.name === 'start_child'
+                  ? 'Files for a sub-thread'
+                  : 'Files sent with a report',
+              ),
+            upload: (name, bytes) =>
+              this.context.uploadFile({
+                sessionId: this.spec.sessionId,
+                teammateId: this.spec.teammate.id,
+                name,
+                bytes,
+              }),
+            send: this.context.callSchedule,
+          },
+        ),
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       computer,
@@ -3098,6 +3118,25 @@ export class HarnessThread {
     } finally {
       await rm(staged.path, { force: true })
     }
+  }
+
+  /**
+   * A sub-thread's branches (start_child's `repos`), pushed to GitHub before it starts, so that it
+   * finds them wherever it runs (docs/sub-threads.md). One that cannot be (uncommitted changes, a
+   * branch nowhere) refuses the call, saying why.
+   */
+  private async subthreadBranches(call: Parameters<ScheduleCaller>[0]) {
+    const { operation } = call
+    if (operation.name !== 'start_child' || !operation.repos?.length) return call
+    for (const repo of operation.repos)
+      await pushForSubthread({
+        spec: this.spec,
+        workDir: this.workDir,
+        ...(this.runAs ? { runAs: this.runAs } : {}),
+        repository: repo.repository,
+        branch: repo.branch,
+      })
+    return call
   }
 
   private reportsWhenDone(call: Parameters<ScheduleCaller>[0]) {

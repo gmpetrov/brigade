@@ -23,6 +23,7 @@ import { ProviderLogo } from '@/components/provider-logo'
 import { wakeTime } from '@/components/wakeup-icon'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
+import { TreeList, treeTitle, useThreadTree } from '@/components/thread-tree'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import {
@@ -531,6 +532,29 @@ function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }
 }
 
 /**
+ * Its sub-threads and theirs, at their levels (docs/sub-threads.md): what each is at, where, what
+ * it made and its tokens. From an API before the tree, its sub-threads' lines, as before.
+ */
+function Tree({ thread, onChange }: { thread: Thread; onChange: () => void }) {
+  const tree = useThreadTree(thread.id)
+  const reload = () => {
+    void tree.reload()
+    onChange()
+  }
+  if (!tree.data || tree.error)
+    return (
+      <Section title={`Sub-threads · ${thread.children.length}`}>
+        <ChildrenList children={thread.children} />
+      </Section>
+    )
+  return (
+    <Section title={treeTitle(tree.data)}>
+      <TreeList threadId={thread.id} tree={tree.data} onChange={reload} />
+    </Section>
+  )
+}
+
+/**
  * Beside an expanded thread, everything that is not the conversation: its
  * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
  * log), the thread's details, and what it made.
@@ -614,11 +638,7 @@ export function ComputerPanel({
 
       {thread.mailMessages?.length > 0 && <SentMail thread={thread} onChange={onChange} />}
 
-      {thread.children.length > 0 && (
-        <Section title={`Sub-threads · ${thread.children.length}`}>
-          <ChildrenList children={thread.children} />
-        </Section>
-      )}
+      {thread.children.length > 0 && <Tree thread={thread} onChange={onChange} />}
 
       {(outputs.length > 0 || changes) && (
         <Section title={outputs.length ? `Outputs · ${outputs.length}` : 'Outputs'}>

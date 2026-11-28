@@ -26,6 +26,7 @@ const REPORTS: Record<string, string> = {
   nothing: 'nothing new',
   report: 'reported',
   needs_person: 'needs you',
+  needs_parent: 'needs parent',
   failed: 'failed',
   cancelled: 'cancelled',
 }
@@ -85,6 +86,7 @@ const STATE_TONES: Record<string, string> = {
   reported: 'bg-success/15 text-success',
   working: 'bg-primary/15 text-primary',
   'needs you': 'bg-warning/15 text-warning',
+  'needs parent': 'bg-primary/15 text-primary',
   failed: 'bg-destructive/15 text-destructive-text',
 }
 
@@ -157,6 +159,7 @@ const REVIEW_ENDS: Record<string, string> = {
   report: 'came in',
   nothing: 'came in',
   needs_person: 'needs you',
+  needs_parent: 'needs its parent',
   failed: 'failed',
   cancelled: 'was cancelled',
 }

@@ -86,6 +86,7 @@ export const RunOutcome = z.enum([
   'report',
   'nothing',
   'needs_person',
+  'needs_parent',
   'failed',
   'cancelled',
   /** A run that reports to nobody ended: Brigade can't tell what it found. */

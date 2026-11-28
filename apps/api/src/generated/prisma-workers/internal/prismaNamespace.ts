@@ -10031,6 +10031,8 @@ export const SessionScalarFieldEnum = {
   askedByMemberId: 'askedByMemberId',
   origin: 'origin',
   parentId: 'parentId',
+  rootId: 'rootId',
+  wakeEach: 'wakeEach',
   parentTeammateId: 'parentTeammateId',
   awaited: 'awaited',
   awaitUntil: 'awaitUntil',
@@ -11374,6 +11376,8 @@ export const ThreadFollowScalarFieldEnum = {
   sessionId: 'sessionId',
   followerId: 'followerId',
   deliveredAt: 'deliveredAt',
+  fromSeq: 'fromSeq',
+  deliveredSeq: 'deliveredSeq',
   createdAt: 'createdAt'
 } as const
 

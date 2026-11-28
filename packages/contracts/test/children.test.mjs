@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  treeMessage,
   batchNote,
   childNote,
   childPrompt,
@@ -362,9 +363,87 @@ test('what a parent tells its child later is read back as its note', () => {
   assert.equal(childNote(sent), 'parent')
   assert.deepEqual(fromParent(sent), {
     from: 'Riley',
+    relation: 'parent',
     parentTitle: 'Playbooks',
     text: 'Fetch **again**',
   })
   // A person writing the same words is still a person.
   assert.equal(fromParent('**Riley** wrote from the parent thread'), null)
+})
+
+test('a message within a tree says its relation, and reads back as a note', () => {
+  for (const relation of ['child', 'sibling', 'tree']) {
+    const sent = treeMessage({ from: 'Cody', relation, title: 'Render the video', text: 'Done.' })
+    assert.equal(childNote(sent), 'parent')
+    assert.equal(
+      sent.split('\n', 1)[0],
+      `**Cody** wrote from the ${relation} thread “Render the video”:`,
+    )
+    assert.deepEqual(fromParent(sent), {
+      from: 'Cody',
+      relation,
+      parentTitle: 'Render the video',
+      text: 'Done.',
+    })
+  }
+})
+
+test('needs_parent wakes the parent, with what to do, and reads back with its status', () => {
+  assert.equal(wakesParent('needs_parent'), true)
+  assert.equal(wakesParent('nothing'), false)
+  const note = singleNote({
+    id: 'c1',
+    title: 'Pick the logo',
+    teammate: 'Cody',
+    schedule: null,
+    report: { status: 'needs_parent', summary: 'Violet or black?', at: new Date().toISOString() },
+  })
+  assert.match(note, /needs its parent:/)
+  assert.match(note, /answer it with `message_thread`/)
+  assert.equal(childNote(note), 'report')
+  assert.equal(noteThreads(note)?.threads[0]?.status, 'needs_parent')
+  // People read it without what the teammate is told to do.
+  assert.doesNotMatch(forPeople(note), /message_thread/)
+})
+
+test('a sub-thread’s brief carries its branches and the computer it runs on', () => {
+  const text = childPrompt({
+    from: 'Riley',
+    parentTitle: 'Launch kit',
+    instructions: 'Render the 30-second video.',
+    inputs: {
+      repos: [{ repository: 'acme/site', branch: 'brigade/riley-kit' }],
+      computer: 'Cloud',
+    },
+  })
+  assert.match(text, /You run on Cloud, not on your parent's computer\./)
+  assert.match(text, /Start from `brigade\/riley-kit` of acme\/site/)
+  assert.equal(childNote(text), 'task')
+})
+
+test('start_child takes the computer, files, branches and wake; report takes needs_parent', () => {
+  const start = ScheduleOperation.safeParse({
+    name: 'start_child',
+    title: 'Render',
+    instructions: 'Render it',
+    computer: { mine: "Ada's Mac" },
+    files: ['att1'],
+    repos: [{ repository: 'acme/site', branch: 'brigade/x' }],
+    wake: 'each',
+  })
+  assert.equal(start.success, true, start.error?.message)
+  assert.equal(
+    ScheduleOperation.safeParse({
+      name: 'start_child',
+      title: 'R',
+      instructions: 'R',
+      computer: 'bobs',
+    }).success,
+    false,
+  )
+  assert.equal(
+    ScheduleOperation.safeParse({ name: 'report', status: 'needs_parent', summary: 'Which?' })
+      .success,
+    true,
+  )
 })

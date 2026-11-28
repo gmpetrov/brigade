@@ -30,6 +30,27 @@ export const holds = (t: Tree, id: string): boolean =>
   t.id === id || !!t.children?.some((c) => holds(c, id))
 
 /**
+ * The most urgent state below a thread, at any depth: one waiting on this member (a ticket, a
+ * question, a failed one waiting on them), then one working; null when none is. A row with
+ * sub-threads shows it, so a level-2 "needs you" is never hidden under two folds.
+ */
+export function urgentBelow(
+  t: { children?: SidebarChild[] },
+  needsYou: Record<string, string>,
+): { status: 'waiting'; ask: string } | { status: 'running' } | null {
+  let working = false
+  for (const c of t.children ?? []) {
+    const ask = needsYou[c.id]
+    if (groupWith(c.status, ask) === 'waiting')
+      return { status: 'waiting', ask: ask ?? 'needs you' }
+    const below = urgentBelow(c, needsYou)
+    if (below?.status === 'waiting') return below
+    if (below || groupOf(c.status) === 'working') working = true
+  }
+  return working ? { status: 'running' } : null
+}
+
+/**
  * A thread's child threads as they show unfolded: waiting on a person (a ticket for this
  * member counts, and a failed one waiting on them, still red), then working, then the latest;
  * the first `cap` and the one open (or the one holding it), or all of them. `hidden`: how many
@@ -52,6 +73,13 @@ export function subThreadRows(
         ask && groupOf(c.status) === 'rest' && c.status !== 'failed'
           ? { ...c, status: 'waiting', ask }
           : { ...c, ask }
+      // What waits below it rises to it (needs you, then working); a failed one keeps its red dot.
+      const below = urgentBelow(c, needsYou)
+      const group = groupWith(row.status, row.ask)
+      if (below?.status === 'waiting' && group !== 'waiting' && row.status !== 'failed')
+        return { row: { ...row, status: 'waiting', ask: below.ask }, i }
+      if (below?.status === 'running' && group === 'rest' && row.status !== 'failed')
+        return { row: { ...row, status: 'running' }, i }
       return { row, i }
     })
     .sort(

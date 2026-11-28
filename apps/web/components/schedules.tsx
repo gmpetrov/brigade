@@ -32,6 +32,7 @@ export const OUTCOME: Record<RunOutcome, { label: string; dot: string }> = {
   nothing: { label: 'Nothing to do', dot: 'bg-success' },
   ended: { label: 'Ended', dot: 'bg-success' },
   needs_person: { label: 'Needs a person', dot: 'bg-warning' },
+  needs_parent: { label: 'Needs its parent', dot: 'bg-primary' },
   failed: { label: 'Failed', dot: 'bg-destructive-text' },
   cancelled: { label: 'Cancelled', dot: 'bg-muted-foreground/40' },
 }

@@ -7,6 +7,8 @@
 import {
   startedThreadBrief,
   threadComment,
+  treeMessage,
+  type TreeRelation,
   WAKEUPS_IN_A_ROW,
   type ScheduleOperation,
 } from '@brigade/contracts'
@@ -15,7 +17,7 @@ import { memberMayWrite } from './account-sharing.js'
 import { trackAudit } from './analytics.js'
 import { audit } from './audit.js'
 import { markOnChiefsWord } from './chief-answers.js'
-import { messageChild } from './children.js'
+import { machineRefusal, messageChild } from './children.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { pickLines, projectOf } from './lists.js'
 import { usableProject } from './projects.js'
@@ -42,6 +44,9 @@ type Caller = {
   projectId: string | null
   playbookRunId: string | null
   chiefWordSeq: number | null
+  /** Its parent, when it is a sub-thread, and the thread at the top of its tree (docs/sub-threads.md). */
+  parentId?: string | null
+  rootId?: string | null
 }
 
 type Teammate = Parameters<typeof pickLines>[3]
@@ -226,8 +231,96 @@ function ownThread(db: ScopedDb, teammateId: string, threadId: string) {
 }
 
 const NOWHERE =
-  'message_thread writes only in your child threads (list_children), the threads you started ' +
-  '(start_thread) and the other threads at the top you are a teammate of.'
+  'message_thread writes only in the threads of your own tree (your parent, your sub-threads and ' +
+  'theirs, your siblings), the threads you started (start_thread) and the other threads at the top ' +
+  'you are a teammate of.'
+
+/** The thread at the top of a thread's tree: itself at the top (two levels at most, SUBTHREAD_DEPTH). */
+async function treeRoot(
+  db: ScopedDb,
+  t: { id: string; parentId?: string | null; rootId?: string | null },
+) {
+  if (t.rootId) return t.rootId
+  if (!t.parentId) return t.id
+  const parent = await db.session.findFirst({
+    where: { id: t.parentId },
+    select: { parentId: true, rootId: true },
+  })
+  return parent?.rootId ?? parent?.parentId ?? t.parentId
+}
+
+/**
+ * Where a thread of the same tree as `session` sits, seen from it (the relation the message it
+ * receives says, treeMessage): the sender is its parent, its child, its sibling (same parent), or
+ * another thread of the tree. Null for a thread of another tree, or for this one.
+ */
+export async function treeRelation(
+  db: ScopedDb,
+  session: { id: string; parentId?: string | null; rootId?: string | null },
+  threadId: string,
+): Promise<TreeRelation | null> {
+  if (threadId === session.id) return null
+  const target = await db.session.findFirst({
+    where: { id: threadId },
+    select: { id: true, parentId: true, rootId: true },
+  })
+  if (!target) return null
+  const [mine, theirs] = await Promise.all([treeRoot(db, session), treeRoot(db, target)])
+  if (mine !== theirs) return null
+  if (target.parentId === session.id) return 'parent'
+  if (session.parentId === target.id) return 'child'
+  if (target.parentId && target.parentId === session.parentId) return 'sibling'
+  return 'tree'
+}
+
+/**
+ * A thread this one may write in with message_thread (and follow, follow_thread), and how: one it
+ * started (start_thread), its own child (messageChild), another thread of its tree, or a thread at
+ * the top its teammate works in. A playbook's run, only within its own tree. Null for any other.
+ * Who may write there is checked when it is written in.
+ */
+export async function writableThread(
+  db: ScopedDb,
+  session: Pick<Caller, 'id' | 'playbookRunId' | 'parentId' | 'rootId'>,
+  teammate: { id: string },
+  threadId: string,
+): Promise<
+  | { kind: 'started' | 'mine' | 'child'; id: string }
+  | { kind: 'tree'; id: string; relation: TreeRelation }
+  | null
+> {
+  if (threadId === session.id) return null
+  // A playbook's run writes only in its own tree: what started it is untrusted.
+  const started = session.playbookRunId
+    ? null
+    : await db.session.findFirst({
+        where: { id: threadId, startedFromId: session.id },
+        select: { id: true },
+      })
+  if (started) return { kind: 'started', id: started.id }
+  const relation = await treeRelation(db, session, threadId)
+  // A child of this thread is told more as a child (messageChild).
+  if (relation === 'parent') return { kind: 'child', id: threadId }
+  if (relation) return { kind: 'tree', id: threadId, relation }
+  if (session.playbookRunId) return null
+  const mine = await ownThread(db, teammate.id, threadId)
+  return mine ? { kind: 'mine', id: mine.id } : null
+}
+
+/**
+ * Whether the people of a thread (its starter, and whoever asked in it when that is another) may
+ * write in `target`: what a message from it there, or its following that thread, needs.
+ */
+export async function peopleMayWrite(
+  db: ScopedDb,
+  session: { id: string; startedByMemberId: string },
+  target: { startedByMemberId: string | null; othersMayPrompt: boolean; computerId: string },
+) {
+  const asker = await askedBy(db, session.id)
+  for (const memberId of new Set([session.startedByMemberId, ...(asker ? [asker] : [])]))
+    if (!(await memberMayWrite(target, memberId))) return false
+  return true
+}
 
 /**
  * Why message_thread may not write in a thread: said plainly, so the teammate knows what to do.
@@ -296,38 +389,40 @@ export async function messageThread(
   op: { threadId: string; text: string },
 ): Promise<object | { error: string }> {
   if (op.threadId === session.id) return { error: 'That is this thread: just reply here.' }
-  // A playbook's run writes only in its own children: what started it is untrusted.
-  const started = session.playbookRunId
-    ? null
-    : await db.session.findFirst({
-        where: { id: op.threadId, startedFromId: session.id },
-        select: { id: true },
-      })
-  // A child of this thread is told more as a child (messageChild).
-  const child =
-    !started &&
-    !!(await db.session.findFirst({
-      where: { id: op.threadId, parentId: session.id },
+  const found = await writableThread(db, session, teammate, op.threadId)
+  if (!found) return refusal(db, session, teammate, op.threadId)
+  // A child of this thread is told more as a child: it carries on and reports again.
+  if (found.kind === 'child') return messageChild(db, scope, session, teammate, found.id, op.text)
+  const mine = found.kind === 'mine'
+  // A pull request's review is asked to look again by the thread whose pull request it reads.
+  if (
+    found.kind === 'tree' &&
+    (await db.pullRequest.findFirst({
+      where: {
+        OR: [{ reviewSessionId: found.id }, { reviews: { some: { sessionId: found.id } } }],
+      },
       select: { id: true },
     }))
-  const mine =
-    started || child || session.playbookRunId ? null : await ownThread(db, teammate.id, op.threadId)
-  const found = started ?? mine
-  if (!found)
-    return child
-      ? messageChild(db, scope, session, teammate, op.threadId, op.text)
-      : refusal(db, session, teammate, op.threadId)
+  )
+    return {
+      error:
+        'That thread reviews a pull request: only the thread that opened it asks it to look again. Write to that thread instead.',
+    }
   const target = await loadThread(db, found.id)
   // As a message from this thread's person would: only where they may write. And from whoever
   // asked for it here, when that is another (a thread shared with them): they ask there too.
   const asker = await askedBy(db, session.id)
-  for (const memberId of new Set([session.startedByMemberId, ...(asker ? [asker] : [])]))
-    if (!(await memberMayWrite(target, memberId)))
-      return {
-        error: "The person in this thread may not write in that one: it is someone else's.",
-      }
+  if (!(await peopleMayWrite(db, session, target)))
+    return {
+      error: "The person in this thread may not write in that one: it is someone else's.",
+    }
   if (target.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
+  // On a member's own machine, in its tree: only on that member's word (start_child's `mine`).
+  if (found.kind === 'tree') {
+    const machine = await machineRefusal(db, session, target)
+    if (machine) return { error: machine }
+  }
   const place = await takeCommentPlace(scope, target.id, {
     teammateId: teammate.id,
     fromId: session.id,
@@ -357,7 +452,16 @@ export async function messageThread(
     // Written on Chief's word: the work it asks for there goes on it too.
     await markOnChiefsWord(db, target.id, session)
     outcome = await promptThread(db, scope, target, {
-      text: threadComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
+      // Within a tree, it says the relation, as a parent's notes always did (docs/sub-threads.md).
+      text:
+        found.kind === 'tree'
+          ? treeMessage({
+              from: teammate.name,
+              relation: found.relation,
+              title: session.title,
+              text: op.text,
+            })
+          : threadComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
       memberId: null,
       // Whoever asked for it here asks in that thread too.
       onBehalfOf: asker,
@@ -391,7 +495,13 @@ export async function messageThread(
     target: { type: 'thread', id: target.id },
     data: { fromId: session.id },
   })
-  return { ok: true, note: 'Posted to that thread; its teammate reads it and answers there.' }
+  return {
+    ok: true,
+    note:
+      found.kind === 'tree'
+        ? `Posted to that thread of your tree (you are its ${found.relation === 'tree' ? 'relative in the tree' : found.relation}); its teammate reads it and goes on there. A sub-thread reports to its own parent as before.`
+        : 'Posted to that thread; its teammate reads it and answers there.',
+  }
 }
 
 /** start_thread and message_thread, from handleScheduleCall. */

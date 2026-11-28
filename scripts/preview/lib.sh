@@ -9,7 +9,8 @@ DATA=$REPO/.preview
 NODE_VERSION=24.22.1
 EMBEDDED_POSTGRES=17.10.0-beta.17
 PG_CACHE=$CACHE/postgres-$EMBEDDED_POSTGRES
-DB_PORT=5433
+# Another preview of Brigade on the same computer holds 5433: PREVIEW_DB_PORT gives this one its own.
+DB_PORT=${PREVIEW_DB_PORT:-5433}
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 

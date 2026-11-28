@@ -139,8 +139,18 @@ export * from './usage.js'
  *     turn.completed carry what the Pi benchmark compares (harness, model, tool calls and errors).
  * 56: teammates on Antigravity (ANTIGRAVITY_PROTOCOL): ThreadSpec.teammate.harness and an account's
  *     provider may be `antigravity`, a Google account signed in with Antigravity's own `agy`.
+ * 57: agent swarms (SUBTHREADS_PROTOCOL, docs/sub-threads.md): ThreadSpec.tree (its level and root);
+ *     start_child's `computer`, `files`, `repos` and `wake`; a sub-thread above the last level starts
+ *     its own; the report status `needs_parent`; follow_thread on any thread it may write in.
  */
-export const PROTOCOL_VERSION = 56
+export const PROTOCOL_VERSION = 57
+/**
+ * Runners from this version on hand a sub-thread its computer, files and branches, and run one
+ * started on another computer than its parent's. The API starts none elsewhere on an older one:
+ * start_child says that computer's Brigade must update first. A runner offers the new fields only
+ * where its API sent ThreadSpec.tree (an older API would drop them).
+ */
+export const SUBTHREADS_PROTOCOL = 57
 /**
  * Runners from this version on run a teammate on Pi (TeammateHarness). The API starts no Pi turn on
  * an older one, whose spec would not parse: it says the computer's Brigade must update first.
