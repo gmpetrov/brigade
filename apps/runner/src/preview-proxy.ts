@@ -4,7 +4,8 @@
 // - The app's other ports (its API) are served under /__ports/<port>/ on the
 //   same address: one origin, one token from the provider, no CORS.
 // - The dashboard shows the preview in a frame on another site, where a
-//   browser drops SameSite=Lax cookies: over HTTPS, the app's cookies become
+//   browser drops SameSite=Lax cookies: over HTTPS, or at the computer's own
+//   <thread>.localhost on a member's machine, the app's cookies become
 //   SameSite=None; Secure; Partitioned (kept for that frame only) with no
 //   Domain, so signing in works in the frame without changing the app.
 // - While the app starts, restarts or is down, a page that says so and reloads
@@ -63,6 +64,18 @@ export function crossSiteCookie(cookie: string) {
     .map((a) => a.trim())
     .filter((a) => a && !/^(samesite|domain|secure|partitioned)\s*(=|$)/i.test(a))
   return [pair.trim(), ...kept, 'Secure', 'SameSite=None', 'Partitioned'].join('; ')
+}
+
+/** A proxy behind the address people open: cookies for the dashboard's frame, and its host. */
+export function behind(options: PreviewProxyOptions, origin: string) {
+  const url = new URL(origin)
+  // In the dashboard's frame (another site), only Secure, partitioned cookies are kept. They
+  // need HTTPS, or the computer's own name: browsers keep Secure cookies from
+  // http://<thread>.localhost as from HTTPS (Chrome, Brigade.app and WebKit, in a frame and a tab).
+  const loopback = url.hostname === 'localhost' || url.hostname.endsWith('.localhost')
+  options.crossSiteCookies = url.protocol === 'https:' || loopback
+  // Behind the preview gateway, the app is asked for the gateway's host, not the provider's.
+  if (url.protocol === 'https:') options.publicHost = url.host
 }
 
 /** The port a request goes to and the path the app sees; null for an unknown /__ports/ port. */

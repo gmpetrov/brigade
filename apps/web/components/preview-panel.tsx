@@ -29,6 +29,7 @@ import {
   Power,
   RotateCw,
   ScrollText,
+  ShieldQuestion,
   Square,
   SquareMousePointer,
   X,
@@ -42,6 +43,7 @@ export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { frameAllow, useLocalAccess } from '@/lib/local-preview'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
 import { previewOrigin, typedPath, withPath } from '@/lib/preview-path'
 import { readPreviewPage, rememberPreviewPage } from '@/lib/thread-side'
@@ -290,6 +292,15 @@ function LivePreviewPanel({
     },
     [threadId],
   )
+  const openTab = () => openAddress(() => fresh()).catch((error: Error) => setError(error.message))
+  // On this computer, whether the browser shows the frame; once the person allows it, the
+  // frame loads again (it showed the browser's blocked page meanwhile).
+  const localAccess = useLocalAccess(view?.local)
+  const allowed = useRef(localAccess)
+  useEffect(() => {
+    if (allowed.current !== 'frame' && localAccess === 'frame') setFrame((n) => n + 1)
+    allowed.current = localAccess
+  }, [localAccess])
   const reload = (path?: string) =>
     void fresh().then(
       (url) => {
@@ -456,7 +467,7 @@ function LivePreviewPanel({
                   aria-label="Open in a new tab"
                   onClick={(e) => {
                     e.preventDefault()
-                    void openAddress(() => fresh()).catch((error: Error) => setError(error.message))
+                    void openTab()
                   }}
                 >
                   <ExternalLink aria-hidden className="size-3.5" />
@@ -612,18 +623,39 @@ function LivePreviewPanel({
                   <span className="font-mono text-foreground">{address}</span>.
                 </p>
               )}
-              <iframe
-                ref={select.frame}
-                key={`${preview.previewId}:${frame}`}
-                src={opened?.url ?? view.url}
-                title={`Preview of the app ${teammateName} runs`}
-                className="min-h-0 w-full flex-1 border-0 bg-white"
-                // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
-                // and what it opens (a sign-in tab) is a plain tab, without the frame's sandbox.
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
-                allow="clipboard-read; clipboard-write; fullscreen"
-                referrerPolicy="no-referrer"
-              />
+              {localAccess === 'ask' && (
+                <Notice icon={<ShieldQuestion aria-hidden className="size-4 shrink-0" />}>
+                  To show it here, your browser asks to let this page reach apps on this computer:
+                  choose Allow.
+                  <NoticeAction onClick={() => void openTab()}>Open in a new tab</NoticeAction>
+                </Notice>
+              )}
+              {localAccess === 'denied' || localAccess === 'tab' ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
+                  <p className="max-w-sm">
+                    {localAccess === 'tab'
+                      ? 'This browser does not show an app running on this computer inside a page of Brigade. Open it in a new tab, or use Chrome or Brigade.app to see it here.'
+                      : 'Your browser blocks this page from reaching apps on this computer. To see it here, allow Local network access in the site settings (left of the address bar), then reload. Or open it in a new tab.'}
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => void openTab()}>
+                    <ExternalLink aria-hidden />
+                    Open in a new tab
+                  </Button>
+                </div>
+              ) : (
+                <iframe
+                  ref={select.frame}
+                  key={`${preview.previewId}:${frame}`}
+                  src={opened?.url ?? view.url}
+                  title={`Preview of the app ${teammateName} runs`}
+                  className="min-h-0 w-full flex-1 border-0 bg-white"
+                  // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
+                  // and what it opens (a sign-in tab) is a plain tab, without the frame's sandbox.
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
+                  allow={frameAllow(view.local)}
+                  referrerPolicy="no-referrer"
+                />
+              )}
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">

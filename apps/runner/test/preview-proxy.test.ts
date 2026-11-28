@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import http from 'node:http'
 import { test } from 'node:test'
-import { PreviewProxy } from '../src/preview-proxy.js'
+import { PreviewProxy, behind, crossSiteCookie } from '../src/preview-proxy.js'
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
@@ -212,4 +212,33 @@ test("behind the preview gateway, the app is asked for the gateway's host, WebSo
     { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
     { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf', origin: 'https://abc.brigade.surf' },
   ])
+})
+
+test("the app's cookies are rewritten for the dashboard's frame over HTTPS and on this computer", () => {
+  const options = () => ({
+    port: 1,
+    ports: [],
+    crossSiteCookies: false,
+    state: () => 'running' as const,
+    onUse: () => undefined,
+  })
+  const gateway = options()
+  behind(gateway, 'https://abc.brigade.surf')
+  assert.equal(gateway.crossSiteCookies, true)
+  assert.equal((gateway as { publicHost?: string }).publicHost, 'abc.brigade.surf')
+  // A member's machine: Secure, partitioned cookies are kept at <thread>.localhost over http,
+  // and the app keeps its own Host.
+  for (const origin of ['http://t1.localhost:31234', 'http://localhost:31234']) {
+    const local = options()
+    behind(local, origin)
+    assert.equal(local.crossSiteCookies, true, origin)
+    assert.equal((local as { publicHost?: string }).publicHost, undefined, origin)
+  }
+  const plain = options()
+  behind(plain, 'http://10.0.0.5:31234')
+  assert.equal(plain.crossSiteCookies, false)
+  assert.equal(
+    crossSiteCookie('sid=1; Path=/; HttpOnly; SameSite=Lax; Domain=t1.localhost'),
+    'sid=1; Path=/; HttpOnly; Secure; SameSite=None; Partitioned',
+  )
 })

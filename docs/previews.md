@@ -107,7 +107,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   provider hosts the proxy's port (`publicPort`), not the app's. It fixes what
   apps cannot be asked to change:
   - **Cookies.** In a frame on another site a browser drops `SameSite=Lax` and
-    `Strict` cookies, so signing in to the app does nothing. Over HTTPS the proxy
+    `Strict` cookies, so signing in to the app does nothing. Over HTTPS, and on a
+    member's Mac at `http://<thread>.localhost` (below), the proxy
     rewrites every `Set-Cookie` to `Secure; SameSite=None; Partitioned` without
     `Domain`: kept for the dashboard's frame only (partitioned, so not a tracking
     cookie) and for the preview's host only. Tested in Chrome 151: an app's
@@ -413,9 +414,46 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   cookies). Frameworks' dev servers accept the name as they accept `localhost`
   (Next's dev origins allow `**.localhost`, Vite's hosts `.localhost`). The
   runner says the address in `preview.logs.result` (`origin`); the API hands
-  out plain `localhost` for runners before it. In a frame of the dashboard
-  (HTTPS), both engines block `http://localhost` and `http://<thread>.localhost`
-  alike, so the pane is no worse off than before: the new tab is the way out.
+  out plain `localhost` for runners before it.
+- **On a member's Mac, the pane frames the preview where the browser allows it**
+  (`apps/web/lib/local-preview.ts`). The frame is `http://<thread>.localhost`
+  under the dashboard's HTTPS page, which browsers treat in three ways
+  (measured on November 28, 2026 with a public HTTPS page framing an app that
+  signs in with a `Lax` cookie):
+  - **Brigade.app** (Electron 45) shows the frame without asking. Only the
+    cookie was wrong: the app's `Lax` session cookie was dropped in the frame,
+    so Brigade's own preview (`scripts/preview/proxy.mjs` signs in on each load
+    without a session) reloaded `/app` forever. The proxy now rewrites cookies
+    there as over HTTPS (above): browsers keep `Secure` cookies from
+    `http://localhost` and its subdomains as from HTTPS (Chrome 158, Electron 45
+    and Playwright's WebKit, in a frame and in a tab alike), so the rewritten
+    one keeps the app signed in across reloads. The app keeps its own `Host`.
+    Brigade.app also allows Chromium's Local Network Access permission for the
+    dashboard's pages (`apps/desktop/src/windows.ts`), for an Electron that
+    starts asking.
+  - **Chrome** (142 and later) asks first: a public page reaching the
+    computer's own addresses needs its Local Network Access permission
+    (`loopback-network`, formerly `local-network-access`), once for the
+    dashboard's site. Until it is allowed, the frame shows Chrome's "The
+    connection is blocked because it was initiated by a public page" page;
+    once it is, the frame shows the app, signed in. The frame delegates the
+    permission (`allow`, every name it has had) and the pane reads its state
+    (`navigator.permissions`): while Chrome asks, a line says to choose Allow,
+    and the frame loads again once allowed; refused, the pane shows no frame
+    but how to allow it in the site's settings, and the new tab.
+  - **Safari** (WebKit) blocks the frame whatever is allowed, `localhost` and
+    `127.0.0.1` alike: the pane shows no frame there, but a line saying to open
+    it in a new tab, or to use Chrome or Brigade.app.
+  - **Firefox** (not measured) treats `localhost` as a secure origin and keeps
+    partitioned cookies: the pane frames it.
+
+  The preview stays reachable from the member's own machine only: the proxy
+  listens on the loopback (`127.0.0.1`), and the permission only lets the
+  dashboard's page on that machine reach it. Serving it over local HTTPS was
+  not needed for these browsers, and would not lift Chrome's question (it is
+  about the address, not the scheme); routing it through `brigade.surf` would
+  send every request of a dev server out to Cloudflare and back.
+
 - **On a member's Mac, a preview nobody uses stops where it is.** There is no
   cgroup to freeze it, so after `FREEZE_MS` without use its process group gets
   `SIGSTOP`, and the running containers of its thread's Compose project are
@@ -820,6 +858,8 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
 
 ## Known limits
 
+- **Safari on a member's Mac** cannot show the preview in the pane at all (above):
+  the new tab is the way there.
 - **Safari** blocks third-party cookies, partitioned ones too (Playwright's
   WebKit dropped an app's rewritten session cookie in the frame): pages load in
   the pane through the gateway, but signing in to the app there needs the new
