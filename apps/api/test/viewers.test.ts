@@ -34,4 +34,6 @@ test('a viewer opens an app and keeps its own state in it, under /api/apps', () 
   for (const route of ['view', 'files', 'state']) assert.ok(viewerMay('POST', `/api/apps/${route}`))
   for (const route of ['call', 'accounts', 'accounts/allow'])
     assert.ok(!viewerMay('POST', `/api/apps/${route}`))
+  // /api/tools, the name before the rename, is gone.
+  assert.ok(!viewerMay('POST', '/api/tools/view'))
 })
