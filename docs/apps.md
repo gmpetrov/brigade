@@ -128,8 +128,8 @@ of its own, from an icon of its own, as Chrome's installed web apps and Claude's
 artifacts do. Behind the `apps` feature, like apps themselves. Not in a browser: a web install (a
 PWA manifest per app) is a separate change.
 
-- **What a member sees.** The app's title menu (`components/tool-view.tsx`) has **Install on this
-  computer**, in Brigade.app's dashboard window only, when its bridge has `apps` (an older
+- **What a member sees.** The app's title menu (`components/tool-view.tsx`) has **Install as app**
+  (marked Beta), in Brigade.app's dashboard window only, when its bridge has `apps` (an older
   Brigade.app shows nothing). Brigade.app asks first, in its own dialog ("Install “Clip review”
   as an app?"), then opens the app. Once installed, the menu has **Open in its own window** and
   **Uninstall from this computer** instead.

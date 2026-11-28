@@ -18,7 +18,7 @@ import {
   Maximize2,
   MessageSquare,
   Minimize2,
-  MonitorDown,
+  Laptop,
   SquareArrowOutUpRight,
   SquareMousePointer,
   Trash2,
@@ -401,8 +401,11 @@ export function ToolPanel({
                         }).catch(() => undefined)
                       }
                     >
-                      <MonitorDown aria-hidden />
-                      Install on this computer
+                      <Laptop aria-hidden />
+                      Install as app
+                      <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        Beta
+                      </span>
                     </DropdownMenuItem>
                   )}
                 </>
