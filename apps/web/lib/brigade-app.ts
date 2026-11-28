@@ -86,6 +86,9 @@ export const captures = {
  */
 export const DESKTOP_SIGN_IN = '/app/desktop-sign-in'
 
+/** An installed app's window (apps/desktop/src/app-windows.ts): the app alone. */
+export const APP_WINDOW = '/app/apps/window'
+
 /** Opens the browser to sign the window in; the app then brings it back to /sign-in with the code. */
 export const signInWithBrowser = () =>
   bridge()?.signInWithBrowser() ?? invoke<void>('capture_sign_in')

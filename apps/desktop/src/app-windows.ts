@@ -308,8 +308,10 @@ export function parseInstall(input: unknown): InstallInput | undefined {
 }
 
 const WHERE: Record<string, string> = {
-  darwin: 'It opens in its own window, with its own icon in the Dock, from ~/Applications/Brigade Apps.',
-  win32: 'It opens in its own window, with its own taskbar button, from the Start menu under Brigade Apps.',
+  darwin:
+    'It opens in its own window, with its own icon in the Dock, from ~/Applications/Brigade Apps.',
+  win32:
+    'It opens in its own window, with its own taskbar button, from the Start menu under Brigade Apps.',
   linux: 'It opens in its own window, from your app launcher.',
 }
 
@@ -452,8 +454,22 @@ export async function openInstall(installId: string) {
   )
 }
 
+/** What went wrong, said by Brigade itself (the page has no room for it): `otherwise` then. */
+async function shown<T, O>(title: string, work: () => Promise<T>, otherwise: O): Promise<T | O> {
+  try {
+    return await work()
+  } catch (error) {
+    await alert(title, (error as Error).message, 'error')
+    return otherwise
+  }
+}
+
 /** Uninstalls: asked first, then its window closes and only what the list names is removed. */
-export async function uninstall(installId: string) {
+export function uninstall(installId: string) {
+  return shown('Could not uninstall the app', () => uninstalling(installId), false)
+}
+
+async function uninstalling(installId: string) {
   const entry = installed.byInstallId(installId)
   if (!entry) return false
   const yes = await confirm({
@@ -486,7 +502,10 @@ async function removeFiles(entry: Entry) {
     rmSync(path, { force: true })
   } else {
     if (!existsSync(path)) return
-    if (!linux.isAppEntry(path) || linux.entryInstallId(readFileSync(path, 'utf8')) !== entry.installId)
+    if (
+      !linux.isAppEntry(path) ||
+      linux.entryInstallId(readFileSync(path, 'utf8')) !== entry.installId
+    )
       throw new Error(`${path} was left as it is.`)
     rmSync(path, { force: true })
     execFile('update-desktop-database', [linux.applicationsFolder()], () => {})
@@ -563,13 +582,13 @@ export function registerAppsBridge() {
     if (!fromDashboard(event)) throw new Error('Not allowed.')
     const parsed = parseInstall(input)
     if (!parsed) throw new Error('This app cannot be installed.')
-    return install(parsed)
+    return shown('Could not install the app', () => install(parsed), null)
   })
   ipcMain.handle('brigade:apps:open', async (event, appId: unknown) => {
     if (!fromDashboard(event)) throw new Error('Not allowed.')
     const entry = currentList().find((a) => a.appId === appId)
     if (!entry) throw new Error('This app is not installed.')
-    await openApp(entry)
+    await shown('Could not open the app', () => openApp(entry), undefined)
   })
   ipcMain.handle('brigade:apps:uninstall', async (event, appId: unknown) => {
     if (!fromDashboard(event)) throw new Error('Not allowed.')

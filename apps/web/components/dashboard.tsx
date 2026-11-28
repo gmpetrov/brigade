@@ -118,7 +118,7 @@ import {
 } from '@/lib/api'
 import { setLiveWorkspace } from '@/lib/live-socket'
 import { setThreadsShownScope } from '@/lib/use-thread-events'
-import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
+import { APP_WINDOW, DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { useDesktopFrame } from '@/lib/desktop-frame'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
@@ -344,7 +344,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       router.replace('/onboarding')
   }, [me.data, pathname, router])
 
-  // Opened from a notification about another of the member's workspaces: switch to it.
+  // Opened from a notification about another of the member's workspaces, or an installed app's
+  // window for an app of another one: switch to it.
   useEffect(() => {
     const wanted = new URLSearchParams(window.location.search).get('workspace')
     if (!wanted || !me.data || wanted === me.data.activeWorkspaceId) return
@@ -374,8 +375,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useSidebarKeys()
 
   // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
-  // So does the page that signs that window in, in the browser.
-  const alone = pathname === '/app/capture' || pathname === DESKTOP_SIGN_IN
+  // So does the page that signs that window in, in the browser, and an installed app's window.
+  const alone =
+    pathname === '/app/capture' || pathname === DESKTOP_SIGN_IN || pathname === APP_WINDOW
+
   useEffect(() => {
     if (pathname === '/app' && inCaptureWindow()) router.replace('/app/capture')
   }, [pathname, router])

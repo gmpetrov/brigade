@@ -191,3 +191,31 @@ test("a page opens its channel only with its address's key, and one port", () =>
     port2.close()
   }
 })
+
+test('a badge shows only where the app has its own icon, as a whole number', async () => {
+  const { host: h } = host()
+  // In a panel: nothing to show it on.
+  assert.deepEqual(await answer(h, ask('badge.set', { count: 3 })), {
+    source: 'brigade-host',
+    id: 'c1',
+    ok: true,
+    result: { shown: false },
+  })
+  const shown: number[] = []
+  const installed = {
+    ...h,
+    setBadge: (n: number) => {
+      shown.push(n)
+      return true
+    },
+  }
+  const reply = await answer(installed, ask('badge.set', { count: 4 }))
+  assert.deepEqual(reply.ok && reply.result, { shown: true })
+  await answer(installed, ask('badge.set', {}))
+  await answer(installed, ask('badge.set', { count: 1e12 }))
+  for (const count of [-1, 1.5, '3']) {
+    const refused = await answer(installed, ask('badge.set', { count }))
+    assert.equal(refused.ok, false, String(count))
+  }
+  assert.deepEqual(shown, [4, 0, 100_000])
+})

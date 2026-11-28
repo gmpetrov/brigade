@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -170,11 +177,17 @@ test("the shim's Info.plist escapes what it holds and names the host", () => {
     hostBundleId: 'ai.brigade.desktop',
     minimumSystemVersion: '14.0',
   })
-  assert.match(text, /<key>CFBundleName<\/key>\n\t<string>Tom &amp; Jerry &lt;&quot;board&quot;&gt;<\/string>/)
+  assert.match(
+    text,
+    /<key>CFBundleName<\/key>\n\t<string>Tom &amp; Jerry &lt;&quot;board&quot;&gt;<\/string>/,
+  )
   assert.doesNotMatch(text, /\u0001/)
   assert.match(text, new RegExp(`<string>ai.brigade.desktop.app.${ID}</string>`))
   assert.match(text, /<key>ElectronAppShimServerName<\/key>\n\t<string>brigade-apps<\/string>/)
-  assert.match(text, /<key>ElectronAppShimHostArguments<\/key>\n\t<array><string>--app-shim<\/string><\/array>/)
+  assert.match(
+    text,
+    /<key>ElectronAppShimHostArguments<\/key>\n\t<array><string>--app-shim<\/string><\/array>/,
+  )
   assert.match(text, /<key>BrigadeAppInstallId<\/key>\n\t<string>0123456789abcdef/)
   if (process.platform === 'darwin') {
     // macOS itself reads it back.
@@ -189,10 +202,25 @@ test("the shim's Info.plist escapes what it holds and names the host", () => {
 })
 
 test('only bundles in the apps folder may be removed, and links are refused', () => {
-  assert.equal(inAppsFolder('/Users/a/Applications/Brigade Apps/X.app', '/Users/a/Applications/Brigade Apps'), true)
-  assert.equal(inAppsFolder('/Users/a/Applications/Brigade Apps/../X.app', '/Users/a/Applications/Brigade Apps'), false)
-  assert.equal(inAppsFolder('/Users/a/Applications/Brigade Apps/X', '/Users/a/Applications/Brigade Apps'), false)
-  assert.equal(inAppsFolder('/Applications/Brigade.app', '/Users/a/Applications/Brigade Apps'), false)
+  assert.equal(
+    inAppsFolder('/Users/a/Applications/Brigade Apps/X.app', '/Users/a/Applications/Brigade Apps'),
+    true,
+  )
+  assert.equal(
+    inAppsFolder(
+      '/Users/a/Applications/Brigade Apps/../X.app',
+      '/Users/a/Applications/Brigade Apps',
+    ),
+    false,
+  )
+  assert.equal(
+    inAppsFolder('/Users/a/Applications/Brigade Apps/X', '/Users/a/Applications/Brigade Apps'),
+    false,
+  )
+  assert.equal(
+    inAppsFolder('/Applications/Brigade.app', '/Users/a/Applications/Brigade Apps'),
+    false,
+  )
   if (process.platform === 'win32') return
   const dir = mkdtempSync(join(tmpdir(), 'brigade-folder-'))
   ownFolder(join(dir, 'made'))
@@ -240,7 +268,10 @@ test("Windows' shortcut names the install", () => {
 test('the desktop entry quotes its Exec and names its window class', () => {
   assert.equal(execArg('/opt/Brigade/brigade-desktop'), '"/opt/Brigade/brigade-desktop"')
   // A quote, a dollar, a backtick, a backslash and a percent, each escaped as the spec says.
-  assert.equal(execArg('/a "b" $c `d` \\e 50%'), '"/a \\\\"b\\\\" \\\\$c \\\\`d\\\\` \\\\\\\\e 50%%"')
+  assert.equal(
+    execArg('/a "b" $c `d` \\e 50%'),
+    '"/a \\\\"b\\\\" \\\\$c \\\\`d\\\\` \\\\\\\\e 50%%"',
+  )
   const text = desktopEntry({
     installId: ID,
     name: 'Clip\nreview',
@@ -252,8 +283,20 @@ test('the desktop entry quotes its Exec and names its window class', () => {
   assert.match(text, new RegExp(`^StartupWMClass=${wmClass(ID)}$`, 'm'))
   assert.equal(entryInstallId(text), ID)
   assert.equal(entryInstallId('[Desktop Entry]\nName=x\n'), undefined)
-  assert.equal(isAppEntry(`/h/.local/share/applications/brigade-app-${ID}.desktop`, '/h/.local/share/applications'), true)
-  assert.equal(isAppEntry('/h/.local/share/applications/brigade-desktop.desktop', '/h/.local/share/applications'), false)
+  assert.equal(
+    isAppEntry(
+      `/h/.local/share/applications/brigade-app-${ID}.desktop`,
+      '/h/.local/share/applications',
+    ),
+    true,
+  )
+  assert.equal(
+    isAppEntry(
+      '/h/.local/share/applications/brigade-desktop.desktop',
+      '/h/.local/share/applications',
+    ),
+    false,
+  )
   if (process.platform === 'linux') {
     // desktop-file-validate, where the desktop has it (CI's Ubuntu does once installed).
     const file = join(mkdtempSync(join(tmpdir(), 'brigade-entry-')), `brigade-app-${ID}.desktop`)

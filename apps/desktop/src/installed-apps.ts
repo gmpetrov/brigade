@@ -163,7 +163,8 @@ const RESERVED = [
 /** Words that pose as a vendor's app whatever follows ("Apple Pay", "Brigade Helper"). */
 const RESERVED_PREFIXES = ['brigade', 'apple', 'macos', 'microsoft', 'windows', 'icloud']
 
-const RESERVED_GLUED = /^(brigade|apple|macos|microsoft|icloud)(helper|update|updater|settings|support|app|pay|id)$/
+const RESERVED_GLUED =
+  /^(brigade|apple|macos|microsoft|icloud)(helper|update|updater|settings|support|app|pay|id)$/
 
 export function imitates(name: string) {
   const plain = name

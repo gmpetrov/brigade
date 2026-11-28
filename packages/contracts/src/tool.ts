@@ -251,6 +251,7 @@ export const TOOL_METHODS = [
   'apps.operations',
   'apps.call',
   'thread.send',
+  'badge.set',
 ] as const
 export type ToolMethod = (typeof TOOL_METHODS)[number]
 
@@ -365,6 +366,14 @@ const SOURCE = String.raw`(function () {
     thread: {
       send: function (text) {
         return call('thread.send', { text: text })
+      },
+    },
+    badge: {
+      set: function (count) {
+        return call('badge.set', { count: count })
+      },
+      clear: function () {
+        return call('badge.set', { count: 0 })
       },
     },
   }

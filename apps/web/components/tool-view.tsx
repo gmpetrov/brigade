@@ -18,7 +18,10 @@ import {
   Maximize2,
   MessageSquare,
   Minimize2,
+  MonitorDown,
+  SquareArrowOutUpRight,
   SquareMousePointer,
+  Trash2,
   RotateCw,
   TriangleAlert,
   X,
@@ -53,6 +56,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { api } from '@/lib/api'
+import { installApp, useInstalledApps } from '@/lib/desktop-apps'
+import { appWindowBridge, desktopBridge } from '@/lib/desktop-bridge'
 import { useElementPicker, type ElementPicker } from '@/lib/element-pickers'
 import { minimizesOnPageChange } from '@/lib/tool-aside'
 import { answer, bridgeRequest, connectPort, isBye, type ToolConfirm } from '@/lib/tool-host'
@@ -64,37 +69,25 @@ const SANDBOX =
 
 type Asking = { what: ToolConfirm; resolve: (yes: boolean) => void; channel: number }
 
-export function ToolPanel({
+/**
+ * A tool's page and the dashboard's side of its bridge: its view (address and accounts), its
+ * frame, and what it asks the person to confirm, one at a time. The panel beside a page or a
+ * thread and the window of an installed app (ToolWindow) both hold one.
+ */
+function useToolHost({
   folder,
   threadId,
-  onClose,
-  libraryLink = true,
-  inDocuments = false,
-  hidden = false,
-  onMinimize,
+  setBadge,
 }: {
   folder: string
-  /** Shown beside this thread: its messages go to it. */
   threadId?: string
-  onClose: () => void
-  /** A button to the tool in the library (not when already there). */
-  libraryLink?: boolean
-  /** Shown by the document panel, which stays open from page to page. */
-  inDocuments?: boolean
-  /**
-   * Kept but not shown (beside a thread while another one shows, components/kept-previews.tsx;
-   * a minimized document): its page stays as it was, not loaded again when it shows.
-   */
-  hidden?: boolean
-  /** In the document panel: folds it into its button, as a document does (⌄, ⌘.). */
-  onMinimize?: () => void
+  /** Where the app has an icon of its own (an installed app's window): its badge. */
+  setBadge?: (count: number) => boolean
 }) {
   const { me } = useDashboard()
   const [view, setView] = useState<ToolView>()
   const [error, setError] = useState<string>()
   const [reload, setReload] = useState(0)
-  const [expanded, setExpanded] = useState(false)
-  const [accountsOpen, setAccountsOpen] = useState(false)
   // What the page asks the person to confirm, one at a time, in order.
   const [asking, setAsking] = useState<Asking[]>([])
   const frame = useRef<HTMLIFrameElement>(null)
@@ -137,6 +130,9 @@ export function ToolPanel({
       new Promise<boolean>((resolve) => setAsking((list) => [...list, { what, resolve, channel }])),
     [],
   )
+
+  const badge = useRef(setBadge)
+  badge.current = setBadge
 
   const target = threadId ?? (view?.thread?.mayPrompt ? view.thread.id : undefined)
   const target_ = useRef(target)
@@ -183,6 +179,7 @@ export function ToolPanel({
             me: { memberId: me.memberId, name: me.user.name },
             api: (path, body) => api(path, { body }),
             confirm: (what) => confirm(what, id),
+            ...(badge.current && { setBadge: badge.current }),
           },
           request,
         ).then((reply) => {
@@ -206,13 +203,64 @@ export function ToolPanel({
     [],
   )
 
+  const first = asking[0]
+  function settle(yes: boolean) {
+    if (!first) return
+    first.resolve(yes)
+    setAsking((list) => list.slice(1))
+  }
+  return {
+    view,
+    error,
+    reload,
+    again: () => setReload((n) => n + 1),
+    refresh,
+    frame,
+    target,
+    first,
+    settle,
+  }
+}
+
+export function ToolPanel({
+  folder,
+  threadId,
+  onClose,
+  libraryLink = true,
+  inDocuments = false,
+  hidden = false,
+  onMinimize,
+}: {
+  folder: string
+  /** Shown beside this thread: its messages go to it. */
+  threadId?: string
+  onClose: () => void
+  /** A button to the tool in the library (not when already there). */
+  libraryLink?: boolean
+  /** Shown by the document panel, which stays open from page to page. */
+  inDocuments?: boolean
+  /**
+   * Kept but not shown (beside a thread while another one shows, components/kept-previews.tsx;
+   * a minimized document): its page stays as it was, not loaded again when it shows.
+   */
+  hidden?: boolean
+  /** In the document panel: folds it into its button, as a document does (⌄, ⌘.). */
+  onMinimize?: () => void
+}) {
+  const { me } = useDashboard()
+  const { view, error, reload, again, refresh, frame, target, first, settle } = useToolHost({
+    folder,
+    threadId,
+  })
+  const [expanded, setExpanded] = useState(false)
+  const [accountsOpen, setAccountsOpen] = useState(false)
+  const installed = useInstalledApps()
+  const install = installed && view ? installed.find((a) => a.appId === view.toolId) : undefined
+  const workspace = me.workspaces.find((w) => w.id === me.activeWorkspaceId)
+
   const title = view?.manifest?.title || toolName(folder)
   const slash = folder.lastIndexOf('/')
   const parent = slash >= 0 ? folder.slice(0, slash) : ''
-  const needs = view?.manifest?.apps ?? []
-  const missing = needs.filter((n) => !view?.accounts.some((a) => a.kind === n.kind)).length
-  const changed = view?.accounts.some((a) => a.changed) ?? false
-  const first = asking[0]
   // Its `index.html`, which its mention names. Not beside a thread: that one is already open.
   const toolId = view?.toolId
   const file = useMemo(
@@ -254,12 +302,6 @@ export function ToolPanel({
   // Without a thread open, Select opens the tool's own thread first, when the person may write
   // there: a new thread's composer takes no elements until its first message is sent.
   const opensThread = !picker && !threadId && Boolean(discussion && view?.thread?.mayPrompt)
-
-  function settle(yes: boolean) {
-    if (!first) return
-    first.resolve(yes)
-    setAsking((list) => list.slice(1))
-  }
 
   return (
     <SidePanel
@@ -324,10 +366,46 @@ export function ToolPanel({
                   </a>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onSelect={() => setReload((n) => n + 1)}>
+              <DropdownMenuItem onSelect={again}>
                 <RotateCw aria-hidden />
                 Reload
               </DropdownMenuItem>
+              {/* Brigade.app: the app in a window of its own, from its own icon. */}
+              {installed && view && workspace && (
+                <>
+                  <DropdownMenuSeparator />
+                  {install ? (
+                    <>
+                      <DropdownMenuItem
+                        onSelect={() => void desktopBridge()?.apps?.open(view.toolId)}
+                      >
+                        <SquareArrowOutUpRight aria-hidden />
+                        Open in its own window
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => void desktopBridge()?.apps?.uninstall(view.toolId)}
+                      >
+                        <Trash2 aria-hidden />
+                        Uninstall from this computer
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        void installApp({
+                          appId: view.toolId,
+                          folder: view.folder,
+                          title,
+                          workspace: { id: workspace.id, name: workspace.name },
+                        }).catch(() => undefined)
+                      }
+                    >
+                      <MonitorDown aria-hidden />
+                      Install on this computer
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <span className="flex-1" />
@@ -367,28 +445,7 @@ export function ToolPanel({
               <span className="max-sm:hidden">Ask {discussion.teammate.name}</span>
             </Button>
           )}
-          {needs.length > 0 && (
-            <Button
-              type="button"
-              variant={missing || changed ? 'secondary' : 'ghost'}
-              size="sm"
-              tooltip={
-                changed
-                  ? 'The app changed: allow its accounts again'
-                  : missing
-                    ? `${missing} account${missing > 1 ? 's' : ''} to attach`
-                    : 'Accounts it uses'
-              }
-              onClick={() => setAccountsOpen(true)}
-            >
-              {changed || missing ? (
-                <TriangleAlert aria-hidden className="text-warning" />
-              ) : (
-                <KeyRound aria-hidden />
-              )}
-              Accounts
-            </Button>
-          )}
+          {view && <AccountsButton view={view} onClick={() => setAccountsOpen(true)} />}
           {onMinimize && !expanded && <MinimizeButton onMinimize={onMinimize} />}
           <Button
             type="button"
@@ -441,6 +498,85 @@ export function ToolPanel({
       )}
       {!hidden && first && <Confirm asking={first} onAnswer={settle} />}
     </SidePanel>
+  )
+}
+
+/** Accounts, when the app asks for Apps: warned while one is missing or the app changed. */
+function AccountsButton({ view, onClick }: { view: ToolView; onClick: () => void }) {
+  const needs = view.manifest?.apps ?? []
+  if (!needs.length) return null
+  const missing = needs.filter((n) => !view.accounts.some((a) => a.kind === n.kind)).length
+  const changed = view.accounts.some((a) => a.changed)
+  return (
+    <Button
+      type="button"
+      variant={missing || changed ? 'secondary' : 'ghost'}
+      size="sm"
+      tooltip={
+        changed
+          ? 'The app changed: allow its accounts again'
+          : missing
+            ? `${missing} account${missing > 1 ? 's' : ''} to attach`
+            : 'Accounts it uses'
+      }
+      onClick={onClick}
+    >
+      {changed || missing ? (
+        <TriangleAlert aria-hidden className="text-warning" />
+      ) : (
+        <KeyRound aria-hidden />
+      )}
+      Accounts
+    </Button>
+  )
+}
+
+/**
+ * An installed app's window (Brigade.app, docs/apps.md): the app alone, its Accounts button and
+ * the confirmations, as in its panel, without the panel's chrome. Its count shows on its own
+ * icon (macOS).
+ */
+export function ToolWindow({ folder }: { folder: string }) {
+  const setBadge = useCallback((count: number) => {
+    const bridge = appWindowBridge()
+    if (!bridge) return false
+    bridge.apps.setBadge(count)
+    return bridge.info.platform === 'darwin'
+  }, [])
+  const { view, error, reload, refresh, frame, first, settle } = useToolHost({ folder, setBadge })
+  const [accountsOpen, setAccountsOpen] = useState(false)
+  const title = view?.manifest?.title || toolName(folder)
+  const needsAccounts = (view?.manifest?.apps?.length ?? 0) > 0
+  useEffect(() => {
+    document.title = title
+  }, [title])
+  return (
+    <main className="flex h-dvh flex-col bg-background" aria-label={`App ${title}`}>
+      {view && needsAccounts && (
+        <div className="flex items-center justify-end gap-1 border-b px-2 py-1.5">
+          <AccountsButton view={view} onClick={() => setAccountsOpen(true)} />
+        </div>
+      )}
+      <div className="relative min-h-0 flex-1">
+        {error ? (
+          <p className="p-4 text-sm text-muted-foreground">{error}</p>
+        ) : view ? (
+          <iframe
+            key={`${view.url}#${reload}`}
+            ref={frame}
+            src={view.url}
+            title={title}
+            sandbox={SANDBOX}
+            referrerPolicy="no-referrer"
+            className="block size-full border-0"
+          />
+        ) : null}
+      </div>
+      {accountsOpen && view && (
+        <ToolAccounts view={view} onChanged={refresh} onClose={() => setAccountsOpen(false)} />
+      )}
+      {first && <Confirm asking={first} onAnswer={settle} />}
+    </main>
   )
 }
 

@@ -29,7 +29,15 @@ export type ToolHost = {
   me: { memberId: string | null; name: string }
   api: <T>(path: string, body: unknown) => Promise<T>
   confirm: (what: ToolConfirm) => Promise<boolean>
+  /**
+   * The app's count on its own icon, where it has one: its window when installed on this
+   * computer (Brigade.app, docs/apps.md). Whether it shows; absent elsewhere.
+   */
+  setBadge?: (count: number) => boolean
 }
+
+/** The most a badge counts; above, it says so (999+). */
+export const BADGE_MAX = 100_000
 
 /**
  * The channel a tool's page opens (`connect`, with the key of its address and one end of a
@@ -170,6 +178,12 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       }
       if (!result.ok) throw new Refused(result.error, 'app_error')
       return result.output
+    }
+    case 'badge.set': {
+      const count = p.count ?? 0
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 0)
+        throw new Refused('A badge counts with a whole number, 0 or more')
+      return { shown: host.setBadge?.(Math.min(count, BADGE_MAX)) ?? false }
     }
     case 'thread.send': {
       const message = text(p.text)?.trim()
