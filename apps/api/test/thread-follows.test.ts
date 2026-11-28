@@ -727,3 +727,52 @@ test(
     assert.match(all[1]!, /Second\./)
   },
 )
+
+test('the sweep brings every missed turn end in order, and none past a gap', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: many ends' })
+  const watcher = await thread({ title: 'Watching many ends' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const at = new Date(Date.now() - 10 * 60_000)
+  const event = (seq: number, type: string, text?: string) => ({
+    ...scope,
+    sessionId: builder.id,
+    seq,
+    type,
+    at,
+    data: text ? { type, text } : { type, at: at.toISOString() },
+  })
+  // Two turns ended in one batch the hub checkpointed (lastSeq 4), then stopped before telling
+  // anyone; a third end is stored past a gap (seq 5 missing), so lastSeq stays at 4.
+  await prisma.sessionEvent.createMany({
+    data: [
+      event(1, 'message.done', 'One.'),
+      event(2, 'turn.completed'),
+      event(3, 'message.done', 'Two.'),
+      event(4, 'turn.completed'),
+      event(6, 'message.done', 'Three.'),
+      event(7, 'turn.completed'),
+    ],
+  })
+  const idle = (lastSeq: number) =>
+    prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+  await idle(4)
+  await settleOverdueChildren(scope.workspaceId)
+  let all = await notes(watcher)
+  assert.equal(all.length, 2)
+  assert.match(all[0]!, /One\./)
+  assert.match(all[1]!, /Two\./)
+  // The gap filled: lastSeq moves on, and the third end comes, once.
+  await prisma.sessionEvent.create({ data: event(5, 'message.user') })
+  await idle(7)
+  await settleOverdueChildren(scope.workspaceId)
+  await settleOverdueChildren(scope.workspaceId)
+  all = await notes(watcher)
+  assert.equal(all.length, 3)
+  assert.match(all[2]!, /Three\./)
+})

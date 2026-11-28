@@ -658,4 +658,27 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.equal(again.error, undefined, JSON.stringify(again))
     assert.equal((await row(done.threadId)).report, null)
   })
+
+  test('a follow-up to a sub-thread on an offline Mac keeps its report', async () => {
+    const root = await top(computers.cloud)
+    const onMac = await start(root, { computer: { mine: "Ada's Laptop" } })
+    assert.ok(onMac.threadId, JSON.stringify(onMac))
+    await reports({ id: onMac.threadId }, 'report', 'Deck drafted in Keynote.')
+    const kept = await row(onMac.threadId)
+    const laptop = runners[0]!
+    laptop.close()
+    try {
+      const out = (await messageThread(db, scope, await row(root.id), riley, {
+        threadId: onMac.threadId,
+        text: 'Add a slide on pricing.',
+      })) as Record<string, any>
+      assert.match(out.error ?? '', /offline/)
+    } finally {
+      runners[0] = await fakeRunner(scope, computers.laptop)
+    }
+    const after = await row(onMac.threadId)
+    assert.equal((after.report as { summary?: string } | null)?.summary, 'Deck drafted in Keynote.')
+    assert.deepEqual(after.reportDeliveredAt, kept.reportDeliveredAt)
+    assert.equal(after.awaited, kept.awaited)
+  })
 })

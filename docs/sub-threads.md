@@ -134,8 +134,9 @@ event). It goes by its events' sequence, never by a computer's clock: a follow k
 `lastSeq` when it was made (`fromSeq`) and the seq of the last end it heard (`deliveredSeq`), so a
 later end is news whatever happened between, and a machine whose clock is off loses none. One its
 delivery missed (a failed wake-up, an API restart) is woken by the minute's sweep, which takes only
-threads whose followers are behind (in SQL, before its limit), reads that turn's end again from
-the events, and marks the others up to date at the thread's last seq (within the hour).
+threads whose followers are behind (in SQL, before its limit), reads every turn end they missed in
+order up to the thread's committed `lastSeq` (never an event stored past a gap), and marks them up
+to date there; a wake-up that fails stops it at that end, for the next sweep (within the hour).
 
 ## The sidebar
 
