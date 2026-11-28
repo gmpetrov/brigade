@@ -9,6 +9,9 @@ Windows and Linux); it:
   (`src/runner.ts`, `src/workspaces.ts`);
 - shows the dashboard in a window of its own (`src/windows.ts`), and a small new thread window,
   the dashboard's `/app/capture`, from a global shortcut (`src/capture.ts`);
+- installs library apps on the computer, each opening in a window of its own from its own icon:
+  an app shim on macOS, a Start menu shortcut on Windows, a launcher entry on Linux
+  (`src/app-windows.ts`, docs/apps.md, Installed apps);
 - finds in the dashboard's page with ⌘F (Ctrl+F on Windows and Linux), ⌘G and ⇧⌘G (F3): a bar
   over its top right, in a view of its own so it never finds its own field (`src/find.ts`,
   `page/find.html`); a code editor that has its own search keeps the key;

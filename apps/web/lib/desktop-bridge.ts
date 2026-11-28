@@ -93,7 +93,7 @@ const raw = () =>
  */
 export const desktopBridge = (): DesktopBridge | undefined => {
   const bridge = raw()
-  return bridge && bridge.info.window !== 'app' ? (bridge as DesktopBridge) : undefined
+  return bridge && bridge.info?.window !== 'app' ? (bridge as DesktopBridge) : undefined
 }
 
 /** In an installed app's window (apps/desktop/src/app-windows.ts): only what that window needs. */
@@ -104,5 +104,5 @@ export type AppWindowBridge = {
 
 export const appWindowBridge = (): AppWindowBridge | undefined => {
   const bridge = raw()
-  return bridge?.info.window === 'app' ? (bridge as AppWindowBridge) : undefined
+  return bridge?.info?.window === 'app' ? (bridge as AppWindowBridge) : undefined
 }
