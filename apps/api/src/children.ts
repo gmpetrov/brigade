@@ -1615,7 +1615,8 @@ export async function messageChild(
       archivedAt: null,
     },
   })
-  if (was && reportOf(was.report))
+  // Its delivery mark too when it had no report (a review's, cleared while it looked): as before.
+  if (was)
     await db.session.updateMany({
       where: {
         id: child.id,
