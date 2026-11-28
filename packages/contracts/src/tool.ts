@@ -92,7 +92,14 @@ export const ToolManifest = z.object({
 })
 export type ToolManifest = z.infer<typeof ToolManifest>
 
-export const OpenToolView = z.object({ path: LibraryPath })
+export const OpenToolView = z.object({
+  path: LibraryPath,
+  /**
+   * The app's `index.html` document id it must have: an installed app's window opens its own app
+   * only, never another one saved at its folder since (409 `app_moved`).
+   */
+  id: z.string().min(1).max(200).optional(),
+})
 
 /** An App account attached to a tool, as its viewer sees it. */
 export type ToolAccount = {

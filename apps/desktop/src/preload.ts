@@ -96,6 +96,8 @@ if (info?.window === 'app')
     apps: {
       /** The app's own count on its Dock icon (macOS); 0 clears it. */
       setBadge: (count: number) => ipcRenderer.send('brigade:apps:badge', count),
+      /** Uninstalls this window's app, after Brigade.app asks (its app was deleted, say). */
+      uninstall: () => ipcRenderer.invoke('brigade:apps:uninstall-self'),
     },
   })
 else if (info)

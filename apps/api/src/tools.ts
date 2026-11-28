@@ -254,8 +254,12 @@ export async function openToolView(
   db: ScopedDb,
   scope: WorkspaceScope,
   path: string,
+  /** The app's index.html it must be (an installed app's window): another one there is refused. */
+  id?: string,
 ): Promise<ToolView> {
   const tool = await toolAt(db, scope, path)
+  if (id !== undefined && tool.entry.id !== id)
+    throw new HTTPException(409, { message: 'app_moved' })
   const latest = [...tool.rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
   const sessionId = latest.find((r) => r.updatedInSessionId)?.updatedInSessionId
   const teammateId = latest.find((r) => r.updatedByType === 'teammate')?.updatedById

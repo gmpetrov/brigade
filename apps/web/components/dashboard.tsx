@@ -344,10 +344,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       router.replace('/onboarding')
   }, [me.data, pathname, router])
 
-  // Opened from a notification about another of the member's workspaces, or an installed app's
-  // window for an app of another one: switch to it.
+  // Opened from a notification about another of the member's workspaces: switch to it.
   useEffect(() => {
     const wanted = new URLSearchParams(window.location.search).get('workspace')
+    // An installed app's window never switches the session: its calls name its workspace.
+    if (window.location.pathname === APP_WINDOW) return
     if (!wanted || !me.data || wanted === me.data.activeWorkspaceId) return
     if (!me.data.workspaces.some((w) => w.id === wanted)) return
     void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(() =>

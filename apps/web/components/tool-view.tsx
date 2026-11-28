@@ -55,7 +55,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { installApp, useInstalledApps } from '@/lib/desktop-apps'
 import { appWindowBridge, desktopBridge } from '@/lib/desktop-bridge'
 import { useElementPicker, type ElementPicker } from '@/lib/element-pickers'
@@ -76,10 +76,13 @@ type Asking = { what: ToolConfirm; resolve: (yes: boolean) => void; channel: num
  */
 function useToolHost({
   folder,
+  appId,
   threadId,
   setBadge,
 }: {
   folder: string
+  /** The app it must be (its index.html's id): another one saved at `folder` is refused. */
+  appId?: string
   threadId?: string
   /** Where the app has an icon of its own (an installed app's window): its badge. */
   setBadge?: (count: number) => boolean
@@ -95,27 +98,31 @@ function useToolHost({
   const current = useRef<ToolView | undefined>(undefined)
   current.current = view
 
+  const [moved, setMoved] = useState(false)
+  const body = useMemo(() => ({ path: folder, ...(appId && { id: appId }) }), [folder, appId])
   const load = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body: { path: folder } })
+      const next = await api<ToolView>('/tools/view', { body })
       setView(next)
       setError(undefined)
+      setMoved(false)
       return next
     } catch (e) {
+      setMoved(e instanceof ApiError && e.status === 409)
       setError(e instanceof Error ? e.message : String(e))
       return undefined
     }
-  }, [folder])
+  }, [body])
 
   // The view again (accounts changed) without reloading the page: its address stays.
   const refresh = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body: { path: folder } })
+      const next = await api<ToolView>('/tools/view', { body })
       setView((was) => (was ? { ...next, url: was.url } : next))
     } catch {
       // The page keeps what it had.
     }
-  }, [folder])
+  }, [body])
 
   useEffect(() => {
     setView(undefined)
@@ -212,6 +219,7 @@ function useToolHost({
   return {
     view,
     error,
+    moved,
     reload,
     again: () => setReload((n) => n + 1),
     refresh,
@@ -540,14 +548,30 @@ function AccountsButton({ view, onClick }: { view: ToolView; onClick: () => void
  * the confirmations, as in its panel, without the panel's chrome. Its count shows on its own
  * icon (macOS).
  */
-export function ToolWindow({ folder }: { folder: string }) {
+export function ToolWindow({
+  folder,
+  appId,
+  onMoved,
+}: {
+  folder: string
+  appId: string
+  /** Another app is at `folder` now (this one moved meanwhile): find it again. */
+  onMoved: () => void
+}) {
   const setBadge = useCallback((count: number) => {
     const bridge = appWindowBridge()
     if (!bridge) return false
     bridge.apps.setBadge(count)
     return bridge.info.platform === 'darwin'
   }, [])
-  const { view, error, reload, refresh, frame, first, settle } = useToolHost({ folder, setBadge })
+  const { view, error, moved, reload, refresh, frame, first, settle } = useToolHost({
+    folder,
+    appId,
+    setBadge,
+  })
+  useEffect(() => {
+    if (moved) onMoved()
+  }, [moved, onMoved])
   const [accountsOpen, setAccountsOpen] = useState(false)
   const title = view?.manifest?.title || toolName(folder)
   const needsAccounts = (view?.manifest?.apps?.length ?? 0) > 0

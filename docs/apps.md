@@ -136,12 +136,21 @@ PWA manifest per app) is a separate change.
 - **The window** shows the dashboard's `/app/apps/window?path=<folder>&id=<index.html id>&workspace=<id>`
   (`app/app/apps/window/page.tsx`): the app alone (`ToolWindow`), its Accounts button and the
   confirmations, without the panel's Ask, Select, library link or minimize. It loads in Brigade.app's
-  own session: no second sign-in. It finds the app by its document id, so an app moved in the
-  library still opens; a deleted one says so. An app from another workspace than the one shown
-  switches the session to it (`?workspace=`, as a notification does), which the dashboard window
-  then shows too. The window stays on that page: any other dashboard address opens in the
-  dashboard window, a signed-out page included.
-- **Its bridge** (`preload.ts`) has `info` (`window: 'app'`) and `apps.setBadge` only: no
+  own session: no second sign-in. The window stays on that page: any other dashboard address
+  opens in the dashboard window, a signed-out page included.
+- **Its app, by id.** It finds the app by its document id only, so an app moved in the library
+  still opens, and the view checks it again (`/view`'s `id`: another app saved at that folder
+  since answers 409 `app_moved`, and the window looks the id up again). A deleted app says so,
+  with an Uninstall button; a lookup that fails (offline, the API restarting) offers to try
+  again. Never the folder it once had: another app may be there now.
+- **Its workspace, pinned.** Every call of the window carries `x-brigade-workspace: <id>`
+  (`pinnedWorkspace` in `lib/api.ts`), and the API makes it in that workspace, whichever the
+  session shows, after checking the person is a member of its organization now (refused
+  otherwise, never taken for the session's: `userFrom` in `apps/api/src/scope.ts`). The session
+  is never switched: the dashboard window stays where it was, and two app windows of two
+  workspaces, even of two organizations, each keep to their own.
+- **Its bridge** (`preload.ts`) has `info` (`window: 'app'`), `apps.setBadge` and
+  `apps.uninstall` (its own app only) only: no
   captures, no sign-in, no notifications, no computer use (`ipc.ts` refuses them to an app
   window). The dashboard there behaves as in a browser (`desktopBridge()` is undefined;
   `appWindowBridge()` gives the badge).
@@ -156,7 +165,14 @@ PWA manifest per app) is a separate change.
   for each install a random install id (16 bytes, hex), the app's document id and folder, its
   workspace, the path of what was written, the bundle's cdhash on macOS and the icon's path on
   Windows and Linux. A bundle, shortcut or entry deleted by hand is forgotten the next time the
-  list is read.
+  list is read. Brigade's menu (the menu bar's, and the app menu's File on macOS) lists them under
+  **Installed apps**, each with Open and Uninstall…, even once the app is gone from the library.
+- **Only what is still Brigade's.** At each start, and before launching a shim, Brigade checks
+  that what the list names is still what it wrote: the bundle's install id and signature (its
+  cdhash), the shortcut's arguments, the launcher entry's install id. Anything put in its place is
+  forgotten and left as it is: never rewritten, signed, launched or removed. A second Install of
+  the same app while the first asks does nothing; settings that could not be saved take back
+  what the install just wrote.
 
 ### macOS: an app shim
 
@@ -206,8 +222,8 @@ it. No badge on Windows and Linux (`badge.set` answers `{ shown: false }`).
 
 ### Uninstall
 
-From the app's menu in the dashboard, or Uninstall… in its own menu on macOS, after Brigade.app
-asks. Only what the list names is removed, after checking it is Brigade's: a bundle in the apps
+From the app's menu in the dashboard, Installed apps in Brigade's menu, its own window when its
+app was deleted, or Uninstall… in its own menu on macOS, after Brigade.app asks. Only what the list names is removed, after checking it is Brigade's: a bundle in the apps
 folder whose `BrigadeAppInstallId` matches, a shortcut in the Brigade Apps folder whose arguments
 name the install, an entry of Brigade's whose `X-Brigade-App-Install-Id` matches.
 

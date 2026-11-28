@@ -265,6 +265,13 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
     assert.match(view.body.url, /\/t\/[^/]+\/index\.html$/)
 
+    // An installed app's window names the app it must be: another app at that folder is refused.
+    const same = await post('/view', { path: TOOL, id: view.body.toolId })
+    assert.equal(same.status, 200)
+    const other = await post('/view', { path: TOOL, id: 'another-app' })
+    assert.equal(other.status, 409)
+    assert.equal(other.body.error, 'app_moved')
+
     const html = await page(view.body.url)
     assert.equal(html.status, 200)
     const text = await html.text()

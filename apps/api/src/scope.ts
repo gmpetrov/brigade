@@ -51,10 +51,40 @@ export const userFrom = (read: SessionReader) =>
     c.set('authSessionId', session.session.id)
     c.set('activeOrganizationId', session.session.activeOrganizationId ?? null)
     c.set('activeWorkspaceId', session.session.activeWorkspaceId ?? null)
+    // A page bound to one workspace (an installed app's window in Brigade.app, docs/apps.md):
+    // its calls are that workspace's, whichever the session shows, and never another's.
+    const pinned = c.req.header(WORKSPACE_PIN_HEADER)
+    if (pinned !== undefined) {
+      const workspace = await pinnedWorkspace(session.user.id, pinned)
+      if (!workspace) throw new HTTPException(403, { message: 'not_a_member' })
+      c.set('activeOrganizationId', workspace.organizationId)
+      c.set('activeWorkspaceId', workspace.id)
+    }
     await next()
     // After next: a handler may answer with a Response of its own, which drops headers set before.
     for (const cookie of headers.getSetCookie()) c.header('set-cookie', cookie, { append: true })
   })
+
+/**
+ * The header a page sends to have its calls made in one workspace, not the session's: an
+ * installed app's window, opened for the workspace it was installed from while the session may
+ * show another, and switch while it is open.
+ */
+export const WORKSPACE_PIN_HEADER = 'x-brigade-workspace'
+
+/** The workspace a pinned page names, when the person is a member of its organization now. */
+export async function pinnedWorkspace(userId: string, workspaceId: string) {
+  if (!/^[\w-]{1,100}$/.test(workspaceId)) return null
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { id: true, organizationId: true },
+  })
+  if (!workspace) return null
+  const member = await prisma.member.findUnique({
+    where: { organizationId_userId: { organizationId: workspace.organizationId, userId } },
+  })
+  return member && !beingRemoved(member) ? workspace : null
+}
 
 export const requireUser = userFrom((headers) =>
   auth.api.getSession({ headers, returnHeaders: true }),

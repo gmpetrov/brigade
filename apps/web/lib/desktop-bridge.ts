@@ -101,7 +101,11 @@ export const desktopBridge = (): DesktopBridge | undefined => {
 /** In an installed app's window (apps/desktop/src/app-windows.ts): only what that window needs. */
 export type AppWindowBridge = {
   info: { window: 'app'; platform: string; version: string; bridge: number }
-  apps: { setBadge: (count: number) => void }
+  apps: {
+    setBadge: (count: number) => void
+    /** Uninstalls this window's app, after Brigade.app asks; older apps leave it out. */
+    uninstall?: () => Promise<boolean>
+  }
 }
 
 export const appWindowBridge = (): AppWindowBridge | undefined => {

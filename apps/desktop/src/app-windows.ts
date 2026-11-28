@@ -29,6 +29,7 @@ import {
 } from 'electron'
 import { execFile } from 'node:child_process'
 import * as mac from './app-install-mac.js'
+import { ctx } from './context.js'
 import * as linux from './app-install-linux.js'
 import * as win from './app-install-win.js'
 import { alert, confirm } from './dialogs.js'
@@ -99,6 +100,8 @@ const appsDir = () => join(app.getPath('userData'), 'Installed apps')
 function changed() {
   const list = currentList().map(installed.info)
   for (const contents of [dashboardContents()]) contents?.send('brigade:apps:changed', list)
+  // Brigade's own menu lists them too.
+  ctx.refreshMenu?.()
 }
 
 /** The list, without installs whose bundle, shortcut or entry was deleted by hand. */
@@ -497,7 +500,42 @@ function record(
     ...extra,
   }
   installed.save(entry)
+  // Brigade's settings could not be written (a full disk, a locked file): what was just made is
+  // taken back, rather than left as an icon Brigade does not know.
+  if (!installed.byInstallId(installId)) {
+    rmSync(installedPath, { recursive: true, force: true })
+    if (extra.iconPath) rmSync(extra.iconPath, { force: true })
+    throw new Error('Brigade could not save its settings, so the app was not installed.')
+  }
   return entry
+}
+
+/**
+ * Whether what the list names is still what Brigade wrote for this install: the bundle with its
+ * install id and its signature, the shortcut or the launcher entry naming it. A file put there
+ * since is someone else's: never rewritten, launched or removed.
+ */
+async function ours(entry: Entry) {
+  const path = entry.installedPath
+  if (!existsSync(path)) return false
+  try {
+    if (process.platform === 'darwin')
+      return (
+        mac.plistValue(path, 'BrigadeAppInstallId') === entry.installId &&
+        !!entry.cdhash &&
+        (await mac.cdhashOf(path)) === entry.cdhash
+      )
+    if (process.platform === 'win32')
+      return (
+        win.inStartMenuFolder(path) &&
+        (shell.readShortcutLink(path).args ?? '').split(/\s+/).includes(`--app=${entry.installId}`)
+      )
+    return (
+      linux.isAppEntry(path) && linux.entryInstallId(readFileSync(path, 'utf8')) === entry.installId
+    )
+  } catch {
+    return false
+  }
 }
 
 /** Opens an installed app: its window, or on macOS its shim, which then gets the window. */
@@ -505,10 +543,13 @@ async function openApp(entry: Entry) {
   if (process.platform !== 'darwin') return openWindow(entry)
   const shim = shims.get(entry.installId)
   if (shim?.isConnected()) return openWindow(entry, shim)
-  if (!existsSync(entry.installedPath)) {
+  // Launched only when the bundle is still the one installed: never one put in its place.
+  if (!(await ours(entry))) {
     forgetLocal(entry)
     changed()
-    throw new Error(`${entry.name} was uninstalled.`)
+    throw new Error(
+      `${entry.name} was removed or changed since it was installed. Install it again.`,
+    )
   }
   await mac.launch(entry.installedPath)
 }
@@ -592,7 +633,14 @@ async function removeFiles(entry: Entry) {
  * (a moved Brigade.app on macOS, an AppImage's new path on Linux, the executable on Windows).
  */
 export async function refreshInstalls() {
+  let forgot = false
   for (const entry of currentList()) {
+    // Replaced or changed by something else: forgotten, and left as it is.
+    if (!(await ours(entry))) {
+      forgetLocal(entry)
+      forgot = true
+      continue
+    }
     try {
       if (process.platform === 'darwin') {
         if (!mac.packagedHost()) continue
@@ -620,6 +668,7 @@ export async function refreshInstalls() {
       console.error('installed app:', entry.name, error)
     }
   }
+  if (forgot) changed()
 }
 
 // macOS: started by a shim, with Brigade closed -----------------------------------------------
@@ -670,6 +719,13 @@ export function registerAppsBridge() {
     const entry = currentList().find((a) => a.appId === appId)
     if (!entry) return false
     return uninstall(entry.installId)
+  })
+  // The window's own Uninstall (its app was deleted from the library): only for its own app.
+  ipcMain.handle('brigade:apps:uninstall-self', (event) => {
+    const frame = event.senderFrame
+    if (!frame || frame !== event.sender.mainFrame || !onAppPage(frame.url)) return false
+    const id = installOf(event.sender)
+    return id ? uninstall(id) : false
   })
   // The app's own count, on its Dock icon (macOS), from its page through the window's bridge.
   ipcMain.on('brigade:apps:badge', (event, count: unknown) => {

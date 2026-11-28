@@ -12,6 +12,7 @@ import {
   webContents,
   type MenuItemConstructorOptions,
 } from 'electron'
+import * as appWindows from './app-windows.js'
 import * as autostart from './autostart.js'
 import * as capture from './capture.js'
 import { ctx } from './context.js'
@@ -19,6 +20,7 @@ import { confirm } from './dialogs.js'
 import { findAgain, openFind } from './find.js'
 import { showLogs } from './logs.js'
 import { label, runnerSupported } from './runner.js'
+import * as installedApps from './installed-apps.js'
 import { dashboard, loadSettings, updateSettings } from './settings.js'
 import * as setup from './setup.js'
 import * as shortcuts from './shortcuts.js'
@@ -170,6 +172,26 @@ function items() {
         else updates.check(true)
       },
     }),
+    installedApps: (title = 'Installed apps'): MenuItemConstructorOptions[] => {
+      // The apps installed on this computer (app-windows.ts): each opens, or uninstalls, from
+      // here too, even once it is gone from the library.
+      const list = installedApps.list()
+      if (!list.length) return []
+      const workspaces = new Set(list.map((a) => a.workspaceId)).size > 1
+      return [
+        {
+          label: title,
+          submenu: list.map((a) => ({
+            label: a.name,
+            ...(workspaces && a.workspaceName && { sublabel: a.workspaceName }),
+            submenu: [
+              { label: 'Open', click: () => void appWindows.openInstall(a.installId) },
+              { label: 'Uninstall…', click: () => void appWindows.uninstall(a.installId) },
+            ],
+          })),
+        },
+      ]
+    },
     restartRunner: (title = 'Restart runner'): MenuItemConstructorOptions => ({
       label: title,
       click: () => void ctx.supervisor.start(),
@@ -193,6 +215,7 @@ function trayMenu() {
     { type: 'separator' },
     it.openDashboard(),
     it.openInBrowser(),
+    ...it.installedApps(),
     ...it.setUp(),
     { type: 'separator' },
     it.keepAwake(),
@@ -302,6 +325,7 @@ export function setAppMenu() {
           { type: 'separator' },
           it.openDashboard('Open Dashboard'),
           it.openInBrowser('Open in Browser'),
+          ...it.installedApps('Installed Apps'),
         ],
       },
       {
