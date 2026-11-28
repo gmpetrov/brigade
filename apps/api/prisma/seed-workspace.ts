@@ -402,6 +402,10 @@ export async function seedWorkspace(
     awaited?: boolean
     report?: Prisma.InputJsonValue
     reportDeliveredAt?: Date
+    // A sub-thread's tree (docs/sub-threads.md): the thread at its top.
+    rootId?: string
+    // Elsewhere than the cloud computer: a member's own machine.
+    computerId?: string
   }) => {
     const { events, others = [], member: by, startedAt, ...rest } = data
     // Events a minute or so apart, from when it started.
@@ -411,7 +415,7 @@ export async function seedWorkspace(
         ...inWorkspace,
         ...rest,
         startedByMemberId: by.id,
-        computerId: computer.id,
+        computerId: data.computerId ?? computer.id,
         lastSeq: events.length,
         createdAt: startedAt,
         updatedAt: at(events.length),
@@ -1620,6 +1624,197 @@ export async function seedWorkspace(
       lastError: "None of Ada's computers was online.",
       createdAt: days(10),
     },
+  })
+
+  // A tree of sub-threads (docs/sub-threads.md): a launch kit split across Riley and Kai, on the
+  // cloud computer and Ada's own Mac, two levels deep; one at level 2 waits on Ada, one at level 1
+  // on its parent.
+  const adasMac = await prisma.computer.create({
+    data: {
+      ...inWorkspace,
+      kind: 'member_machine',
+      memberId: ada.id,
+      name: "Ada's MacBook",
+      createdAt: days(20),
+    },
+  })
+  const kitId = `seedkit${id()}`
+  const kitPart = (threadId: string, title: string, computer?: string) =>
+    tool(
+      harness('start_child'),
+      {
+        title,
+        instructions: `${title}. Why a sub-thread: it is independent.`,
+        wait: true,
+        ...(computer ? { computer } : {}),
+      },
+      { threadId, title, teammate: riley.name, level: 1 },
+    )
+  const kit = {
+    research: `seedkitresearch${id()}`,
+    landing: `seedkitlanding${id()}`,
+    posts: `seedkitposts${id()}`,
+    video: `seedkitvideo${id()}`,
+    hero: `seedkithero${id()}`,
+    pricing: `seedkitpricing${id()}`,
+  }
+  await thread({
+    id: kitId,
+    title: 'Launch kit for the CSV importer',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: hours(3),
+    projectId: website.id,
+    events: turn(
+      riley.id,
+      adaAccount.id,
+      'Make the launch kit for the CSV importer: competitor research, a landing page draft, five X posts and a 30-second video.',
+      ada.id,
+      [
+        ...kitPart(kit.research, 'Competitor research', 'cloud'),
+        ...kitPart(kit.landing, 'Landing page draft'),
+        ...kitPart(kit.posts, 'Five X posts'),
+        ...kitPart(kit.video, '30-second launch video', 'mine'),
+      ],
+      'Four parts are under way: research and the video on their own computers, the page and the posts here. I hear back once they report.',
+    ),
+  })
+  const withoutSteps = <T extends { steps?: unknown }>({ steps: _, ...rest }: T) => rest
+  const kitChild = (data: {
+    id: string
+    title: string
+    teammateId: string
+    status: 'idle' | 'running' | 'waiting'
+    parentId: string
+    computerId?: string
+    report?: Prisma.InputJsonValue
+    steps?: Draft[]
+  }) =>
+    thread({
+      ...withoutSteps(data),
+      member: ada,
+      accountId: adaAccount.id,
+      startedAt: hours(3),
+      projectId: website.id,
+      origin: 'child',
+      parentTeammateId: riley.id,
+      rootId: kitId,
+      awaited: true,
+      events: turn(
+        data.teammateId,
+        adaAccount.id,
+        childPrompt({
+          from: riley.name,
+          parentTitle: 'Launch kit for the CSV importer',
+          instructions: `${data.title}. Why a sub-thread: it is independent.`,
+        }),
+        null,
+        data.steps ?? [],
+      ),
+    })
+  await kitChild({
+    id: kit.research,
+    title: 'Competitor research',
+    teammateId: riley.id,
+    status: 'idle',
+    parentId: kitId,
+    report: {
+      status: 'report',
+      summary:
+        'Three competitors import CSV; none maps columns automatically. Notes saved to the library.',
+      at: hours(2).toISOString(),
+    },
+  })
+  await kitChild({
+    id: kit.landing,
+    title: 'Landing page draft',
+    teammateId: riley.id,
+    status: 'running',
+    parentId: kitId,
+    steps: [
+      ...tool(
+        harness('start_child'),
+        {
+          title: 'Hero illustration',
+          instructions: 'Draw the hero.',
+          wait: true,
+          teammate: kai.name,
+        },
+        { threadId: kit.hero, title: 'Hero illustration', teammate: kai.name, level: 2 },
+      ),
+      ...tool(
+        harness('start_child'),
+        { title: 'Pricing copy', instructions: 'Write the pricing block.', wait: true },
+        { threadId: kit.pricing, title: 'Pricing copy', teammate: riley.name, level: 2 },
+      ),
+    ],
+  })
+  const heroRequest = `call_${id()}`
+  const heroAsks = [
+    {
+      id: 'style',
+      type: 'decision',
+      question: 'Which style for the hero illustration?',
+      options: [
+        { id: 'flat', label: 'Flat violet' },
+        { id: 'photo', label: 'Product photo' },
+      ],
+    },
+  ]
+  await kitChild({
+    id: kit.hero,
+    title: 'Hero illustration',
+    teammateId: kai.id,
+    status: 'waiting',
+    parentId: kit.landing,
+    steps: [
+      { type: 'ticket.opened', requestId: heroRequest, title: 'Which style?', asks: heroAsks },
+    ],
+  })
+  await prisma.ticket.create({
+    data: {
+      ...inWorkspace,
+      sessionId: kit.hero,
+      type: 'request',
+      title: 'Kai: Which style for the hero illustration?',
+      payload: { source: 'harness', teammateId: kai.id, requestId: heroRequest, asks: heroAsks },
+      createdAt: hours(2),
+    },
+  })
+  await kitChild({
+    id: kit.pricing,
+    title: 'Pricing copy',
+    teammateId: riley.id,
+    status: 'idle',
+    parentId: kit.landing,
+    report: {
+      status: 'report',
+      summary: 'The pricing block is written: three tiers, the importer in all of them.',
+      at: hours(2).toISOString(),
+    },
+  })
+  await kitChild({
+    id: kit.posts,
+    title: 'Five X posts',
+    teammateId: riley.id,
+    status: 'idle',
+    parentId: kitId,
+    report: {
+      status: 'needs_parent',
+      summary:
+        'Five posts are drafted. Should they link the landing page (not live yet) or the changelog?',
+      at: hours(1).toISOString(),
+    },
+  })
+  await kitChild({
+    id: kit.video,
+    title: '30-second launch video',
+    teammateId: riley.id,
+    status: 'running',
+    parentId: kitId,
+    computerId: adasMac.id,
   })
 
   // The support playbook Sam runs, with its runs, approvals and dry run (seed-playbooks.ts).
