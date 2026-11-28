@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { app } from 'electron'
+import * as appWindows from './app-windows.js'
 import * as autostart from './autostart.js'
 import * as capture from './capture.js'
 import { ctx } from './context.js'
@@ -16,6 +17,7 @@ import { LinuxComputerUse, serve } from './linux/computer-use.js'
 import { INDICATOR_FLAG, runIndicator } from './linux/indicator.js'
 import * as find from './find.js'
 import { registerBridge } from './ipc.js'
+import { APP_SHIM_FLAG, appArg } from './installed-apps.js'
 import { handleQuit } from './lifecycle.js'
 import { openLink } from './links.js'
 import { createTray, keepAwake, refreshMenu, setAppMenu } from './menu.js'
@@ -101,6 +103,8 @@ function start() {
 
   setUpSession()
   registerBridge()
+  appWindows.registerAppsBridge()
+  appWindows.startShimServer()
   find.registerFind()
   setup.registerSetup()
   handleLinks(link)
@@ -110,8 +114,11 @@ function start() {
   if (settings.keepAwake) keepAwake(true)
   void ctx.supervisor.start()
   notifications.start()
-  setup.showIfNeeded()
+  // Started for an installed app (its shim on macOS, its shortcut elsewhere): that app only.
+  const forApp = appArg(process.argv)
+  if (!forApp && !process.argv.includes(APP_SHIM_FLAG)) setup.showIfNeeded()
   linuxLinks()
+  void appWindows.refreshInstalls()
 
   // The smoke test (test/e2e/smoke.mjs) reaches the app's parts from Playwright.
   if (process.env.BRIGADE_DESKTOP_TEST === '1')
@@ -122,6 +129,7 @@ function start() {
   ready = true
   for (const url of [...early, ...linksIn(process.argv)]) void openLink(url)
   early.length = 0
+  if (forApp) void appWindows.openInstall(forApp)
   startUpdates()
 }
 
@@ -158,9 +166,14 @@ if (process.argv.includes(INDICATOR_FLAG)) {
   })
   app.on('second-instance', (_event, argv) => {
     const links = linksIn(argv)
+    const forApp = appArg(argv)
     if (links.length) links.forEach(link)
     // The runner starting Brigade for computer use (Linux): it runs already, nothing to show.
     else if (argv.includes('--computer-use')) return
+    // An installed app's shortcut or launcher entry (Windows, Linux): its window.
+    else if (forApp) {
+      if (ready) void appWindows.openInstall(forApp)
+    }
     // Opened again from Applications, the Start menu or a launcher: the dashboard.
     else if (ready) showDashboard()
   })
@@ -171,6 +184,9 @@ if (process.argv.includes(INDICATOR_FLAG)) {
   })
   void app.whenReady().then(() => {
     launched = Date.now()
+    // Started by an installed app's shim (macOS): no Dock icon of Brigade's own until one of
+    // its windows opens.
+    if (process.argv.includes(APP_SHIM_FLAG)) appWindows.startHidden()
     start()
   })
 }

@@ -29,7 +29,15 @@ export type ToolHost = {
   me: { memberId: string | null; name: string }
   api: <T>(path: string, body: unknown) => Promise<T>
   confirm: (what: ToolConfirm) => Promise<boolean>
+  /**
+   * The app's count on its own icon, where it has one: its window when installed on this
+   * computer (Brigade.app, docs/apps.md). Whether it shows; absent elsewhere.
+   */
+  setBadge?: (count: number) => boolean
 }
+
+/** The most a badge counts; above, it says so (999+). */
+export const BADGE_MAX = 100_000
 
 /**
  * The channel a tool's page opens (`connect`, with the key of its address and one end of a
@@ -100,6 +108,8 @@ function unusable(account: ToolAccount | undefined, ref: unknown) {
 async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unknown> {
   const { view, api } = host
   const path = view.folder
+  // Every call names the app as well as its folder: one saved at that folder since is refused.
+  const id = view.toolId
   const p = request.params
   switch (request.method) {
     case 'me':
@@ -107,7 +117,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
     case 'files.list': {
       const folder = text(p.folder)
       if (!folder) throw new Refused('Name a library folder')
-      return api('/apps/files', { path, folder })
+      return api('/apps/files', { path, id, folder })
     }
     case 'state.get':
     case 'state.list':
@@ -120,6 +130,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const body = {
         op,
         path,
+        id,
         shared: bool(p.shared),
         ...(op !== 'list' ? { key: text(p.key) ?? '' } : {}),
         ...(op === 'list' && prefix ? { prefix } : {}),
@@ -143,7 +154,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const account = accountFor(view.accounts, p.account)
       const why = unusable(account, p.account)
       if (why) throw why
-      return api('/apps/operations', { path, connectionId: account!.connectionId })
+      return api('/apps/operations', { path, id, connectionId: account!.connectionId })
     }
     case 'apps.call': {
       const account = accountFor(view.accounts, p.account)
@@ -151,7 +162,13 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       if (why) throw why
       const operation = text(p.operation)
       if (!operation) throw new Refused('Name the operation to call')
-      const call = { path, connectionId: account!.connectionId, operation, input: p.input ?? {} }
+      const call = {
+        path,
+        id,
+        connectionId: account!.connectionId,
+        operation,
+        input: p.input ?? {},
+      }
       let result: ToolCallResult
       try {
         result = await api<ToolCallResult>('/apps/call', call)
@@ -170,6 +187,12 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       }
       if (!result.ok) throw new Refused(result.error, 'app_error')
       return result.output
+    }
+    case 'badge.set': {
+      const count = p.count ?? 0
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 0)
+        throw new Refused('A badge counts with a whole number, 0 or more')
+      return { shown: host.setBadge?.(Math.min(count, BADGE_MAX)) ?? false }
     }
     case 'thread.send': {
       const message = text(p.text)?.trim()

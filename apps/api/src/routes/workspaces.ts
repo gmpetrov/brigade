@@ -35,6 +35,7 @@ import { placeNewHub } from '../platform/node.js'
 import { LOGO_HEADERS, readLogo } from '../logos.js'
 import {
   parseBody,
+  pinnedWorkspace,
   requireRole,
   requireUser,
   requireWorkspace,
@@ -509,14 +510,21 @@ export const workspaces = new Hono<AppEnv>()
       : c.json({ created: false })
   })
 
-  /** Make another workspace of the active organization the session's scope. */
+  /**
+   * Make another workspace the session's scope: of the active organization, or of another one the
+   * person is a member of (a notification, or Open in Brigade from an installed app's window,
+   * names a workspace of any of their organizations), which becomes the active one too.
+   */
   .post('/workspaces/switch', async (c) => {
     const { workspaceId } = await parseBody(c.req.raw, SwitchWorkspace)
     const scope = await resolveScope({ ...c.var, activeWorkspaceId: workspaceId })
-    if (!scope) throw new HTTPException(404, { message: 'Workspace not found' })
+    const elsewhere = scope ? null : await pinnedWorkspace(c.var.userId, workspaceId)
+    if (!scope && !elsewhere) throw new HTTPException(404, { message: 'Workspace not found' })
     await prisma.authSession.update({
       where: { id: c.var.authSessionId },
-      data: { activeWorkspaceId: scope.workspaceId },
+      data: scope
+        ? { activeWorkspaceId: scope.workspaceId }
+        : { activeOrganizationId: elsewhere!.organizationId, activeWorkspaceId: elsewhere!.id },
     })
     return c.json({ ok: true })
   })

@@ -151,7 +151,7 @@ test('a message to the thread goes as the person, said to come from the tool, on
   assert.equal(nowhere.asked.length, 0)
 })
 
-test('state and files go to the API for this tool, whatever path the page names', async () => {
+test('state and files go to the API for this tool and its id, whatever path the page names', async () => {
   const h = host()
   await answer(h.host, ask('state.set', { shared: true, key: 'k', value: [1], version: 2 }))
   await answer(h.host, ask('state.list', { shared: false, prefix: 'clip:', after: 'clip:9' }))
@@ -162,6 +162,7 @@ test('state and files go to the API for this tool, whatever path the page names'
       body: {
         op: 'set',
         path: 'Film/review.webapp',
+        id: 'doc1',
         shared: true,
         key: 'k',
         value: [1],
@@ -173,12 +174,13 @@ test('state and files go to the API for this tool, whatever path the page names'
       body: {
         op: 'list',
         path: 'Film/review.webapp',
+        id: 'doc1',
         shared: false,
         prefix: 'clip:',
         after: 'clip:9',
       },
     },
-    { path: '/apps/files', body: { path: 'Film/review.webapp', folder: 'Film/clips' } },
+    { path: '/apps/files', body: { path: 'Film/review.webapp', id: 'doc1', folder: 'Film/clips' } },
   ])
 })
 
@@ -200,4 +202,32 @@ test("a page opens its channel only with its address's key, and one port", () =>
     port1.close()
     port2.close()
   }
+})
+
+test('a badge shows only where the app has its own icon, as a whole number', async () => {
+  const { host: h } = host()
+  // In a panel: nothing to show it on.
+  assert.deepEqual(await answer(h, ask('badge.set', { count: 3 })), {
+    source: 'brigade-host',
+    id: 'c1',
+    ok: true,
+    result: { shown: false },
+  })
+  const shown: number[] = []
+  const installed = {
+    ...h,
+    setBadge: (n: number) => {
+      shown.push(n)
+      return true
+    },
+  }
+  const reply = await answer(installed, ask('badge.set', { count: 4 }))
+  assert.deepEqual(reply.ok && reply.result, { shown: true })
+  await answer(installed, ask('badge.set', {}))
+  await answer(installed, ask('badge.set', { count: 1e12 }))
+  for (const count of [-1, 1.5, '3']) {
+    const refused = await answer(installed, ask('badge.set', { count }))
+    assert.equal(refused.ok, false, String(count))
+  }
+  assert.deepEqual(shown, [4, 0, 100_000])
 })

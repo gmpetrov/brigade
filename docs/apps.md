@@ -90,6 +90,7 @@ The sandbox host adds a script first in the head of an app's pages (`toolBridgeS
 | `apps.list()`, `apps.operations(account)` | The attached accounts, and an account's operations with their input schemas.                                 |
 | `apps.call(account, operation, input)`    | Calls an operation (named as the teammate's own app for it); an account by kind or id.                       |
 | `thread.send(text)`                       | Sends a message to the thread, as the viewer, said to come from the app.                                     |
+| `badge.set(count)`, `badge.clear()`       | The app's count on its own icon, once installed on a Mac (below); `{ shown }` says whether it shows.         |
 
 Each returns a Promise and rejects with an `Error` whose `code` says why when it matters
 (`conflict`, `declined`, `tool_changed`, `not_usable`, `no_account`, `no_thread`, `app_error`).
@@ -104,6 +105,131 @@ never reaches a document that replaced the page; the page says `bye` as it goes,
 waiting for (a question to the person included) is dropped. The dashboard
 (`components/tool-view.tsx`, `lib/tool-host.ts`) checks each call again and makes it with the
 person's session (`/api/apps/*`).
+
+## Installed apps
+
+In Brigade.app (apps/desktop), an app can be installed on the computer, so that it opens in a window
+of its own, from an icon of its own, as Chrome's installed web apps and Claude's installed
+artifacts do. Behind the `apps` feature, like apps themselves. Not in a browser: a web install (a
+PWA manifest per app) is a separate change.
+
+- **What a member sees.** The app's title menu (`components/tool-view.tsx`) has **Install as app**
+  (marked Beta), in Brigade.app's dashboard window only, when its bridge has `apps` (an older
+  Brigade.app shows nothing). Brigade.app asks first, in its own dialog ("Install “Clip review”
+  as an app?"), then opens the app. Once installed, the menu has **Open in its own window** and
+  **Uninstall from this computer** instead.
+- **The window** shows the dashboard's `/app/apps/window?path=<folder>&id=<index.html id>&workspace=<id>`
+  (`app/app/apps/window/page.tsx`): the app alone (`ToolWindow`), its Accounts button and the
+  confirmations, without the panel's Ask, Select, library link or minimize. It loads in Brigade.app's
+  own session: no second sign-in. The window stays on that page: any other dashboard address
+  opens in the dashboard window, a signed-out page included.
+- **Its app, by id.** It finds the app by its document id only, so an app moved in the library
+  still opens. Every request for an app names its id beside its folder (`id` in contracts'
+  `ToolId`: the view, state, files, operations, calls and accounts, from the panel and the window
+  alike), and its page's signed address carries it too: once another app is saved at that folder
+  (the app moved, its folder reused), the requests answer 409 `app_moved` and the address 410,
+  never the other app. The address serves its files from one read of the folder, the entry
+  checked in it, so a move while a page is asked for never mixes the two. The window then looks the id up again. A deleted app says so,
+  with an Uninstall button; a lookup that fails (offline, the API restarting) offers to try
+  again. Never the folder it once had: another app may be there now.
+- **Its workspace, pinned.** Every call of the window carries `x-brigade-workspace: <id>`
+  (`pinnedWorkspace` in `lib/api.ts`), and the API makes it in that workspace, whichever the
+  session shows, after checking the person is a member of its organization now (refused
+  otherwise, never taken for the session's: `userFrom` in `apps/api/src/scope.ts`). The session
+  is never switched: the dashboard window stays where it was, and two app windows of two
+  workspaces, even of two organizations, each keep to their own. The window needs no AI account
+  of the person's (no onboarding there). Access taken away (removed from the organization): the
+  window says so, with Uninstall, rather than trying again.
+- **Its bridge** (`preload.ts`) has `info` (`window: 'app'`), `apps.setBadge` and
+  `apps.uninstall` (its own app only) only: no
+  captures, no sign-in, no notifications, no computer use (`ipc.ts` refuses them to an app
+  window). The dashboard there behaves as in a browser (`desktopBridge()` is undefined;
+  `appWindowBridge()` gives the badge).
+- **The icon** is drawn by the dashboard (`lib/desktop-apps.ts`): the app's `thumbnail.png`
+  cropped to a square, or a gradient of its own with the title's first letter, in a rounded
+  square (with macOS's margin on a Mac), 1024px. Brigade.app reads it as an image and writes each
+  system's format.
+- **Names.** The title as a file name every system takes; " (<workspace>)" when an app of that
+  name from another workspace is installed; " (App)" when it would pass for Brigade's, Apple's,
+  Microsoft's or a system app; " 2", " 3"… when the name is taken. Nothing is written over.
+- **What Brigade.app keeps**: `installedApps` in `~/.brigade/desktop.json` (`installed-apps.ts`):
+  for each install a random install id (16 bytes, hex), the app's document id and folder, its
+  workspace, the path of what was written, the bundle's cdhash on macOS and the icon's path on
+  Windows and Linux. A bundle, shortcut or entry deleted by hand is forgotten the next time the
+  list is read. Brigade's menu (the menu bar's, and the app menu's File on macOS) lists them under
+  **Installed apps**, each with Open and Uninstall…, even once the app is gone from the library.
+- **Only what is still Brigade's.** At each start, and before launching a shim, Brigade checks
+  that what the list names is still what it wrote, and never a link: the bundle's install id and
+  its signature, whole (`codesign --verify --strict`) and with the cdhash kept; the shortcut's
+  arguments; the launcher entry's install id (rewritten through a file beside it, renamed over
+  it). Anything put in its place is
+  forgotten and left as it is: never rewritten, signed, launched or removed. A second Install of
+  the same app while the first asks does nothing; settings that could not be saved take back
+  what the install just wrote.
+
+### macOS: an app shim
+
+Electron 45's app shims (`app.startAppShimServer`, `AppShimHost`, `BrowserWindow({ appShim })`,
+marked experimental), as Chrome and Claude use (`app-install-mac.ts`, `app-windows.ts`):
+
+- `~/Applications/Brigade Apps/<name>.app`: `Contents/MacOS/app` is a copy of Electron's
+  `app_shim_loader` (`Electron Framework.framework/Versions/A/Helpers/`), its Info.plist names the
+  install (`BrigadeAppInstallId`, bundle id `ai.brigade.desktop.app.<installId>`) and Brigade.app
+  (`ElectronAppShimHostPath`, `ElectronAppShimHostBundleIdentifier`, `ElectronAppShimServerName`
+  `brigade-apps`, `ElectronAppShimHostArguments` `--app-shim`), its icon is an .icns made with
+  `sips` and `iconutil`. It is made in Brigade.app's own folder, signed ad hoc on the Mac
+  (`codesign --sign -`, its cdhash kept), then moved in under a name claimed first, registered with
+  Launch Services and opened. The folder is refused when it is a link or someone else's.
+- Launched, the shim loads Brigade.app's framework and connects to it, starting it first if it is
+  closed: Brigade then starts with `--app-shim`, without its own window or Dock icon until one of
+  its own windows opens (`startHidden`). Brigade.app gives a window only to a shim whose bundle
+  names a known install and whose running process has that install's cdhash
+  (`satisfiesCodeRequirement('cdhash H"…"')`, which binds its Info.plist too); any other is told
+  to quit. Any process of the account can connect to the server, so nothing opens without both.
+- The window is made in the shim's process: its own Dock icon, ⌘-Tab entry, menu bar (the app's
+  name with Open in Brigade, which opens it in the library by its id and in its workspace
+  (`/app/library?app-id=…&workspace=…`; the dashboard switches to it first, even in another of
+  the person's organizations, and says so when the app is gone or no longer theirs), Uninstall…, Hide and Quit; Edit; View; Window) and badge
+  (`brigade.badge.set`). Closing the window quits the shim; its Dock icon, clicked, opens it again.
+- Updates keep Brigade.app's path, so shims keep working. A Brigade.app that moved rewrites each
+  shim's host path at start and signs it again. A shim launched after Brigade.app was updated
+  while running cannot connect (`app-shim-version-mismatch`): Brigade offers to restart.
+
+### Windows: a Start menu shortcut
+
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Brigade Apps\<name>.lnk`
+(`app-install-win.ts`): Brigade's executable with `--app=<installId>`, an .ico of 16 to 256px
+(PNG entries, `encodeIco`) and the AppUserModelID `ai.brigade.desktop.app.<installId>`. Launched
+with Brigade closed, Brigade starts without its own window; running, `second-instance` gets the
+argument. The window gets the same id and the relaunch command (`setAppDetails`), so the taskbar
+gives it its own button, with its icon, which pins and relaunches the app. A Brigade that moved
+rewrites the shortcuts' target at start.
+
+### Linux: a launcher entry
+
+`~/.local/share/applications/brigade-app-<installId>.desktop` (`app-install-linux.ts`): Exec runs
+the AppImage (`$APPIMAGE`) or Brigade's binary with `--app=<installId>`, Icon is the app's PNG in
+Brigade's own folder, `StartupWMClass=brigade-app-<installId>`. Rewritten at each start, since an
+AppImage's path changes with updates. On X11 the window's `WM_CLASS` is set to match before it is
+shown (through the `x11` package), so the dock groups it under its own icon. On Wayland a window
+can't be given its own app id: it groups under Brigade's icon, and its launcher entry still opens
+it. No badge on Windows and Linux (`badge.set` answers `{ shown: false }`).
+
+### Uninstall
+
+From the app's menu in the dashboard, Installed apps in Brigade's menu, its own window when its
+app was deleted, or Uninstall… in its own menu on macOS, after Brigade.app asks. Only what the list names is removed, after checking it is Brigade's: a bundle in the apps
+folder whose `BrigadeAppInstallId` matches, a shortcut in the Brigade Apps folder whose arguments
+name the install, an entry of Brigade's whose `X-Brigade-App-Install-Id` matches.
+
+### Checked
+
+Unit tests (`apps/desktop/test/installed-apps.test.ts`): the list, `--app=`, names and imitation
+names, the Info.plist and its escaping (read back by `plutil` on macOS), the `.ico`, the desktop
+entry's quoting (and `desktop-file-validate` on Linux). The packaged app's smoke test
+(`test/e2e/smoke.mjs`, CI on the three systems) installs an app through the bridge, checks what
+was written (the signed shim and its plist; the shortcut read back; the entry validated), the app
+window's bridge, and uninstalls.
 
 ## Decisions
 
@@ -160,7 +286,11 @@ person's session (`/api/apps/*`).
 - Runner: `save_app`, `read_app_state` (`apps/runner/src/harness/tools.ts`), the skill and
   section (`apps/runner/src/instructions.ts`), the bridge in `check_design` (`src/design-shot.ts`).
 - Dashboard: `components/tool-view.tsx`, `lib/tool-host.ts`, `components/tool-gallery.tsx`, and
-  apps in `components/library-browser.tsx` and `components/file-panel.tsx`.
+  apps in `components/library-browser.tsx` and `components/file-panel.tsx`; installing,
+  `lib/desktop-apps.ts` and `app/app/apps/window/page.tsx`.
+- Brigade.app: `apps/desktop/src/app-windows.ts`, `installed-apps.ts`, `app-install-mac.ts`,
+  `app-install-win.ts`, `app-install-linux.ts`.
 - Sample: the Acme workspace's `Projects/Fall launch/visual-review.webapp` (`prisma/seed-tool.ts`).
 - Tests: `apps/api/test/tools.test.ts`, `apps/web/test/tool-host.test.ts`,
+  `apps/desktop/test/installed-apps.test.ts`,
   `apps/runner/test/save-tool.test.ts`, `packages/contracts/test/tool.test.mjs`.

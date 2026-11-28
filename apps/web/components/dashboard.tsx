@@ -68,6 +68,7 @@ import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
 import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import { CloudHoursBanner } from '@/components/cloud-hours-banner'
 import { DemoBanner } from '@/components/demo-banner'
@@ -118,7 +119,8 @@ import {
 } from '@/lib/api'
 import { setLiveWorkspace } from '@/lib/live-socket'
 import { setThreadsShownScope } from '@/lib/use-thread-events'
-import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
+import { APP_WINDOW, DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
+import { appWindowBridge } from '@/lib/desktop-bridge'
 import { useDesktopFrame } from '@/lib/desktop-frame'
 import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
@@ -340,6 +342,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // links that computer, rather than through it here (it offers to download the app they come
   // from). Again on each route: leaving that page (⌘, to Settings) goes to onboarding.
   useEffect(() => {
+    // Nor in an installed app's window: an app needs no AI account of the person's to open.
+    if (pathname === APP_WINDOW) return
     if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady) && pathname !== DESKTOP_SIGN_IN)
       router.replace('/onboarding')
   }, [me.data, pathname, router])
@@ -347,43 +351,59 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Opened from a notification about another of the member's workspaces: switch to it.
   useEffect(() => {
     const wanted = new URLSearchParams(window.location.search).get('workspace')
+    // An installed app's window never switches the session: its calls name its workspace.
+    if (window.location.pathname === APP_WINDOW) return
     if (!wanted || !me.data || wanted === me.data.activeWorkspaceId) return
-    if (!me.data.workspaces.some((w) => w.id === wanted)) return
-    void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(() =>
-      window.location.reload(),
+    // A workspace of another of their organizations too: the API checks they are a member.
+    // Refused (gone, or no longer theirs): the page carries on without it, and says what it can.
+    void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(
+      () => window.location.reload(),
+      () => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('workspace')
+        router.replace(`${url.pathname}${url.search}`)
+      },
     )
-  }, [me.data])
+  }, [me.data, router])
 
   // The member could not be read (the API restarting, a deploy, the network): asked again,
   // sooner then less often, rather than the loader staying for good. 401 signs out above.
   const failures = useRef(0)
-  const unreachable = !me.data && !!me.error && me.error.status !== 401
+  // An installed app's window whose workspace the person may no longer open (removed, or left
+  // its organization): the API refuses its pinned calls (403), and asking again changes nothing.
+  const revoked = !me.data && me.error?.status === 403 && pathname === APP_WINDOW
+  const unreachable = !me.data && !!me.error && me.error.status !== 401 && !revoked
   const reloadMe = me.reload
   useEffect(() => {
-    if (!me.error || me.error.status === 401) {
+    if (!me.error || me.error.status === 401 || revoked) {
       failures.current = 0
       return
     }
     const wait = Math.min(1000 * 2 ** failures.current++, 15000)
     const timer = setTimeout(() => void reloadMe(), wait)
     return () => clearTimeout(timer)
-  }, [me.error, reloadMe])
+  }, [me.error, reloadMe, revoked])
 
   useSettingsShortcut()
   // ⌥↑ / ⌥↓ through the sidebar, Enter unfolds a folded row.
   useSidebarKeys()
 
   // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
-  // So does the page that signs that window in, in the browser.
-  const alone = pathname === '/app/capture' || pathname === DESKTOP_SIGN_IN
+  // So does the page that signs that window in, in the browser, and an installed app's window.
+  const alone =
+    pathname === '/app/capture' || pathname === DESKTOP_SIGN_IN || pathname === APP_WINDOW
+
   useEffect(() => {
     if (pathname === '/app' && inCaptureWindow()) router.replace('/app/capture')
   }, [pathname, router])
 
-  // The page that signs Brigade.app in needs only who is signed in, onboarded or not.
+  if (revoked) return <RevokedAppWindow />
+  // The page that signs Brigade.app in needs only who is signed in, onboarded or not; an
+  // installed app's window, its workspace.
   if (
     !me.data ||
-    (pathname !== DESKTOP_SIGN_IN && (!me.data.activeWorkspaceId || !me.data.aiReady))
+    (pathname !== DESKTOP_SIGN_IN && !me.data.activeWorkspaceId) ||
+    (pathname !== DESKTOP_SIGN_IN && pathname !== APP_WINDOW && !me.data.aiReady)
   )
     return <AppLoader note={unreachable ? 'Cannot reach Brigade. Trying again…' : undefined} />
   const data = me.data
@@ -1112,4 +1132,21 @@ export function timeAgo(iso: string) {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
   return new Date(iso).toLocaleDateString()
+}
+
+/** An installed app's window whose workspace the person may no longer open: its app goes too. */
+function RevokedAppWindow() {
+  const bridge = appWindowBridge()
+  return (
+    <main className="flex h-dvh flex-col items-center justify-center gap-4 bg-background p-6">
+      <p className="max-w-sm text-center text-sm text-muted-foreground">
+        You no longer have access to the workspace this app is in.
+      </p>
+      {bridge?.apps.uninstall && (
+        <Button type="button" variant="outline" onClick={() => void bridge.apps.uninstall?.()}>
+          Uninstall
+        </Button>
+      )}
+    </main>
+  )
 }

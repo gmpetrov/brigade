@@ -617,6 +617,7 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       'await brigade.apps.operations("github")              // [{ name, description, write, inputSchema }]\n' +
       'await brigade.apps.call("github", "github_list_pull_requests", { repository: "acme/web" })\n' +
       'await brigade.thread.send("Approved: a.mp4, c.mp4. Rejected: b.mp4.")\n' +
+      'await brigade.badge.set(3)                           // its count on its own icon, once installed on a Mac\n' +
       '```\n\n' +
       '- Keys hold JSON up to 100 KB each, up to 2000 keys a person and 2000 shared. Keep what each person does ' +
       '(ratings, notes, their picks) in `state`, and what the team decides together in `shared`, written with the ' +

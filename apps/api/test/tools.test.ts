@@ -265,6 +265,13 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     )
     assert.match(view.body.url, /\/t\/[^/]+\/index\.html$/)
 
+    // An installed app's window names the app it must be: another app at that folder is refused.
+    const same = await post('/view', { path: TOOL, id: view.body.toolId })
+    assert.equal(same.status, 200)
+    const other = await post('/view', { path: TOOL, id: 'another-app' })
+    assert.equal(other.status, 409)
+    assert.equal(other.body.error, 'app_moved')
+
     const html = await page(view.body.url)
     assert.equal(html.status, 200)
     const text = await html.text()
@@ -335,6 +342,39 @@ describe('tools', { skip: !database && 'no database answers' }, () => {
     assert.equal(view.body.manifest.title, 'Clip board')
     assert.deepEqual(view.body.manifest.reads, ['Film/clips'])
     assert.equal((await post('/files', { path: folder, folder: 'Film/clips' })).status, 200)
+  })
+
+  test('an app moved and its folder reused: what was opened for it never reaches the other', async () => {
+    const folder = 'Film/swap.webapp'
+    await save(`${folder}/index.html`, '<!doctype html><p>First</p>')
+    const view = await post('/view', { path: folder })
+    assert.equal(view.status, 200)
+    const first = view.body.toolId as string
+    assert.equal((await page(view.body.url)).status, 200)
+    const set = (id: string) =>
+      post('/state', { op: 'set', path: folder, id, shared: true, key: 'k', value: 1 })
+    assert.equal((await set(first)).status, 200)
+    // The first app moves; another is saved at its old folder.
+    await library.moveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: member('ada') },
+      first,
+      'Film/swap-moved.webapp/index.html',
+    )
+    await save(`${folder}/index.html`, '<!doctype html><p>Second</p>')
+    // Its page's address, its state, its files, its accounts: refused for the other app.
+    assert.equal((await page(view.body.url)).status, 410)
+    const refused = await set(first)
+    assert.equal(refused.status, 409)
+    assert.equal(refused.body.error, 'app_moved')
+    assert.equal((await post('/files', { path: folder, id: first, folder })).status, 409)
+    assert.equal((await post('/accounts/allow', { path: folder, id: first })).status, 409)
+    // Named without an id (a panel of an older dashboard), the folder's app, as before.
+    assert.equal(
+      (await post('/state', { op: 'get', path: folder, shared: true, key: 'k' })).status,
+      200,
+    )
   })
 
   test('files: the folders its manifest lists, each with an address on the sandbox host', async () => {
