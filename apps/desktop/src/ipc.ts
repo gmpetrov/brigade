@@ -2,6 +2,7 @@
 // Each request is checked: from a window of Brigade's, from its top frame, on the dashboard's
 // site; the draft's captures only from the new thread window.
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { setBadge } from './badge.js'
 import * as capture from './capture.js'
 import { closeFind, findAgain, openFind } from './find.js'
 import * as notifications from './notifications.js'
@@ -173,10 +174,11 @@ export function registerBridge() {
     return notifications.disable()
   })
 
-  // What needs the member, on the Dock icon (macOS) or the launcher's (Linux).
+  // What needs the member, on the Dock icon (macOS), the launcher's (Linux) or the taskbar
+  // button (Windows).
   ipcMain.on('brigade:badge', (event, count: unknown) => {
     if (from(event) !== 'main') return
     const n = Number(count)
-    app.setBadgeCount(Number.isInteger(n) && n > 0 ? n : 0)
+    setBadge(Number.isInteger(n) && n > 0 ? n : 0)
   })
 }

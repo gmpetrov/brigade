@@ -8,7 +8,8 @@
 // while the person looks at a dashboard) stay the API's (apps/api/src/notifications.ts).
 import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, Notification } from 'electron'
+import { Notification } from 'electron'
+import { setBadge } from './badge.js'
 import { allowedDashboard, dashboard, home } from './settings.js'
 import { showDashboard } from './windows.js'
 
@@ -173,7 +174,7 @@ export function show(message: PushMessage) {
     shown.delete(tag)
   }
   if (typeof message.badge === 'number')
-    app.setBadgeCount(Number.isInteger(message.badge) && message.badge > 0 ? message.badge : 0)
+    setBadge(Number.isInteger(message.badge) && message.badge > 0 ? message.badge : 0)
   if (!supported() || typeof message.title !== 'string') return
   shown.get(message.tag)?.close()
   const notification = new Notification({

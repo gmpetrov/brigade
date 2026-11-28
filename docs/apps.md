@@ -202,8 +202,11 @@ marked experimental), as Chrome and Claude use (`app-install-mac.ts`, `app-windo
 (PNG entries, `encodeIco`) and the AppUserModelID `ai.brigade.desktop.app.<installId>`. Launched
 with Brigade closed, Brigade starts without its own window; running, `second-instance` gets the
 argument. The window gets the same id and the relaunch command (`setAppDetails`), so the taskbar
-gives it its own button, with its icon, which pins and relaunches the app. A Brigade that moved
-rewrites the shortcuts' target at start.
+gives it its own button, with its icon, which pins and relaunches the app. Brigade's own count
+stays off it: Electron draws `app.setBadgeCount` on every window's button, so Brigade takes it off
+the apps' windows again, and its dashboard sets the count through the bridge only, never the
+Badging API too (`badge.ts`, `components/notifications.tsx`). A Brigade that moved rewrites the
+shortcuts' target at start.
 
 ### Linux: a launcher entry
 

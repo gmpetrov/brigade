@@ -37,6 +37,7 @@ import {
 } from 'electron'
 import { execFile } from 'node:child_process'
 import * as mac from './app-install-mac.js'
+import * as badge from './badge.js'
 import { ctx } from './context.js'
 import * as linux from './app-install-linux.js'
 import * as win from './app-install-win.js'
@@ -730,6 +731,8 @@ export function startHidden() {
 // The bridge ---------------------------------------------------------------------------------
 
 export function registerAppsBridge() {
+  // Windows: an app's taskbar button is its own, without Brigade's count (badge.ts).
+  badge.keepOff(() => [...windows.values()])
   const fromDashboard = (event: IpcMainInvokeEvent) => {
     const frame = event.senderFrame
     if (!frame || frame !== event.sender.mainFrame || !onDashboard(frame.url)) return false

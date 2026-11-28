@@ -75,8 +75,13 @@ export function useAppNotifications(needsYou: number) {
   }, [])
 
   useEffect(() => {
-    // Brigade.app's dashboard window: on the app's own icon.
-    setDesktopBadge(needsYou)
+    // Brigade.app's dashboard window: on the app's own icon, through its bridge only. Electron
+    // puts the Badging API's count on every window's taskbar button on Windows, installed apps'
+    // own buttons too (apps/desktop/src/badge.ts).
+    if (desktopBridge()) {
+      setDesktopBadge(needsYou)
+      return
+    }
     if (!('setAppBadge' in navigator)) return
     void (needsYou > 0 ? navigator.setAppBadge(needsYou) : navigator.clearAppBadge()).catch(
       () => {},
