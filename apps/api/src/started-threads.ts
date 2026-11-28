@@ -17,7 +17,7 @@ import { memberMayWrite } from './account-sharing.js'
 import { trackAudit } from './analytics.js'
 import { audit } from './audit.js'
 import { markOnChiefsWord } from './chief-answers.js'
-import { machineRefusal, messageChild, reopenInTree, type Reopened } from './children.js'
+import { machineRefusal, messageChild } from './children.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { pickLines, projectOf } from './lists.js'
 import { usableProject } from './projects.js'
@@ -442,17 +442,6 @@ export async function messageThread(
       target: { type: 'thread', id: target.id },
       data: { placeId: String(place.id), fromId: session.id },
     })
-  // A sub-thread of the tree that reported is set to work again: it takes a place under the
-  // tree's cap, now that nothing else refuses the message, and gives it back if it does not go.
-  let reopened: Reopened = { undo: async () => {} }
-  if (found.kind === 'tree') {
-    const taken = await reopenInTree(db, found.id, {})
-    if ('error' in taken) {
-      await free()
-      return taken
-    }
-    reopened = taken
-  }
   let outcome: Awaited<ReturnType<typeof promptThread>>
   try {
     // Written in again, an archived thread is back in the sidebar, as when a person writes there.
@@ -487,12 +476,10 @@ export async function messageThread(
     // Refused before it was taken in (a thread moving, a runner too old), or the thread could not
     // be brought back: nothing went.
     await free()
-    await reopened.undo()
     throw error
   }
   if (outcome === 'offline') {
     await free()
-    await reopened.undo()
     return { error: "That thread's computer is offline." }
   }
   // The message went: it must not be reported as failed, which a retry would send again.

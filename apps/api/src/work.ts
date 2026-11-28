@@ -272,30 +272,17 @@ export async function retryThread(
     throw new HTTPException(409, { message: 'There is nothing to try again: no turn failed.' })
   const turn = started?.data as AgentEvent | undefined
   const teammate = teammateIn(thread, turn?.type === 'turn.started' ? turn.teammateId : undefined)
-  // A sub-thread works again: it takes a place under its tree's cap (docs/sub-threads.md), given
-  // back if the retry does not go. Imported here: children.ts reaches this file.
-  const { reopenInTree } = await import('./children.js')
-  const reopened = thread.parentId ? await reopenInTree(db, thread.id, {}) : null
-  if (reopened && 'error' in reopened) throw new HTTPException(409, { message: reopened.error })
-  let sent: Awaited<ReturnType<ReturnType<typeof hubs.get>['dispatch']>>
-  try {
-    sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
-      type: 'thread.retry',
-      commandId,
-      thread: await specFor(db, thread, { teammate }),
-      error: error.message.slice(0, 10_000),
-      memberId,
-    })
-  } catch (failure) {
-    await reopened?.undo()
-    throw failure
-  }
-  if (sent === 'offline') {
-    await reopened?.undo()
+  const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
+    type: 'thread.retry',
+    commandId,
+    thread: await specFor(db, thread, { teammate }),
+    error: error.message.slice(0, 10_000),
+    memberId,
+  })
+  if (sent === 'offline')
     throw new HTTPException(409, {
       message: 'That computer is offline. Start its runner and try again.',
     })
-  }
 }
 
 /** The member in control hands the thread back: the teammate continues, told their note and what changed. */

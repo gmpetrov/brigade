@@ -1503,41 +1503,32 @@ export async function messageChild(
   const machine = await machineRefusal(db, parent, thread)
   if (machine) return { error: machine }
   const until = waitUntil(undefined)
-  // Set to work again: under its tree's cap, unless it is a review (which the cap leaves out).
-  const reopened = await reopenInTree(
-    db,
-    child.id,
-    {
+  // Set to work again, as before: the tree's cap is on new sub-threads only (start_child), never on
+  // one that goes on with its work (docs/sub-threads.md).
+  await db.session.updateMany({
+    where: { id: child.id },
+    data: {
+      report: Prisma.DbNull,
+      reportDeliveredAt: null,
+      reportDueAt: null,
       // One whose every report wakes its parent (wake `each`) still does, rather than wait with others.
       ...(child.wakeEach ? {} : { awaited: true, awaitUntil: until }),
       parentTeammateId: teammate.id,
       // Archived with its parent's old work, it comes back.
       archivedAt: null,
     },
-    { capped: !reviewed },
-  )
-  if ('error' in reopened) return reopened
+  })
   // A child thread asking its review to look again: its own parent waits for it that long too.
   if (reviewed) await outlast(db, parent.id, until)
   // Work handed on Chief's word goes on it there too; a review stays the review it is.
   if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordSeq: parent.chiefWordSeq ?? null })
-  let outcome: Awaited<ReturnType<typeof promptThread>>
-  try {
-    outcome = await promptThread(db, scope, thread, {
-      text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
-      memberId: null,
-      // Whoever asked for it in the parent asks in the child too.
-      onBehalfOf: await askedBy(db, parent.id),
-    })
-  } catch (error) {
-    // Nothing went: its report and its place are as they were.
-    await reopened.undo()
-    throw error
-  }
-  if (outcome === 'offline') {
-    await reopened.undo()
-    return { error: "That child thread's computer is offline." }
-  }
+  const outcome = await promptThread(db, scope, thread, {
+    text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
+    memberId: null,
+    // Whoever asked for it in the parent asks in the child too.
+    onBehalfOf: await askedBy(db, parent.id),
+  })
+  if (outcome === 'offline') return { error: "That child thread's computer is offline." }
   await parentChanged(scope, parent.id)
   return {
     ok: true,
@@ -1861,116 +1852,6 @@ export async function handleChildCall(
     throw error
   }
 }
-
-/** A reopening that took a sub-thread's place in its tree (reopenInTree), to give back. */
-export type Reopened = { undo: () => Promise<void> }
-
-/**
- * A sub-thread set to work again (a message to it, a retry): its report cleared, with `data`, under
- * its tree's lock with the tree's cap, in one transaction, so that reopening finished ones never
- * makes more than SUBTHREADS_AT_WORK at work. One failed or done is idle again, so that it counts at
- * once. Call it once everything else that could refuse the message has passed, and `undo` if the
- * message still does not go. What `undo` puts back is read under the same lock as the write, and
- * goes back only while the row is as this reopening left it (its updatedAt): a later reopening, a
- * new report or a turn makes it a no-op. One already at work (reopened by a message still on its
- * way, say) gets only `data`, its version kept, and nothing to undo. Why it may not, or the place.
- */
-export async function reopenInTree(
-  db: ScopedDb,
-  childId: string,
-  data: Prisma.SessionUpdateManyMutationInput,
-  options: { capped?: boolean } = {},
-): Promise<{ error: string } | Reopened> {
-  const child = await db.session.findFirst({
-    where: { id: childId },
-    select: {
-      id: true,
-      parentId: true,
-      rootId: true,
-      origin: true,
-      _count: { select: { reviewsOf: true } },
-    },
-  })
-  const none: Reopened = { undo: async () => {} }
-  if (!child) return none
-  // A review is left out of the cap (treeAtWork), so never refused for it.
-  const capped =
-    options.capped !== false &&
-    !!child.parentId &&
-    child.origin === 'child' &&
-    child._count.reviewsOf === 0
-  const lock = child.parentId ? `tree:${await treeRoot(db, child)}` : `reopen:${childId}`
-  const outcome = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lock}, 0))`
-    const was = await tx.session.findFirst({
-      where: { id: childId },
-      select: {
-        report: true,
-        reportDeliveredAt: true,
-        reportDueAt: true,
-        status: true,
-        awaited: true,
-        awaitUntil: true,
-        updatedAt: true,
-      },
-    })
-    if (!was) return null
-    const ended = ['failed', 'done'].includes(was.status)
-    const atWork = !reportOf(was.report) && !was.reportDeliveredAt && !ended
-    if (atWork) {
-      // Nothing to give back: its version stays, so a reopening still on its way can undo.
-      await tx.session.updateMany({
-        where: { id: childId },
-        data: { ...data, updatedAt: was.updatedAt },
-      })
-      return null
-    }
-    if (capped) {
-      const working = await treeAtWork(tx, rootIdOfLock(lock))
-      if (working >= SUBTHREADS_AT_WORK)
-        return {
-          error:
-            `Its tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}): ` +
-            'it would be one more. Wait for one to report, or cancel one, then try again.',
-        }
-    }
-    const version = new Date()
-    await tx.session.updateMany({
-      where: { id: childId },
-      data: {
-        ...data,
-        report: Prisma.DbNull,
-        reportDeliveredAt: null,
-        reportDueAt: null,
-        ...(ended ? { status: 'idle' as const } : {}),
-        updatedAt: version,
-      },
-    })
-    return { was, version }
-  })
-  if (!outcome) return none
-  if (outcome.error !== undefined) return { error: outcome.error }
-  const { was, version } = outcome
-  return {
-    undo: async () => {
-      // Only while the row is as this reopening left it.
-      await db.session.updateMany({
-        where: { id: childId, updatedAt: version },
-        data: {
-          report: (was.report ?? Prisma.DbNull) as Prisma.InputJsonValue,
-          reportDeliveredAt: was.reportDeliveredAt,
-          reportDueAt: was.reportDueAt,
-          status: was.status,
-          awaited: was.awaited,
-          awaitUntil: was.awaitUntil,
-        },
-      })
-    },
-  }
-}
-
-/** The tree a reopening's lock is for (`tree:<rootId>`). */
-const rootIdOfLock = (lock: string) => lock.slice('tree:'.length)
 
 /**
  * Why `sender` may not send work to a thread on another computer that is a member's own machine:

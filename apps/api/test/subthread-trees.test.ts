@@ -529,28 +529,6 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.equal((await notes(root)).length, 0)
   })
 
-  test('a finished sub-thread set to work again by a message counts towards the cap', async () => {
-    const root = await top()
-    const done = await start(root)
-    await reports({ id: done.threadId })
-    for (let i = 0; i < SUBTHREADS_AT_WORK; i++) assert.ok((await start(root)).threadId)
-    const again = (await messageThread(db, scope, await row(root.id), riley, {
-      threadId: done.threadId,
-      text: 'One more thing.',
-    })) as Record<string, any>
-    assert.match(again.error ?? '', /already has 8 sub-threads at work/)
-    assert.notEqual((await row(done.threadId)).report, null)
-    // From a sibling too.
-    const sibling = await prisma.session.findFirstOrThrow({
-      where: { parentId: root.id, report: { equals: Prisma.DbNull } },
-    })
-    const across = (await messageThread(db, scope, sibling, riley, {
-      threadId: done.threadId,
-      text: 'Use the violet logo.',
-    })) as Record<string, any>
-    assert.match(across.error ?? '', /already has 8 sub-threads at work/)
-  })
-
   test('follow_thread needs its people to be allowed in that thread, then and on delivery', async () => {
     // Ada's own thread on her laptop, closed to others; Bob's thread, Riley in both.
     const hers = await top(computers.laptop)
@@ -633,44 +611,6 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.equal(after.status, before.status)
   })
 
-  test('a failed sub-thread set to work again counts at once; a retry is admitted the same way', async () => {
-    const root = await top()
-    const failed = await start(root)
-    await reports({ id: failed.threadId }, 'failed', 'It stopped on an error.')
-    await prisma.session.update({ where: { id: failed.threadId }, data: { status: 'failed' } })
-    for (let i = 0; i < SUBTHREADS_AT_WORK; i++) assert.ok((await start(root)).threadId)
-    // Full: neither a message nor a retry sets it to work.
-    const told = (await messageThread(db, scope, await row(root.id), riley, {
-      threadId: failed.threadId,
-      text: 'Try again.',
-    })) as Record<string, any>
-    assert.match(told.error ?? '', /already has 8 sub-threads at work/)
-    await prisma.sessionEvent.create({
-      data: {
-        ...scope,
-        sessionId: failed.threadId,
-        seq: 900,
-        type: 'error',
-        at: new Date(),
-        data: { type: 'error', message: 'boom', at: new Date().toISOString() },
-      },
-    })
-    const { retryThread } = await import('../src/work.js')
-    await assert.rejects(
-      retryThread(db, scope, await loadThread(db, failed.threadId), member('ada')),
-      /already has 8 sub-threads at work/,
-    )
-    assert.equal((await row(failed.threadId)).status, 'failed')
-    // One reports: the retry takes its place, and it counts at once.
-    const any = await prisma.session.findFirstOrThrow({
-      where: { parentId: root.id, report: { equals: Prisma.DbNull } },
-    })
-    await reports({ id: any.id })
-    await retryThread(db, scope, await loadThread(db, failed.threadId), member('ada'))
-    assert.equal((await row(failed.threadId)).status, 'idle')
-    assert.match((await start(root)).error ?? '', /the most it may/)
-  })
-
   test('read_child on a followed thread stops once its people may no longer read it', async () => {
     // On her own laptop, opened to others (a thread on the cloud computer always is).
     const hers = await top(computers.laptop)
@@ -705,39 +645,17 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.match((await read()).error ?? '', /may no longer read that one/)
   })
 
-  test('two reopenings at once that both fail leave the report as it was', async () => {
-    const { reopenInTree } = await import('../src/children.js')
+  test('a finished sub-thread goes on when told more, even with the tree full: the cap is on new ones', async () => {
     const root = await top()
     const done = await start(root)
-    await reports({ id: done.threadId }, 'report', 'Research done.')
-    const kept = await row(done.threadId)
-    // A takes the place; B finds it already at work and takes nothing.
-    const a = await reopenInTree(db, done.threadId, {})
-    const b = await reopenInTree(db, done.threadId, {})
-    assert.ok(!('error' in a) && !('error' in b))
-    assert.equal((await row(done.threadId)).report, null)
-    // Both fail, in either order: the report is back, once.
-    await a.undo()
-    await b.undo()
-    const after = await row(done.threadId)
-    assert.equal((after.report as { summary?: string } | null)?.summary, 'Research done.')
-    assert.deepEqual(after.reportDeliveredAt, kept.reportDeliveredAt)
-    // B first, then A: the same.
-    const a2 = await reopenInTree(db, done.threadId, {})
-    const b2 = await reopenInTree(db, done.threadId, {})
-    assert.ok(!('error' in a2) && !('error' in b2))
-    await b2.undo()
-    assert.equal((await row(done.threadId)).report, null)
-    await a2.undo()
-    assert.equal(
-      ((await row(done.threadId)).report as { summary?: string } | null)?.summary,
-      'Research done.',
-    )
-    // A reopening that went is not undone by an older one that failed: anything since is kept.
-    const a3 = await reopenInTree(db, done.threadId, {})
-    assert.ok(!('error' in a3))
-    await prisma.session.update({ where: { id: done.threadId }, data: { status: 'running' } })
-    await a3.undo()
+    await reports({ id: done.threadId })
+    for (let i = 0; i < SUBTHREADS_AT_WORK; i++) assert.ok((await start(root)).threadId)
+    assert.match((await start(root)).error ?? '', /the most it may/)
+    const again = (await messageThread(db, scope, await row(root.id), riley, {
+      threadId: done.threadId,
+      text: 'One more thing.',
+    })) as Record<string, any>
+    assert.equal(again.error, undefined, JSON.stringify(again))
     assert.equal((await row(done.threadId)).report, null)
   })
 })

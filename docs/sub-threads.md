@@ -31,12 +31,11 @@ A thread at the top and every sub-thread under it make a tree.
   until one reports (or is cancelled). `SUBTHREADS_AT_WORK = 8`. At work: started by start_child
   (`origin` child), no report yet, not failed or done. Not a schedule's runs that report to a
   thread, nor the review of a pull request: Brigade starts those (one per pull request, its looks
-  capped), and a review is never refused for the cap. A finished sub-thread a message sets to work
-  again (message_thread, from its parent or another thread of the tree), or retried after a failed
-  turn, counts as one more, and is refused when the tree is full (`reopenInTree`). Its place is
-  taken only once nothing else refuses the message, and given back, with its report, if the message
-  or the retry does not go (a person in control, the computer offline). A failed one is idle again
-  once reopened, so that it counts at once.
+  capped), and a review is never refused for the cap. **The cap is on new sub-threads only**
+  (Georges, 28 Nov): a finished sub-thread a message sets to work again (message_thread, from its
+  parent or another thread of the tree), or one retried after a failed turn, goes on with its work
+  and is never refused, even when the tree is full. It is work already handed out, not a new branch;
+  `COMMENTS_IN_A_ROW` and `WAKEUPS_IN_A_ROW` keep threads from looping.
 - Both are constants in `packages/contracts/src/children.ts`, read by the API (which enforces them)
   and the runner (which says them in the teammates' instructions and tools). No person sees or sets
   them; changing either is one line.
@@ -46,7 +45,7 @@ A thread at the top and every sub-thread under it make a tree.
 - **One place at a time per tree.** The new sub-thread's row is made in one short transaction that
   takes `pg_advisory_xact_lock('tree:<root>')`, counts, and inserts (startThread's `guard`), so two
   starts at once never both take the last place, and no connection is held while the rest of the
-  start runs. Reopening a finished one takes the same lock with its count.
+  start runs.
 - Reviews: Brigade starts the review of a pull request a level-1 sub-thread opens under it (level
   2), and none under a level-2 one (as before: "below which Brigade starts no review"), so nothing is
   ever deeper than level 2.
@@ -130,9 +129,13 @@ follows, again when a report is delivered (one no longer allowed is claimed with
 when `read_child` reads it.
 Its next report wakes the follower, at most `FOLLOWERS_PER_THREAD` (20) each. A thread at the top
 keeps no report: the end of each of its turns tells its followers what its last message said
-(`noteFollowedEvents`), once; a follow is marked with the time of the end it heard, so a later end
-is news whatever happened between. One its delivery missed (a failed wake-up, an API restart) is
-woken by the minute's sweep, which reads that turn's end again from the events (within the hour).
+(`noteFollowedEvents`), once, with the answer of that turn (the last message at or before its
+event). It goes by its events' sequence, never by a computer's clock: a follow keeps the thread's
+`lastSeq` when it was made (`fromSeq`) and the seq of the last end it heard (`deliveredSeq`), so a
+later end is news whatever happened between, and a machine whose clock is off loses none. One its
+delivery missed (a failed wake-up, an API restart) is woken by the minute's sweep, which takes only
+threads whose followers are behind (in SQL, before its limit), reads that turn's end again from
+the events, and marks the others up to date at the thread's last seq (within the hour).
 
 ## The sidebar
 
