@@ -247,13 +247,13 @@ async function openWindow(entry: Entry, shim?: AppShimHost) {
     const handle = window.getNativeWindowHandle()
     const name = linux.wmClass(entry.installId)
     await linux.setWmClass(handle, name)
-    // Just installed: the dock may not have read its new entry yet and grouped the window under
-    // Brigade's icon. Set again once it has: a dock looks the window's app up on each change.
-    if (arrival)
-      for (const ms of linux.WM_CLASS_AGAIN_MS)
-        setTimeout(() => {
-          if (!window.isDestroyed()) void linux.setWmClass(handle, name)
-        }, ms)
+    // Installed moments ago (this window or one closed since): the dock may not have read its
+    // new entry yet and grouped the window under Brigade's icon. Set again once it has: a dock
+    // looks the window's app up on each change.
+    for (const ms of linux.wmClassAgainIn(Date.parse(entry.installedAt)))
+      setTimeout(() => {
+        if (!window.isDestroyed()) void linux.setWmClass(handle, name)
+      }, ms)
   }
   window.once('ready-to-show', () => {
     // Just installed: it shows as its animation opens out to it.

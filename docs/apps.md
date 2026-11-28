@@ -213,7 +213,7 @@ Brigade's own folder, `StartupWMClass=brigade-app-<installId>`. Rewritten at eac
 AppImage's path changes with updates. On X11 the window's `WM_CLASS` is set to match before it is
 shown (through the `x11` package), so the dock groups it under its own icon. GNOME Shell reads a
 new entry only 5 s after it is written, so a window opened right after its install first groups
-under Brigade's icon: it sets its WM_CLASS again 7 and 15 s later, and Shell then moves it to its
+under Brigade's icon: any window of it open then sets its WM_CLASS again 7 and 15 s after the install, and Shell then moves it to its
 own (`WM_CLASS_AGAIN_MS`). On Wayland a window
 can't be given its own app id: it groups under Brigade's icon, and its launcher entry still opens
 it. No badge on Windows and Linux (`badge.set` answers `{ shown: false }`).

@@ -76,6 +76,16 @@ export function entryInstallId(text: string) {
  */
 export const WM_CLASS_AGAIN_MS = [7_000, 15_000]
 
+/**
+ * In how many ms a window of an app installed at `installedAt` sets its WM_CLASS again: those of
+ * WM_CLASS_AGAIN_MS (from the install) still ahead. Any window opened then, not only the first:
+ * closed and opened again at once, the second is as unknown to Shell as the first.
+ */
+export function wmClassAgainIn(installedAt: number, now = Date.now()) {
+  const since = Number.isFinite(installedAt) ? Math.max(0, now - installedAt) : Infinity
+  return WM_CLASS_AGAIN_MS.filter((ms) => ms > since).map((ms) => ms - since)
+}
+
 const WM_CLASS = 67 // predefined atoms
 const STRING = 31
 
