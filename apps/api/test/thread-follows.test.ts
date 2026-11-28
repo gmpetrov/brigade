@@ -559,7 +559,12 @@ test(
       })
       return { event: { type: 'turn.completed', at: at.toISOString() } }
     }
-    const first = new Date(Date.now() + 1_000)
+    const first = new Date(Date.now() - 8 * 60_000)
+    // Followed before either end.
+    await prisma.threadFollow.updateMany({
+      where: { sessionId: builder.id },
+      data: { createdAt: new Date(first.getTime() - 60_000) },
+    })
     await noteFollowedEvents(builder, [await end(1, first, 'Opened #50.')])
     assert.equal((await notes(watcher)).length, 1)
     // A second turn ends; its message's reset never ran (a restart): the sweep brings it, once.
@@ -575,3 +580,100 @@ test(
     assert.match(all[1]!, /Merged #50/)
   },
 )
+
+test('two turn ends that come in together each bring their own answer', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: two turns' })
+  const watcher = await thread({ title: 'Watching two turns' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const first = new Date(Date.now() + 1_000)
+  const second = new Date(first.getTime() + 60_000)
+  const event = (seq: number, type: string, at: Date, text?: string) => ({
+    ...scope,
+    sessionId: builder.id,
+    seq,
+    type,
+    at,
+    data: text ? { type, text } : { type, at: at.toISOString() },
+  })
+  await prisma.sessionEvent.createMany({
+    data: [
+      event(1, 'message.done', first, 'First answer.'),
+      event(2, 'turn.completed', first),
+      event(3, 'message.done', second, 'Second answer.'),
+      event(4, 'turn.completed', second),
+    ],
+  })
+  await noteFollowedEvents(builder, [
+    { seq: 2, event: { type: 'turn.completed', at: first.toISOString() } },
+    { seq: 4, event: { type: 'turn.completed', at: second.toISOString() } },
+  ])
+  const [one, two, ...more] = await notes(watcher)
+  assert.equal(more.length, 0)
+  assert.match(one!, /First answer\./)
+  assert.match(two!, /Second answer\./)
+})
+
+test('the sweep reaches a missed follower behind many that are up to date', { skip }, async () => {
+  // A hundred and five followed threads at the top whose followers heard their last turn.
+  const watcher = await thread({ title: 'Watching many' })
+  const old = new Date(Date.now() - 10 * 60_000)
+  const many = await Promise.all(
+    Array.from({ length: 105 }, (_, i) => thread({ title: `Up to date ${i}` })),
+  )
+  await prisma.session.updateMany({
+    where: { id: { in: many.map((t) => t.id) } },
+    data: { status: 'idle', updatedAt: old },
+  })
+  await prisma.threadFollow.createMany({
+    data: many.map((t) => ({
+      ...scope,
+      sessionId: t.id,
+      followerId: watcher.id,
+      createdAt: new Date(old.getTime() - 60_000),
+      deliveredAt: old,
+    })),
+  })
+  // And one whose last turn its follower never heard.
+  const missed = await thread({ title: 'Builder: missed' })
+  const late = await thread({ title: 'Late follower' })
+  const ended = new Date(Date.now() - 6 * 60_000)
+  await prisma.sessionEvent.createMany({
+    data: [
+      {
+        ...scope,
+        sessionId: missed.id,
+        seq: 1,
+        type: 'message.done',
+        at: ended,
+        data: { type: 'message.done', text: 'Shipped #77.' },
+      },
+      {
+        ...scope,
+        sessionId: missed.id,
+        seq: 2,
+        type: 'turn.completed',
+        at: ended,
+        data: { type: 'turn.completed', at: ended.toISOString() },
+      },
+    ],
+  })
+  await prisma.threadFollow.create({
+    data: {
+      ...scope,
+      sessionId: missed.id,
+      followerId: late.id,
+      createdAt: new Date(ended.getTime() - 60_000),
+    },
+  })
+  await prisma.session.update({
+    where: { id: missed.id },
+    data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+  })
+  await settleOverdueChildren(scope.workspaceId)
+  const [note] = await notes(late)
+  assert.match(note ?? '', /Shipped #77/)
+  assert.equal((await notes(watcher)).length, 0)
+})

@@ -704,4 +704,40 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     await prisma.session.update({ where: { id: hers.id }, data: { othersMayPrompt: false } })
     assert.match((await read()).error ?? '', /may no longer read that one/)
   })
+
+  test('two reopenings at once that both fail leave the report as it was', async () => {
+    const { reopenInTree } = await import('../src/children.js')
+    const root = await top()
+    const done = await start(root)
+    await reports({ id: done.threadId }, 'report', 'Research done.')
+    const kept = await row(done.threadId)
+    // A takes the place; B finds it already at work and takes nothing.
+    const a = await reopenInTree(db, done.threadId, {})
+    const b = await reopenInTree(db, done.threadId, {})
+    assert.ok(!('error' in a) && !('error' in b))
+    assert.equal((await row(done.threadId)).report, null)
+    // Both fail, in either order: the report is back, once.
+    await a.undo()
+    await b.undo()
+    const after = await row(done.threadId)
+    assert.equal((after.report as { summary?: string } | null)?.summary, 'Research done.')
+    assert.deepEqual(after.reportDeliveredAt, kept.reportDeliveredAt)
+    // B first, then A: the same.
+    const a2 = await reopenInTree(db, done.threadId, {})
+    const b2 = await reopenInTree(db, done.threadId, {})
+    assert.ok(!('error' in a2) && !('error' in b2))
+    await b2.undo()
+    assert.equal((await row(done.threadId)).report, null)
+    await a2.undo()
+    assert.equal(
+      ((await row(done.threadId)).report as { summary?: string } | null)?.summary,
+      'Research done.',
+    )
+    // A reopening that went is not undone by an older one that failed: anything since is kept.
+    const a3 = await reopenInTree(db, done.threadId, {})
+    assert.ok(!('error' in a3))
+    await prisma.session.update({ where: { id: done.threadId }, data: { status: 'running' } })
+    await a3.undo()
+    assert.equal((await row(done.threadId)).report, null)
+  })
 })

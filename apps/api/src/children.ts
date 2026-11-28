@@ -661,40 +661,54 @@ async function wakeWaitingFollowers(workspaceId?: string) {
   // Threads at the top keep no report: what their last turn ended on is read again from their
   // events, for the follows made before it that it did not reach (its wake-up failed, or the API
   // restarted before it went).
-  const top = await prisma.threadFollow.findMany({
-    where: { ...(workspaceId ? { workspaceId } : {}), ...topFollowsDue(new Date()) },
-    select: { sessionId: true, organizationId: true, workspaceId: true },
-    distinct: ['sessionId'],
-    take: 100,
-  })
+  const top = await topFollowsBehind(new Date(), workspaceId)
   for (const f of top) {
+    const scope = { organizationId: f.organizationId, workspaceId: f.workspaceId }
     const ended = await turnEnded(f.sessionId)
-    if (!ended) continue
-    await wakeFollowers(
-      { organizationId: f.organizationId, workspaceId: f.workspaceId },
-      f.sessionId,
-      ended.report,
-      ended.at,
-    ).catch((error: unknown) => console.error(`followers of ${f.sessionId}: could not wake`, error))
+    if (ended)
+      await wakeFollowers(scope, f.sessionId, ended.report, ended.at).catch((error: unknown) =>
+        console.error(`followers of ${f.sessionId}: could not wake`, error),
+      )
+    // Those now told of its last end, or that it does not concern (none ended, or the follow is
+    // newer), are up to date with the thread as it is: their mark moves to its last change, so the
+    // next sweep takes others. One whose wake-up failed again stays behind, for the next.
+    await scoped(scope).threadFollow.updateMany({
+      where: {
+        sessionId: f.sessionId,
+        AND: [
+          { OR: [{ deliveredAt: null }, { deliveredAt: { lt: f.updatedAt } }] },
+          ...(ended
+            ? [{ OR: [{ deliveredAt: { gte: ended.at } }, { createdAt: { gte: ended.at } }] }]
+            : []),
+        ],
+      },
+      data: { deliveredAt: f.updatedAt },
+    })
   }
 }
 
 /**
- * Follows of a thread at the top still to hear its last turn (wakeWaitingFollowers): the thread at
- * rest, its turn over a while ago (its own delivery had its chance, STRANDED_AFTER_MS) and within
- * the hour (STRANDED_WITHIN_MS), as for a child's stranded turn.
+ * Threads at the top whose followers are behind (wakeWaitingFollowers, dueChildren): at rest, last
+ * changed 2 minutes to an hour ago (its own delivery had its chance, STRANDED_AFTER_MS; within
+ * STRANDED_WITHIN_MS), with a follow not marked since that change (one it does not concern is
+ * marked up to date by the sweep, which reads the turn's end from the events). Behind ones
+ * only, before the limit: those up to date never fill the batch.
  */
-const topFollowsDue = (now: Date) =>
-  ({
-    session: {
-      parentId: null,
-      status: { notIn: ['starting', 'running', 'waiting'] },
-      updatedAt: {
-        lte: new Date(now.getTime() - STRANDED_AFTER_MS),
-        gte: new Date(now.getTime() - STRANDED_WITHIN_MS),
-      },
-    },
-  }) satisfies Prisma.ThreadFollowWhereInput
+async function topFollowsBehind(now: Date, workspaceId?: string, limit = 100) {
+  const after = new Date(now.getTime() - STRANDED_WITHIN_MS)
+  const before = new Date(now.getTime() - STRANDED_AFTER_MS)
+  return prisma.$queryRaw<
+    { sessionId: string; organizationId: string; workspaceId: string; updatedAt: Date }[]
+  >`
+    SELECT DISTINCT s.id AS "sessionId", s."organizationId", s."workspaceId", s."updatedAt"
+    FROM "ThreadFollow" f JOIN "Session" s ON s.id = f."sessionId"
+    WHERE s."parentId" IS NULL
+      AND s.status NOT IN ('starting', 'running', 'waiting')
+      AND s."updatedAt" BETWEEN ${after} AND ${before}
+      AND (f."deliveredAt" IS NULL OR f."deliveredAt" < s."updatedAt")
+      ${workspaceId ? Prisma.sql`AND s."workspaceId" = ${workspaceId}` : Prisma.empty}
+    LIMIT ${limit}`
+}
 
 /**
  * What a thread at the top last ended a turn on, as its followers hear it (noteFollowedEvents), and
@@ -722,7 +736,7 @@ async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: 
         : {
             status: 'report',
             summary: clipReport(
-              (await lastMessage(sessionId)) || 'It ended without a word.',
+              (await lastMessage(sessionId, end.seq)) || 'It ended without a word.',
               REPORT_MAX,
             ),
             at: end.at.toISOString(),
@@ -740,7 +754,11 @@ async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: 
  */
 export async function noteFollowedEvents(
   session: { id: string; organizationId: string; workspaceId: string; parentId: string | null },
-  events: { event: { type: string; at: string; retrying?: boolean; waiting?: boolean } }[],
+  events: {
+    /** The event's place in its thread: its answer is the last message at or before it. */
+    seq?: number
+    event: { type: string; at: string; retrying?: boolean; waiting?: boolean }
+  }[],
 ) {
   if (session.parentId) return
   const ends = events.filter(
@@ -752,14 +770,14 @@ export async function noteFollowedEvents(
   const scope: Scope = { organizationId: session.organizationId, workspaceId: session.workspaceId }
   const db = scoped(scope)
   if (!(await db.threadFollow.count({ where: { sessionId: session.id } }))) return
-  for (const { event } of ends) {
+  for (const { event, seq } of ends) {
     const report: ChildReport =
       event.type === 'error'
         ? { status: 'failed', summary: 'It stopped on an error.', at: event.at }
         : {
             status: 'report',
             summary: clipReport(
-              (await lastMessage(session.id)) || 'It ended without a word.',
+              (await lastMessage(session.id, seq)) || 'It ended without a word.',
               REPORT_MAX,
             ),
             at: event.at,
@@ -771,9 +789,14 @@ export async function noteFollowedEvents(
 }
 
 /** What a child's latest answer said: its report when it ended its turn without one. */
-async function lastMessage(sessionId: string) {
+async function lastMessage(sessionId: string, atOrBefore?: number) {
   const event = await prisma.sessionEvent.findFirst({
-    where: { sessionId, type: 'message.done' },
+    where: {
+      sessionId,
+      type: 'message.done',
+      // The answer of a given turn's end, not a later one's (events that came in together).
+      ...(atOrBefore !== undefined ? { seq: { lte: atOrBefore } } : {}),
+    },
     orderBy: { seq: 'desc' },
     select: { data: true },
   })
@@ -1184,11 +1207,7 @@ export async function dueChildren(now = new Date()) {
       distinct: ['workspaceId'],
       select: { workspaceId: true },
     }),
-    prisma.threadFollow.findMany({
-      where: topFollowsDue(now),
-      distinct: ['workspaceId'],
-      select: { workspaceId: true },
-    }),
+    topFollowsBehind(now, undefined, 1000),
   ])
   return [...overdue, ...quiet, ...followers, ...stranded, ...top].map((r) => r.workspaceId)
 }
@@ -1839,8 +1858,10 @@ export type Reopened = { undo: () => Promise<void> }
  * its tree's lock with the tree's cap, in one transaction, so that reopening finished ones never
  * makes more than SUBTHREADS_AT_WORK at work. One failed or done is idle again, so that it counts at
  * once. Call it once everything else that could refuse the message has passed, and `undo` if the
- * message still does not go: it puts back what it was, unless it changed since. Why it may not, or
- * the place it took.
+ * message still does not go. What `undo` puts back is read under the same lock as the write, and
+ * goes back only while the row is as this reopening left it (its updatedAt): a later reopening, a
+ * new report or a turn makes it a no-op. One already at work (reopened by a message still on its
+ * way, say) gets only `data`, its version kept, and nothing to undo. Why it may not, or the place.
  */
 export async function reopenInTree(
   db: ScopedDb,
@@ -1855,79 +1876,89 @@ export async function reopenInTree(
       parentId: true,
       rootId: true,
       origin: true,
-      report: true,
-      reportDeliveredAt: true,
-      reportDueAt: true,
-      status: true,
-      awaited: true,
-      awaitUntil: true,
       _count: { select: { reviewsOf: true } },
     },
   })
   const none: Reopened = { undo: async () => {} }
   if (!child) return none
-  const ended = ['failed', 'done'].includes(child.status)
-  const clear = {
-    ...data,
-    report: Prisma.DbNull,
-    reportDeliveredAt: null,
-    reportDueAt: null,
-    ...(ended ? { status: 'idle' as const } : {}),
-  } satisfies Prisma.SessionUpdateManyMutationInput
-  const undo = async () => {
-    // Only while nothing came since: no new report, no turn under way.
-    await db.session.updateMany({
-      where: {
-        id: childId,
-        report: { equals: Prisma.DbNull },
-        reportDeliveredAt: null,
-        status: ended ? 'idle' : child.status,
-      },
-      data: {
-        report: (child.report ?? Prisma.DbNull) as Prisma.InputJsonValue,
-        reportDeliveredAt: child.reportDeliveredAt,
-        reportDueAt: child.reportDueAt,
-        status: child.status,
-        awaited: child.awaited,
-        awaitUntil: child.awaitUntil,
-      },
-    })
-  }
   // A review is left out of the cap (treeAtWork), so never refused for it.
-  if (
-    options.capped === false ||
-    !child.parentId ||
-    child.origin !== 'child' ||
-    child._count.reviewsOf > 0
-  ) {
-    await db.session.updateMany({ where: { id: childId }, data: clear })
-    return { undo }
-  }
-  const rootId = await treeRoot(db, child)
-  const full = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tree:${rootId}`}, 0))`
-    const now = await tx.session.findFirst({
+  const capped =
+    options.capped !== false &&
+    !!child.parentId &&
+    child.origin === 'child' &&
+    child._count.reviewsOf === 0
+  const lock = child.parentId ? `tree:${await treeRoot(db, child)}` : `reopen:${childId}`
+  const outcome = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lock}, 0))`
+    const was = await tx.session.findFirst({
       where: { id: childId },
-      select: { report: true, reportDeliveredAt: true, status: true },
+      select: {
+        report: true,
+        reportDeliveredAt: true,
+        reportDueAt: true,
+        status: true,
+        awaited: true,
+        awaitUntil: true,
+        updatedAt: true,
+      },
     })
-    const atWork =
-      !!now &&
-      !reportOf(now.report) &&
-      !now.reportDeliveredAt &&
-      !['failed', 'done'].includes(now.status)
-    if (!atWork) {
-      const working = await treeAtWork(tx, rootId)
-      if (working >= SUBTHREADS_AT_WORK)
-        return (
-          `Its tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}): ` +
-          'it would be one more. Wait for one to report, or cancel one, then try again.'
-        )
+    if (!was) return null
+    const ended = ['failed', 'done'].includes(was.status)
+    const atWork = !reportOf(was.report) && !was.reportDeliveredAt && !ended
+    if (atWork) {
+      // Nothing to give back: its version stays, so a reopening still on its way can undo.
+      await tx.session.updateMany({
+        where: { id: childId },
+        data: { ...data, updatedAt: was.updatedAt },
+      })
+      return null
     }
-    await tx.session.updateMany({ where: { id: childId }, data: clear })
-    return null
+    if (capped) {
+      const working = await treeAtWork(tx, rootIdOfLock(lock))
+      if (working >= SUBTHREADS_AT_WORK)
+        return {
+          error:
+            `Its tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}): ` +
+            'it would be one more. Wait for one to report, or cancel one, then try again.',
+        }
+    }
+    const version = new Date()
+    await tx.session.updateMany({
+      where: { id: childId },
+      data: {
+        ...data,
+        report: Prisma.DbNull,
+        reportDeliveredAt: null,
+        reportDueAt: null,
+        ...(ended ? { status: 'idle' as const } : {}),
+        updatedAt: version,
+      },
+    })
+    return { was, version }
   })
-  return full ? { error: full } : { undo }
+  if (!outcome) return none
+  if (outcome.error !== undefined) return { error: outcome.error }
+  const { was, version } = outcome
+  return {
+    undo: async () => {
+      // Only while the row is as this reopening left it.
+      await db.session.updateMany({
+        where: { id: childId, updatedAt: version },
+        data: {
+          report: (was.report ?? Prisma.DbNull) as Prisma.InputJsonValue,
+          reportDeliveredAt: was.reportDeliveredAt,
+          reportDueAt: was.reportDueAt,
+          status: was.status,
+          awaited: was.awaited,
+          awaitUntil: was.awaitUntil,
+        },
+      })
+    },
+  }
 }
+
+/** The tree a reopening's lock is for (`tree:<rootId>`). */
+const rootIdOfLock = (lock: string) => lock.slice('tree:'.length)
 
 /**
  * Why `sender` may not send work to a thread on another computer that is a member's own machine:
