@@ -12,6 +12,7 @@ if [ ! -f apps/api/.env ]; then
   secret=$(node -p 'require("crypto").randomBytes(32).toString("hex")')
   vault=$(node -p 'require("crypto").randomBytes(32).toString("base64")')
   sed -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$secret|" -e "s|^VAULT_KEY=.*|VAULT_KEY=$vault|" \
+    -e "s|@localhost:5433/|@localhost:$DB_PORT/|" \
     apps/api/.env.example >apps/api/.env
 fi
 
