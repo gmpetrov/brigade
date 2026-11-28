@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import http from 'node:http'
 import { test } from 'node:test'
-import { PreviewProxy } from '../src/preview-proxy.js'
+import { PreviewProxy, behind, crossSiteCookie, plainCookieRemoval } from '../src/preview-proxy.js'
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
@@ -211,5 +211,102 @@ test("behind the preview gateway, the app is asked for the gateway's host, WebSo
   assert.deepEqual(seen, [
     { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
     { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf', origin: 'https://abc.brigade.surf' },
+  ])
+})
+
+test("the app's cookies are rewritten for the dashboard's frame over HTTPS and on this computer", () => {
+  const options = () => ({
+    port: 1,
+    ports: [],
+    crossSiteCookies: false,
+    state: () => 'running' as const,
+    onUse: () => undefined,
+  })
+  const gateway = options()
+  behind(gateway, 'https://abc.brigade.surf')
+  assert.equal(gateway.crossSiteCookies, true)
+  assert.equal((gateway as { publicHost?: string }).publicHost, 'abc.brigade.surf')
+  assert.equal((gateway as { clearPlainCookies?: boolean }).clearPlainCookies, false)
+  // A member's machine: Secure, partitioned cookies are kept at <thread>.localhost over http,
+  // and the app keeps its own Host.
+  for (const origin of ['http://t1.localhost:31234', 'http://localhost:31234']) {
+    const local = options()
+    behind(local, origin)
+    assert.equal(local.crossSiteCookies, true, origin)
+    assert.equal((local as { clearPlainCookies?: boolean }).clearPlainCookies, true, origin)
+    assert.equal((local as { publicHost?: string }).publicHost, undefined, origin)
+  }
+  const plain = options()
+  behind(plain, 'http://10.0.0.5:31234')
+  assert.equal(plain.crossSiteCookies, false)
+  assert.equal(
+    crossSiteCookie('sid=1; Path=/; HttpOnly; SameSite=Lax; Domain=t1.localhost'),
+    'sid=1; Path=/; HttpOnly; Secure; SameSite=None; Partitioned',
+  )
+})
+
+test('on this computer, the plain cookie a rewritten one replaces is removed, where it was set', () => {
+  // A tab kept the plain one an older runner let through: Chrome sent both, and a sign-out
+  // cleared only the partitioned one.
+  assert.equal(
+    plainCookieRemoval('session=new; Path=/; HttpOnly; SameSite=Lax', '/api/auth/sign-in'),
+    'session=; Path=/; Max-Age=0; Secure; HttpOnly',
+  )
+  // No Path: the browser took the request's directory.
+  assert.equal(
+    plainCookieRemoval('sid=1; HttpOnly', '/api/auth/sign-in?x=1'),
+    'sid=; Path=/api/auth; Max-Age=0; Secure; HttpOnly',
+  )
+  assert.equal(plainCookieRemoval('sid=1', '/login'), 'sid=; Path=/; Max-Age=0; Secure')
+  // Secure-prefixed names are refused without Secure, so their removal has it too.
+  assert.equal(
+    plainCookieRemoval('__Host-sid=1; Path=/; Secure; HttpOnly', '/'),
+    '__Host-sid=; Path=/; Max-Age=0; Secure; HttpOnly',
+  )
+  assert.equal(
+    plainCookieRemoval('sid=1; domain=t1.localhost; path=/app', '/app/x'),
+    'sid=; Path=/app; Domain=t1.localhost; Max-Age=0; Secure',
+  )
+})
+
+test('through the proxy on this computer, each cookie comes after the removal of its plain one', async (t) => {
+  const server = http.createServer((req, res) =>
+    res
+      .writeHead(200, {
+        'set-cookie': [req.url === '/auth/login' ? 'b=2; HttpOnly' : 'a=1; Path=/; SameSite=Lax'],
+      })
+      .end('ok'),
+  )
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
+  t.after(() => server.close())
+  const options = {
+    port: (server.address() as { port: number }).port,
+    ports: [(server.address() as { port: number }).port],
+    crossSiteCookies: false,
+    state: () => 'running' as const,
+    onUse: () => undefined,
+  }
+  behind(options, 'http://t1.localhost:31234')
+  const proxy = new PreviewProxy(options)
+  t.after(() => proxy.close())
+  const at = await proxy.listen(20_000 + Math.floor(Math.random() * 20_000), [])
+  const cookies = (path: string) =>
+    new Promise<string[] | undefined>((done, fail) => {
+      http
+        .get({ host: '127.0.0.1', port: at, path, agent: false }, (res) => {
+          res.resume()
+          done(res.headers['set-cookie'])
+        })
+        .on('error', fail)
+    })
+  assert.deepEqual(await cookies('/'), [
+    'a=; Path=/; Max-Age=0; Secure',
+    'a=1; Path=/; Secure; SameSite=None; Partitioned',
+  ])
+  // On another port, a cookie without Path was the browser's at the address it asked for.
+  const other = `/__ports/${options.port}`
+  assert.deepEqual(await cookies(`${other}/auth/login`), [
+    `b=; Path=${other}/auth; Max-Age=0; Secure; HttpOnly`,
+    'b=2; HttpOnly; Secure; SameSite=None; Partitioned',
   ])
 })

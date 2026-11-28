@@ -104,6 +104,7 @@ import {
 import {
   PORTS_PREFIX,
   PreviewProxy,
+  behind,
   type PreviewProxyOptions,
   type ProxyState,
 } from './preview-proxy.js'
@@ -2851,14 +2852,6 @@ export class Previews {
 }
 
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
-
-/** A proxy behind the address people open: cookies for the dashboard's frame over HTTPS, and its host. */
-function behind(options: PreviewProxyOptions, origin: string) {
-  // In the dashboard's frame (another site), only these cookies are kept; they need HTTPS.
-  options.crossSiteCookies = origin.startsWith('https:')
-  // Behind the preview gateway, the app is asked for the gateway's host, not the provider's.
-  if (options.crossSiteCookies) options.publicHost = new URL(origin).host
-}
 
 /**
  * The app's environment: this computer's for the teammate, its addresses, its settings and
