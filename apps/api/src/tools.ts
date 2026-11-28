@@ -74,9 +74,11 @@ const toolRows = (db: ScopedDb, folder: string) =>
   })
 
 type Row = Awaited<ReturnType<typeof toolRows>>[number]
+/** A row as the sandbox serves it: without its search text, never needed there. */
+type Served = Omit<Row, 'text'>
 
 /** `tool.json`, parsed leniently; null when missing or unreadable. */
-async function readManifest(scope: Scope, row: Row | null | undefined) {
+async function readManifest(scope: Scope, row: Served | null | undefined) {
   if (!row) return null
   try {
     const text = new TextDecoder().decode(await readLibraryFile(scope, row))
@@ -902,7 +904,7 @@ const MEDIA = /^(audio|video)\//
 const RUNNABLE = /javascript|ecmascript|wasm|jscript|livescript/i
 
 /** A library file a tool reads: as the library serves it, never as a page that runs script. */
-async function serveLibraryFile(c: Context, scope: Scope, row: Row) {
+async function serveLibraryFile(c: Context, scope: Scope, row: Served) {
   const key = fileKey(scope, row)
   const disposition = `inline; filename*=UTF-8''${encodeURIComponent(row.path.split('/').pop()!)}`
   // Video and large files from the bucket's own address, which answers a player's ranges.
@@ -950,18 +952,30 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   const scope = { organizationId: claim.o, workspaceId: claim.w }
   const db = scoped(scope)
   const folder = claim.p
-  // The app's files read once: its entry checked, its manifest and the file asked for, all from
-  // this one read. Made for one app, the address serves nothing once another is at its folder
-  // (it moved, the folder reused), not even when that happens while this page is asked for.
-  const rows = await toolRows(db, folder)
+  // What it serves, read in one query: the app's entry (checked), its manifest and the file asked
+  // for, when it is the app's own (under _library/ too). Made for one app, the address serves
+  // nothing once another is at its folder (it moved, the folder reused), not even when that
+  // happens while this page is asked for. Only those rows, without their search text: a page
+  // loads many assets at once.
+  const library = rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1
+  const asked = library ? rest.slice(1).join('/') : [folder, ...rest].join('/')
+  const own = asked.startsWith(`${folder}/`)
+  const rows = await db.document.findMany({
+    where: {
+      kind: 'library',
+      deletedAt: null,
+      path: { in: [`${folder}/${TOOL_ENTRY}`, toolManifestPath(folder), ...(own ? [asked] : [])] },
+    },
+    omit: { text: true },
+  })
   const rowAt = (path: string) => rows.find((r) => r.path === path)
   if (claim.i && rowAt(`${folder}/${TOOL_ENTRY}`)?.id !== claim.i)
     return c.text('This app moved. Open it again.', 410)
   const manifest = await readManifest(scope, rowAt(toolManifestPath(folder)))
-  if (rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1) {
-    const path = rest.slice(1).join('/')
-    if (!readable({ folder, manifest }, path)) return c.text('Not found', 404)
-    const row = await libraryRow(db, path)
+  if (library) {
+    if (!readable({ folder, manifest }, asked)) return c.text('Not found', 404)
+    // Its own folder's from the read above; another folder it reads, on its own.
+    const row = own ? rowAt(asked) : await libraryRow(db, asked)
     return row ? serveLibraryFile(c, scope, row) : c.text('Not found', 404)
   }
   if (rest.join('/') === TOOL_SCREENSHOT)
@@ -973,7 +987,7 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
       'access-control-allow-origin': '*',
       'cache-control': 'private, max-age=3600',
     })
-  const row = rowAt([folder, ...rest].join('/'))
+  const row = rowAt(asked)
   if (!row) return c.text('Not found', 404)
   const html = row.contentType === 'text/html'
   const headers = {
