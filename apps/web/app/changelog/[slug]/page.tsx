@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { changelogMetadata } from '@/components/landing/changelog'
-import { Footer } from '@/components/landing/closing'
-import { Header } from '@/components/landing/hero'
+import { SitePage } from '@/components/home/site-page'
 import { c } from '@/components/landing/parts'
 import { REPO_URL } from '@/lib/github-proof'
 import { fitDescription, SITE_URL } from '@/lib/page-metadata'
@@ -59,65 +58,61 @@ export default async function Release({ params }: Props) {
     },
   }
   return (
-    <div className={c('page')}>
+    <SitePage>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
-      <Header />
-      <main>
-        <article className={c('log release')} aria-labelledby="release-title">
-          <div className={c('wrap')}>
-            <Link className={c('log-back')} href="/changelog">
-              ← All releases
-            </Link>
-            <p className={c('eyebrow')}>
-              {release.version && <>v{release.version} · </>}
-              <time dateTime={release.slug}>{releaseDate(release.slug)}</time>
-            </p>
-            <h1 id="release-title">{release.title}</h1>
-            <p className={c('log-lead')}>{release.summary}</p>
-            {release.sections.map((section) => (
-              <section key={section.heading}>
-                <h2>{section.heading}</h2>
-                <ul>
-                  {section.items.map((item) => (
-                    <li key={item.title}>
-                      <strong>{item.title}.</strong> {item.text}
-                      {item.prs?.length ? (
-                        <span className={c('log-prs')}>
-                          {item.prs.map((n) => (
-                            <a key={n} href={`${REPO_URL}/pull/${n}`}>
-                              #{n}
-                            </a>
-                          ))}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-            <nav className={c('log-pager')} aria-label="Other releases">
-              {older ? (
-                <Link href={`/changelog/${older.slug}`} rel="prev">
-                  <span>← Older</span>
-                  {older.title}
-                </Link>
-              ) : (
-                <span />
-              )}
-              {newer && (
-                <Link href={`/changelog/${newer.slug}`} rel="next">
-                  <span>Newer →</span>
-                  {newer.title}
-                </Link>
-              )}
-            </nav>
-          </div>
-        </article>
-      </main>
-      <Footer />
-    </div>
+      <article className={c('log release')} aria-labelledby="release-title">
+        <div className={c('wrap')}>
+          <Link className={c('log-back')} href="/changelog">
+            ← All releases
+          </Link>
+          <p className={c('eyebrow')}>
+            {release.version && <>v{release.version} · </>}
+            <time dateTime={release.slug}>{releaseDate(release.slug)}</time>
+          </p>
+          <h1 id="release-title">{release.title}</h1>
+          <p className={c('log-lead')}>{release.summary}</p>
+          {release.sections.map((section) => (
+            <section key={section.heading}>
+              <h2>{section.heading}</h2>
+              <ul>
+                {section.items.map((item) => (
+                  <li key={item.title}>
+                    <strong>{item.title}.</strong> {item.text}
+                    {item.prs?.length ? (
+                      <span className={c('log-prs')}>
+                        {item.prs.map((n) => (
+                          <a key={n} href={`${REPO_URL}/pull/${n}`}>
+                            #{n}
+                          </a>
+                        ))}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          <nav className={c('log-pager')} aria-label="Other releases">
+            {older ? (
+              <Link href={`/changelog/${older.slug}`} rel="prev">
+                <span>← Older</span>
+                {older.title}
+              </Link>
+            ) : (
+              <span />
+            )}
+            {newer && (
+              <Link href={`/changelog/${newer.slug}`} rel="next">
+                <span>Newer →</span>
+                {newer.title}
+              </Link>
+            )}
+          </nav>
+        </div>
+      </article>
+    </SitePage>
   )
 }

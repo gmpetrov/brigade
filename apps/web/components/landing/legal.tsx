@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { Footer } from '@/components/landing/closing'
-import { Header } from '@/components/landing/hero'
+import { SitePage } from '@/components/home/site-page'
 import { c } from '@/components/landing/parts'
 
 export const LEGAL_UPDATED = 'October 28, 2026'
@@ -25,18 +24,14 @@ export function ArticlePage({
   children: ReactNode
 }) {
   return (
-    <div className={c('page')}>
-      <Header />
-      <main>
-        <article className={c('legal')}>
-          <div className={c('wrap')}>
-            <p className={c('eyebrow')}>{eyebrow}</p>
-            <h1>{title}</h1>
-            {children}
-          </div>
-        </article>
-      </main>
-      <Footer />
-    </div>
+    <SitePage>
+      <article className={c('legal')}>
+        <div className={c('wrap')}>
+          <p className={c('eyebrow')}>{eyebrow}</p>
+          <h1>{title}</h1>
+          {children}
+        </div>
+      </article>
+    </SitePage>
   )
 }

@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { HarnessLogo } from '@/components/harness-logo'
-import { Footer } from '@/components/landing/closing'
-import { Header } from '@/components/landing/hero'
+import { SitePage } from '@/components/home/site-page'
 import type { Logo, Mark } from '@/lib/compare'
 import { AuthLink } from './auth-link'
 import { c, Icon, SIGN_UP } from './parts'
@@ -11,13 +10,9 @@ import { c, Icon, SIGN_UP } from './parts'
 /** A comparison page (app/compare) in the landing's header and footer. */
 export function ComparePage({ children }: { children: ReactNode }) {
   return (
-    <div className={c('page')}>
-      <Header />
-      <main className={c('vs')}>
-        <div className={c('wrap')}>{children}</div>
-      </main>
-      <Footer />
-    </div>
+    <SitePage className="vs">
+      <div className={c('wrap')}>{children}</div>
+    </SitePage>
   )
 }
 
