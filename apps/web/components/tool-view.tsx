@@ -697,7 +697,9 @@ function ToolAccounts({
               size="sm"
               className="self-start"
               disabled={busy || !view.mayAttach}
-              onClick={() => void run('/tools/accounts/allow', { path: view.folder })}
+              onClick={() =>
+                void run('/tools/accounts/allow', { path: view.folder, id: view.toolId })
+              }
             >
               Allow the changed app
             </Button>
@@ -745,6 +747,7 @@ function ToolAccounts({
                         onClick={() =>
                           void run('/tools/accounts/detach', {
                             path: view.folder,
+                            id: view.toolId,
                             connectionId: a.connectionId,
                           })
                         }
@@ -768,6 +771,7 @@ function ToolAccounts({
                       onClick={() =>
                         void run('/tools/accounts', {
                           path: view.folder,
+                          id: view.toolId,
                           connectionId: a.connectionId,
                           access: need.access,
                         })

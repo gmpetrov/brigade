@@ -139,8 +139,11 @@ PWA manifest per app) is a separate change.
   own session: no second sign-in. The window stays on that page: any other dashboard address
   opens in the dashboard window, a signed-out page included.
 - **Its app, by id.** It finds the app by its document id only, so an app moved in the library
-  still opens, and the view checks it again (`/view`'s `id`: another app saved at that folder
-  since answers 409 `app_moved`, and the window looks the id up again). A deleted app says so,
+  still opens. Every request for an app names its id beside its folder (`id` in contracts'
+  `ToolId`: the view, state, files, operations, calls and accounts, from the panel and the window
+  alike), and its page's signed address carries it too: once another app is saved at that folder
+  (the app moved, its folder reused), the requests answer 409 `app_moved` and the address 410,
+  never the other app. The window then looks the id up again. A deleted app says so,
   with an Uninstall button; a lookup that fails (offline, the API restarting) offers to try
   again. Never the folder it once had: another app may be there now.
 - **Its workspace, pinned.** Every call of the window carries `x-brigade-workspace: <id>`
@@ -148,7 +151,9 @@ PWA manifest per app) is a separate change.
   session shows, after checking the person is a member of its organization now (refused
   otherwise, never taken for the session's: `userFrom` in `apps/api/src/scope.ts`). The session
   is never switched: the dashboard window stays where it was, and two app windows of two
-  workspaces, even of two organizations, each keep to their own.
+  workspaces, even of two organizations, each keep to their own. The window needs no AI account
+  of the person's (no onboarding there). Access taken away (removed from the organization): the
+  window says so, with Uninstall, rather than trying again.
 - **Its bridge** (`preload.ts`) has `info` (`window: 'app'`), `apps.setBadge` and
   `apps.uninstall` (its own app only) only: no
   captures, no sign-in, no notifications, no computer use (`ipc.ts` refuses them to an app
@@ -168,8 +173,10 @@ PWA manifest per app) is a separate change.
   list is read. Brigade's menu (the menu bar's, and the app menu's File on macOS) lists them under
   **Installed apps**, each with Open and Uninstall…, even once the app is gone from the library.
 - **Only what is still Brigade's.** At each start, and before launching a shim, Brigade checks
-  that what the list names is still what it wrote: the bundle's install id and signature (its
-  cdhash), the shortcut's arguments, the launcher entry's install id. Anything put in its place is
+  that what the list names is still what it wrote, and never a link: the bundle's install id and
+  its signature, whole (`codesign --verify --strict`) and with the cdhash kept; the shortcut's
+  arguments; the launcher entry's install id (rewritten through a file beside it, renamed over
+  it). Anything put in its place is
   forgotten and left as it is: never rewritten, signed, launched or removed. A second Install of
   the same app while the first asks does nothing; settings that could not be saved take back
   what the install just wrote.
@@ -194,7 +201,8 @@ marked experimental), as Chrome and Claude use (`app-install-mac.ts`, `app-windo
   (`satisfiesCodeRequirement('cdhash H"…"')`, which binds its Info.plist too); any other is told
   to quit. Any process of the account can connect to the server, so nothing opens without both.
 - The window is made in the shim's process: its own Dock icon, ⌘-Tab entry, menu bar (the app's
-  name with Open in Brigade, Uninstall…, Hide and Quit; Edit; View; Window) and badge
+  name with Open in Brigade, which opens it in the library by its id and in its workspace
+  (`/app/library?app-id=…&workspace=…`), Uninstall…, Hide and Quit; Edit; View; Window) and badge
   (`brigade.badge.set`). Closing the window quits the shim; its Dock icon, clicked, opens it again.
 - Updates keep Brigade.app's path, so shims keep working. A Brigade.app that moved rewrites each
   shim's host path at start and signs it again. A shim launched after Brigade.app was updated

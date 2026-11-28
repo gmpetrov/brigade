@@ -148,7 +148,7 @@ test('a message to the thread goes as the person, said to come from the tool, on
   assert.equal(nowhere.asked.length, 0)
 })
 
-test('state and files go to the API for this tool, whatever path the page names', async () => {
+test('state and files go to the API for this tool and its id, whatever path the page names', async () => {
   const h = host()
   await answer(h.host, ask('state.set', { shared: true, key: 'k', value: [1], version: 2 }))
   await answer(h.host, ask('state.list', { shared: false, prefix: 'clip:', after: 'clip:9' }))
@@ -156,19 +156,28 @@ test('state and files go to the API for this tool, whatever path the page names'
   assert.deepEqual(h.calls, [
     {
       path: '/tools/state',
-      body: { op: 'set', path: 'Film/review.tool', shared: true, key: 'k', value: [1], version: 2 },
+      body: {
+        op: 'set',
+        path: 'Film/review.tool',
+        id: 'doc1',
+        shared: true,
+        key: 'k',
+        value: [1],
+        version: 2,
+      },
     },
     {
       path: '/tools/state',
       body: {
         op: 'list',
         path: 'Film/review.tool',
+        id: 'doc1',
         shared: false,
         prefix: 'clip:',
         after: 'clip:9',
       },
     },
-    { path: '/tools/files', body: { path: 'Film/review.tool', folder: 'Film/clips' } },
+    { path: '/tools/files', body: { path: 'Film/review.tool', id: 'doc1', folder: 'Film/clips' } },
   ])
 })
 

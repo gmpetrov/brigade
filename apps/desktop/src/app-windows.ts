@@ -13,7 +13,15 @@
 // Brigade's own session, as the new thread window does (capture.ts). It stays on that page:
 // anything else of the dashboard opens in the dashboard window. Its bridge has nothing but
 // `info` and the app's badge (ipc.ts, preload.ts).
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 import {
   app,
@@ -168,10 +176,14 @@ function appMenu(entry: Entry, window: () => BrowserWindow | undefined) {
   ])
 }
 
-/** The app in the dashboard window, in the library. */
+/**
+ * The app in the dashboard window, in the library: by its document id (wherever it moved), in
+ * the workspace it was installed from, which the dashboard switches to for it.
+ */
 function openInBrigade(entry: Entry) {
   const url = new URL(`${dashboard()}/library`)
-  url.searchParams.set('app', entry.path)
+  url.searchParams.set('app-id', entry.appId)
+  url.searchParams.set('workspace', entry.workspaceId)
   showDashboard(url.toString())
 }
 
@@ -473,6 +485,8 @@ async function make(input: InstallInput, square: Electron.NativeImage): Promise<
     writeFileSync(
       file,
       linux.desktopEntry({ installId, name, exec: linux.launcherPath(), icon: png }),
+      // A new install id's file: never one already there, nor a link's target.
+      { flag: 'wx' },
     )
     execFile('update-desktop-database', [folder], () => {})
     entry = record(input, installId, name, file, { iconPath: png })
@@ -517,13 +531,14 @@ function record(
  */
 async function ours(entry: Entry) {
   const path = entry.installedPath
-  if (!existsSync(path)) return false
   try {
+    // A link could point anywhere: what Brigade wrote is never one.
+    if (lstatSync(path).isSymbolicLink()) return false
     if (process.platform === 'darwin')
       return (
         mac.plistValue(path, 'BrigadeAppInstallId') === entry.installId &&
         !!entry.cdhash &&
-        (await mac.cdhashOf(path)) === entry.cdhash
+        (await mac.signedAs(path, entry.cdhash))
       )
     if (process.platform === 'win32')
       return (
@@ -604,6 +619,13 @@ async function uninstalling(installId: string) {
 
 async function removeFiles(entry: Entry) {
   const path = entry.installedPath
+  // A link put in its place: forgotten, never followed nor removed.
+  try {
+    if (lstatSync(path).isSymbolicLink())
+      throw new Error(`${path} is not what Brigade installed, so it was left as it is.`)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   if (process.platform === 'darwin') {
     if (!(await mac.removeShim(path, entry.installId)))
       throw new Error(`${path} is not an app Brigade installed, so it was left as it is.`)
@@ -654,15 +676,20 @@ export async function refreshInstalls() {
         if (link.target !== process.execPath)
           shell.writeShortcutLink(entry.installedPath, 'update', { target: process.execPath })
       } else if (entry.iconPath) {
+        // Written beside it, then renamed over it: a link put there meanwhile is replaced, never
+        // followed.
+        const temp = `${entry.installedPath}.${process.pid}.tmp`
         writeFileSync(
-          entry.installedPath,
+          temp,
           linux.desktopEntry({
             installId: entry.installId,
             name: entry.name,
             exec: linux.launcherPath(),
             icon: entry.iconPath,
           }),
+          { flag: 'wx' },
         )
+        renameSync(temp, entry.installedPath)
       }
     } catch (error) {
       console.error('installed app:', entry.name, error)

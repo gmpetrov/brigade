@@ -163,6 +163,25 @@ export async function cdhashOf(bundle: string) {
   return hash
 }
 
+/**
+ * Whether a bundle's signature is whole (nothing in it changed since it was signed) and is the
+ * one Brigade made: `codesign --verify` checks the seal, then its cdhash is compared. Reading
+ * the cdhash alone (`-dvvv`) would accept a bundle edited after it was signed.
+ */
+export async function signedAs(bundle: string, cdhash: string) {
+  if (!/^[0-9a-f]{40}$/.test(cdhash)) return false
+  try {
+    // The seal first: nothing in the bundle changed since it was signed (its Info.plist, its
+    // resources, its executable). Then whose signature it is: the cdhash kept at install. (A
+    // `cdhash` requirement given to --verify is checked against another slice of a universal
+    // executable than the one -dvvv prints.)
+    await run('/usr/bin/codesign', ['--verify', '--strict', bundle], { timeout: 30_000 })
+    return (await cdhashOf(bundle)) === cdhash
+  } catch {
+    return false
+  }
+}
+
 /** Signs a bundle ad hoc: this Mac's own signature, which macOS asks of every app it runs. */
 async function sign(bundle: string) {
   await run('/usr/bin/codesign', ['--force', '--sign', '-', bundle], { timeout: 30_000 })

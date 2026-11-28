@@ -53,8 +53,8 @@ export const tools = new Hono<AppEnv>()
 
   /** Allow the accounts again once the tool changed. */
   .post('/accounts/allow', async (c) => {
-    const { path } = await parseBody(c.req.raw, ApproveToolChange)
-    return c.json({ allowed: await approveToolChange(c.var.db, c.var.scope, path) })
+    const { path, id } = await parseBody(c.req.raw, ApproveToolChange)
+    return c.json({ allowed: await approveToolChange(c.var.db, c.var.scope, path, id) })
   })
 
   .post('/state', async (c) => {

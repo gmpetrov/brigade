@@ -92,14 +92,15 @@ export const ToolManifest = z.object({
 })
 export type ToolManifest = z.infer<typeof ToolManifest>
 
-export const OpenToolView = z.object({
-  path: LibraryPath,
-  /**
-   * The app's `index.html` document id it must have: an installed app's window opens its own app
-   * only, never another one saved at its folder since (409 `app_moved`).
-   */
-  id: z.string().min(1).max(200).optional(),
-})
+/**
+ * The app's `index.html` document id a request is for, beside its folder: when another app was
+ * saved at that folder since (the app moved, its folder reused), the request is refused (409
+ * `app_moved`) rather than made for the other one. An installed app's window sends it, and the
+ * dashboard's side of the bridge for every call of an app's page.
+ */
+export const ToolId = z.string().min(1).max(200).optional()
+
+export const OpenToolView = z.object({ path: LibraryPath, id: ToolId })
 
 /** An App account attached to a tool, as its viewer sees it. */
 export type ToolAccount = {
@@ -139,17 +140,19 @@ export type ToolView = {
 
 export const AttachToolAccount = z.object({
   path: LibraryPath,
+  id: ToolId,
   connectionId: z.string().min(1).max(64),
   access: z.enum(['read', 'read_write']),
 })
 
 export const DetachToolAccount = z.object({
   path: LibraryPath,
+  id: ToolId,
   connectionId: z.string().min(1).max(64),
 })
 
 /** Allow a tool's accounts again after it changed: every account attached to it. */
-export const ApproveToolChange = z.object({ path: LibraryPath })
+export const ApproveToolChange = z.object({ path: LibraryPath, id: ToolId })
 
 /** Longest key a tool keeps state under, and largest value. */
 export const TOOL_STATE_KEY_MAX = 200
@@ -161,10 +164,17 @@ const StateKey = z.string().min(1).max(TOOL_STATE_KEY_MAX)
 
 /** State a tool keeps: `shared` for everyone who opens it, else the viewer's own. */
 export const ToolStateRequest = z.discriminatedUnion('op', [
-  z.object({ op: z.literal('get'), path: LibraryPath, shared: z.boolean(), key: StateKey }),
+  z.object({
+    op: z.literal('get'),
+    path: LibraryPath,
+    id: ToolId,
+    shared: z.boolean(),
+    key: StateKey,
+  }),
   z.object({
     op: z.literal('list'),
     path: LibraryPath,
+    id: ToolId,
     shared: z.boolean(),
     prefix: z.string().max(TOOL_STATE_KEY_MAX).optional(),
     /** The next page: the `next` the last one gave. */
@@ -173,6 +183,7 @@ export const ToolStateRequest = z.discriminatedUnion('op', [
   z.object({
     op: z.literal('set'),
     path: LibraryPath,
+    id: ToolId,
     shared: z.boolean(),
     key: StateKey,
     value: z.unknown(),
@@ -182,6 +193,7 @@ export const ToolStateRequest = z.discriminatedUnion('op', [
   z.object({
     op: z.literal('delete'),
     path: LibraryPath,
+    id: ToolId,
     shared: z.boolean(),
     key: StateKey,
     version: z.number().int().min(1).optional(),
@@ -200,6 +212,7 @@ export type ToolStateEntry = {
 /** Library files a tool lists, from a folder it declares. */
 export const ToolFilesRequest = z.object({
   path: LibraryPath,
+  id: ToolId,
   folder: LibraryPath,
 })
 
@@ -223,11 +236,13 @@ export type ToolOperation = {
 
 export const ToolOperationsRequest = z.object({
   path: LibraryPath,
+  id: ToolId,
   connectionId: z.string().min(1).max(64),
 })
 
 export const ToolCall = z.object({
   path: LibraryPath,
+  id: ToolId,
   connectionId: z.string().min(1).max(64),
   operation: z.string().min(1).max(200),
   input: z.unknown(),

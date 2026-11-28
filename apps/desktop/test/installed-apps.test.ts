@@ -11,7 +11,14 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { infoPlist, inAppsFolder, ownFolder, plistValue } from '../src/app-install-mac.js'
+import {
+  cdhashOf,
+  infoPlist,
+  inAppsFolder,
+  ownFolder,
+  plistValue,
+  signedAs,
+} from '../src/app-install-mac.js'
 import {
   desktopEntry,
   entryInstallId,
@@ -312,3 +319,37 @@ test('the desktop entry quotes its Exec and names its window class', () => {
     assert.equal(readFileSync(file, 'utf8'), text)
   }
 })
+
+test(
+  "a bundle counts as Brigade's only while its signature is whole and its cdhash the one kept",
+  {
+    skip: process.platform !== 'darwin' && 'macOS only',
+  },
+  async () => {
+    const bundle = join(mkdtempSync(join(tmpdir(), 'brigade-signed-')), 'x.app')
+    mkdirSync(join(bundle, 'Contents', 'MacOS'), { recursive: true })
+    writeFileSync(join(bundle, 'Contents', 'MacOS', 'app'), readFileSync('/usr/bin/true'))
+    writeFileSync(
+      join(bundle, 'Contents', 'Info.plist'),
+      infoPlist({
+        installId: ID,
+        name: 'Signed',
+        hostPath: '/Applications/Brigade.app',
+        hostBundleId: 'ai.brigade.desktop',
+        minimumSystemVersion: '14.0',
+      }),
+    )
+    execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', bundle])
+    const cdhash = await cdhashOf(bundle)
+    assert.equal(await signedAs(bundle, cdhash), true)
+    assert.equal(await signedAs(bundle, 'f'.repeat(40)), false)
+    assert.equal(await signedAs(bundle, 'not a hash'), false)
+    // Edited after it was signed: its cdhash still reads the same, but the seal is broken.
+    writeFileSync(
+      join(bundle, 'Contents', 'Info.plist'),
+      readFileSync(join(bundle, 'Contents', 'Info.plist'), 'utf8').replace('Signed', 'Edited'),
+    )
+    assert.equal(await cdhashOf(bundle), cdhash)
+    assert.equal(await signedAs(bundle, cdhash), false)
+  },
+)

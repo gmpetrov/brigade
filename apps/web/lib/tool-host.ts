@@ -108,6 +108,8 @@ function unusable(account: ToolAccount | undefined, ref: unknown) {
 async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unknown> {
   const { view, api } = host
   const path = view.folder
+  // Every call names the app as well as its folder: one saved at that folder since is refused.
+  const id = view.toolId
   const p = request.params
   switch (request.method) {
     case 'me':
@@ -115,7 +117,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
     case 'files.list': {
       const folder = text(p.folder)
       if (!folder) throw new Refused('Name a library folder')
-      return api('/tools/files', { path, folder })
+      return api('/tools/files', { path, id, folder })
     }
     case 'state.get':
     case 'state.list':
@@ -128,6 +130,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const body = {
         op,
         path,
+        id,
         shared: bool(p.shared),
         ...(op !== 'list' ? { key: text(p.key) ?? '' } : {}),
         ...(op === 'list' && prefix ? { prefix } : {}),
@@ -151,7 +154,7 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       const account = accountFor(view.accounts, p.account)
       const why = unusable(account, p.account)
       if (why) throw why
-      return api('/tools/operations', { path, connectionId: account!.connectionId })
+      return api('/tools/operations', { path, id, connectionId: account!.connectionId })
     }
     case 'apps.call': {
       const account = accountFor(view.accounts, p.account)
@@ -159,7 +162,13 @@ async function perform(host: ToolHost, request: ToolBridgeRequest): Promise<unkn
       if (why) throw why
       const operation = text(p.operation)
       if (!operation) throw new Refused('Name the operation to call')
-      const call = { path, connectionId: account!.connectionId, operation, input: p.input ?? {} }
+      const call = {
+        path,
+        id,
+        connectionId: account!.connectionId,
+        operation,
+        input: p.input ?? {},
+      }
       let result: ToolCallResult
       try {
         result = await api<ToolCallResult>('/tools/call', call)

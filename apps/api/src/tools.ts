@@ -115,12 +115,14 @@ type Tool = {
 }
 
 /** The tool a library path is in, or is: its folder, files, page and manifest. */
-async function toolAt(db: ScopedDb, scope: Scope, path: string): Promise<Tool> {
+async function toolAt(db: ScopedDb, scope: Scope, path: string, id?: string): Promise<Tool> {
   const folder = toolFolderOf(path)
   if (!folder) throw new HTTPException(400, { message: 'That is not in an app folder' })
   const rows = await toolRows(db, folder)
   const entry = rows.find((r) => r.path === `${folder}/${TOOL_ENTRY}`)
   if (!entry) throw new HTTPException(404, { message: `The app has no ${TOOL_ENTRY} yet` })
+  // Another app at this folder than the one asked for (it moved, its folder reused): never it.
+  if (id !== undefined && entry.id !== id) throw new HTTPException(409, { message: 'app_moved' })
   const manifest = await readManifest(
     scope,
     rows.find((r) => r.path === toolManifestPath(folder)),
@@ -141,19 +143,22 @@ const readable = (tool: { folder: string; manifest: ToolManifest | null }, path:
 /** How long a tool's address works. Reopening the tool gets a new one. */
 const VIEW_SECONDS = 4 * 60 * 60
 
-type ViewClaim = { o: string; w: string; p: string; e: number }
+/** The address's claim: organization, workspace, folder, expiry and the app's index.html id. */
+type ViewClaim = { o: string; w: string; p: string; e: number; i?: string }
 
 const b64url = (data: Buffer | string) => Buffer.from(data).toString('base64url')
 // Its own key: a design's address never opens a tool, nor a tool's a design.
 const sign = (payload: string) =>
   b64url(createHmac('sha256', `tool-view:${env.BETTER_AUTH_SECRET}`).update(payload).digest())
 
-export function toolToken(scope: Scope, folder: string, now = Date.now()) {
+export function toolToken(scope: Scope, folder: string, now = Date.now(), id?: string) {
   const claim: ViewClaim = {
     o: scope.organizationId,
     w: scope.workspaceId,
     p: folder,
     e: Math.floor(now / 1000) + VIEW_SECONDS,
+    // The app it was made for: another app saved at its folder since is not served under it.
+    ...(id && { i: id }),
   }
   const payload = b64url(JSON.stringify(claim))
   return { token: `${payload}.${sign(payload)}`, expiresAt: new Date(claim.e * 1000) }
@@ -257,9 +262,7 @@ export async function openToolView(
   /** The app's index.html it must be (an installed app's window): another one there is refused. */
   id?: string,
 ): Promise<ToolView> {
-  const tool = await toolAt(db, scope, path)
-  if (id !== undefined && tool.entry.id !== id)
-    throw new HTTPException(409, { message: 'app_moved' })
+  const tool = await toolAt(db, scope, path, id)
   const latest = [...tool.rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
   const sessionId = latest.find((r) => r.updatedInSessionId)?.updatedInSessionId
   const teammateId = latest.find((r) => r.updatedByType === 'teammate')?.updatedById
@@ -291,7 +294,7 @@ export async function openToolView(
     db,
     attached.flatMap((a) => (a.attachedByMemberId ? [a.attachedByMemberId] : [])),
   )
-  const { token, expiresAt } = toolToken(scope, tool.folder)
+  const { token, expiresAt } = toolToken(scope, tool.folder, Date.now(), tool.entry.id)
   const taken = new Set(attached.map((a) => a.connectionId))
   return {
     url: `${env.DESIGN_URL}/t/${token}/${TOOL_ENTRY}`,
@@ -343,9 +346,9 @@ async function memberNames(db: ScopedDb, ids: string[]) {
 export async function attachToolAccount(
   db: ScopedDb,
   scope: WorkspaceScope,
-  input: { path: string; connectionId: string; access: 'read' | 'read_write' },
+  input: { path: string; id?: string; connectionId: string; access: 'read' | 'read_write' },
 ) {
-  const tool = await toolAt(db, scope, input.path)
+  const tool = await toolAt(db, scope, input.path, input.id)
   const connection = await db.connection.findFirst({
     where: { id: input.connectionId, status: 'active' },
     select: ACCOUNT_SELECT,
@@ -385,9 +388,9 @@ export async function attachToolAccount(
 export async function detachToolAccount(
   db: ScopedDb,
   scope: WorkspaceScope,
-  input: { path: string; connectionId: string },
+  input: { path: string; id?: string; connectionId: string },
 ) {
-  const tool = await toolAt(db, scope, input.path)
+  const tool = await toolAt(db, scope, input.path, input.id)
   const attached = await db.toolAccount.findFirst({
     where: { toolId: tool.entry.id, connectionId: input.connectionId },
     include: { connection: { select: ACCOUNT_SELECT } },
@@ -411,8 +414,13 @@ export async function detachToolAccount(
  * Allow a tool's accounts again once its files changed: those this member may attach, as the
  * tool is now. Returns how many.
  */
-export async function approveToolChange(db: ScopedDb, scope: WorkspaceScope, path: string) {
-  const tool = await toolAt(db, scope, path)
+export async function approveToolChange(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  path: string,
+  id?: string,
+) {
+  const tool = await toolAt(db, scope, path, id)
   const attached = await db.toolAccount.findMany({
     where: { toolId: tool.entry.id, codeHash: { not: tool.codeHash } },
     include: { connection: { select: ACCOUNT_SELECT } },
@@ -532,7 +540,7 @@ export async function toolState(
   scope: WorkspaceScope,
   request: ToolStateRequest,
 ): Promise<ToolStateEntry | { entries: ToolStateEntry[]; next?: string } | null> {
-  const tool = await toolAt(db, scope, request.path)
+  const tool = await toolAt(db, scope, request.path, request.id)
   const owner = ownerOf(request.shared, scope.memberId)
   const where = { toolId: tool.entry.id, owner }
   const current = async (key: string) => {
@@ -668,9 +676,9 @@ const FILES_MAX = 1000
 export async function toolFiles(
   db: ScopedDb,
   scope: WorkspaceScope,
-  input: { path: string; folder: string },
+  input: { path: string; id?: string; folder: string },
 ): Promise<ToolFile[]> {
-  const tool = await toolAt(db, scope, input.path)
+  const tool = await toolAt(db, scope, input.path, input.id)
   const folder = input.folder.replace(/\/+$/, '')
   if (!readable(tool, folder))
     throw new HTTPException(403, {
@@ -682,7 +690,7 @@ export async function toolFiles(
     take: FILES_MAX,
     select: { path: true, contentType: true, size: true, updatedAt: true },
   })
-  const { token } = toolToken(scope, tool.folder)
+  const { token } = toolToken(scope, tool.folder, Date.now(), tool.entry.id)
   return rows.map((r) => ({
     path: r.path,
     name: r.path.split('/').pop()!,
@@ -752,9 +760,9 @@ async function callableAccount(
 export async function toolOperations(
   db: ScopedDb,
   scope: WorkspaceScope,
-  input: { path: string; connectionId: string },
+  input: { path: string; id?: string; connectionId: string },
 ): Promise<ToolOperation[]> {
-  const tool = await toolAt(db, scope, input.path)
+  const tool = await toolAt(db, scope, input.path, input.id)
   const { attached, connection } = await callableAccount(db, scope, tool, input.connectionId)
   if (connectors[connection.kind]?.auth === 'brigade') return []
   const operations = await grantOperations(db, scope, connection, attached.access)
@@ -796,7 +804,7 @@ export async function callToolOperation(
     throw new HTTPException(403, { message: 'Viewers cannot use the connected apps of apps' })
   if (!calls.take(scope.memberId))
     throw new HTTPException(429, { message: 'Too many calls from apps: wait a minute' })
-  const tool = await toolAt(db, scope, input.path)
+  const tool = await toolAt(db, scope, input.path, input.id)
   const { attached, connection } = await callableAccount(db, scope, tool, input.connectionId)
   if (connectors[connection.kind]?.auth === 'brigade')
     throw new HTTPException(400, { message: `${appName(connection)} is not available to apps` })
@@ -942,6 +950,9 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   const scope = { organizationId: claim.o, workspaceId: claim.w }
   const db = scoped(scope)
   const folder = claim.p
+  // Made for one app: once another is at its folder (it moved, the folder reused), nothing here.
+  if (claim.i && (await libraryRow(db, `${folder}/${TOOL_ENTRY}`))?.id !== claim.i)
+    return c.text('This app moved. Open it again.', 410)
   const manifest = await readManifest(scope, await libraryRow(db, toolManifestPath(folder)))
   if (rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1) {
     const path = rest.slice(1).join('/')
