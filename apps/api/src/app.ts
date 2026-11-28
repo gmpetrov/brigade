@@ -266,9 +266,8 @@ app.route('/api/themes', themeRoutes)
 app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)
-// Apps (docs/apps.md). /api/tools for the dashboard before this one: remove it once this is out.
+// Apps (docs/apps.md).
 app.route('/api/apps', tools)
-app.route('/api/tools', tools)
 app.route('/api/attachments', attachments)
 app.route('/api/feedback', feedback)
 app.route('/api/uploads', uploads)
