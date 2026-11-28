@@ -428,9 +428,13 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     `http://localhost` and its subdomains as from HTTPS (Chrome 158, Electron 45
     and Playwright's WebKit, in a frame and in a tab alike), so the rewritten
     one keeps the app signed in across reloads. The app keeps its own `Host`.
-    Brigade.app also allows Chromium's Local Network Access permission for the
-    dashboard's pages (`apps/desktop/src/windows.ts`), for an Electron that
-    starts asking.
+    Before each rewritten cookie, the proxy there clears the plain one of its
+    name (same path and domain, `Max-Age=0`): a tab still holds the plain
+    cookie an older runner let through, which Chrome 158 then sent beside the
+    new one and kept after a sign-out (review of #1005). In the frame, the
+    browser ignores that removal. Brigade.app grants no Local Network Access
+    permission: granted from the dashboard's own address, it would let the
+    dashboard reach any address on the member's network, the pane closed too.
   - **Chrome** (142 and later) asks first: a public page reaching the
     computer's own addresses needs its Local Network Access permission
     (`loopback-network`, formerly `local-network-access`), once for the

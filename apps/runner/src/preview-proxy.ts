@@ -37,8 +37,13 @@ export type PreviewProxyOptions = {
   port: number
   /** Its other ports, served under PORTS_PREFIX. */
   ports: number[]
-  /** Rewrite cookies for a cross-site frame: the address people open is HTTPS. */
+  /** Rewrite cookies for a cross-site frame: the address people open is HTTPS, or this computer's. */
   crossSiteCookies: boolean
+  /**
+   * Before each rewritten cookie, clear the plain one of its name that a tab still holds: on a
+   * member's machine, runners before this rewrite let the app's own cookies through as they were.
+   */
+  clearPlainCookies?: boolean
   /**
    * The host people open (the preview gateway's, apps/preview-gateway): the app gets it as
    * the Host it was asked for, not the provider's that forwarded it, as on a real deploy.
@@ -66,6 +71,27 @@ export function crossSiteCookie(cookie: string) {
   return [pair.trim(), ...kept, 'Secure', 'SameSite=None', 'Partitioned'].join('; ')
 }
 
+/**
+ * A Set-Cookie value that removes the plain (unpartitioned) cookie a rewritten one replaces:
+ * in a tab, a browser keeps both, sends the stale one too, and a sign-out cleared only the
+ * partitioned one (Chrome 158). Same name, path (the request's directory when it had none, as
+ * the browser chose then) and domain; in the frame, the browser ignores it.
+ */
+export function plainCookieRemoval(cookie: string, requestPath: string) {
+  const [pair = '', ...attributes] = cookie.split(';').map((a) => a.trim())
+  const name = pair.split('=')[0]!.trim()
+  const attribute = (key: string) =>
+    attributes.find((a) => new RegExp(`^${key}\\s*=`, 'i').test(a))?.replace(/^[^=]*=\s*/, '')
+  const pathname = requestPath.split('?')[0] ?? '/'
+  const path =
+    attribute('path') ??
+    (pathname.lastIndexOf('/') > 0 ? pathname.slice(0, pathname.lastIndexOf('/')) : '/')
+  const domain = attribute('domain')
+  return [`${name}=`, `Path=${path}`, ...(domain ? [`Domain=${domain}`] : []), 'Max-Age=0'].join(
+    '; ',
+  )
+}
+
 /** A proxy behind the address people open: cookies for the dashboard's frame, and its host. */
 export function behind(options: PreviewProxyOptions, origin: string) {
   const url = new URL(origin)
@@ -74,6 +100,7 @@ export function behind(options: PreviewProxyOptions, origin: string) {
   // http://<thread>.localhost as from HTTPS (Chrome, Brigade.app and WebKit, in a frame and a tab).
   const loopback = url.hostname === 'localhost' || url.hostname.endsWith('.localhost')
   options.crossSiteCookies = url.protocol === 'https:' || loopback
+  options.clearPlainCookies = loopback
   // Behind the preview gateway, the app is asked for the gateway's host, not the provider's.
   if (url.protocol === 'https:') options.publicHost = url.host
 }
@@ -244,7 +271,10 @@ export class PreviewProxy {
           response.statusCode !== 304
         if (tagged) delete headers['content-length']
         if (this.options.crossSiteCookies && headers['set-cookie'])
-          headers['set-cookie'] = headers['set-cookie'].map(crossSiteCookie)
+          headers['set-cookie'] = headers['set-cookie'].flatMap((cookie) => [
+            ...(this.options.clearPlainCookies ? [plainCookieRemoval(cookie, target.path)] : []),
+            crossSiteCookie(cookie),
+          ])
         // A redirect to the app's own path stays under its prefix.
         const location = headers.location
         if (target.prefix && location?.startsWith('/') && !location.startsWith('//'))

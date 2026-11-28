@@ -110,13 +110,7 @@ export function guard(contents: WebContents, kind: WindowKind) {
   })
 }
 
-/** Chromium's permission for a public page to reach this computer, by its names old and new. */
-const LOCAL_NETWORK = new Set<string>(['local-network-access', 'local-network', 'loopback-network'])
-
-/**
- * The dashboard's pages get what dictation and notifications need, and its preview pane what a
- * preview running on this computer needs, and nothing else.
- */
+/** The dashboard's pages get what dictation and notifications need, and nothing else. */
 export function setUpSession() {
   const allowed = new Set([
     'notifications',
@@ -125,9 +119,6 @@ export function setUpSession() {
     'fullscreen',
   ])
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
-    // A preview on this computer, in the dashboard's frame: Chromium asks before a public page
-    // reaches the computer's own addresses (Local Network Access), for the frame's address.
-    if (LOCAL_NETWORK.has(permission) && onDashboard(contents.getURL())) return callback(true)
     const url = details.requestingUrl || contents.getURL()
     if (!onDashboard(url)) return callback(false)
     // Dictation records the microphone; nothing films.
@@ -135,8 +126,7 @@ export function setUpSession() {
       return callback(!('mediaTypes' in details && details.mediaTypes?.includes('video')))
     callback(allowed.has(permission))
   })
-  session.defaultSession.setPermissionCheckHandler((contents, permission, origin) => {
-    if (LOCAL_NETWORK.has(permission) && contents && onDashboard(contents.getURL())) return true
+  session.defaultSession.setPermissionCheckHandler((_contents, permission, origin) => {
     if (!onDashboard(origin)) return false
     return permission === 'media' || allowed.has(permission)
   })
