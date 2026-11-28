@@ -420,17 +420,27 @@ type ParentThread = {
   othersMayPrompt: boolean
   /** A playbook run's thread: its children are part of the run. */
   playbookRunId?: string | null
+  /** The thread at the top of its tree, when it is a sub-thread (Session.rootId). */
+  rootId?: string | null
+  /** It is a sub-thread itself: its own parent. */
+  parentId?: string | null
 }
 
-/** A child's columns (src/children.ts): out of the sidebar, shown in its parent, with its access. */
+/**
+ * A child's columns (src/children.ts): out of the sidebar, shown in its parent, with its access,
+ * in its parent's tree (rootId: the thread at the top; an older sub-thread has none, and its
+ * parent is the top).
+ */
 const childOf = (
   parent: ParentThread,
-  child: { teammateId: string; awaited: boolean; awaitUntil?: Date },
+  child: { teammateId: string; awaited: boolean; awaitUntil?: Date; wakeEach?: boolean },
 ) => ({
   parentId: parent.id,
+  rootId: parent.rootId ?? parent.parentId ?? parent.id,
   parentTeammateId: child.teammateId,
   awaited: child.awaited,
   ...(child.awaitUntil ? { awaitUntil: child.awaitUntil } : {}),
+  ...(child.wakeEach ? { wakeEach: true } : {}),
   private: parent.private,
   othersMayPrompt: parent.othersMayPrompt,
   ...(parent.playbookRunId ? { playbookRunId: parent.playbookRunId } : {}),
@@ -509,6 +519,8 @@ export async function startThread(
           byTeammateId: string
           awaited: boolean
           awaitUntil?: Date
+          /** Each of its reports wakes its parent (start_child's wake `each`). */
+          wakeEach?: boolean
           /** In a playbook's run: the teammate setting it works as, whose Apps alone it has. */
           playbookTeammate?: string | null
         }
@@ -641,6 +653,7 @@ export async function startThread(
                     teammateId: input.origin.byTeammateId,
                     awaited: input.origin.awaited,
                     ...(input.origin.awaitUntil ? { awaitUntil: input.origin.awaitUntil } : {}),
+                    ...(input.origin.wakeEach ? { wakeEach: true } : {}),
                   }),
                   ...(input.origin.playbookTeammate
                     ? { playbookTeammate: input.origin.playbookTeammate }

@@ -75,7 +75,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       teammate: true,
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
-      parent: { select: { id: true, title: true } },
+      parent: { select: { id: true, title: true, parentId: true } },
       startedBy: { select: { suggestions: true } },
     },
   })
@@ -426,7 +426,13 @@ export async function specFor(
     libraryFolders: folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
     private: thread.private,
     // A child reports to it; older runners ignore it, and its last message stands for its report.
-    parent: thread.parent,
+    parent: thread.parent ? { id: thread.parent.id, title: thread.parent.title } : null,
+    // Where it sits in its tree (docs/sub-threads.md): what the runner offers it of start_child.
+    // Older runners ignore it.
+    tree: {
+      level: !thread.parent ? 0 : thread.parent.parentId ? 2 : 1,
+      rootId: thread.rootId ?? thread.parent?.parentId ?? thread.parent?.id ?? thread.id,
+    },
     // Chief's answers in the person's name, by their pass: false when it is off, and the
     // instructions are as before.
     chiefAnswers,

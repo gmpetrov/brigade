@@ -543,6 +543,8 @@ export const SessionScalarFieldEnum = {
   askedByMemberId: 'askedByMemberId',
   origin: 'origin',
   parentId: 'parentId',
+  rootId: 'rootId',
+  wakeEach: 'wakeEach',
   parentTeammateId: 'parentTeammateId',
   awaited: 'awaited',
   awaitUntil: 'awaitUntil',

@@ -723,10 +723,16 @@ model Session {
   /// child: a teammate started it from its parent thread (start_child).
   origin               SessionOrigin      @default(member)
   /// The thread it was started from (start_child, or a schedule's run that reports there): out of the
-  /// sidebar, shown in its parent, which its report wakes (src/children.ts). One level only.
+  /// sidebar, shown in its parent, which its report wakes (src/children.ts). Two levels at most
+  /// (SUBTHREAD_DEPTH, docs/sub-threads.md).
   parentId             String?
   parent               Session?           @relation("SessionChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children             Session[]          @relation("SessionChildren")
+  /// The thread at the top of its tree, set on every sub-thread at its start; null at the top, and on
+  /// sub-threads started before it (their parent is the top then). The tree's cap counts by it.
+  rootId               String?
+  /// Every report of it wakes its parent (start_child's wake `each`), not only with the others.
+  wakeEach             Boolean            @default(false)
   /// The parent's teammate that started it, the one its report wakes.
   parentTeammateId     String?
   /// Its parent waits for its report, with the others it waits for; false for a schedule's run.
@@ -878,6 +884,7 @@ model Session {
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
   @@index([parentId, createdAt])
+  @@index([rootId])
   @@index([reportDueAt])
   @@index([playbookRunId])
   @@index([workspaceId, doneAt])

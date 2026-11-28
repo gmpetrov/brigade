@@ -7,7 +7,8 @@ import {
   ATTACHMENT_MAX,
   CHILD_WAIT_MAX_MINUTES,
   CHILD_WAIT_MINUTES,
-  CHILDREN_AT_WORK,
+  SUBTHREAD_DEPTH,
+  SUBTHREADS_AT_WORK,
   CHIEF_NAME,
   COMPLETE_THREAD_TOOL,
   DONE_SUMMARY_MAX,
@@ -2912,23 +2913,29 @@ export function reviewTools(call: ScheduleCaller): Record<string, Tool> {
 }
 
 /**
- * Child threads: work started beside this thread, in a fresh context, whose report
- * comes back here. A child reports with `report` and starts no children of its own: the
- * review of a pull request it opens is the one thread under it, which it lists and reads.
- * A playbook's run may also follow another run's child (follow_thread, `follow`).
- * They go through the schedule calls; the API checks the thread and its children.
+ * Child threads: work started beside this thread, in a fresh context, whose report comes back
+ * here. A child reports with `report`. Where its API says the tree (ThreadSpec.tree,
+ * SUBTHREADS_PROTOCOL), a sub-thread above the last level (SUBTHREAD_DEPTH) starts its own, and
+ * start_child takes where it runs, files, branches and when it wakes its parent; elsewhere a child
+ * starts none, as before: the review of a pull request it opens is the one thread under it. A
+ * thread may follow another (follow_thread, `follow`): any it may write in where the tree is said, a
+ * playbook's run another run's child. They go through the schedule calls; the API checks each.
  */
 export function childTools(
   call: ScheduleCaller,
-  options: { child: boolean; follow?: boolean },
+  options: { child: boolean; follow?: boolean; tree?: { level: number; rootId: string } },
 ): Record<string, Tool> {
+  const { tree } = options
+  const starts = !options.child || (!!tree && tree.level < SUBTHREAD_DEPTH)
   const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
   const list_children = tool({
     description:
       "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in." +
       (options.child
-        ? ' Here, the reviews of the pull requests you opened.'
-        : options.follow
+        ? starts
+          ? ' Here, those you started and the reviews of the pull requests you opened.'
+          : ' Here, the reviews of the pull requests you opened.'
+        : options.follow && !tree
           ? " Also fromOtherRuns: the child threads of this playbook's other runs from the last week " +
             '(e.g. the fix of a bug another customer reported), which follow_thread can follow.'
           : ''),
@@ -2959,159 +2966,246 @@ export function childTools(
         input,
       }),
   })
-  if (options.child)
-    return {
-      list_children,
-      read_child,
-      report: tool({
-        description:
-          'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
-          'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
-          'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when the work cannot ' +
-          'go on without a person and you leave it to them (say what they must do), failed when you could not do it (say why). That thread cannot see your files, ' +
-          '/tmp included: never point it to one. Put all it needs in the summary, and send the files it needs ' +
-          '(reproduction scripts, logs, screenshots) in files: Brigade puts them in its working folder. Without a ' +
-          'report, your last message stands for it. Not while a review of a pull request you opened runs: end your ' +
-          'turn instead, and report once it is done.',
-        inputSchema: jsonSchema<{
-          status: 'report' | 'nothing' | 'needs_person' | 'failed'
-          summary: string
-          files?: string[]
-        }>({
-          type: 'object',
-          properties: {
-            status: { type: 'string', enum: ['report', 'nothing', 'needs_person', 'failed'] },
-            summary: {
-              type: 'string',
-              description:
-                'The answer first, in a few lines (its note shows the start), then everything the parent needs in ' +
-                `full, such as each finding with file:line and how to reproduce it. At most ${REPORT_MAX} characters.`,
-            },
-            files: {
-              type: 'array',
-              items: { type: 'string' },
-              description: `Paths of files to send, in your folder or /tmp: at most ${REPORT_FILES_MAX}, ${ATTACHMENT_MAX / (1024 * 1024)} MB each`,
-            },
-          },
-          required: ['status', 'summary'],
-        }),
-        execute: (input, { toolCallId }) =>
-          call({
-            operation: {
-              name: 'report',
-              status: input.status,
-              summary: input.summary,
-              // Paths here: the harness sends the files first, and the report carries their ids.
-              ...(input.files?.length ? { files: input.files } : {}),
-            },
-            toolCallId,
-            toolName: 'report',
-            input,
-          }),
-      }),
-    }
-  return {
-    start_child: tool({
-      description:
-        'Start work in a child thread of this one: a fresh context, on this computer and the accounts of the person in ' +
-        'this thread, out of their sidebar and shown here. Use it for work that must outlive your turn, is for ' +
-        'another teammate (teammate), or may need a person; otherwise do the work yourself, with your own ' +
-        'sub-agents for parallel parts if you have them. The child does not see this ' +
-        'conversation: write instructions that stand alone (the goal, inputs by name, where the result goes, what ' +
-        'done looks like). Its files are not visible from here: its report brings back what it found, and the ' +
-        'files it sends with it come to your working folder. With wait (default), you are woken here once, with ' +
-        'one note, when every child you wait for has reported: start them all, then end your turn; never wait or poll. ' +
-        `At most ${CHILDREN_AT_WORK} at work at once.`,
-      inputSchema: jsonSchema<{
-        title: string
-        instructions: string
-        teammate?: string
-        wait?: boolean
-        timeoutMinutes?: number
-      }>({
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'Short, e.g. "Bisect the Next 16.3 regression"' },
-          instructions: { type: 'string', description: 'The work, standing alone' },
-          teammate: {
-            type: 'string',
-            description:
-              "Who does it: a teammate id or name. In a playbook's thread, one of its teammates by its key (e.g. developer). Unset: you.",
-          },
-          wait: {
-            type: 'boolean',
-            description:
-              'true (default): woken when it and the others you wait for reported. false: woken only if it reports something or fails.',
-          },
-          timeoutMinutes: {
-            type: 'number',
-            description: `Stop waiting after this long and hear what is done (default ${CHILD_WAIT_MINUTES}, at most ${CHILD_WAIT_MAX_MINUTES})`,
-          },
+  const statuses = tree
+    ? (['report', 'nothing', 'needs_person', 'needs_parent', 'failed'] as const)
+    : (['report', 'nothing', 'needs_person', 'failed'] as const)
+  const report = tool({
+    description:
+      'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
+      'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
+      'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when the work cannot ' +
+      'go on without a person and you leave it to them (say what they must do), ' +
+      (tree
+        ? 'needs_parent when you need a decision the thread that started you can make (say what, and your ' +
+          'recommendation): it is woken at once and answers you here, '
+        : '') +
+      'failed when you could not do it (say why). That thread cannot see your files, ' +
+      '/tmp included: never point it to one. Put all it needs in the summary, and send the files it needs ' +
+      '(reproduction scripts, logs, screenshots) in files: Brigade puts them in its working folder. Without a ' +
+      'report, your last message stands for it. Not while a review of a pull request you opened runs: end your ' +
+      'turn instead, and report once it is done.',
+    inputSchema: jsonSchema<{
+      status: (typeof statuses)[number]
+      summary: string
+      files?: string[]
+    }>({
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: [...statuses] },
+        summary: {
+          type: 'string',
+          description:
+            'The answer first, in a few lines (its note shows the start), then everything the parent needs in ' +
+            `full, such as each finding with file:line and how to reproduce it. At most ${REPORT_MAX} characters.`,
         },
-        required: ['title', 'instructions'],
-      }),
-      execute: (input, { toolCallId }) =>
-        call({
-          operation: {
-            name: 'start_child',
-            title: input.title,
-            instructions: input.instructions,
-            ...(input.teammate ? { teammate: input.teammate } : {}),
-            wait: input.wait ?? true,
-            ...(input.timeoutMinutes ? { timeoutMinutes: Math.round(input.timeoutMinutes) } : {}),
-          },
-          toolCallId,
-          toolName: 'start_child',
-          input,
-        }),
+        files: {
+          type: 'array',
+          items: { type: 'string' },
+          description: `Paths of files to send, in your folder or /tmp: at most ${REPORT_FILES_MAX}, ${ATTACHMENT_MAX / (1024 * 1024)} MB each`,
+        },
+      },
+      required: ['status', 'summary'],
     }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: {
+          name: 'report',
+          status: input.status,
+          summary: input.summary,
+          // Paths here: the harness sends the files first, and the report carries their ids.
+          ...(input.files?.length ? { files: input.files } : {}),
+        },
+        toolCallId,
+        toolName: 'report',
+        input,
+      }),
+  })
+  type StartInput = {
+    title: string
+    instructions: string
+    teammate?: string
+    wait?: boolean
+    timeoutMinutes?: number
+    computer?: string
+    files?: string[]
+    repos?: { repository: string; branch: string }[]
+    wake?: 'all' | 'each'
+  }
+  const start_child = tool({
+    description:
+      'Start work in a child thread (a sub-thread) of this one: a fresh context, on the accounts of the person in ' +
+      'this thread, out of their sidebar and shown here. Do the work yourself unless it splits into parts that are ' +
+      'independent, long, or need another computer or teammate; otherwise use your own sub-agents for parallel ' +
+      'parts if you have them. Prefer few sub-threads with full briefs to many small ones. The child does not see this ' +
+      'conversation: write instructions that stand alone (the goal, inputs by name, where the result goes, what ' +
+      'done looks like), with one line on why this part is a sub-thread' +
+      (tree ? ' and why on that computer' : '') +
+      '. Its files are not visible from here: its report brings back what it found, and the ' +
+      'files it sends with it come to your working folder. With wait (default), you are woken here once, with ' +
+      'one note, when every child you wait for has reported: start them all, then end your turn; never wait or poll. ' +
+      (tree
+        ? `At most ${SUBTHREADS_AT_WORK} at work at once in this whole tree, over both levels; sub-threads go ` +
+          `${SUBTHREAD_DEPTH} levels deep at most.` +
+          (tree.level > 0
+            ? ' You are a sub-thread: start one only for a part that splits again, never to hand your whole task down.'
+            : '')
+        : `At most ${SUBTHREADS_AT_WORK} at work at once.`),
+    inputSchema: jsonSchema<StartInput>({
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Short, e.g. "Bisect the Next 16.3 regression"' },
+        instructions: { type: 'string', description: 'The work, standing alone' },
+        teammate: {
+          type: 'string',
+          description:
+            "Who does it: a teammate id or name. In a playbook's thread, one of its teammates by its key (e.g. developer). Unset: you.",
+        },
+        wait: {
+          type: 'boolean',
+          description:
+            'true (default): woken when it and the others you wait for reported. false: woken only if it reports something, needs you, or fails.',
+        },
+        timeoutMinutes: {
+          type: 'number',
+          description: `Stop waiting after this long and hear what is done (default ${CHILD_WAIT_MINUTES}, at most ${CHILD_WAIT_MAX_MINUTES})`,
+        },
+        ...(tree
+          ? {
+              computer: {
+                type: 'string',
+                description:
+                  'Where it runs: "same" (default) this computer; "cloud" the cloud computer, for long, heavy or ' +
+                  'unattended work (renders, scraping, test suites, work that must go on with the laptop closed); ' +
+                  '"mine" the own machine of the person this work is for, for their Mac apps, signed-in browser or ' +
+                  'computer use; or the name of one of their machines when they have several. Never another ' +
+                  "person's. Refused at once, with why, when it cannot run there: then pick another or ask the person.",
+              },
+              files: {
+                type: 'array',
+                items: { type: 'string' },
+                description: `Files it needs, by path in your folder or /tmp: at most ${REPORT_FILES_MAX}, ${ATTACHMENT_MAX / (1024 * 1024)} MB each. They reach its working folder. Library documents need none: name them by path in the instructions.`,
+              },
+              repos: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    repository: { type: 'string', description: 'owner/name' },
+                    branch: { type: 'string', description: 'The branch it starts from' },
+                  },
+                  required: ['repository', 'branch'],
+                },
+                description:
+                  'Branches it starts from: each is pushed to GitHub from your checkout first (commit your changes ' +
+                  'before: refused otherwise), and it checks it out and works on a branch of its own from it.',
+              },
+              wake: {
+                type: 'string',
+                enum: ['all', 'each'],
+                description:
+                  'all (default): woken once, when all you wait for reported. each: woken by each of its reports, as ' +
+                  'it comes, to go on without waiting for the slowest.',
+              },
+            }
+          : {}),
+      },
+      required: ['title', 'instructions'],
+    }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: {
+          name: 'start_child',
+          title: input.title,
+          instructions: input.instructions,
+          ...(input.teammate ? { teammate: input.teammate } : {}),
+          wait: input.wait ?? true,
+          ...(input.timeoutMinutes ? { timeoutMinutes: Math.round(input.timeoutMinutes) } : {}),
+          ...(tree ? subthreadFields(input) : {}),
+        },
+        toolCallId,
+        toolName: 'start_child',
+        input,
+      }),
+  })
+  const cancel_child = tool({
+    description:
+      'Stop a child thread that is no longer needed. You stop waiting for it; the others you wait for still count.',
+    inputSchema: jsonSchema<{ threadId: string }>({
+      type: 'object',
+      properties: { threadId },
+      required: ['threadId'],
+    }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: { name: 'cancel_child', threadId: input.threadId },
+        toolCallId,
+        toolName: 'cancel_child',
+        input,
+      }),
+  })
+  const follow_thread = tool({
+    description: tree
+      ? 'Be woken by another thread’s report, without being its parent: a thread you may write in (another ' +
+        'sub-thread of your tree, a thread you started, a thread at the top you are a teammate of)' +
+        '. You are woken here once, with a short note, when it reports (a thread at the top: when its turn ends), and again if it reports later; read_child then gives its full report. Not your own child (its report already comes to you). Never wait or poll: end your turn. ' +
+        `At most ${FOLLOWERS_PER_THREAD} threads follow one.`
+      : 'Wait for a child thread of another run of this playbook, instead of starting the same work again: when a bug ' +
+        'your customer reports is already being fixed there (list_children shows them in fromOtherRuns), follow ' +
+        'that fix. You are woken here once, with a short note, when it reports (and again if it reports later); ' +
+        'read_child then gives its full report. Tell your customer the team is on it, then end your turn: never ' +
+        `wait or poll. Not your own child (its report already comes to you). At most ${FOLLOWERS_PER_THREAD} threads follow one.`,
+    inputSchema: jsonSchema<{ threadId: string }>({
+      type: 'object',
+      properties: {
+        threadId: {
+          type: 'string',
+          description: tree
+            ? 'The thread to follow'
+            : "A thread from list_children's fromOtherRuns",
+        },
+      },
+      required: ['threadId'],
+    }),
+    execute: (input, { toolCallId }) =>
+      call({
+        operation: { name: 'follow_thread', threadId: input.threadId },
+        toolCallId,
+        toolName: 'follow_thread',
+        input,
+      }),
+  })
+  return {
+    ...(starts ? { start_child } : {}),
     list_children,
     read_child,
-    cancel_child: tool({
-      description:
-        'Stop a child thread that is no longer needed. You stop waiting for it; the others you wait for still count.',
-      inputSchema: jsonSchema<{ threadId: string }>({
-        type: 'object',
-        properties: { threadId },
-        required: ['threadId'],
-      }),
-      execute: (input, { toolCallId }) =>
-        call({
-          operation: { name: 'cancel_child', threadId: input.threadId },
-          toolCallId,
-          toolName: 'cancel_child',
-          input,
-        }),
-    }),
-    ...(options.follow
+    ...(starts ? { cancel_child } : {}),
+    ...(options.child ? { report } : {}),
+    ...(options.follow ? { follow_thread } : {}),
+  }
+}
+
+/**
+ * start_child's fields of SUBTHREADS_PROTOCOL, as the API takes them: the computer as a keyword or
+ * one of the person's machines by name, files by path (the harness sends them first) and branches.
+ */
+function subthreadFields(input: {
+  computer?: string
+  files?: string[]
+  repos?: { repository: string; branch: string }[]
+  wake?: 'all' | 'each'
+}) {
+  const where = input.computer?.trim()
+  return {
+    ...(where
       ? {
-          follow_thread: tool({
-            description:
-              'Wait for a child thread of another run of this playbook, instead of starting the same work again: when a bug ' +
-              'your customer reports is already being fixed there (list_children shows them in fromOtherRuns), follow ' +
-              'that fix. You are woken here once, with a short note, when it reports (and again if it reports later); ' +
-              'read_child then gives its full report. Tell your customer the team is on it, then end your turn: never ' +
-              `wait or poll. Not your own child (its report already comes to you). At most ${FOLLOWERS_PER_THREAD} threads follow one.`,
-            inputSchema: jsonSchema<{ threadId: string }>({
-              type: 'object',
-              properties: {
-                threadId: {
-                  type: 'string',
-                  description: "A thread from list_children's fromOtherRuns",
-                },
-              },
-              required: ['threadId'],
-            }),
-            execute: (input, { toolCallId }) =>
-              call({
-                operation: { name: 'follow_thread', threadId: input.threadId },
-                toolCallId,
-                toolName: 'follow_thread',
-                input,
-              }),
-          }),
+          computer: ['same', 'cloud', 'mine'].includes(where.toLowerCase())
+            ? (where.toLowerCase() as 'same' | 'cloud' | 'mine')
+            : { mine: where },
         }
       : {}),
+    ...(input.files?.length ? { files: input.files } : {}),
+    ...(input.repos?.length ? { repos: input.repos } : {}),
+    ...(input.wake ? { wake: input.wake } : {}),
   }
 }
 

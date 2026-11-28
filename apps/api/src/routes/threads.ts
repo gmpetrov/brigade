@@ -145,6 +145,7 @@ import {
   type WorkspaceScope,
 } from '../scope.js'
 import { headOf } from '../serve-object.js'
+import { threadTree } from '../thread-tree.js'
 
 /** The ids of a thread's teammates, the one asked for first (whose folder is tried first). */
 function teammatesFirst(
@@ -685,6 +686,19 @@ export const threads = new Hono<AppEnv>()
         }
       }),
     )
+  })
+
+  /**
+   * Its tree, for its details' Tree section (docs/sub-threads.md): each sub-thread below it with
+   * its level, teammate, computer, state, output and tokens, and the whole tree's tokens.
+   */
+  .get('/:id/tree', async (c) => {
+    const thread = await c.var.db.session.findFirst({
+      where: { id: c.req.param('id') },
+      select: { id: true, parentId: true, rootId: true },
+    })
+    if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+    return c.json(await threadTree(c.var.db, c.var.scope.workspaceId, thread))
   })
 
   .get('/:id', async (c) => {

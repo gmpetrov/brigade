@@ -643,3 +643,70 @@ export async function sweep(inUse: (sessionId: string) => boolean) {
   for (const dir of removed) console.log(`removed ${dir}: nothing in it that GitHub lacks`)
   return removed
 }
+
+/**
+ * A branch a sub-thread starts from (start_child's `repos`, docs/sub-threads.md), pushed to
+ * GitHub first so that it finds it there, whatever computer it runs on. From the checkout of that
+ * repository in this thread's working directory that has the branch; refused, saying so, when that
+ * checkout is on it with uncommitted changes (they would not reach the sub-thread). A branch that
+ * is only on GitHub is there already. Returns what it did, for the call's result.
+ */
+export async function pushForSubthread(input: {
+  spec: ThreadSpec
+  workDir: string
+  runAs?: string
+  repository: string
+  branch: string
+}) {
+  const { spec, workDir, runAs } = input
+  const access = spec.git
+  if (!access)
+    throw new Error(
+      'This teammate has no GitHub connection: it cannot hand a branch to a sub-thread.',
+    )
+  const match = input.repository
+    .trim()
+    .replace(/\.git$/, '')
+    .match(REPO)
+  if (!match)
+    throw new Error(`Give each repository as owner/name: “${input.repository}” is not one`)
+  if (!BRANCH.test(input.branch)) throw new Error(`“${input.branch}” is not a branch name`)
+  const repository = `${match[1]}/${match[2]}`.toLowerCase()
+  const found = await run('find', [workDir, '-mindepth', '2', '-maxdepth', '2', '-name', '.git'], {
+    runAs,
+  }).catch(() => Buffer.alloc(0))
+  for (const marker of found.toString().split('\n').filter(Boolean)) {
+    const dir = marker.replace(/\/\.git$/, '')
+    const g = (args: string[]) => git(['-C', dir, ...args], access, runAs)
+    const url = await g(['ls-remote', '--get-url', 'origin']).catch(() => '')
+    if (!url.startsWith(access.url)) continue
+    const of = url
+      .slice(access.url.length)
+      .replace(/\.git$/, '')
+      .toLowerCase()
+    if (of !== repository) continue
+    const local = await g(['rev-parse', '--verify', '--quiet', `refs/heads/${input.branch}`]).catch(
+      () => '',
+    )
+    if (!local) continue
+    const head = await g(['rev-parse', '--abbrev-ref', 'HEAD']).catch(() => '')
+    if (head === input.branch && (await g(['status', '--porcelain', '--untracked-files=no'])))
+      throw new Error(
+        `${basename(dir)} has uncommitted changes on ${input.branch}: commit them first, so that the sub-thread gets them, then call start_child again.`,
+      )
+    await g(['push', '--quiet', 'origin', `refs/heads/${input.branch}:refs/heads/${input.branch}`])
+    return { repository, branch: input.branch, pushed: true }
+  }
+  // Not checked out here: it must be on GitHub already.
+  const remote = `${access.url}${match[1]}/${match[2]}.git`
+  const onGitHub = await git(
+    ['ls-remote', '--heads', remote, `refs/heads/${input.branch}`],
+    access,
+    runAs,
+  ).catch(() => '')
+  if (!onGitHub)
+    throw new Error(
+      `${input.branch} is neither checked out here nor on GitHub for ${repository}: check out the repository, or name a branch that exists.`,
+    )
+  return { repository, branch: input.branch, pushed: false }
+}

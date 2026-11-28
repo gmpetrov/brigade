@@ -15,7 +15,7 @@ import { trackTurns } from '../analytics.js'
 import { handlePreviewCall, handlePreviewExpose, notePreviewEvents } from '../app-previews.js'
 import { audit } from '../audit.js'
 import { alignChief } from '../chief-harness.js'
-import { noteChildEvents } from '../children.js'
+import { noteChildEvents, noteFollowedEvents } from '../children.js'
 import { noteChiefAnswered } from '../chief-answers.js'
 import { notePassEvents } from '../chief-pass.js'
 import { ensureSetup, giveHomesBackOnceRestored, stopWithoutPlan } from '../cloud.js'
@@ -745,6 +745,8 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       void bringBackFromLater(session, session.id).catch(console.error)
     // A child's report goes to its parent once its turn ends.
     if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
+    // A thread at the top others follow (follow_thread): the end of its turn tells them.
+    else void noteFollowedEvents(session, fresh).catch(console.error)
     // A dry run's event is done once its turn ends: the next one starts.
     if (session.playbookRunId) void noteDryRunEvents(session, fresh).catch(console.error)
   }

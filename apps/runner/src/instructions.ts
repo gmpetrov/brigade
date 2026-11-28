@@ -7,6 +7,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   CHIEF_NAME,
+  SUBTHREAD_DEPTH,
+  SUBTHREADS_AT_WORK,
   DESIGN_ENTRY,
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
@@ -1202,6 +1204,25 @@ const mission = (m: NonNullable<ThreadSpec['mission']>) =>
 const SUB_THREAD =
   'People see child threads as sub-threads: call them sub-threads when you write to people.'
 
+/**
+ * Where its API says the tree (SUBTHREADS_PROTOCOL, docs/sub-threads.md): fanning out only when it
+ * pays, the computers a sub-thread may run on, its inputs, and waking.
+ */
+const SWARM =
+  'Fan out only when the work truly splits: parts that are independent, long, or need another computer or ' +
+  'teammate. Prefer few sub-threads with full briefs to many small ones, and say in one line of each brief why ' +
+  'that part is a sub-thread and why on that computer: every sub-thread costs tokens on the person’s own ' +
+  `subscription. A sub-thread may start its own, ${SUBTHREAD_DEPTH} levels deep at most, and a tree has ` +
+  `${SUBTHREADS_AT_WORK} at work at most over both levels. \`computer\`: \`same\` (default); \`cloud\` for long, heavy or ` +
+  'unattended work (renders, scraping, test suites, work that must go on with the laptop closed); `mine` for ' +
+  "the person's own machine (their Mac apps, signed-in browser, computer use), never another person's. When " +
+  'it cannot run there (offline, no account signed in, Brigade too old) start_child says so at once: pick ' +
+  'another computer or ask the person. Hand it its inputs: `files` by path, library documents by path in the ' +
+  'brief, branches in `repos` (commit first: each is pushed before it starts). `wake: "each"` wakes you on each ' +
+  'of its reports, to go on without waiting for the slowest. A sub-thread that needs your decision reports ' +
+  '`needs_parent`: answer it with `message_thread`, and ask the person only what you cannot decide. ' +
+  '`follow_thread` lets you be woken by any thread you may write in, without being its parent. '
+
 /** Child threads: in a child, how to report; elsewhere, when to start one. */
 const children = (spec: ThreadSpec) =>
   spec.parent
@@ -1211,10 +1232,27 @@ const children = (spec: ThreadSpec) =>
       '`report` once and end your turn: your report reaches the parent when your turn ends. If something you need ' +
       'is missing (a decision, an input), do not guess: report it as what you need, and the parent answers by ' +
       'writing here. When only a person can decide, open a ticket: your turn waits for their answer, then carry ' +
-      'on. You cannot start child threads or schedules of your own' +
-      (spec.git
-        ? ': the review of a pull request you open is the one thread Brigade starts under this one (see Code). '
-        : '. ') +
+      'on. ' +
+      (spec.tree
+        ? 'When the thread that started you can make the decision, `report` with status `needs_parent` (what to ' +
+          'decide, and your recommendation): it is woken at once and answers here, and you go on. '
+        : '') +
+      (spec.tree && spec.tree.level < SUBTHREAD_DEPTH && !spec.playbook?.dryRun
+        ? 'You may start sub-threads of your own (`start_child`), one level further, never deeper: only for a ' +
+          'part that splits again (independent, long, or for another computer or teammate), never to hand ' +
+          `your whole task down; the tree has ${SUBTHREADS_AT_WORK} at work at most, over both levels. Each ` +
+          'reports to you, and you report up. You cannot start schedules of your own' +
+          (spec.git
+            ? '; the review of a pull request you open runs under this thread too (see Code). '
+            : '. ')
+        : 'You cannot start child threads or schedules of your own' +
+          (spec.git
+            ? ': the review of a pull request you open is the one thread Brigade starts under this one (see Code). '
+            : '. ')) +
+      (spec.tree
+        ? '`message_thread` also writes to the other threads of your tree (your parent, your siblings, their ' +
+          'sub-threads): each message says who sent it and from where. '
+        : '') +
       (wakesInChild(spec)
         ? 'To check on something later (a scan, a deploy, a CI run), set a wake-up with `set_wakeup` and ' +
           'end your turn, instead of waiting, polling or asking a person to write here later: you are ' +
@@ -1238,6 +1276,7 @@ const children = (spec: ThreadSpec) =>
       'then end your turn: you are woken here once, with one note, when all those you wait for have reported. Then ' +
       '`read_child` for the details, `message_thread` with its threadId to tell one more (it carries on and reports ' +
       'again), and tell the person where things stand. ' +
+      (spec.tree ? SWARM : '') +
       SUB_THREAD
 
 /** Installing a playbook from the chat (show_playbook … activate_playbook). */
