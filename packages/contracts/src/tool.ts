@@ -34,6 +34,20 @@ export const toolName = (folder: string) => {
   return name.endsWith(TOOL_SUFFIX) ? name.slice(0, -TOOL_SUFFIX.length) : name
 }
 
+/**
+ * Apps were `<name>.tool` folders before they were renamed: a runner from before that may still
+ * save one with `save_tool`, which would make a folder nothing opens as an app. The API refuses
+ * a teammate's save into one, with this, so the teammate hears it rather than a false success.
+ */
+export function retiredAppFolderRefusal(path: string) {
+  const folders = path.split('/').slice(0, -1)
+  return folders.some((part) => part.length > '.tool'.length && part.endsWith('.tool'))
+    ? 'Apps are now `<name>.webapp` folders with an `app.json`, saved with `save_app`: a `.tool` ' +
+        "folder no longer opens as an app. Once Brigade on this teammate's computer is updated, " +
+        'save it again there.'
+    : null
+}
+
 /** The library path of an app's manifest. */
 export const toolManifestPath = (folder: string) => `${folder}/${TOOL_MANIFEST}`
 

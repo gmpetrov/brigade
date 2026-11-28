@@ -8,6 +8,7 @@ import {
   TRASH_DAYS,
   type ApiToRunner,
   type RunnerToApi,
+  retiredAppFolderRefusal,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
@@ -162,7 +163,7 @@ export async function handleLibraryCall(
       throw error
     }
   }
-  const refusal = saveRefusal(teammate.name, access, op.path)
+  const refusal = saveRefusal(teammate.name, access, op.path) ?? retiredAppFolderRefusal(op.path)
   if (refusal) return fail(refusal)
   const actor = { type: 'teammate' as const, id: teammate.id }
   // save_to_library's guard: never over a change it has not seen. What it may replace is checked

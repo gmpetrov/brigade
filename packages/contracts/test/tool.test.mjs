@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ToolManifest, toolFolderOf, toolManifestPath, toolName } from '../dist/index.js'
+import {
+  ToolManifest,
+  retiredAppFolderRefusal,
+  toolFolderOf,
+  toolManifestPath,
+  toolName,
+} from '../dist/index.js'
 
 test('an app is the folder its path is in, or is', () => {
   assert.equal(toolFolderOf('a/review.webapp/app.js'), 'a/review.webapp')
@@ -31,4 +37,12 @@ test('app.json is lenient: a bad entry is left out, not the manifest', () => {
     { kind: 'posthog', access: 'read_write' },
   ])
   assert.deepEqual(parsed.hosts, ['https://api.example.com'])
+})
+
+test('a teammate save into a .tool folder is refused: apps are .webapp folders now', () => {
+  assert.match(retiredAppFolderRefusal('Social/tracker.tool/index.html'), /\.webapp/)
+  assert.match(retiredAppFolderRefusal('a/tracker.tool/assets/x.png'), /\.webapp/)
+  assert.equal(retiredAppFolderRefusal('Social/tracker.webapp/index.html'), null)
+  assert.equal(retiredAppFolderRefusal('Social/notes.tool'), null)
+  assert.equal(retiredAppFolderRefusal('Social/.tool/x'), null)
 })
