@@ -397,6 +397,7 @@ export function ToolPanel({
                           folder: view.folder,
                           title,
                           workspace: { id: workspace.id, name: workspace.name },
+                          pane: frame.current,
                         }).catch(() => undefined)
                       }
                     >

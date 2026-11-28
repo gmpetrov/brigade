@@ -20,6 +20,7 @@ import {
   BrowserWindow,
   type AppShimHost,
   ipcMain,
+  type Rectangle,
   type IpcMainInvokeEvent,
   Menu,
   nativeImage,
@@ -33,8 +34,21 @@ import * as win from './app-install-win.js'
 import { alert, confirm } from './dialogs.js'
 import * as installed from './installed-apps.js'
 import { sessionType } from './linux/input.js'
+import {
+  appWindowBounds,
+  startInstallAnimation,
+  type InstallAnimation,
+} from './install-animation.js'
 import { dashboard, onDashboard } from './settings.js'
-import { dashboardContents, dashboardPreferences, guard, kindOf, showDashboard } from './windows.js'
+import {
+  dashboardContents,
+  dashboardPreferences,
+  dashboardWindow,
+  guard,
+  kindOf,
+  pageRectOnScreen,
+  showDashboard,
+} from './windows.js'
 
 type Entry = installed.InstalledApp
 
@@ -47,6 +61,10 @@ const windows = new Map<string, BrowserWindow>()
 const shims = new Map<string, AppShimHost>()
 /** An app's window is being made: Brigade's own Dock icon stays hidden for it (--app-shim). */
 let making = false
+/** Apps just installed, whose first window opens where their animation leads. */
+const arriving = new Map<string, { animation: InstallAnimation | null; bounds: Rectangle }>()
+/** Apps being installed now (by document id): a second Install meanwhile does nothing. */
+const installing = new Set<string>()
 
 const own = (window: BrowserWindow | undefined) =>
   window && !window.isDestroyed() ? window : undefined
@@ -169,12 +187,15 @@ async function openWindow(entry: Entry, shim?: AppShimHost) {
     process.platform === 'linux' && entry.iconPath
       ? nativeImage.createFromPath(entry.iconPath)
       : undefined
+  const arrival = arriving.get(entry.installId)
+  arriving.delete(entry.installId)
   making = true
   let window: BrowserWindow
   try {
     window = new BrowserWindow({
       width: 1100,
       height: 760,
+      ...arrival?.bounds,
       minWidth: 360,
       minHeight: 280,
       show: false,
@@ -209,7 +230,11 @@ async function openWindow(entry: Entry, shim?: AppShimHost) {
     })
   if (process.platform === 'linux' && sessionType() === 'x11')
     await linux.setWmClass(window.getNativeWindowHandle(), linux.wmClass(entry.installId))
-  window.once('ready-to-show', () => bringUp(window))
+  window.once('ready-to-show', () => {
+    // Just installed: it shows as its animation opens out to it.
+    if (!arrival?.animation) return bringUp(window)
+    void arrival.animation.go(arrival.bounds).then(() => !window.isDestroyed() && bringUp(window))
+  })
   window.on('closed', () => {
     if (windows.get(entry.installId) === window) windows.delete(entry.installId)
     // macOS: the shim goes with its last window, as a web app's does.
@@ -285,6 +310,8 @@ export type InstallInput = {
   iconPng: Uint8Array
   workspaceId: string
   workspaceName: string
+  /** The app's pane in the dashboard's page, where the install animation starts. */
+  from?: Rectangle
 }
 
 const MAX_ICON = 8 * 1024 * 1024
@@ -304,7 +331,18 @@ export function parseInstall(input: unknown): InstallInput | undefined {
     iconPng: i.iconPng,
     workspaceId: String(i.workspaceId),
     workspaceName: String(i.workspaceName).slice(0, 200),
+    ...(rectangle(i.from) && { from: rectangle(i.from) }),
   }
+}
+
+/** A rectangle of the page, in its pixels, if it is one. */
+export function rectangle(value: unknown): Rectangle | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const { x, y, width, height } = value as Record<string, unknown>
+  const n = (v: unknown, min: number) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= min && v < 100_000
+  if (!n(x, -100_000) || !n(y, -100_000) || !n(width, 1) || !n(height, 1)) return undefined
+  return { x: x as number, y: y as number, width: width as number, height: height as number }
 }
 
 const WHERE: Record<string, string> = {
@@ -322,16 +360,54 @@ export async function install(input: InstallInput): Promise<installed.InstalledA
     await openApp(already)
     return installed.info(already)
   }
+  if (installing.has(input.appId)) return null
+  installing.add(input.appId)
+  try {
+    return await installing_(input)
+  } finally {
+    installing.delete(input.appId)
+  }
+}
+
+async function installing_(input: InstallInput): Promise<installed.InstalledAppInfo | null> {
   const yes = await confirm({
     title: `Install “${input.title}” as an app?`,
     message: `${WHERE[process.platform] ?? WHERE.linux} It shows only the app, signed in as you.`,
     ok: 'Install',
   })
   if (!yes) return null
+  // Installed meanwhile (another of the dashboard's pages asked too): it opens.
+  const meanwhile = currentList().find((a) => a.appId === input.appId)
+  if (meanwhile) {
+    await openApp(meanwhile)
+    return installed.info(meanwhile)
+  }
   // The picture, read and written again: only an image goes on.
   const image = nativeImage.createFromBuffer(Buffer.from(input.iconPng))
   if (image.isEmpty()) throw new Error('The app’s icon could not be read.')
   const square = image.resize({ width: 1024, height: 1024, quality: 'best' })
+  // The animation starts from the app's pane, while the app is made.
+  const pane = (input.from && pageRectOnScreen(input.from)) ?? dashboardWindow()?.getContentBounds()
+  const bounds = appWindowBounds(pane ?? { x: 0, y: 0, width: 1, height: 1 })
+  const animation = pane
+    ? startInstallAnimation(
+        pane,
+        square.resize({ width: 512, height: 512, quality: 'best' }).toPNG(),
+      )
+    : null
+  try {
+    const entry = await make(input, square)
+    arriving.set(entry.installId, { animation, bounds })
+    await openApp(entry)
+    return installed.info(entry)
+  } catch (error) {
+    animation?.cancel()
+    throw error
+  }
+}
+
+/** Writes the system's own entry for the app, and keeps it in the list. */
+async function make(input: InstallInput, square: Electron.NativeImage): Promise<Entry> {
   const installId = installed.newInstallId()
   const dir = appsDir()
   mkdirSync(dir, { recursive: true })
@@ -399,8 +475,7 @@ export async function install(input: InstallInput): Promise<installed.InstalledA
     entry = record(input, installId, name, file, { iconPath: png })
   }
   changed()
-  await openApp(entry)
-  return installed.info(entry)
+  return entry
 }
 
 function record(

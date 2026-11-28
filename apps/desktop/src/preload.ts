@@ -149,6 +149,8 @@ else if (info)
         iconPng: Uint8Array
         workspaceId: string
         workspaceName: string
+        /** The app's pane in the page, where the install animation starts. */
+        from?: { x: number; y: number; width: number; height: number }
       }) => ipcRenderer.invoke('brigade:apps:install', input),
       open: (appId: string) => ipcRenderer.invoke('brigade:apps:open', appId),
       /** Asks the person first; whether it was uninstalled. */

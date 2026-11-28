@@ -68,6 +68,8 @@ export type DesktopBridge = {
       iconPng: Uint8Array
       workspaceId: string
       workspaceName: string
+      /** The app's pane in the page, where the install animation starts; older apps ignore it. */
+      from?: { x: number; y: number; width: number; height: number }
     }) => Promise<InstalledDesktopApp | null>
     open: (appId: string) => Promise<void>
     /** Brigade.app asks the person first: whether it was uninstalled. */

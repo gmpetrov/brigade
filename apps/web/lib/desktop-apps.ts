@@ -132,6 +132,8 @@ export async function installApp(input: {
   folder: string
   title: string
   workspace: { id: string; name: string }
+  /** The app's frame: Brigade.app's install animation starts from it. */
+  pane?: Element | null
 }) {
   const bridge = desktopBridge()
   if (!bridge?.apps) throw new Error('Update Brigade to install apps.')
@@ -147,5 +149,13 @@ export async function installApp(input: {
     iconPng,
     workspaceId: input.workspace.id,
     workspaceName: input.workspace.name,
+    ...(rectOf(input.pane) && { from: rectOf(input.pane) }),
   })
+}
+
+/** Where an element is in the page, if it shows. */
+function rectOf(element: Element | null | undefined) {
+  const r = element?.getBoundingClientRect()
+  if (!r || r.width < 1 || r.height < 1) return undefined
+  return { x: r.x, y: r.y, width: r.width, height: r.height }
 }
