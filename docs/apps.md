@@ -103,7 +103,7 @@ bridge: without the key, no channel opens. Calls and answers go over that channe
 never reaches a document that replaced the page; the page says `bye` as it goes, and what it was
 waiting for (a question to the person included) is dropped. The dashboard
 (`components/tool-view.tsx`, `lib/tool-host.ts`) checks each call again and makes it with the
-person's session (`/api/tools/*`).
+person's session (`/api/apps/*`).
 
 ## Decisions
 
@@ -155,7 +155,7 @@ person's session (`/api/tools/*`).
 
 - Contracts: `packages/contracts/src/tool.ts` (manifest, requests, bridge script).
 - API: `apps/api/src/tools.ts` (views, state, files, accounts, calls, the sandbox host's `/t/`),
-  `apps/api/src/routes/tools.ts` (`/api/tools/*`, behind the feature), `ToolState` and
+  `apps/api/src/routes/tools.ts` (`/api/apps/*`, behind the feature), `ToolState` and
   `ToolAccount` (`prisma/schema.prisma`), `tool_state` in `src/library-calls.ts`.
 - Runner: `save_app`, `read_app_state` (`apps/runner/src/harness/tools.ts`), the skill and
   section (`apps/runner/src/instructions.ts`), the bridge in `check_design` (`src/design-shot.ts`).
