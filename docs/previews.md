@@ -429,7 +429,9 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     and Playwright's WebKit, in a frame and in a tab alike), so the rewritten
     one keeps the app signed in across reloads. The app keeps its own `Host`.
     Before each rewritten cookie, the proxy there clears the plain one of its
-    name (same path and domain, `Max-Age=0`): a tab still holds the plain
+    name (same path, or the directory of the address the browser asked for;
+    same domain; `Max-Age=0; Secure`, as `__Secure-` and `__Host-` names
+    need): a tab still holds the plain
     cookie an older runner let through, which Chrome 158 then sent beside the
     new one and kept after a sign-out (review of #1005). In the frame, the
     browser ignores that removal. Brigade.app grants no Local Network Access
