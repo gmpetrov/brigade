@@ -27,9 +27,7 @@ import {
   TOOL_FILES_MAX,
   TOOL_MANIFEST,
   TOOL_SUFFIX,
-  LEGACY_TOOL_MANIFEST,
   toolFolderOf,
-  toolManifestFile,
   ToolManifest,
   designFolderOf,
   DesignManifest,
@@ -1240,10 +1238,8 @@ export function libraryTools(options: {
     designs: string[],
     call: { toolCallId: string; toolName: string; input: unknown },
     onSaved?: (file: string, output: unknown) => void,
-    /** The file of the folder each is saved from, when not its own (an app's manifests). */
-    sourceOf: (file: string) => string = (file) => file,
   ) => {
-    const sources = new Map(files.map((f) => [f, `${folder}/${sourceOf(f)}`]))
+    const sources = new Map(files.map((f) => [f, `${folder}/${f}`]))
     for (const design of designs) {
       const at = (file: string) => (design ? `${design}/${file}` : file)
       if (sources.has(at(DESIGN_THUMBNAIL)) || !sources.has(at(DESIGN_ENTRY))) continue
@@ -1679,39 +1675,31 @@ export function libraryTools(options: {
         }),
         execute: async (input, { toolCallId }) => {
           const path = input.path.replace(/\/+$/, '')
-          // An app saved before the rename keeps its `.tool` folder, so its state and accounts stay.
           if (toolFolderOf(path) !== path)
             throw new Error(`The library path must end in "<name>${TOOL_SUFFIX}"`)
           const files = await folderFiles(input.folder)
           if (!files.includes(TOOL_ENTRY))
             throw new Error(`The folder has no ${TOOL_ENTRY} at its top`)
-          // Its manifest is the file its path's suffix names (toolManifestFile): `app.json`, or
-          // `tool.json` for a `.tool` app from before the rename. Every file is saved as it is;
-          // when the folder has only the other one, that is saved under the manifest's name too.
-          const manifestName = toolManifestFile(path)
-          const manifestFile = [manifestName, TOOL_MANIFEST, LEGACY_TOOL_MANIFEST].find((f) =>
-            files.includes(f),
-          )
-          if (!manifestFile) throw new Error(`The folder has no ${manifestName} at its top`)
-          const uploads = files.includes(manifestName) ? files : [...files, manifestName]
+          if (!files.includes(TOOL_MANIFEST))
+            throw new Error(`The folder has no ${TOOL_MANIFEST} at its top`)
           if (files.length > TOOL_FILES_MAX)
             throw new Error(
               `An app can have up to ${TOOL_FILES_MAX} files; this folder has ${files.length}`,
             )
           const folder = input.folder.replace(/\/+$/, '')
           const manifest = await options
-            .readFile(`${folder}/${manifestFile}`)
+            .readFile(`${folder}/${TOOL_MANIFEST}`)
             .then((bytes) => ToolManifest.safeParse(JSON.parse(bytes.toString('utf8'))))
             .catch((error: unknown) => ({ success: false as const, error }))
           if (!manifest.success)
             throw new Error(
-              `${manifestFile} is not valid: ${errorMessage(manifest.error)}. Nothing was saved.`,
+              `${TOOL_MANIFEST} is not valid: ${errorMessage(manifest.error)}. Nothing was saved.`,
             )
           let mention: string | undefined
           const saved = await saveFolder(
             folder,
             path,
-            uploads,
+            files,
             [''],
             { toolCallId, toolName: 'save_app', input },
             (file, output) => {
@@ -1721,7 +1709,6 @@ export function libraryTools(options: {
               )?.[1]
               if (file === TOOL_ENTRY && id) mention = `@[${path}](document:${id})`
             },
-            (file) => (file === manifestName ? manifestFile : file),
           )
           const apps = manifest.data.apps ?? []
           return {
@@ -1760,16 +1747,6 @@ export function libraryTools(options: {
             input,
           }),
       })
-      // Their names before apps were renamed from tools (docs/apps.md): a conversation from before
-      // the rename may still call them. Remove once those have gone quiet.
-      tools.save_tool = {
-        ...tools.save_app,
-        description: 'The old name of save_app: call save_app instead.',
-      } as Tool
-      tools.read_tool_state = {
-        ...tools.read_app_state,
-        description: 'The old name of read_app_state: call read_app_state instead.',
-      } as Tool
     }
     tools.check_design = tool({
       description:

@@ -50,7 +50,7 @@ export const FEATURES = {
       'Apps (docs/apps.md): small web apps teammates make and save in the library, which people ' +
       'open beside a page or a thread. An app lists library folders, keeps state, calls App ' +
       'accounts (connected apps) attached to it and sends messages to its thread. Being tried by ' +
-      'the team first. Was `tools` before the rename.',
+      'the team first.',
     default: false,
   },
   google_ads: {

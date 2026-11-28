@@ -61,13 +61,3 @@ export const appOpen = (kind: string, features: Set<Feature>) => {
 export function requireFeature(features: Set<Feature>, feature: Feature) {
   if (!features.has(feature)) throw new HTTPException(404, { message: 'Not found' })
 }
-
-/**
- * A person's features as a dashboard reads them, with their names from before a rename too: a
- * dashboard deployed before the API knows only those. `apps` was `tools` (docs/apps.md).
- */
-export function withLegacyNames(features: readonly string[]): string[] {
-  return features.includes('apps') && !features.includes('tools')
-    ? [...features, 'tools']
-    : [...features]
-}

@@ -102,7 +102,7 @@ function useToolHost({
   const body = useMemo(() => ({ path: folder, ...(appId && { id: appId }) }), [folder, appId])
   const load = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body })
+      const next = await api<ToolView>('/apps/view', { body })
       setView(next)
       setError(undefined)
       setMoved(false)
@@ -117,7 +117,7 @@ function useToolHost({
   // The view again (accounts changed) without reloading the page: its address stays.
   const refresh = useCallback(async () => {
     try {
-      const next = await api<ToolView>('/tools/view', { body })
+      const next = await api<ToolView>('/apps/view', { body })
       setView((was) => (was ? { ...next, url: was.url } : next))
     } catch {
       // The page keeps what it had.
@@ -698,7 +698,7 @@ function ToolAccounts({
               className="self-start"
               disabled={busy || !view.mayAttach}
               onClick={() =>
-                void run('/tools/accounts/allow', { path: view.folder, id: view.toolId })
+                void run('/apps/accounts/allow', { path: view.folder, id: view.toolId })
               }
             >
               Allow the changed app
@@ -745,7 +745,7 @@ function ToolAccounts({
                         variant="ghost"
                         disabled={busy}
                         onClick={() =>
-                          void run('/tools/accounts/detach', {
+                          void run('/apps/accounts/detach', {
                             path: view.folder,
                             id: view.toolId,
                             connectionId: a.connectionId,
@@ -769,7 +769,7 @@ function ToolAccounts({
                       variant="outline"
                       disabled={busy}
                       onClick={() =>
-                        void run('/tools/accounts', {
+                        void run('/apps/accounts', {
                           path: view.folder,
                           id: view.toolId,
                           connectionId: a.connectionId,

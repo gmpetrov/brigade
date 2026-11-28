@@ -637,8 +637,8 @@ function toolSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       'not the page it drew.',
     '## Saving',
     'Check it with `check_design` on the folder (it renders like a design: screenshots and the errors its page logged), ' +
-      `open the screenshots and fix what is off. Then save it with \`save_app\` to a library path ending in \`${TOOL_SUFFIX}\` ` +
-      '(one saved before under `.tool`, with a `tool.json`, keeps its path and manifest), next to the work it belongs to, and name it in your reply by the `mention` `save_app` returns: it opens the ' +
+      `open the screenshots and fix what is off. Then save it with \`save_app\` to a library path ending in \`${TOOL_SUFFIX}\`, ` +
+      'next to the work it belongs to, and name it in your reply by the `mention` `save_app` returns: it opens the ' +
       'app beside the thread. Saving again replaces it; the library keeps earlier versions. ' +
       `Before you change a saved app, copy its files from \`${libraryDir}/<path>/\` over your working copy.`,
   ].join('\n\n')

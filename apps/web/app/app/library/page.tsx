@@ -39,7 +39,6 @@ import {
   type SearchHit,
   type Teammate,
 } from '@/lib/api'
-import { hasApps } from '@/lib/apps-feature'
 
 /** The workspace's shared files and memory, and one search over both. */
 export default function LibraryPage() {
@@ -82,7 +81,7 @@ function LibraryView() {
   const folder = params.get('folder') ?? ''
   const focus = params.get('file') ?? undefined
   const focusDesign = params.get('design') ?? undefined
-  // ?app=<folder> opens an app (?tool= before apps were renamed from tools); ?app-id=<its
+  // ?app=<folder> opens an app; ?app-id=<its
   // index.html id> the app wherever it is now (Open in Brigade, from an installed app's window).
   const appId = params.get('app-id')
   // Its workspace, named beside it: the dashboard switches to it first (components/dashboard.tsx).
@@ -106,9 +105,9 @@ function LibraryView() {
       live = false
     }
   }, [appId, switching])
-  const focusTool = params.get('app') ?? params.get('tool') ?? appById
+  const focusTool = params.get('app') ?? appById
   // Apps (docs/apps.md), for people who have them.
-  const tools = hasApps(me.data?.features)
+  const tools = me.data?.features?.includes('apps') ?? false
   const setFolder = useCallback(
     (path: string) => {
       setCreating(null)
@@ -120,12 +119,6 @@ function LibraryView() {
   )
   useEffect(() => {
     const asked = focus || focusDesign || focusTool ? 'files' : params.get('tab')
-    // Apps were Tools before the rename: an old ?tab=tools still opens them.
-    if (asked === 'tools') {
-      setTab('apps')
-      setQuery('')
-      return
-    }
     // Design systems were a tab of their own: they open beside the designs now.
     if (asked === 'design-systems') {
       setTab('designs')

@@ -1,6 +1,6 @@
 'use client'
 // Every tool in the library (docs/apps.md), newest first: its picture (the
-// thumbnail save_tool renders), name, folder and who changed it last. Opens
+// thumbnail save_app renders), name, folder and who changed it last. Opens
 // in the document panel, beside the page, where it minimizes as a document does.
 import {
   TOOL_ENTRY,

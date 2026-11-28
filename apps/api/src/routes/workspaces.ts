@@ -46,7 +46,7 @@ import {
 import { readAvatar, shownImage, updateProfile } from '../profile.js'
 import { deleteWorkspace } from '../workspace-delete.js'
 import { updateWorkspace } from '../workspace-settings.js'
-import { featuresOf, featuresOfMember, requireFeature, withLegacyNames } from '../features.js'
+import { featuresOf, featuresOfMember, requireFeature } from '../features.js'
 import { z } from 'zod'
 
 const SetSidebarOrder = z.object({
@@ -239,9 +239,9 @@ export const workspaces = new Hono<AppEnv>()
       // Chief's daily pass for them (docs/chief-answers.md): Today shows what it did.
       chiefPass: membership?.chiefPass ?? false,
       // Features hidden until ready that this person has (src/features.ts).
-      features: withLegacyNames([
+      features: [
         ...(await featuresOf({ email: user.email, workspaceId: scope?.workspaceId ?? null })),
-      ]),
+      ],
     })
   })
 

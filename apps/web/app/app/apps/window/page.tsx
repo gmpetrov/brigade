@@ -11,7 +11,6 @@ import { useDashboard } from '@/components/dashboard'
 import { ToolWindow } from '@/components/tool-view'
 import { Button } from '@/components/ui/button'
 import { ApiError, api } from '@/lib/api'
-import { hasApps } from '@/lib/apps-feature'
 import { appWindowBridge } from '@/lib/desktop-bridge'
 
 type Found = { folder: string } | { gone: string; deleted?: boolean } | { failed: string }
@@ -77,7 +76,8 @@ function AppWindow() {
   if (unbound)
     return <Message>This app is in another workspace than this window can reach.</Message>
   if (!found) return null
-  if (!hasApps(me.features)) return <Message>Apps are not available in this workspace.</Message>
+  if (!(me.features?.includes('apps') ?? false))
+    return <Message>Apps are not available in this workspace.</Message>
   if ('failed' in found)
     return (
       <Message

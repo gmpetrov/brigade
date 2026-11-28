@@ -94,7 +94,6 @@ import { openIntent } from '@/lib/prepare-document'
 import { fileIcon } from '@/components/file-icon'
 import { folderSuggestions, splitTyped } from '@/lib/library-path'
 import { cn } from '@/lib/utils'
-import { hasApps } from '@/lib/apps-feature'
 
 export { contentUrl }
 
@@ -187,7 +186,7 @@ export function LibraryBrowser({
   const [design, setDesign] = useState<string>()
   const { me } = useDashboard()
   /** Tools (docs/apps.md) show as tools for people who have them; as folders for the others. */
-  const tools = hasApps(me.features)
+  const tools = me.features?.includes('apps') ?? false
   const isTool = (path: string) => tools && toolFolderOf(path) === path
   const [renaming, setRenaming] = useState<string>()
   const [access, setAccess] = useState<string>()

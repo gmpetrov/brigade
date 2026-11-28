@@ -128,9 +128,9 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     // A tool and a design, each a folder of files.
     const file = (path: string, contentType: string, text: string) =>
       db.document.create({ data: { path, contentType, size: text.length, text } } as never)
-    const tool = 'Projects/Brigade/social/launch-tracker.tool'
+    const tool = 'Projects/Brigade/social/launch-tracker.webapp'
     await file(
-      `${tool}/tool.json`,
+      `${tool}/app.json`,
       'application/json',
       JSON.stringify({
         title: 'Launch campaign tracker',
@@ -138,7 +138,11 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
       }),
     )
     await file(`${tool}/index.html`, 'text/html', '<h1>Launch campaign tracker</h1><p>Visitors</p>')
-    await file(`${tool}/app.js`, 'text/javascript', "var CAMPAIGN_START = '2026-10'; zebrafish()")
+    await file(
+      `${tool}/script.js`,
+      'text/javascript',
+      "var CAMPAIGN_START = '2026-10'; zebrafish()",
+    )
     await file(`${tool}/notes.md`, 'text/markdown', 'How the tracker counts')
     const design = 'Projects/Brigade/pricing.design'
     await file(
@@ -272,7 +276,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
       tools.map((r) => [r.id, r.title, r.detail]),
       [
         [
-          'Projects/Brigade/social/launch-tracker.tool',
+          'Projects/Brigade/social/launch-tracker.webapp',
           'Launch campaign tracker',
           'App · Projects/Brigade/social',
         ],
@@ -280,7 +284,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     )
     assert.ok(tools[0]!.score >= SCORE.exact, 'named as typed')
     assert.deepEqual(
-      titles(results, 'file').filter((t) => t.includes('.tool/')),
+      titles(results, 'file').filter((t) => t.includes('.webapp/')),
       [],
       'none of its files',
     )
@@ -289,16 +293,16 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     assert.equal(byName?.title, 'Launch campaign tracker')
     // Its Markdown is a document people read: it stays a file.
     assert.deepEqual(titles(await find('tracker counts'), 'file'), [
-      'Projects/Brigade/social/launch-tracker.tool/notes.md',
+      'Projects/Brigade/social/launch-tracker.webapp/notes.md',
     ])
   })
 
   test("words only in a tool's or design's code find nothing", async () => {
     assert.deepEqual(await find('zebrafish'), [])
     assert.deepEqual(await find('flamingo'), [])
-    // Nor does the name of one of its files: app.js is not the tool.
+    // Nor does the name of one of its files: script.js is not the app.
     assert.deepEqual(
-      (await find('app')).filter((r) => r.kind === 'tool' || r.title.includes('.tool/')),
+      (await find('script')).filter((r) => r.kind === 'tool' || r.title.includes('.webapp/')),
       [],
     )
   })
@@ -323,7 +327,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     try {
       const results = await find('launch campaign tracker')
       assert.deepEqual(titles(results, 'tool'), [])
-      assert.ok(titles(results, 'file').some((t) => t.endsWith('launch-tracker.tool/tool.json')))
+      assert.ok(titles(results, 'file').some((t) => t.endsWith('launch-tracker.webapp/app.json')))
     } finally {
       await setTools(true)
     }

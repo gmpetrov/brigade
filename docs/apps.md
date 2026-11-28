@@ -12,27 +12,12 @@ Apps are behind the `apps` feature (docs/feature-flags.md) while the team tries 
 
 Apps were called tools until 27 Nov 2026; the code still calls them tools (`ToolView`, `ToolState`,
 `tool-view.tsx`, `toolFolderOf`), since `App` there already names connected apps (the `App`
-model, `/api/connections/apps`). What people and teammates see says app:
-
-- An app is a library folder named `<name>.webapp` with `app.json`. A folder named `<name>.tool`
-  with `tool.json`, saved before the rename, still opens as one, and `save_app` saves to it again
-  under its old path, so its state and attached accounts stay (both keyed by its `index.html`).
-  The folder's suffix says which manifest it has (`toolManifestFile`): `app.json` for
-  `.webapp`, `tool.json` for `.tool`. A file of the other name is just a file of the app (data it
-  loads, say), so an app never has two manifests that disagree. The code hash its accounts are
-  attached under says which file is the manifest (as before for `.tool` folders, so what was
-  allowed stays allowed): a `.tool` folder moved to `.webapp` waits to be allowed again.
-  `save_app` saves every file as it is, and a `.webapp`'s `tool.json` as its `app.json` too when
-  it has no `app.json`.
-  Not `.app`: Finder takes a folder so named for an application (the library's copies are on
-  Macs), and `.app` is also a domain ending people name folders with.
-- Teammates save one with `save_app` and read its state with `read_app_state`, following the
-  `brigade-apps` skill. The thread spec still carries the feature as `tools`.
-- The feature is `apps`: a migration copied the `tools` row, which stays for the API before it.
-  The dashboard takes either.
-- The API answers under `/api/apps/*` and, for dashboards from before the rename, `/api/tools/*`.
-- In the dashboard, the integrations people connect (App accounts) show as **Connected apps**, so
-  that **Apps** names these. "App" with a capital in this document means a connected app.
+model, `/api/connections/apps`). What people and teammates see says app: a `<name>.webapp`
+folder with `app.json` (not `.app`: Finder takes a folder so named for an application, and the
+library's copies are on Macs), `save_app` and `read_app_state`, the `brigade-apps` skill, the
+`apps` feature and `/api/apps/*`. In the dashboard, the integrations people connect (App accounts)
+show as **Connected apps**, so that **Apps** names these. "App" with a capital in this document
+means a connected app.
 
 ## What a member sees
 
@@ -119,7 +104,7 @@ bridge: without the key, no channel opens. Calls and answers go over that channe
 never reaches a document that replaced the page; the page says `bye` as it goes, and what it was
 waiting for (a question to the person included) is dropped. The dashboard
 (`components/tool-view.tsx`, `lib/tool-host.ts`) checks each call again and makes it with the
-person's session (`/api/tools/*`).
+person's session (`/api/apps/*`).
 
 ## Installed apps
 
@@ -296,7 +281,7 @@ window's bridge, and uninstalls.
 
 - Contracts: `packages/contracts/src/tool.ts` (manifest, requests, bridge script).
 - API: `apps/api/src/tools.ts` (views, state, files, accounts, calls, the sandbox host's `/t/`),
-  `apps/api/src/routes/tools.ts` (`/api/tools/*`, behind the feature), `ToolState` and
+  `apps/api/src/routes/tools.ts` (`/api/apps/*`, behind the feature), `ToolState` and
   `ToolAccount` (`prisma/schema.prisma`), `tool_state` in `src/library-calls.ts`.
 - Runner: `save_app`, `read_app_state` (`apps/runner/src/harness/tools.ts`), the skill and
   section (`apps/runner/src/instructions.ts`), the bridge in `check_design` (`src/design-shot.ts`).
