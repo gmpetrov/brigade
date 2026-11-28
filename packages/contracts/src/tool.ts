@@ -37,11 +37,23 @@ export const toolName = (folder: string) => {
 /**
  * Apps were `<name>.tool` folders before they were renamed: a runner from before that may still
  * save one with `save_tool`, which would make a folder nothing opens as an app. The API refuses
- * a teammate's save into one, with this, so the teammate hears it rather than a false success.
+ * a teammate's save of such an app's page or manifest (`index.html`, `tool.json` at the top of a
+ * `.tool` folder that is not inside an app), so the teammate hears it rather than a false success.
+ * Other files of a `.tool` folder, and anything inside a `.webapp` app, save as usual.
  */
 export function retiredAppFolderRefusal(path: string) {
-  const folders = path.split('/').slice(0, -1)
-  return folders.some((part) => part.length > '.tool'.length && part.endsWith('.tool'))
+  const parts = path.split('/')
+  const at = parts.findIndex(
+    (part) =>
+      (part.endsWith('.tool') && part.length > '.tool'.length) ||
+      (part.endsWith(TOOL_SUFFIX) && part.length > TOOL_SUFFIX.length),
+  )
+  const retired =
+    at >= 0 &&
+    parts[at]!.endsWith('.tool') &&
+    at === parts.length - 2 &&
+    (parts[at + 1] === 'tool.json' || parts[at + 1] === TOOL_ENTRY)
+  return retired
     ? 'Apps are now `<name>.webapp` folders with an `app.json`, saved with `save_app`: a `.tool` ' +
         "folder no longer opens as an app. Once Brigade on this teammate's computer is updated, " +
         'save it again there.'

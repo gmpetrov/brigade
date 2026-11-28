@@ -39,10 +39,15 @@ test('app.json is lenient: a bad entry is left out, not the manifest', () => {
   assert.deepEqual(parsed.hosts, ['https://api.example.com'])
 })
 
-test('a teammate save into a .tool folder is refused: apps are .webapp folders now', () => {
+test("an old app's page or manifest in a .tool folder is refused; other files are not", () => {
+  assert.match(retiredAppFolderRefusal('Social/tracker.tool/tool.json'), /\.webapp/)
   assert.match(retiredAppFolderRefusal('Social/tracker.tool/index.html'), /\.webapp/)
-  assert.match(retiredAppFolderRefusal('a/tracker.tool/assets/x.png'), /\.webapp/)
+  // Anything else in a folder that happens to end in .tool saves as usual.
+  assert.equal(retiredAppFolderRefusal('Exports/vendor.tool/notes.md'), null)
+  assert.equal(retiredAppFolderRefusal('Social/tracker.tool/assets/index.html'), null)
+  // Inside an app, a resource folder named .tool is just a folder.
+  assert.equal(retiredAppFolderRefusal('a/board.webapp/vendor/widget.tool/data.json'), null)
+  assert.equal(retiredAppFolderRefusal('a/board.webapp/vendor/widget.tool/index.html'), null)
   assert.equal(retiredAppFolderRefusal('Social/tracker.webapp/index.html'), null)
-  assert.equal(retiredAppFolderRefusal('Social/notes.tool'), null)
-  assert.equal(retiredAppFolderRefusal('Social/.tool/x'), null)
+  assert.equal(retiredAppFolderRefusal('Social/.tool/index.html'), null)
 })
