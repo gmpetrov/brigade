@@ -66,6 +66,26 @@ export function entryInstallId(text: string) {
   return /^X-Brigade-App-Install-Id=([0-9a-f]{32})$/m.exec(text)?.[1]
 }
 
+/**
+ * When a just-installed app's window sets its WM_CLASS again (`setWmClass`, same value). GNOME
+ * Shell reads new launcher entries 5 s after the last change to them (ShellAppCache), and the
+ * install writes the entry, then mimeinfo.cache (update-desktop-database), then opens the window
+ * at once: Shell found no entry for its WM_CLASS and took it for Brigade's, by its process, for
+ * as long as the window lives. It looks the window's app up again on each WM_CLASS change, even
+ * to the same value (tried on Ubuntu 24.04, GNOME Shell 46 on Xorg).
+ */
+export const WM_CLASS_AGAIN_MS = [7_000, 15_000]
+
+/**
+ * In how many ms a window of an app installed at `installedAt` sets its WM_CLASS again: those of
+ * WM_CLASS_AGAIN_MS (from the install) still ahead. Any window opened then, not only the first:
+ * closed and opened again at once, the second is as unknown to Shell as the first.
+ */
+export function wmClassAgainIn(installedAt: number, now = Date.now()) {
+  const since = Number.isFinite(installedAt) ? Math.max(0, now - installedAt) : Infinity
+  return WM_CLASS_AGAIN_MS.filter((ms) => ms > since).map((ms) => ms - since)
+}
+
 const WM_CLASS = 67 // predefined atoms
 const STRING = 31
 

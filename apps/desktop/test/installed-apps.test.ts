@@ -25,6 +25,7 @@ import {
   execArg,
   isAppEntry,
   wmClass,
+  wmClassAgainIn,
 } from '../src/app-install-linux.js'
 import {
   appUserModelId,
@@ -353,3 +354,16 @@ test(
     assert.equal(await signedAs(bundle, cdhash), false)
   },
 )
+
+test('a window of an app installed moments ago sets its WM_CLASS again, whichever it is', () => {
+  const at = 1_000_000
+  // The install's own window, and one opened again 2 s later: what is left of 7 and 15 s.
+  assert.deepEqual(wmClassAgainIn(at, at), [7_000, 15_000])
+  assert.deepEqual(wmClassAgainIn(at, at + 2_000), [5_000, 13_000])
+  assert.deepEqual(wmClassAgainIn(at, at + 10_000), [5_000])
+  // Long installed, or a date that does not read: nothing to do.
+  assert.deepEqual(wmClassAgainIn(at, at + 60_000), [])
+  assert.deepEqual(wmClassAgainIn(Number.NaN, at), [])
+  // A clock set back: as at the install, never later.
+  assert.deepEqual(wmClassAgainIn(at, at - 5_000), [7_000, 15_000])
+})

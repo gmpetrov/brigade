@@ -211,7 +211,10 @@ rewrites the shortcuts' target at start.
 the AppImage (`$APPIMAGE`) or Brigade's binary with `--app=<installId>`, Icon is the app's PNG in
 Brigade's own folder, `StartupWMClass=brigade-app-<installId>`. Rewritten at each start, since an
 AppImage's path changes with updates. On X11 the window's `WM_CLASS` is set to match before it is
-shown (through the `x11` package), so the dock groups it under its own icon. On Wayland a window
+shown (through the `x11` package), so the dock groups it under its own icon. GNOME Shell reads a
+new entry only 5 s after it is written, so a window opened right after its install first groups
+under Brigade's icon: any window of it open then sets its WM_CLASS again 7 and 15 s after the install, and Shell then moves it to its
+own (`WM_CLASS_AGAIN_MS`). On Wayland a window
 can't be given its own app id: it groups under Brigade's icon, and its launcher entry still opens
 it. No badge on Windows and Linux (`badge.set` answers `{ shown: false }`).
 
