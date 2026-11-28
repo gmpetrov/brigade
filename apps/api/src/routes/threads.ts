@@ -626,6 +626,8 @@ export const threads = new Hono<AppEnv>()
       ...child
     }: (typeof children)[number]) => ({
       ...child,
+      // Where it runs: the sidebar marks one on a member's own machine, as a thread's own row.
+      computer,
       // A pull request's review: out of the sidebar unless it needs the person.
       review: reviewIds.has(child.id),
       // What its menu needs (thread-menu.tsx): who started it, who else may change it,
