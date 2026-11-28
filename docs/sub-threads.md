@@ -164,7 +164,8 @@ works on, what it produced (pull requests, library documents it saved, files it 
 tokens; the whole tree's tokens in the title, counted as Usage counts them (input and output, from
 the top). Stop a working one (`POST /threads/:id/interrupt`) or retry a failed one
 (`POST /threads/:id/retry`) from there. A dashboard on an API before it shows the sub-threads'
-lines, as before.
+lines, as before. Its title folds the section to that one line, and the browser remembers it per
+thread (`brigade.treeFolded.<threadId>` in localStorage).
 
 ## Fanning out
 

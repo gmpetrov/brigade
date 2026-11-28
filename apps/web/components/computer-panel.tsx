@@ -5,7 +5,16 @@
 // Preview, a shell, the run log) and what it made. Beside the list, what the teammate is
 // on now. Both end with the teammate: routines, settings.
 import type { BillingResponse } from '@brigade/contracts'
-import { AlarmClock, ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
+import {
+  AlarmClock,
+  ArrowRight,
+  ChevronDown,
+  Globe,
+  Hand,
+  Settings,
+  SquareTerminal,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -36,25 +45,48 @@ import {
 } from '@/lib/api'
 import { changeControl, useControlError, useControlPending } from '@/lib/control'
 import { savedReplies } from '@/lib/ticket-replies'
+import { useRememberedFlag } from '@/lib/use-remembered'
+import { cn } from '@/lib/utils'
 
 function Section({
   title,
   action,
+  folded,
+  onFold,
   children,
 }: {
   title: string
   action?: React.ReactNode
+  /** Given with `onFold`, its title is a button that folds it to that line alone. */
+  folded?: boolean
+  onFold?: (folded: boolean) => void
   children: React.ReactNode
 }) {
+  const heading = 'text-xs font-semibold tracking-wider text-muted-foreground uppercase'
   return (
     <section className="flex flex-col gap-2">
       <div className="flex min-h-8 items-center gap-2">
-        <h2 className="flex-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          {title}
-        </h2>
+        {onFold ? (
+          <h2 className="flex min-w-0 flex-1">
+            <button
+              type="button"
+              aria-expanded={!folded}
+              onClick={() => onFold(!folded)}
+              className={cn(heading, 'group flex min-w-0 items-center gap-1 hover:text-foreground')}
+            >
+              <ChevronDown
+                className={cn('size-3.5 shrink-0 transition-transform', folded && '-rotate-90')}
+                aria-hidden
+              />
+              <span className="truncate">{title}</span>
+            </button>
+          </h2>
+        ) : (
+          <h2 className={cn('flex-1', heading)}>{title}</h2>
+        )}
         {action}
       </div>
-      {children}
+      {!folded && children}
     </section>
   )
 }
@@ -537,18 +569,20 @@ function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }
  */
 function Tree({ thread, onChange }: { thread: Thread; onChange: () => void }) {
   const tree = useThreadTree(thread.id)
+  // Folded or not, per thread, in this browser.
+  const [folded, setFolded] = useRememberedFlag(`brigade.treeFolded.${thread.id}`, false)
   const reload = () => {
     void tree.reload()
     onChange()
   }
   if (!tree.data || tree.error)
     return (
-      <Section title={`Sub-threads · ${thread.children.length}`}>
+      <Section title={`Sub-threads · ${thread.children.length}`} folded={folded} onFold={setFolded}>
         <ChildrenList children={thread.children} />
       </Section>
     )
   return (
-    <Section title={treeTitle(tree.data)}>
+    <Section title={treeTitle(tree.data)} folded={folded} onFold={setFolded}>
       <TreeList threadId={thread.id} tree={tree.data} onChange={reload} />
     </Section>
   )
