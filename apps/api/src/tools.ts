@@ -950,10 +950,14 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
   const scope = { organizationId: claim.o, workspaceId: claim.w }
   const db = scoped(scope)
   const folder = claim.p
-  // Made for one app: once another is at its folder (it moved, the folder reused), nothing here.
-  if (claim.i && (await libraryRow(db, `${folder}/${TOOL_ENTRY}`))?.id !== claim.i)
+  // The app's files read once: its entry checked, its manifest and the file asked for, all from
+  // this one read. Made for one app, the address serves nothing once another is at its folder
+  // (it moved, the folder reused), not even when that happens while this page is asked for.
+  const rows = await toolRows(db, folder)
+  const rowAt = (path: string) => rows.find((r) => r.path === path)
+  if (claim.i && rowAt(`${folder}/${TOOL_ENTRY}`)?.id !== claim.i)
     return c.text('This app moved. Open it again.', 410)
-  const manifest = await readManifest(scope, await libraryRow(db, toolManifestPath(folder)))
+  const manifest = await readManifest(scope, rowAt(toolManifestPath(folder)))
   if (rest[0] === TOOL_LIBRARY_PREFIX && rest.length > 1) {
     const path = rest.slice(1).join('/')
     if (!readable({ folder, manifest }, path)) return c.text('Not found', 404)
@@ -969,7 +973,7 @@ export const toolPages = new Hono().get('/:token/*', async (c) => {
       'access-control-allow-origin': '*',
       'cache-control': 'private, max-age=3600',
     })
-  const row = await libraryRow(db, [folder, ...rest].join('/'))
+  const row = rowAt([folder, ...rest].join('/'))
   if (!row) return c.text('Not found', 404)
   const html = row.contentType === 'text/html'
   const headers = {

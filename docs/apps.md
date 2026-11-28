@@ -143,7 +143,8 @@ PWA manifest per app) is a separate change.
   `ToolId`: the view, state, files, operations, calls and accounts, from the panel and the window
   alike), and its page's signed address carries it too: once another app is saved at that folder
   (the app moved, its folder reused), the requests answer 409 `app_moved` and the address 410,
-  never the other app. The window then looks the id up again. A deleted app says so,
+  never the other app. The address serves its files from one read of the folder, the entry
+  checked in it, so a move while a page is asked for never mixes the two. The window then looks the id up again. A deleted app says so,
   with an Uninstall button; a lookup that fails (offline, the API restarting) offers to try
   again. Never the folder it once had: another app may be there now.
 - **Its workspace, pinned.** Every call of the window carries `x-brigade-workspace: <id>`
@@ -202,7 +203,8 @@ marked experimental), as Chrome and Claude use (`app-install-mac.ts`, `app-windo
   to quit. Any process of the account can connect to the server, so nothing opens without both.
 - The window is made in the shim's process: its own Dock icon, ⌘-Tab entry, menu bar (the app's
   name with Open in Brigade, which opens it in the library by its id and in its workspace
-  (`/app/library?app-id=…&workspace=…`), Uninstall…, Hide and Quit; Edit; View; Window) and badge
+  (`/app/library?app-id=…&workspace=…`; the dashboard switches to it first, even in another of
+  the person's organizations, and says so when the app is gone or no longer theirs), Uninstall…, Hide and Quit; Edit; View; Window) and badge
   (`brigade.badge.set`). Closing the window quits the shim; its Dock icon, clicked, opens it again.
 - Updates keep Brigade.app's path, so shims keep working. A Brigade.app that moved rewrites each
   shim's host path at start and signs it again. A shim launched after Brigade.app was updated

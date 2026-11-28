@@ -354,11 +354,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     // An installed app's window never switches the session: its calls name its workspace.
     if (window.location.pathname === APP_WINDOW) return
     if (!wanted || !me.data || wanted === me.data.activeWorkspaceId) return
-    if (!me.data.workspaces.some((w) => w.id === wanted)) return
-    void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(() =>
-      window.location.reload(),
+    // A workspace of another of their organizations too: the API checks they are a member.
+    // Refused (gone, or no longer theirs): the page carries on without it, and says what it can.
+    void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(
+      () => window.location.reload(),
+      () => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('workspace')
+        router.replace(`${url.pathname}${url.search}`)
+      },
     )
-  }, [me.data])
+  }, [me.data, router])
 
   // The member could not be read (the API restarting, a deploy, the network): asked again,
   // sooner then less often, rather than the loader staying for good. 401 signs out above.

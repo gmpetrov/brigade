@@ -85,18 +85,27 @@ function LibraryView() {
   // ?app=<folder> opens an app (?tool= before apps were renamed from tools); ?app-id=<its
   // index.html id> the app wherever it is now (Open in Brigade, from an installed app's window).
   const appId = params.get('app-id')
+  // Its workspace, named beside it: the dashboard switches to it first (components/dashboard.tsx).
+  const wantedWorkspace = params.get('workspace')
+  const switching = !!wantedWorkspace && !!me.data && wantedWorkspace !== me.data.activeWorkspaceId
   const [appById, setAppById] = useState<string>()
   useEffect(() => {
-    if (!appId) return setAppById(undefined)
+    if (!appId || switching) return setAppById(undefined)
     let live = true
     api<LibraryFile>(`/library/${encodeURIComponent(appId)}`).then(
       (file) => live && setAppById(toolFolderOf(file.path)),
-      () => live && setAppById(undefined),
+      () => {
+        if (!live) return
+        setAppById(undefined)
+        setError(
+          'This app could not be opened: it was deleted, or you no longer have access to its workspace.',
+        )
+      },
     )
     return () => {
       live = false
     }
-  }, [appId])
+  }, [appId, switching])
   const focusTool = params.get('app') ?? params.get('tool') ?? appById
   // Apps (docs/apps.md), for people who have them.
   const tools = hasApps(me.data?.features)

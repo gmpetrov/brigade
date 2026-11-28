@@ -25,8 +25,12 @@ const database = await Promise.race([
 const { Hono } = await import('hono')
 const { HTTPException } = await import('hono/http-exception')
 const { requireWorkspace, userFrom, WORKSPACE_PIN_HEADER } = await import('../src/scope.js')
+const { auth } = await import('../src/auth.js')
+const { workspaces: workspaceRoutes } = await import('../src/routes/workspaces.js')
+const { sessionStub } = await import('./session-stub.js')
 
 const run = randomUUID().slice(0, 8)
+const getSession = auth.api.getSession
 const orgA = `org-pin-a-${run}`
 const orgB = `org-pin-b-${run}`
 const orgC = `org-pin-c-${run}`
@@ -87,6 +91,8 @@ describe('a pinned workspace', { skip: !database && 'no database answers' }, () 
   })
 
   after(async () => {
+    ;(auth.api as { getSession: unknown }).getSession = getSession
+    await prisma.authSession.deleteMany({ where: { userId } })
     await prisma.workspace.deleteMany({ where: { organizationId: { in: [orgA, orgB, orgC] } } })
     await prisma.member.deleteMany({ where: { userId } })
     await prisma.organization.deleteMany({ where: { id: { in: [orgA, orgB, orgC] } } })
@@ -137,6 +143,47 @@ describe('a pinned workspace', { skip: !database && 'no database answers' }, () 
       data: { removingAt: new Date() },
     })
     const { status } = await scopeFor(b1)
+    await prisma.member.update({ where: { id: `m-pin-b-${run}` }, data: { removingAt: null } })
     assert.equal(status, 403)
+  })
+
+  test('a switch reaches a workspace of another of the person’s organizations, and no other', async () => {
+    const sessionId = `s-switch-${run}`
+    await prisma.authSession.create({
+      data: {
+        id: sessionId,
+        token: `t-switch-${run}`,
+        userId,
+        expiresAt: new Date(Date.now() + 60_000),
+        activeOrganizationId: orgA,
+        activeWorkspaceId: a1,
+      },
+    })
+    ;(auth.api as { getSession: unknown }).getSession = sessionStub(() => ({
+      user: { id: userId },
+      session: { id: sessionId, activeOrganizationId: orgA, activeWorkspaceId: a1 },
+    }))
+    const routes = new Hono().route('/api', workspaceRoutes)
+    routes.onError((error, c) =>
+      error instanceof HTTPException
+        ? c.json({ error: error.message }, error.status)
+        : c.json({ error: String(error) }, 500),
+    )
+    const switchTo = (workspaceId: string) =>
+      routes.request('/api/workspaces/switch', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ workspaceId }),
+      })
+    const session = () =>
+      prisma.authSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        select: { activeOrganizationId: true, activeWorkspaceId: true },
+      })
+    assert.equal((await switchTo(b1)).status, 200)
+    assert.deepEqual(await session(), { activeOrganizationId: orgB, activeWorkspaceId: b1 })
+    // Not a member of C: refused, the session as it was.
+    assert.equal((await switchTo(c1)).status, 404)
+    assert.deepEqual(await session(), { activeOrganizationId: orgB, activeWorkspaceId: b1 })
   })
 })
