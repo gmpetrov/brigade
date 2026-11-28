@@ -32,8 +32,11 @@ A thread at the top and every sub-thread under it make a tree.
   (`origin` child), no report yet, not failed or done. Not a schedule's runs that report to a
   thread, nor the review of a pull request: Brigade starts those (one per pull request, its looks
   capped), and a review is never refused for the cap. A finished sub-thread a message sets to work
-  again (message_thread, from its parent or another thread of the tree) counts as one more, and is
-  refused when the tree is full (`reopenInTree`).
+  again (message_thread, from its parent or another thread of the tree), or retried after a failed
+  turn, counts as one more, and is refused when the tree is full (`reopenInTree`). Its place is
+  taken only once nothing else refuses the message, and given back, with its report, if the message
+  or the retry does not go (a person in control, the computer offline). A failed one is idle again
+  once reopened, so that it counts at once.
 - Both are constants in `packages/contracts/src/children.ts`, read by the API (which enforces them)
   and the runner (which says them in the teammates' instructions and tools). No person sees or sets
   them; changing either is one line.
@@ -64,7 +67,9 @@ A thread at the top and every sub-thread under it make a tree.
   sub-thread inherits): their only one, or `{ mine: "<name>" }` when they have several. For their Mac
   apps, their signed-in browser, computer use. **Never another member's machine**, and only on the
   word of that member: not when another member asked in a thread shared with them, nor in a thread
-  an outside event or a schedule started (`askedBy` must be the machine's member).
+  an outside event or a schedule started (`askedBy` must be the machine's member). The same holds
+  for every later message to a sub-thread on a member's machine from a thread on another computer
+  (`machineRefusal`), its parent's included.
 
 Refused at once with the reason, never by falling back to another computer: the machine is offline;
 its runner is older than `SUBTHREADS_PROTOCOL`; or no account of the teammate's login (`loginOf`) is
@@ -121,12 +126,13 @@ writes only within its own tree.
 `message_thread`): a thread of its own tree, one it started (start_thread), another thread at the top
 it is a teammate of; in a playbook's run, also a child of another run of the same installation (as
 before). Its people must be allowed to write there, as for a message (`peopleMayWrite`), when it
-follows and again when a report is delivered: one no longer allowed is claimed without a wake-up.
+follows, again when a report is delivered (one no longer allowed is claimed without a wake-up), and
+when `read_child` reads it.
 Its next report wakes the follower, at most `FOLLOWERS_PER_THREAD` (20) each. A thread at the top
 keeps no report: the end of each of its turns tells its followers what its last message said
-(`noteFollowedEvents`), once, until a new message to it; one its delivery missed (a failed wake-up,
-an API restart) is woken by the minute's sweep, which reads that turn's end again from the events
-(within the hour).
+(`noteFollowedEvents`), once; a follow is marked with the time of the end it heard, so a later end
+is news whatever happened between. One its delivery missed (a failed wake-up, an API restart) is
+woken by the minute's sweep, which reads that turn's end again from the events (within the hour).
 
 ## The sidebar
 

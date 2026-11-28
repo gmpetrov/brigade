@@ -564,14 +564,19 @@ export async function wakeFollowers(
   sessionId: string,
   /** A thread at the top keeps no report: what its turn ended on stands for one (noteFollowedEvents). */
   ended?: ChildReport,
-  /** Only the follows made before this (the end of the turn `ended` is), not one made since. */
+  /**
+   * When the turn `ended` ended: only the follows made before it, and not yet told of it (none
+   * delivered, or delivered before it). A thread at the top is told by the time of its turn's end,
+   * not by a flag a new message resets, which a restart could lose.
+   */
   before?: Date,
 ) {
   const db = scoped(scope)
+  const due = followsDue(before)
   const [thread, follows] = await Promise.all([
     db.session.findFirst({ where: { id: sessionId }, select: CHILD_SELECT }),
     db.threadFollow.findMany({
-      where: { sessionId, deliveredAt: null, ...(before ? { createdAt: { lt: before } } : {}) },
+      where: { sessionId, ...due },
       select: { id: true, followerId: true },
       orderBy: { createdAt: 'asc' },
     }),
@@ -601,8 +606,9 @@ export async function wakeFollowers(
       // The follower's own teammate; a deleted follower is claimed with no wake-up.
       wakeupId = await db.$transaction(async (tx) => {
         const { count } = await tx.threadFollow.updateMany({
-          where: { id: follow.id, deliveredAt: null },
-          data: { deliveredAt: new Date() },
+          where: { id: follow.id, ...due },
+          // A thread at the top's follow is marked with the end it heard, so a later end is news.
+          data: { deliveredAt: before ?? new Date() },
         })
         return count && allowed ? reportWakeup(tx, follow.followerId, null, note) : null
       })
@@ -615,6 +621,18 @@ export async function wakeFollowers(
     if (wakeupId) await fireNow(wakeupId)
   }
 }
+
+/**
+ * The follows still to hear a report: none delivered; for a thread at the top, by the end of its
+ * turn (`before`), those made before it and not delivered since it.
+ */
+const followsDue = (before?: Date) =>
+  (before
+    ? {
+        createdAt: { lt: before },
+        OR: [{ deliveredAt: null }, { deliveredAt: { lt: before } }],
+      }
+    : { deliveredAt: null }) satisfies Prisma.ThreadFollowWhereInput
 
 /**
  * Follows a report should have woken but did not (a failure before the wake-up was stored):
@@ -668,7 +686,6 @@ async function wakeWaitingFollowers(workspaceId?: string) {
  */
 const topFollowsDue = (now: Date) =>
   ({
-    deliveredAt: null,
     session: {
       parentId: null,
       status: { notIn: ['starting', 'running', 'waiting'] },
@@ -716,8 +733,8 @@ async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: 
 
 /**
  * A thread at the top that others follow (follow_thread): it keeps no report, so the end of each
- * of its turns tells them what its last message said, once; a new message to it makes them hear
- * the next one too. Not a turn still waiting on a person's answer (a Codex teammate's ask), nor one
+ * of its turns tells them what its last message said, once, by the time it ended (a follow is
+ * marked with the end it heard: a later one is news, whatever happened between). Not a turn still waiting on a person's answer (a Codex teammate's ask), nor one
  * the runner tries again. Its followers hear it once its events are stored; one that fails to wake
  * is woken by the minute's sweep (wakeWaitingFollowers), which reads that end again from the events.
  */
@@ -728,7 +745,6 @@ export async function noteFollowedEvents(
   if (session.parentId) return
   const ends = events.filter(
     ({ event }) =>
-      event.type === 'message.user' ||
       (event.type === 'turn.completed' && !event.waiting) ||
       (event.type === 'error' && event.retrying !== true),
   )
@@ -737,13 +753,6 @@ export async function noteFollowedEvents(
   const db = scoped(scope)
   if (!(await db.threadFollow.count({ where: { sessionId: session.id } }))) return
   for (const { event } of ends) {
-    if (event.type === 'message.user') {
-      await db.threadFollow.updateMany({
-        where: { sessionId: session.id, deliveredAt: { not: null } },
-        data: { deliveredAt: null },
-      })
-      continue
-    }
     const report: ChildReport =
       event.type === 'error'
         ? { status: 'failed', summary: 'It stopped on an error.', at: event.at }
@@ -756,7 +765,8 @@ export async function noteFollowedEvents(
             at: event.at,
             fromLastMessage: true,
           }
-    await wakeFollowers(scope, session.id, report)
+    // Told by the time its turn ended: the same end seen twice, or by the sweep, tells them once.
+    await wakeFollowers(scope, session.id, report, new Date(event.at))
   }
 }
 
@@ -1458,9 +1468,12 @@ export async function messageChild(
   const thread = await loadThread(db, child.id)
   if (thread.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
+  // On a member's own machine (start_child's `mine`): only on that member's word, each time.
+  const machine = await machineRefusal(db, parent, thread)
+  if (machine) return { error: machine }
   const until = waitUntil(undefined)
   // Set to work again: under its tree's cap, unless it is a review (which the cap leaves out).
-  const full = await reopenInTree(
+  const reopened = await reopenInTree(
     db,
     child.id,
     {
@@ -1472,18 +1485,28 @@ export async function messageChild(
     },
     { capped: !reviewed },
   )
-  if (full) return { error: full }
+  if ('error' in reopened) return reopened
   // A child thread asking its review to look again: its own parent waits for it that long too.
   if (reviewed) await outlast(db, parent.id, until)
   // Work handed on Chief's word goes on it there too; a review stays the review it is.
   if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordSeq: parent.chiefWordSeq ?? null })
-  const outcome = await promptThread(db, scope, thread, {
-    text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
-    memberId: null,
-    // Whoever asked for it in the parent asks in the child too.
-    onBehalfOf: await askedBy(db, parent.id),
-  })
-  if (outcome === 'offline') return { error: "That child thread's computer is offline." }
+  let outcome: Awaited<ReturnType<typeof promptThread>>
+  try {
+    outcome = await promptThread(db, scope, thread, {
+      text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
+      memberId: null,
+      // Whoever asked for it in the parent asks in the child too.
+      onBehalfOf: await askedBy(db, parent.id),
+    })
+  } catch (error) {
+    // Nothing went: its report and its place are as they were.
+    await reopened.undo()
+    throw error
+  }
+  if (outcome === 'offline') {
+    await reopened.undo()
+    return { error: "That child thread's computer is offline." }
+  }
   await parentChanged(scope, parent.id)
   return {
     ok: true,
@@ -1597,6 +1620,19 @@ export async function handleChildCall(
         error:
           'No child of this thread, nor a thread it follows, has that id; list_children shows them',
       }
+    // A thread it follows: only while its people may still write there (it may have been closed
+    // to them since), as on delivery.
+    if (!own) {
+      const access = await db.session.findFirst({
+        where: { id: child.id },
+        select: { startedByMemberId: true, othersMayPrompt: true, computerId: true },
+      })
+      if (!access || !(await peopleMayWrite(db, session, access)))
+        return {
+          error:
+            'The people of this thread may no longer read that one: it is not shown here. Ask a person who may.',
+        }
+    }
     const [final, pulls, files, verdicts] = await Promise.all([
       lastMessage(child.id),
       db.pullRequest.findMany({
@@ -1795,35 +1831,80 @@ export async function handleChildCall(
   }
 }
 
+/** A reopening that took a sub-thread's place in its tree (reopenInTree), to give back. */
+export type Reopened = { undo: () => Promise<void> }
+
 /**
- * A sub-thread set to work again by a message (message_thread): its report cleared, with `data`,
- * under its tree's lock with the tree's cap, in one transaction, so that reopening finished ones
- * never makes more than SUBTHREADS_AT_WORK at work. One still at work only gets `data`. Why it may
- * not, or null once done.
+ * A sub-thread set to work again (a message to it, a retry): its report cleared, with `data`, under
+ * its tree's lock with the tree's cap, in one transaction, so that reopening finished ones never
+ * makes more than SUBTHREADS_AT_WORK at work. One failed or done is idle again, so that it counts at
+ * once. Call it once everything else that could refuse the message has passed, and `undo` if the
+ * message still does not go: it puts back what it was, unless it changed since. Why it may not, or
+ * the place it took.
  */
 export async function reopenInTree(
   db: ScopedDb,
   childId: string,
   data: Prisma.SessionUpdateManyMutationInput,
   options: { capped?: boolean } = {},
-): Promise<string | null> {
+): Promise<{ error: string } | Reopened> {
   const child = await db.session.findFirst({
     where: { id: childId },
-    select: { id: true, parentId: true, rootId: true, origin: true },
+    select: {
+      id: true,
+      parentId: true,
+      rootId: true,
+      origin: true,
+      report: true,
+      reportDeliveredAt: true,
+      reportDueAt: true,
+      status: true,
+      awaited: true,
+      awaitUntil: true,
+      _count: { select: { reviewsOf: true } },
+    },
   })
-  if (!child) return null
+  const none: Reopened = { undo: async () => {} }
+  if (!child) return none
+  const ended = ['failed', 'done'].includes(child.status)
   const clear = {
     ...data,
     report: Prisma.DbNull,
     reportDeliveredAt: null,
     reportDueAt: null,
+    ...(ended ? { status: 'idle' as const } : {}),
   } satisfies Prisma.SessionUpdateManyMutationInput
-  if (options.capped === false || !child.parentId || child.origin !== 'child') {
+  const undo = async () => {
+    // Only while nothing came since: no new report, no turn under way.
+    await db.session.updateMany({
+      where: {
+        id: childId,
+        report: { equals: Prisma.DbNull },
+        reportDeliveredAt: null,
+        status: ended ? 'idle' : child.status,
+      },
+      data: {
+        report: (child.report ?? Prisma.DbNull) as Prisma.InputJsonValue,
+        reportDeliveredAt: child.reportDeliveredAt,
+        reportDueAt: child.reportDueAt,
+        status: child.status,
+        awaited: child.awaited,
+        awaitUntil: child.awaitUntil,
+      },
+    })
+  }
+  // A review is left out of the cap (treeAtWork), so never refused for it.
+  if (
+    options.capped === false ||
+    !child.parentId ||
+    child.origin !== 'child' ||
+    child._count.reviewsOf > 0
+  ) {
     await db.session.updateMany({ where: { id: childId }, data: clear })
-    return null
+    return { undo }
   }
   const rootId = await treeRoot(db, child)
-  return db.$transaction(async (tx) => {
+  const full = await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tree:${rootId}`}, 0))`
     const now = await tx.session.findFirst({
       where: { id: childId },
@@ -1839,12 +1920,38 @@ export async function reopenInTree(
       if (working >= SUBTHREADS_AT_WORK)
         return (
           `Its tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}): ` +
-          'it would be one more. Wait for one to report, or cancel one, then write to it.'
+          'it would be one more. Wait for one to report, or cancel one, then try again.'
         )
     }
     await tx.session.updateMany({ where: { id: childId }, data: clear })
     return null
   })
+  return full ? { error: full } : { undo }
+}
+
+/**
+ * Why `sender` may not send work to a thread on another computer that is a member's own machine:
+ * only on the word of that member (the person who asked in `sender`), as for start_child's `mine`.
+ * Null when it may: the same computer, or a cloud computer.
+ */
+export async function machineRefusal(
+  db: ScopedDb,
+  sender: { id: string },
+  target: { computerId: string },
+): Promise<string | null> {
+  const from = await db.session.findFirst({
+    where: { id: sender.id },
+    select: { computerId: true },
+  })
+  if (!from || from.computerId === target.computerId) return null
+  const machine = await db.computer.findFirst({
+    where: { id: target.computerId },
+    select: { kind: true, memberId: true },
+  })
+  if (machine?.kind !== 'member_machine') return null
+  return (await askedBy(db, sender.id)) === machine.memberId
+    ? null
+    : "That thread runs on a person's own machine: only that person may send it work, from a thread they asked in. Tell the person here instead."
 }
 
 /** A thread's level in its tree: 0 at the top, 1 a sub-thread, 2 a sub-thread's (SUBTHREAD_DEPTH). */

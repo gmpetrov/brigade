@@ -17,7 +17,7 @@ import { memberMayWrite } from './account-sharing.js'
 import { trackAudit } from './analytics.js'
 import { audit } from './audit.js'
 import { markOnChiefsWord } from './chief-answers.js'
-import { messageChild, reopenInTree } from './children.js'
+import { machineRefusal, messageChild, reopenInTree, type Reopened } from './children.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { pickLines, projectOf } from './lists.js'
 import { usableProject } from './projects.js'
@@ -408,11 +408,6 @@ export async function messageThread(
       error:
         'That thread reviews a pull request: only the thread that opened it asks it to look again. Write to that thread instead.',
     }
-  // A sub-thread of the tree that reported is set to work again: under the tree's cap.
-  if (found.kind === 'tree') {
-    const full = await reopenInTree(db, found.id, {})
-    if (full) return { error: full }
-  }
   const target = await loadThread(db, found.id)
   // As a message from this thread's person would: only where they may write. And from whoever
   // asked for it here, when that is another (a thread shared with them): they ask there too.
@@ -423,6 +418,11 @@ export async function messageThread(
     }
   if (target.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
+  // On a member's own machine, in its tree: only on that member's word (start_child's `mine`).
+  if (found.kind === 'tree') {
+    const machine = await machineRefusal(db, session, target)
+    if (machine) return { error: machine }
+  }
   const place = await takeCommentPlace(scope, target.id, {
     teammateId: teammate.id,
     fromId: session.id,
@@ -442,6 +442,17 @@ export async function messageThread(
       target: { type: 'thread', id: target.id },
       data: { placeId: String(place.id), fromId: session.id },
     })
+  // A sub-thread of the tree that reported is set to work again: it takes a place under the
+  // tree's cap, now that nothing else refuses the message, and gives it back if it does not go.
+  let reopened: Reopened = { undo: async () => {} }
+  if (found.kind === 'tree') {
+    const taken = await reopenInTree(db, found.id, {})
+    if ('error' in taken) {
+      await free()
+      return taken
+    }
+    reopened = taken
+  }
   let outcome: Awaited<ReturnType<typeof promptThread>>
   try {
     // Written in again, an archived thread is back in the sidebar, as when a person writes there.
@@ -476,10 +487,12 @@ export async function messageThread(
     // Refused before it was taken in (a thread moving, a runner too old), or the thread could not
     // be brought back: nothing went.
     await free()
+    await reopened.undo()
     throw error
   }
   if (outcome === 'offline') {
     await free()
+    await reopened.undo()
     return { error: "That thread's computer is offline." }
   }
   // The message went: it must not be reported as failed, which a retry would send again.

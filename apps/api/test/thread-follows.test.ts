@@ -478,10 +478,9 @@ test(
     assert.equal(more.length, 0)
     assert.match(note!, /^The thread you follow “Builder: ship the importer”/)
     assert.match(note!, /Opened #31/)
-    // Written in again, its next turn's end is news again.
+    // Its next turn's end is news again: a later end, whatever came between.
     await noteFollowedEvents(builder, [
-      { event: { type: 'message.user', at: new Date().toISOString() } },
-      ended,
+      { event: { type: 'turn.completed', at: new Date(Date.now() + 60_000).toISOString() } },
     ])
     assert.equal((await notes(watcher)).length, 2)
   },
@@ -526,3 +525,53 @@ test('the sweep wakes a top thread’s follower its turn’s end did not reach',
   assert.equal(more.length, 0)
   assert.match(note!, /Opened #40/)
 })
+
+test(
+  'a top thread’s second turn end reaches its follower, with no message seen between',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: ship the importer v2' })
+    const watcher = await thread({ title: 'Release plan v2' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const end = async (seq: number, at: Date, text: string) => {
+      await prisma.sessionEvent.createMany({
+        data: [
+          {
+            ...scope,
+            sessionId: builder.id,
+            seq,
+            type: 'message.done',
+            at,
+            data: { type: 'message.done', text },
+          },
+          {
+            ...scope,
+            sessionId: builder.id,
+            seq: seq + 1,
+            type: 'turn.completed',
+            at,
+            data: { type: 'turn.completed', at: at.toISOString() },
+          },
+        ],
+      })
+      return { event: { type: 'turn.completed', at: at.toISOString() } }
+    }
+    const first = new Date(Date.now() + 1_000)
+    await noteFollowedEvents(builder, [await end(1, first, 'Opened #50.')])
+    assert.equal((await notes(watcher)).length, 1)
+    // A second turn ends; its message's reset never ran (a restart): the sweep brings it, once.
+    await end(3, new Date(first.getTime() + 60_000), 'Merged #50.')
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    await settleOverdueChildren(scope.workspaceId)
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[1]!, /Merged #50/)
+  },
+)

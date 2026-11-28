@@ -55,7 +55,13 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     for (const p of people) {
       await prisma.user.create({ data: { id: user(p), name: p, email: `${user(p)}@example.com` } })
       await prisma.member.create({
-        data: { id: member(p), organizationId: org, userId: user(p), role: 'owner' },
+        // Ada owns the workspace; Bob is a member, whom a thread closed to others keeps out.
+        data: {
+          id: member(p),
+          organizationId: org,
+          userId: user(p),
+          role: p === 'ada' ? 'owner' : 'member',
+        },
       })
     }
     const workspace = await prisma.workspace.create({
@@ -568,5 +574,134 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     } as never)) as Record<string, any>
     assert.match(out.error ?? '', /only a thread you may write in/)
     assert.equal(await prisma.threadFollow.count({ where: { followerId: his.id } }), 0)
+  })
+
+  // Review of #1003, second look.
+
+  test('a message to a sub-thread on the starter’s Mac needs the starter’s word each time', async () => {
+    const root = await top(computers.cloud)
+    const onMac = await start(root, { computer: { mine: "Ada's Laptop" } })
+    assert.ok(onMac.threadId, JSON.stringify(onMac))
+    await reports({ id: onMac.threadId })
+    // The thread is shared since, and Bob asks in it.
+    await prisma.session.update({
+      where: { id: root.id },
+      data: { askedByMemberId: member('bob'), othersMayPrompt: true },
+    })
+    const out = (await messageThread(db, scope, await row(root.id), riley, {
+      threadId: onMac.threadId,
+      text: 'Open Keynote again.',
+    })) as Record<string, any>
+    assert.match(out.error ?? '', /person's own machine/)
+    // Its report stays, and nothing was sent to the Mac.
+    assert.notEqual((await row(onMac.threadId)).report, null)
+  })
+
+  test('a message that does not go leaves the report and the place as they were', async () => {
+    const root = await top()
+    const a = await start(root)
+    const b = await start(root)
+    await reports({ id: b.threadId }, 'report', 'Posts drafted.')
+    const before = await row(b.threadId)
+    // A person has control of it: refused before anything changes.
+    await prisma.session.update({
+      where: { id: b.threadId },
+      data: { controlledByMemberId: member('ada') },
+    })
+    const taken = (await messageThread(db, scope, await row(a.threadId), riley, {
+      threadId: b.threadId,
+      text: 'Shorter, please.',
+    })) as Record<string, any>
+    assert.match(taken.error ?? '', /has control/)
+    assert.equal((await row(b.threadId)).report && 'kept', 'kept')
+    await prisma.session.update({ where: { id: b.threadId }, data: { controlledByMemberId: null } })
+    // Its computer offline: the report comes back.
+    const laptop = runners[0]!
+    laptop.close()
+    try {
+      const offline = (await messageThread(db, scope, await row(a.threadId), riley, {
+        threadId: b.threadId,
+        text: 'Shorter, please.',
+      })) as Record<string, any>
+      assert.match(offline.error ?? '', /offline/)
+    } finally {
+      runners[0] = await fakeRunner(scope, computers.laptop)
+    }
+    const after = await row(b.threadId)
+    assert.equal((after.report as { summary?: string } | null)?.summary, 'Posts drafted.')
+    assert.deepEqual(after.reportDeliveredAt, before.reportDeliveredAt)
+    assert.equal(after.status, before.status)
+  })
+
+  test('a failed sub-thread set to work again counts at once; a retry is admitted the same way', async () => {
+    const root = await top()
+    const failed = await start(root)
+    await reports({ id: failed.threadId }, 'failed', 'It stopped on an error.')
+    await prisma.session.update({ where: { id: failed.threadId }, data: { status: 'failed' } })
+    for (let i = 0; i < SUBTHREADS_AT_WORK; i++) assert.ok((await start(root)).threadId)
+    // Full: neither a message nor a retry sets it to work.
+    const told = (await messageThread(db, scope, await row(root.id), riley, {
+      threadId: failed.threadId,
+      text: 'Try again.',
+    })) as Record<string, any>
+    assert.match(told.error ?? '', /already has 8 sub-threads at work/)
+    await prisma.sessionEvent.create({
+      data: {
+        ...scope,
+        sessionId: failed.threadId,
+        seq: 900,
+        type: 'error',
+        at: new Date(),
+        data: { type: 'error', message: 'boom', at: new Date().toISOString() },
+      },
+    })
+    const { retryThread } = await import('../src/work.js')
+    await assert.rejects(
+      retryThread(db, scope, await loadThread(db, failed.threadId), member('ada')),
+      /already has 8 sub-threads at work/,
+    )
+    assert.equal((await row(failed.threadId)).status, 'failed')
+    // One reports: the retry takes its place, and it counts at once.
+    const any = await prisma.session.findFirstOrThrow({
+      where: { parentId: root.id, report: { equals: Prisma.DbNull } },
+    })
+    await reports({ id: any.id })
+    await retryThread(db, scope, await loadThread(db, failed.threadId), member('ada'))
+    assert.equal((await row(failed.threadId)).status, 'idle')
+    assert.match((await start(root)).error ?? '', /the most it may/)
+  })
+
+  test('read_child on a followed thread stops once its people may no longer read it', async () => {
+    // On her own laptop, opened to others (a thread on the cloud computer always is).
+    const hers = await top(computers.laptop)
+    await prisma.session.update({ where: { id: hers.id }, data: { othersMayPrompt: true } })
+    const his = await prisma.session.create({
+      data: {
+        ...scope,
+        teammateId: riley.id,
+        startedByMemberId: member('bob'),
+        askedByMemberId: member('bob'),
+        computerId: computers.cloud,
+        title: 'Bob’s plan',
+        status: 'idle',
+      },
+    })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: his.id, teammateId: riley.id },
+    })
+    const follow = (await handleChildCall(db, scope, his, riley, {
+      name: 'follow_thread',
+      threadId: hers.id,
+    } as never)) as Record<string, any>
+    assert.equal(follow.error, undefined, JSON.stringify(follow))
+    const read = () =>
+      handleChildCall(db, scope, his, riley, {
+        name: 'read_child',
+        threadId: hers.id,
+      } as never) as Promise<Record<string, any>>
+    assert.equal((await read()).error, undefined)
+    // Closed to others since.
+    await prisma.session.update({ where: { id: hers.id }, data: { othersMayPrompt: false } })
+    assert.match((await read()).error ?? '', /may no longer read that one/)
   })
 })
