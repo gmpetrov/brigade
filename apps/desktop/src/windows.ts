@@ -19,7 +19,8 @@ import { confirm } from './dialogs.js'
 import { attachFind, placeFind, setFindTheme } from './find.js'
 import { dashboard, loadSettings, onDashboard, updateSettings } from './settings.js'
 
-export type WindowKind = 'main' | 'capture'
+/** The dashboard, the new thread window (capture.ts), and an installed app's (app-windows.ts). */
+export type WindowKind = 'main' | 'capture' | 'app'
 
 const kinds = new WeakMap<WebContents, WindowKind>()
 export const kindOf = (contents: WebContents) => kinds.get(contents)
@@ -188,6 +189,22 @@ export const dashboardWindow = () => (main && !main.isDestroyed() ? main : undef
 /** The dashboard's page in its window. */
 export const dashboardContents = () =>
   view && !view.webContents.isDestroyed() ? view.webContents : undefined
+
+/** A rectangle of the dashboard's page (its CSS pixels) on the screen, while it shows. */
+export function pageRectOnScreen(r: { x: number; y: number; width: number; height: number }) {
+  const window = dashboardWindow()
+  const page = dashboardContents()
+  if (!window || !view || !page || !window.isVisible()) return undefined
+  const content = window.getContentBounds()
+  const at = view.getBounds()
+  const zoom = page.getZoomFactor()
+  return {
+    x: Math.round(content.x + at.x + r.x * zoom),
+    y: Math.round(content.y + at.y + r.y * zoom),
+    width: Math.max(1, Math.round(r.width * zoom)),
+    height: Math.max(1, Math.round(r.height * zoom)),
+  }
+}
 
 /** How far down the dashboard starts: below the band that keeps the window's buttons. */
 function band() {

@@ -35,8 +35,8 @@ export const tools = new Hono<AppEnv>()
 
   /** A tool's page on the sandbox origin, good for a few hours, and its accounts. */
   .post('/view', async (c) => {
-    const { path } = await parseBody(c.req.raw, OpenToolView)
-    return c.json(await openToolView(c.var.db, c.var.scope, path))
+    const { path, id } = await parseBody(c.req.raw, OpenToolView)
+    return c.json(await openToolView(c.var.db, c.var.scope, path, id))
   })
 
   .post('/accounts', async (c) => {
@@ -53,8 +53,8 @@ export const tools = new Hono<AppEnv>()
 
   /** Allow the accounts again once the tool changed. */
   .post('/accounts/allow', async (c) => {
-    const { path } = await parseBody(c.req.raw, ApproveToolChange)
-    return c.json({ allowed: await approveToolChange(c.var.db, c.var.scope, path) })
+    const { path, id } = await parseBody(c.req.raw, ApproveToolChange)
+    return c.json({ allowed: await approveToolChange(c.var.db, c.var.scope, path, id) })
   })
 
   .post('/state', async (c) => {

@@ -52,15 +52,33 @@ export class ApiError extends Error {
   }
 }
 
+/** The header that makes a call one workspace's, whatever the session shows (src/scope.ts in the API). */
+export const WORKSPACE_PIN_HEADER = 'x-brigade-workspace'
+
+/**
+ * The workspace this page's calls are bound to: an installed app's window in Brigade.app
+ * (/app/apps/window?workspace=…, docs/apps.md) works in the workspace the app came from, even
+ * when the session shows another one, or switches while the window is open.
+ */
+export function pinnedWorkspace(location?: { pathname: string; search: string }) {
+  const where = location ?? (typeof window === 'undefined' ? undefined : window.location)
+  if (!where || where.pathname !== '/app/apps/window') return undefined
+  return new URLSearchParams(where.search).get('workspace') || undefined
+}
+
 /** Call the Brigade API with the session cookie. */
 export async function api<T = unknown>(
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<T> {
+  const pinned = pinnedWorkspace()
   const response = await fetch(`${API_URL}/api${path}`, {
     method: init.method ?? (init.body === undefined ? 'GET' : 'POST'),
     credentials: 'include',
-    headers: init.body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: {
+      ...(init.body !== undefined && { 'content-type': 'application/json' }),
+      ...(pinned && { [WORKSPACE_PIN_HEADER]: pinned }),
+    },
     body: init.body === undefined ? null : JSON.stringify(init.body),
   })
   if (response.status === 204) return undefined as T
