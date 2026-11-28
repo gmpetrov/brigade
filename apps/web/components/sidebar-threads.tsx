@@ -25,6 +25,7 @@ import {
   Clock,
   ChevronUp,
   Globe,
+  Laptop,
   ListChecks,
   ListFilter,
   MessagesSquare,
@@ -510,6 +511,13 @@ function SubThreadRow({
           >
             <Globe aria-hidden className="size-3 opacity-50" />
             <span className="sr-only">Preview running</span>
+          </span>
+        )}
+        {/* On a member's own machine, as on a thread's own row (ThreadRow). */}
+        {c.computer?.kind === 'member_machine' && (
+          <span title={`Runs on ${c.computer.name}`} className="flex shrink-0">
+            <Laptop aria-hidden className="size-3 opacity-50" />
+            <span className="sr-only">Runs on {c.computer.name}</span>
           </span>
         )}
         {c.wakeAt && <WakeupIcon at={c.wakeAt} />}
