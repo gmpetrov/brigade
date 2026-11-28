@@ -68,7 +68,7 @@ test('uncommitted changes on it are refused, saying so', async () => {
   writeFileSync(join(site, 'kit.md'), 'Changed, not committed\n')
   await assert.rejects(
     pushForSubthread({ spec, workDir, repository: 'acme/site', branch: 'brigade/riley-kit' }),
-    /uncommitted changes on brigade\/riley-kit: commit them first/,
+    /uncommitted changes on brigade\/riley-kit \(kit\.md\): commit them/,
   )
   assert.equal(git(remote, 'branch', '--list', 'brigade/riley-kit'), '')
 })
@@ -89,5 +89,14 @@ test('a branch only on GitHub is there already; one nowhere is refused', async (
   await assert.rejects(
     pushForSubthread({ spec, workDir, repository: 'not a repo', branch: 'main' }),
     /owner\/name/,
+  )
+})
+
+test('a new file not committed is refused too, by name', async () => {
+  const { spec, workDir, site } = setUp()
+  writeFileSync(join(site, 'hero.svg'), '<svg/>')
+  await assert.rejects(
+    pushForSubthread({ spec, workDir, repository: 'acme/site', branch: 'brigade/riley-kit' }),
+    /uncommitted changes on brigade\/riley-kit \(hero\.svg\)/,
   )
 })

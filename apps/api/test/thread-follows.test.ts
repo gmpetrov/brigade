@@ -486,3 +486,43 @@ test(
     assert.equal((await notes(watcher)).length, 2)
   },
 )
+
+test('the sweep wakes a top thread’s follower its turn’s end did not reach', { skip }, async () => {
+  const builder = await thread({ title: 'Builder: ship the exporter' })
+  const watcher = await thread({ title: 'Release plan' })
+  await prisma.threadTeammate.create({
+    data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+  })
+  assert.equal((await follow(watcher, builder)).error, undefined)
+  const ended = new Date(Date.now() + 1_000)
+  await prisma.sessionEvent.createMany({
+    data: [
+      {
+        ...scope,
+        sessionId: builder.id,
+        seq: 1,
+        type: 'message.done',
+        at: ended,
+        data: { type: 'message.done', text: 'Opened #40: the exporter.' },
+      },
+      {
+        ...scope,
+        sessionId: builder.id,
+        seq: 2,
+        type: 'turn.completed',
+        at: ended,
+        data: { type: 'turn.completed', at: ended.toISOString() },
+      },
+    ],
+  })
+  // Its own delivery never ran (an API restart): a few minutes later, the sweep brings it, once.
+  await prisma.session.update({
+    where: { id: builder.id },
+    data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+  })
+  await settleOverdueChildren(scope.workspaceId)
+  await settleOverdueChildren(scope.workspaceId)
+  const [note, ...more] = await notes(watcher)
+  assert.equal(more.length, 0)
+  assert.match(note!, /Opened #40/)
+})

@@ -4,7 +4,7 @@
 // GitHub stays the source of truth: the computer's disk is a cache, swept of
 // checkouts that hold nothing GitHub does not have.
 import { spawn } from 'node:child_process'
-import { readdir } from 'node:fs/promises'
+import { readdir, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 import type { GitAccess, ThreadSpec } from '@brigade/contracts'
@@ -672,11 +672,7 @@ export async function pushForSubthread(input: {
     throw new Error(`Give each repository as owner/name: “${input.repository}” is not one`)
   if (!BRANCH.test(input.branch)) throw new Error(`“${input.branch}” is not a branch name`)
   const repository = `${match[1]}/${match[2]}`.toLowerCase()
-  const found = await run('find', [workDir, '-mindepth', '2', '-maxdepth', '2', '-name', '.git'], {
-    runAs,
-  }).catch(() => Buffer.alloc(0))
-  for (const marker of found.toString().split('\n').filter(Boolean)) {
-    const dir = marker.replace(/\/\.git$/, '')
+  for (const dir of await checkoutsIn(workDir, runAs)) {
     const g = (args: string[]) => git(['-C', dir, ...args], access, runAs)
     const url = await g(['ls-remote', '--get-url', 'origin']).catch(() => '')
     if (!url.startsWith(access.url)) continue
@@ -690,10 +686,19 @@ export async function pushForSubthread(input: {
     )
     if (!local) continue
     const head = await g(['rev-parse', '--abbrev-ref', 'HEAD']).catch(() => '')
-    if (head === input.branch && (await g(['status', '--porcelain', '--untracked-files=no'])))
+    // New files too (those .gitignore leaves out aside): the sub-thread would start without them.
+    const changed = head === input.branch ? await g(['status', '--porcelain']) : ''
+    if (changed) {
+      const files = changed
+        .split('\n')
+        // `XY path`; the output comes trimmed, so the first line may have lost its leading space.
+        .map((l) => l.replace(/^[ MTADRCU?!]{1,2} /, ''))
+        .filter(Boolean)
       throw new Error(
-        `${basename(dir)} has uncommitted changes on ${input.branch}: commit them first, so that the sub-thread gets them, then call start_child again.`,
+        `${basename(dir)} has uncommitted changes on ${input.branch} (${files.slice(0, 5).join(', ')}${files.length > 5 ? `, and ${files.length - 5} more` : ''}): ` +
+          'commit them (or remove what it does not need) first, so that the sub-thread gets them, then call start_child again.',
       )
+    }
     await g(['push', '--quiet', 'origin', `refs/heads/${input.branch}:refs/heads/${input.branch}`])
     return { repository, branch: input.branch, pushed: true }
   }
@@ -709,4 +714,38 @@ export async function pushForSubthread(input: {
       `${input.branch} is neither checked out here nor on GitHub for ${repository}: check out the repository, or name a branch that exists.`,
     )
   return { repository, branch: input.branch, pushed: false }
+}
+
+/**
+ * The git checkouts directly in a working directory. As the teammate's user on a cloud computer
+ * (its folder is theirs); elsewhere, the runner's own, read with Node: Windows' find.exe takes
+ * none of GNU find's options.
+ */
+async function checkoutsIn(workDir: string, runAs?: string) {
+  if (runAs) {
+    const found = await run(
+      'find',
+      [workDir, '-mindepth', '2', '-maxdepth', '2', '-name', '.git'],
+      { runAs },
+    ).catch(() => Buffer.alloc(0))
+    return found
+      .toString()
+      .split('\n')
+      .filter(Boolean)
+      .map((marker) => marker.replace(/\/\.git$/, ''))
+  }
+  const entries = await readdir(workDir, { withFileTypes: true }).catch(() => [])
+  const dirs: string[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const dir = join(workDir, entry.name)
+    if (
+      await stat(join(dir, '.git')).then(
+        () => true,
+        () => false,
+      )
+    )
+      dirs.push(dir)
+  }
+  return dirs
 }

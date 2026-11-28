@@ -47,11 +47,15 @@ function outputs(node: TreeNode) {
 
 function TreeRow({ node, onChange }: { node: TreeNode; onChange: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
   const state = STATES[node.state]
   const act = (path: 'interrupt' | 'retry') => {
     setBusy(true)
+    setError(undefined)
     void api(`/threads/${node.id}/${path}`, { body: {} })
-      .then(onChange, () => undefined)
+      .then(onChange, (e: unknown) =>
+        setError(e instanceof Error ? e.message : 'It did not go through. Try again.'),
+      )
       .finally(() => setBusy(false))
   }
   const made = outputs(node)
@@ -76,6 +80,7 @@ function TreeRow({ node, onChange }: { node: TreeNode; onChange: () => void }) {
             .filter(Boolean)
             .join(' · ')}
         </span>
+        {error && <span className="pl-5.5 text-xs text-destructive-text">{error}</span>}
       </Link>
       {node.state === 'working' && (
         <Button
@@ -91,7 +96,8 @@ function TreeRow({ node, onChange }: { node: TreeNode; onChange: () => void }) {
           <Square aria-hidden />
         </Button>
       )}
-      {node.state === 'failed' && (
+      {/* Its turn failed, which Retry runs again; a failed report on a turn that ended has nothing to retry. */}
+      {node.status === 'failed' && (
         <Button
           type="button"
           variant="ghost"

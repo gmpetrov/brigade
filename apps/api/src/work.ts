@@ -413,6 +413,33 @@ export async function handoffThread(
   })
 }
 
+/** A check made with a thread's creation, under a lock (startThread's `guard`). */
+export type StartGuard = {
+  lock: string
+  /** Why it may not be made, or null; read through the transaction's client. */
+  check: (tx: Pick<ScopedDb, 'session'>) => Promise<string | null>
+}
+
+type SessionRow = Awaited<ReturnType<ScopedDb['session']['findFirstOrThrow']>>
+
+/**
+ * session.create; with a guard, under its lock with its check, in one transaction: the check's
+ * count and the row it adds commit together, on one connection, before the lock goes.
+ */
+async function createSession(
+  db: ScopedDb,
+  guard: StartGuard | undefined,
+  args: { data: never },
+): Promise<SessionRow> {
+  if (!guard) return db.session.create(args)
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${guard.lock}, 0))`
+    const why = await guard.check(tx)
+    if (why) throw new HTTPException(409, { message: why })
+    return tx.session.create(args)
+  })
+}
+
 /** The thread a child is started from: it takes who may see and write in it from there. */
 type ParentThread = {
   id: string
@@ -582,6 +609,12 @@ export async function startThread(
      * does too, from its start, and its App writes ask a person.
      */
     chiefWord?: boolean
+    /**
+     * Its row is made only if `check` finds nothing against it, under the advisory lock `lock`,
+     * in one short transaction: a sub-thread under its tree's cap (src/children.ts). Refused, it
+     * throws a 409 with what `check` said, and nothing is made.
+     */
+    guard?: StartGuard
   },
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, teammates, children).
@@ -605,7 +638,7 @@ export async function startThread(
     input.id && !input.fresh ? await db.session.findFirst({ where: { id: input.id } }) : null
   const created =
     made ??
-    (await db.session.create({
+    (await createSession(db, input.guard, {
       data: {
         ...(input.id ? { id: input.id } : {}),
         teammateId: input.teammate.id,

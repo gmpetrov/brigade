@@ -25,7 +25,7 @@ process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 process.env.BUCKET_DIR = mkdtempSync(join(tmpdir(), 'subthread-trees-'))
 
-const { prisma, scoped } = await import('../src/db.js')
+const { prisma, scoped, Prisma } = await import('../src/db.js')
 const database = await Promise.race([
   prisma.$queryRaw`select "rootId" from "Session" limit 1`.then(() => true),
   new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
@@ -219,7 +219,22 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
   test('two starts at once for the last place: one takes it', async () => {
     const root = await top()
     for (let i = 0; i < SUBTHREADS_AT_WORK - 1; i++) assert.ok((await start(root)).threadId)
-    const both = await Promise.all([start(root), start(root)])
+    // Each new row of this tree takes a while to be made: two starts at once both count before
+    // either row is in, unless the tree's lock makes the second count after the first's commit.
+    const name = `slow_tree_${root.id}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.4); RETURN NEW; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Session" FOR EACH ROW WHEN (NEW."rootId" = '${root.id}') EXECUTE FUNCTION ${name}()`,
+    )
+    let both: Record<string, any>[]
+    try {
+      both = await Promise.all([start(root), start(root)])
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Session"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
     assert.equal(both.filter((o) => o.threadId).length, 1, JSON.stringify(both))
     assert.equal(both.filter((o) => /the most it may/.test(o.error ?? '')).length, 1)
     assert.equal(
@@ -448,5 +463,110 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.equal(below.level, 1)
     assert.equal(below.nodes.length, 1)
     assert.equal(below.tokens.tree, 22_200)
+  })
+
+  // Review of #1003.
+
+  test('another member asking in a shared thread cannot send work to the starter’s machine', async () => {
+    const root = await top(computers.cloud)
+    await prisma.session.update({
+      where: { id: root.id },
+      data: { askedByMemberId: member('bob'), othersMayPrompt: true },
+    })
+    const out = await start(root, { computer: { mine: "Ada's Laptop" } })
+    assert.match(out.error ?? '', /Only the person whose machine it is/)
+    // An outside event's thread (nobody asked) neither.
+    await prisma.session.update({ where: { id: root.id }, data: { askedByMemberId: null } })
+    assert.match(
+      (await start(root, { computer: { mine: "Ada's Laptop" } })).error ?? '',
+      /Only the person whose machine it is/,
+    )
+    // The cloud computer is the workspace's: fine.
+    assert.ok((await start(root, { computer: 'cloud' })).threadId)
+    assert.equal(
+      await prisma.session.count({ where: { parentId: root.id, computerId: computers.laptop } }),
+      0,
+    )
+  })
+
+  test('a sub-thread whose own sub-threads work does not report up yet', async () => {
+    const root = await top()
+    const one = await start(root)
+    const two = await start({ id: one.threadId })
+    // Its turn ends while the one it waits for works: nothing goes to the top.
+    await prisma.session.update({ where: { id: one.threadId }, data: { status: 'idle' } })
+    await noteChildEvents(await row(one.threadId), [
+      { event: { type: 'turn.completed', at: new Date().toISOString() } },
+    ])
+    assert.equal((await row(one.threadId)).report, null)
+    assert.equal((await notes(root)).length, 0)
+    // Nor by calling report; a question for its parent still goes.
+    const early = (await handleChildCall(db, scope, await row(one.threadId), riley, {
+      name: 'report',
+      status: 'report',
+      summary: 'Done.',
+    } as never)) as Record<string, any>
+    assert.match(early.error ?? '', /still at work: do not report yet/)
+    const asking = (await handleChildCall(db, scope, await row(one.threadId), riley, {
+      name: 'report',
+      status: 'needs_parent',
+      summary: 'Which logo?',
+    } as never)) as Record<string, any>
+    assert.equal(asking.error, undefined, JSON.stringify(asking))
+    // Its sub-thread reports: the note is still to reach it, so it still holds.
+    await prisma.session.update({ where: { id: one.threadId }, data: { report: Prisma.DbNull } })
+    await reports({ id: two.threadId })
+    assert.equal((await notes({ id: one.threadId })).length, 1)
+    await noteChildEvents(await row(one.threadId), [
+      { event: { type: 'turn.completed', at: new Date().toISOString() } },
+    ])
+    assert.equal((await notes(root)).length, 0)
+  })
+
+  test('a finished sub-thread set to work again by a message counts towards the cap', async () => {
+    const root = await top()
+    const done = await start(root)
+    await reports({ id: done.threadId })
+    for (let i = 0; i < SUBTHREADS_AT_WORK; i++) assert.ok((await start(root)).threadId)
+    const again = (await messageThread(db, scope, await row(root.id), riley, {
+      threadId: done.threadId,
+      text: 'One more thing.',
+    })) as Record<string, any>
+    assert.match(again.error ?? '', /already has 8 sub-threads at work/)
+    assert.notEqual((await row(done.threadId)).report, null)
+    // From a sibling too.
+    const sibling = await prisma.session.findFirstOrThrow({
+      where: { parentId: root.id, report: { equals: Prisma.DbNull } },
+    })
+    const across = (await messageThread(db, scope, sibling, riley, {
+      threadId: done.threadId,
+      text: 'Use the violet logo.',
+    })) as Record<string, any>
+    assert.match(across.error ?? '', /already has 8 sub-threads at work/)
+  })
+
+  test('follow_thread needs its people to be allowed in that thread, then and on delivery', async () => {
+    // Ada's own thread on her laptop, closed to others; Bob's thread, Riley in both.
+    const hers = await top(computers.laptop)
+    const his = await prisma.session.create({
+      data: {
+        ...scope,
+        teammateId: riley.id,
+        startedByMemberId: member('bob'),
+        askedByMemberId: member('bob'),
+        computerId: computers.cloud,
+        title: 'Bob’s plan',
+        status: 'idle',
+      },
+    })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: his.id, teammateId: riley.id },
+    })
+    const out = (await handleChildCall(db, scope, his, riley, {
+      name: 'follow_thread',
+      threadId: hers.id,
+    } as never)) as Record<string, any>
+    assert.match(out.error ?? '', /only a thread you may write in/)
+    assert.equal(await prisma.threadFollow.count({ where: { followerId: his.id } }), 0)
   })
 })

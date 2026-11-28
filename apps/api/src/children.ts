@@ -48,7 +48,7 @@ import { askedBy, loadThread, noSuchTeammate } from './thread-spec.js'
 import { fireNow, firedInARow, wakeupHold, wakeupMessageId } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 import { usableAccounts } from './routes/accounts.js'
-import { writableThread } from './started-threads.js'
+import { peopleMayWrite, writableThread } from './started-threads.js'
 
 type ChildOperation = Extract<
   ScheduleOperation,
@@ -185,16 +185,25 @@ export async function reviewHold(
   if (!pulls.length) return null
   const running = pulls.find((p) => p.reviewSession && reviewUnderWay(p.reviewSession))
   if (running) return { number: running.number, reviewer: running.reviewSession!.teammate.name }
-  // Its report is in, and wakes this thread when it can take it (queued behind the turn at work,
-  // say): the turn that reads it reports, not one before. One that never showed a while after it
-  // went (a person took the thread over meanwhile) holds nothing more (UNSHOWN_HOLD_MS).
+  const pull = pulls[0]!
+  return (await reportUnread(db, sessionId))
+    ? { number: pull.number, reviewer: pull.reviewSession!.teammate.name }
+    : null
+}
+
+/**
+ * A report is in for this thread, and wakes it when it can take it (queued behind the turn at
+ * work, say): the turn that reads it reports, not one before. One that never showed a while after
+ * it went (a person took the thread over meanwhile) holds nothing more (UNSHOWN_HOLD_MS).
+ */
+async function reportUnread(db: ScopedDb, sessionId: string) {
   const last = await db.wakeup.findFirst({
     where: { sessionId, kind: 'report', status: { in: ['pending', 'fired'] } },
     orderBy: { createdAt: 'desc' },
     select: { id: true, status: true, firedAt: true },
   })
-  const unread =
-    last &&
+  return (
+    !!last &&
     (last.status === 'pending' ||
       (!!last.firedAt &&
         Date.now() - last.firedAt.getTime() < UNSHOWN_HOLD_MS &&
@@ -206,8 +215,23 @@ export async function reviewHold(
           },
           select: { seq: true },
         }))))
-  const pull = pulls[0]!
-  return unread ? { number: pull.number, reviewer: pull.reviewSession!.teammate.name } : null
+  )
+}
+
+/**
+ * Why a sub-thread with sub-threads of its own does not report yet (docs/sub-threads.md): one it
+ * waits for is still at work, or their report is still to wake it. It reports up once it has read
+ * them, from the turn their note brings (or once its wait ran out, which wakes it too), so the end
+ * of a turn meanwhile sends nothing, and `report` waits. The number still at work, or 0 for a
+ * note still to read; null when nothing holds it.
+ */
+export async function childrenHold(db: ScopedDb, sessionId: string): Promise<number | null> {
+  const waiting = await db.session.count({
+    where: { parentId: sessionId, origin: 'child', awaited: true, reportDeliveredAt: null },
+  })
+  if (waiting) return waiting
+  const had = await db.session.count({ where: { parentId: sessionId, origin: 'child' } })
+  return had && (await reportUnread(db, sessionId)) ? 0 : null
 }
 
 /**
@@ -540,12 +564,14 @@ export async function wakeFollowers(
   sessionId: string,
   /** A thread at the top keeps no report: what its turn ended on stands for one (noteFollowedEvents). */
   ended?: ChildReport,
+  /** Only the follows made before this (the end of the turn `ended` is), not one made since. */
+  before?: Date,
 ) {
   const db = scoped(scope)
   const [thread, follows] = await Promise.all([
     db.session.findFirst({ where: { id: sessionId }, select: CHILD_SELECT }),
     db.threadFollow.findMany({
-      where: { sessionId, deliveredAt: null },
+      where: { sessionId, deliveredAt: null, ...(before ? { createdAt: { lt: before } } : {}) },
       select: { id: true, followerId: true },
       orderBy: { createdAt: 'asc' },
     }),
@@ -558,7 +584,18 @@ export async function wakeFollowers(
     teammate: thread.teammate.name,
     report,
   })
+  const access = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { startedByMemberId: true, othersMayPrompt: true, computerId: true },
+  })
   for (const follow of follows) {
+    // Its people may no longer read it (the thread was closed to others, a member left): the
+    // follow is claimed, and the report goes nowhere.
+    const follower = await db.session.findFirst({
+      where: { id: follow.followerId },
+      select: { id: true, startedByMemberId: true },
+    })
+    const allowed = !!follower && !!access && (await peopleMayWrite(db, follower, access))
     let wakeupId: string | null
     try {
       // The follower's own teammate; a deleted follower is claimed with no wake-up.
@@ -567,7 +604,7 @@ export async function wakeFollowers(
           where: { id: follow.id, deliveredAt: null },
           data: { deliveredAt: new Date() },
         })
-        return count ? reportWakeup(tx, follow.followerId, null, note) : null
+        return count && allowed ? reportWakeup(tx, follow.followerId, null, note) : null
       })
     } catch (error) {
       console.error(`follower ${follow.followerId} of ${sessionId}: could not wake`, error)
@@ -603,6 +640,78 @@ async function wakeWaitingFollowers(workspaceId?: string) {
       { organizationId: f.organizationId, workspaceId: f.workspaceId },
       f.sessionId,
     ).catch((error: unknown) => console.error(`followers of ${f.sessionId}: could not wake`, error))
+  // Threads at the top keep no report: what their last turn ended on is read again from their
+  // events, for the follows made before it that it did not reach (its wake-up failed, or the API
+  // restarted before it went).
+  const top = await prisma.threadFollow.findMany({
+    where: { ...(workspaceId ? { workspaceId } : {}), ...topFollowsDue(new Date()) },
+    select: { sessionId: true, organizationId: true, workspaceId: true },
+    distinct: ['sessionId'],
+    take: 100,
+  })
+  for (const f of top) {
+    const ended = await turnEnded(f.sessionId)
+    if (!ended) continue
+    await wakeFollowers(
+      { organizationId: f.organizationId, workspaceId: f.workspaceId },
+      f.sessionId,
+      ended.report,
+      ended.at,
+    ).catch((error: unknown) => console.error(`followers of ${f.sessionId}: could not wake`, error))
+  }
+}
+
+/**
+ * Follows of a thread at the top still to hear its last turn (wakeWaitingFollowers): the thread at
+ * rest, its turn over a while ago (its own delivery had its chance, STRANDED_AFTER_MS) and within
+ * the hour (STRANDED_WITHIN_MS), as for a child's stranded turn.
+ */
+const topFollowsDue = (now: Date) =>
+  ({
+    deliveredAt: null,
+    session: {
+      parentId: null,
+      status: { notIn: ['starting', 'running', 'waiting'] },
+      updatedAt: {
+        lte: new Date(now.getTime() - STRANDED_AFTER_MS),
+        gte: new Date(now.getTime() - STRANDED_WITHIN_MS),
+      },
+    },
+  }) satisfies Prisma.ThreadFollowWhereInput
+
+/**
+ * What a thread at the top last ended a turn on, as its followers hear it (noteFollowedEvents), and
+ * when; null when no turn has ended since its last message, or that turn waits on a person.
+ */
+async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: Date } | null> {
+  const last = (types: string[]) =>
+    prisma.sessionEvent.findFirst({
+      where: { sessionId, type: { in: types } },
+      orderBy: { seq: 'desc' },
+      select: { seq: true, data: true, at: true },
+    })
+  const [end, asked] = await Promise.all([
+    last(['turn.completed', 'error']),
+    last(['message.user']),
+  ])
+  const data = end?.data as StoredEvent | undefined
+  if (!end || !data || (asked && asked.seq > end.seq)) return null
+  if (data.type === 'error' ? data.retrying === true : data.waiting) return null
+  return {
+    at: end.at,
+    report:
+      data.type === 'error'
+        ? { status: 'failed', summary: 'It stopped on an error.', at: end.at.toISOString() }
+        : {
+            status: 'report',
+            summary: clipReport(
+              (await lastMessage(sessionId)) || 'It ended without a word.',
+              REPORT_MAX,
+            ),
+            at: end.at.toISOString(),
+            fromLastMessage: true,
+          },
+  }
 }
 
 /**
@@ -610,7 +719,7 @@ async function wakeWaitingFollowers(workspaceId?: string) {
  * of its turns tells them what its last message said, once; a new message to it makes them hear
  * the next one too. Not a turn still waiting on a person's answer (a Codex teammate's ask), nor one
  * the runner tries again. Its followers hear it once its events are stored; one that fails to wake
- * is not tried again by the minute's sweep (wakeWaitingFollowers reads only reports kept).
+ * is woken by the minute's sweep (wakeWaitingFollowers), which reads that end again from the events.
  */
 export async function noteFollowedEvents(
   session: { id: string; organizationId: string; workspaceId: string; parentId: string | null },
@@ -726,7 +835,8 @@ export async function reportHeld(scope: Scope, childId: string) {
   if (
     !['idle', 'done'].includes(child.status) ||
     (await reviewHold(db, childId)) ||
-    (await wakeupHold(db, childId))
+    (await wakeupHold(db, childId)) ||
+    (await childrenHold(db, childId)) !== null
   )
     return
   const report: ChildReport = {
@@ -830,11 +940,14 @@ export async function noteChildEvents(
       if (!row || row.reportDeliveredAt) continue
       // Its pull request's review is under way, or its report is still to wake it: it reports
       // once that is done, from the turn the review's report brings. A wake-up it set too, ahead
-      // of a person's conversation: the turn it brings reports.
+      // of a person's conversation: the turn it brings reports. Sub-threads of its own it waits
+      // for too: the turn their note brings reports up.
       if (
         !reportOf(row.report) &&
         event.type === 'turn.completed' &&
-        ((await reviewHold(db, session.id)) || (await wakeupHold(db, session.id)))
+        ((await reviewHold(db, session.id)) ||
+          (await wakeupHold(db, session.id)) ||
+          (await childrenHold(db, session.id)) !== null)
       ) {
         if (!fence) await parentChanged(scope, session.parentId)
         continue
@@ -1037,7 +1150,7 @@ export async function settleStrandedChildren(workspaceId?: string, now = new Dat
 /** Workspaces with children or followers due to hear now (src/jobs.ts). */
 export async function dueChildren(now = new Date()) {
   const busy = ['starting', 'running', 'waiting'] as const
-  const [overdue, quiet, followers, stranded] = await Promise.all([
+  const [overdue, quiet, followers, stranded, top] = await Promise.all([
     prisma.session.findMany({
       where: { awaited: true, reportDeliveredAt: null, awaitUntil: { lte: now } },
       distinct: ['workspaceId'],
@@ -1061,8 +1174,13 @@ export async function dueChildren(now = new Date()) {
       distinct: ['workspaceId'],
       select: { workspaceId: true },
     }),
+    prisma.threadFollow.findMany({
+      where: topFollowsDue(now),
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
   ])
-  return [...overdue, ...quiet, ...followers, ...stranded].map((r) => r.workspaceId)
+  return [...overdue, ...quiet, ...followers, ...stranded, ...top].map((r) => r.workspaceId)
 }
 
 /** Wait this long for a child: what the teammate asked, else the default. */
@@ -1241,7 +1359,16 @@ async function followThread(
     !!thread.parentId &&
     !thread.parent?.parentId &&
     (await installationOf(db, thread.playbookRunId)) === installationId
-  if (!otherRun && !(await writableThread(db, session, teammate, thread.id)))
+  const access = await db.session.findFirst({
+    where: { id: thread.id },
+    select: { startedByMemberId: true, othersMayPrompt: true, computerId: true },
+  })
+  if (
+    !otherRun &&
+    (!(await writableThread(db, session, teammate, thread.id)) ||
+      !access ||
+      !(await peopleMayWrite(db, session, access)))
+  )
     return {
       error: installationId
         ? 'You may follow a thread of your own tree, or a child thread of another run of this same playbook; list_children shows those.'
@@ -1332,19 +1459,20 @@ export async function messageChild(
   if (thread.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
   const until = waitUntil(undefined)
-  await db.session.updateMany({
-    where: { id: child.id },
-    data: {
-      report: Prisma.DbNull,
-      reportDeliveredAt: null,
-      reportDueAt: null,
+  // Set to work again: under its tree's cap, unless it is a review (which the cap leaves out).
+  const full = await reopenInTree(
+    db,
+    child.id,
+    {
       // One whose every report wakes its parent (wake `each`) still does, rather than wait with others.
       ...(child.wakeEach ? {} : { awaited: true, awaitUntil: until }),
       parentTeammateId: teammate.id,
       // Archived with its parent's old work, it comes back.
       archivedAt: null,
     },
-  })
+    { capped: !reviewed },
+  )
+  if (full) return { error: full }
   // A child thread asking its review to look again: its own parent waits for it that long too.
   if (reviewed) await outlast(db, parent.id, until)
   // Work handed on Chief's word goes on it there too; a review stays the review it is.
@@ -1396,6 +1524,14 @@ export async function handleChildCall(
         error:
           'You have a wake-up still to come in this thread: do not report yet. End your turn now, and ' +
           'report from the turn it brings; or, if you are done, cancel it (cancel_wakeup) and report.',
+      }
+    // A question for its parent goes at once; anything else waits for its own sub-threads.
+    const below = op.status === 'needs_parent' ? null : await childrenHold(db, session.id)
+    if (below !== null)
+      return {
+        error: below
+          ? `${below === 1 ? 'A sub-thread' : `${below} sub-threads`} you wait for ${below === 1 ? 'is' : 'are'} still at work: do not report yet. End your turn now; you are woken here once they reported, and report from that turn. If you no longer need one, cancel it (cancel_child) first.`
+          : 'Your sub-threads’ reports are still to reach you: end your turn now, and report from the turn they bring.',
       }
     // Its files are its parent's now: in each of its teammates' folders before its next turn.
     const files = op.files?.length
@@ -1588,75 +1724,126 @@ export async function handleChildCall(
   const rootId = session.rootId ?? (session.parentId ? await treeRoot(db, session) : session.id)
   // One start at a time in a tree, counted and started under its lock: two at once never both
   // take the last place.
-  return withTreeLock(rootId, async () => {
-    const working = await treeAtWork(db, rootId)
-    if (working >= SUBTHREADS_AT_WORK)
-      return {
-        error:
-          `This tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}, ` +
-          'over both levels). Do this part yourself, wait for their reports, or cancel one.',
-      }
-    try {
-      const { thread, outcome } = await startThread(db, scope, {
-        teammate: assignee,
-        computer: target.computer,
-        memberId: session.startedByMemberId,
-        // Its parent's account when it runs where its parent does, with the same login.
-        accountId:
-          target.computer.id === parent.computer.id &&
-          login === loginOf(parent.teammate.harness, parent.teammate.model)
-            ? session.accountId
-            : null,
-        title: op.title,
-        text: childPrompt({
-          from: teammate.name,
-          parentTitle: session.title,
-          instructions: op.instructions,
-          inputs: {
-            ...(op.repos?.length ? { repos: op.repos } : {}),
-            ...(target.computer.id !== parent.computer.id
-              ? { computer: target.computer.name }
-              : {}),
-          },
-        }),
-        ...(files.length ? { attachmentIds: files } : {}),
-        origin: {
-          kind: 'child',
-          parent: { ...session, rootId },
-          byTeammateId: teammate.id,
-          awaited,
-          ...(awaited ? { awaitUntil: waitUntil(op.timeoutMinutes) } : {}),
-          ...(each ? { wakeEach: true } : {}),
-          ...(handoff.key !== undefined ? { playbookTeammate: handoff.key } : {}),
+  // The tree's cap is checked with the sub-thread's row, under the tree's lock, in one short
+  // transaction (startThread's guard): two starts at once never both take the last place.
+  let working = 0
+  try {
+    const { thread, outcome } = await startThread(db, scope, {
+      teammate: assignee,
+      computer: target.computer,
+      memberId: session.startedByMemberId,
+      // Its parent's account when it runs where its parent does, with the same login.
+      accountId:
+        target.computer.id === parent.computer.id &&
+        login === loginOf(parent.teammate.harness, parent.teammate.model)
+          ? session.accountId
+          : null,
+      title: op.title,
+      text: childPrompt({
+        from: teammate.name,
+        parentTitle: session.title,
+        instructions: op.instructions,
+        inputs: {
+          ...(op.repos?.length ? { repos: op.repos } : {}),
+          ...(target.computer.id !== parent.computer.id ? { computer: target.computer.name } : {}),
         },
-        projectId: session.projectId,
-        effort: (parent.effort as never) ?? null,
-        // Started on Chief's word: the child's work goes on it too (src/chief-answers.ts).
-        chiefWord: session.chiefWordSeq != null,
-      })
-      if (outcome === 'offline')
-        return {
-          error: `${target.computer.id === parent.computer.id ? 'This computer' : target.computer.name} is offline; the sub-thread could not start.`,
-        }
-      await parentChanged(scope, session.id)
+      }),
+      ...(files.length ? { attachmentIds: files } : {}),
+      origin: {
+        kind: 'child',
+        parent: { ...session, rootId },
+        byTeammateId: teammate.id,
+        awaited,
+        ...(awaited ? { awaitUntil: waitUntil(op.timeoutMinutes) } : {}),
+        ...(each ? { wakeEach: true } : {}),
+        ...(handoff.key !== undefined ? { playbookTeammate: handoff.key } : {}),
+      },
+      projectId: session.projectId,
+      effort: (parent.effort as never) ?? null,
+      // Started on Chief's word: the child's work goes on it too (src/chief-answers.ts).
+      chiefWord: session.chiefWordSeq != null,
+      guard: {
+        lock: `tree:${rootId}`,
+        check: async (tx) => {
+          working = await treeAtWork(tx, rootId)
+          return working >= SUBTHREADS_AT_WORK ? treeFull(working) : null
+        },
+      },
+    })
+    if (outcome === 'offline')
       return {
-        threadId: thread.id,
-        title: thread.title,
-        teammate: assignee.name,
-        level: level + 1,
-        computer: target.computer.name,
-        atWorkInTree: working + 1,
-        note: each
-          ? 'Started. Each of its reports wakes you here, as it comes. Go on with your work, then end your turn: do not wait or poll.'
-          : op.wait
-            ? 'Started. When every child you wait for has reported, you are woken here with one note for all of them. ' +
-              'Start the others you need now, then end your turn: do not wait or poll.'
-            : 'Started. You are woken here only if it reports something, needs you, or fails.',
+        error: `${target.computer.id === parent.computer.id ? 'This computer' : target.computer.name} is offline; the sub-thread could not start.`,
       }
-    } catch (error) {
-      if (error instanceof HTTPException) return { error: error.message }
-      throw error
+    await parentChanged(scope, session.id)
+    return {
+      threadId: thread.id,
+      title: thread.title,
+      teammate: assignee.name,
+      level: level + 1,
+      computer: target.computer.name,
+      atWorkInTree: working + 1,
+      note: each
+        ? 'Started. Each of its reports wakes you here, as it comes. Go on with your work, then end your turn: do not wait or poll.'
+        : op.wait
+          ? 'Started. When every child you wait for has reported, you are woken here with one note for all of them. ' +
+            'Start the others you need now, then end your turn: do not wait or poll.'
+          : 'Started. You are woken here only if it reports something, needs you, or fails.',
     }
+  } catch (error) {
+    if (error instanceof HTTPException) return { error: error.message }
+    throw error
+  }
+}
+
+/**
+ * A sub-thread set to work again by a message (message_thread): its report cleared, with `data`,
+ * under its tree's lock with the tree's cap, in one transaction, so that reopening finished ones
+ * never makes more than SUBTHREADS_AT_WORK at work. One still at work only gets `data`. Why it may
+ * not, or null once done.
+ */
+export async function reopenInTree(
+  db: ScopedDb,
+  childId: string,
+  data: Prisma.SessionUpdateManyMutationInput,
+  options: { capped?: boolean } = {},
+): Promise<string | null> {
+  const child = await db.session.findFirst({
+    where: { id: childId },
+    select: { id: true, parentId: true, rootId: true, origin: true },
+  })
+  if (!child) return null
+  const clear = {
+    ...data,
+    report: Prisma.DbNull,
+    reportDeliveredAt: null,
+    reportDueAt: null,
+  } satisfies Prisma.SessionUpdateManyMutationInput
+  if (options.capped === false || !child.parentId || child.origin !== 'child') {
+    await db.session.updateMany({ where: { id: childId }, data: clear })
+    return null
+  }
+  const rootId = await treeRoot(db, child)
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tree:${rootId}`}, 0))`
+    const now = await tx.session.findFirst({
+      where: { id: childId },
+      select: { report: true, reportDeliveredAt: true, status: true },
+    })
+    const atWork =
+      !!now &&
+      !reportOf(now.report) &&
+      !now.reportDeliveredAt &&
+      !['failed', 'done'].includes(now.status)
+    if (!atWork) {
+      const working = await treeAtWork(tx, rootId)
+      if (working >= SUBTHREADS_AT_WORK)
+        return (
+          `Its tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}): ` +
+          'it would be one more. Wait for one to report, or cancel one, then write to it.'
+        )
+    }
+    await tx.session.updateMany({ where: { id: childId }, data: clear })
+    return null
   })
 }
 
@@ -1689,14 +1876,17 @@ export const inTree = (rootId: string) =>
   ({ OR: [{ rootId }, { parentId: rootId }] }) satisfies Prisma.SessionWhereInput
 
 /**
- * The sub-threads at work in a tree, at both levels: started by a teammate (start_child, or a
- * review), no report yet, not failed or done. A schedule's runs that report there are not.
+ * The sub-threads at work in a tree, at both levels: started by a teammate (start_child), no
+ * report yet, not failed or done. Not a schedule's runs that report there, nor the review of a pull
+ * request, which Brigade starts (one per pull request, its looks capped by REVIEW_LOOKS): the cap is
+ * on the work teammates hand out, and a review is never refused for it.
  */
-export async function treeAtWork(db: ScopedDb, rootId: string) {
+export async function treeAtWork(db: Pick<ScopedDb, 'session'>, rootId: string) {
   return db.session.count({
     where: {
       ...inTree(rootId),
       origin: 'child',
+      reviewsOf: { none: {} },
       reportDeliveredAt: null,
       report: { equals: Prisma.DbNull },
       status: { notIn: ['failed', 'done'] },
@@ -1704,30 +1894,10 @@ export async function treeAtWork(db: ScopedDb, rootId: string) {
   })
 }
 
-/** How long a start may hold its tree's lock: a start takes seconds. */
-const TREE_LOCK_MS = 60_000
-
-/**
- * `fn` under its tree's lock: one start_child at a time in a tree, so that the count it reads
- * holds until its thread is made. The lock is a transaction's, held while `fn` runs on other
- * connections (its writes commit on their own, before the next start reads the count). Should the
- * lock's transaction time out once `fn` is done, what `fn` did stands.
- */
-async function withTreeLock<T>(rootId: string, fn: () => Promise<T>): Promise<T> {
-  let result: { value: T } | undefined
-  try {
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tree:${rootId}`}, 0))`
-        result = { value: await fn() }
-      },
-      { maxWait: 15_000, timeout: TREE_LOCK_MS },
-    )
-  } catch (error) {
-    if (!result) throw error
-  }
-  return result!.value
-}
+/** Why a tree takes no more sub-threads now. */
+const treeFull = (working: number) =>
+  `This tree already has ${working} sub-threads at work, the most it may (${SUBTHREADS_AT_WORK}, ` +
+  'over both levels). Do this part yourself, wait for their reports, or cancel one.'
 
 /** The protocol of a computer's runner: its own now, else the last it said (0: never). */
 async function protocolOf(scope: Scope, computerId: string) {
@@ -1772,6 +1942,14 @@ async function childComputer(
           'This workspace has no cloud computer to run it on. Run it here (computer: same), or ask the person to set one up.',
       }
   } else {
+    // Only on the word of the member it belongs to: not for another member asking in a thread
+    // shared with them, nor for an outside event or a schedule's run, which nobody asked here.
+    if ((await askedBy(db, session.id)) !== session.startedByMemberId)
+      return {
+        error:
+          'Only the person whose machine it is may send work to it, from a thread they asked in: here, ' +
+          'run it on this computer or the cloud computer.',
+      }
     const machines = await db.computer.findMany({
       where: { kind: 'member_machine', memberId: session.startedByMemberId },
       select: { id: true, name: true, kind: true, workspaceId: true },

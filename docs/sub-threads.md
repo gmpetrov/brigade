@@ -28,24 +28,29 @@ A thread at the top and every sub-thread under it make a tree.
   the most Brigade allows: do the work here, or say in your report what else is needed".
   `SUBTHREAD_DEPTH = 2`.
 - **Eight at work per tree**, counted from the top over both levels: the 9th start_child is refused
-  until one reports (or is cancelled). `SUBTHREADS_AT_WORK = 8`. At work: started by a teammate
-  (`origin` child: start_child or a review), no report yet, not failed or done. A schedule's runs
-  that report to a thread are not counted. A sub-thread a message sets to work again (message_thread)
-  is not refused: the cap is checked when one starts.
+  until one reports (or is cancelled). `SUBTHREADS_AT_WORK = 8`. At work: started by start_child
+  (`origin` child), no report yet, not failed or done. Not a schedule's runs that report to a
+  thread, nor the review of a pull request: Brigade starts those (one per pull request, its looks
+  capped), and a review is never refused for the cap. A finished sub-thread a message sets to work
+  again (message_thread, from its parent or another thread of the tree) counts as one more, and is
+  refused when the tree is full (`reopenInTree`).
 - Both are constants in `packages/contracts/src/children.ts`, read by the API (which enforces them)
   and the runner (which says them in the teammates' instructions and tools). No person sees or sets
   them; changing either is one line.
 - **`Session.rootId`**: the tree's top, set on every sub-thread at its start (null at the top). A
   sub-thread started before it has none: its parent is the top then (`inTree` reads both). The cap
   counts a tree in one query.
-- **One start at a time per tree.** start_child counts and starts under the tree's advisory lock
-  (`withTreeLock`): a transaction holds `pg_advisory_xact_lock('tree:<root>')` while the thread is
-  made on other connections, whose writes commit before the lock is released, so two starts at once
-  never both take the last place. If that transaction times out after the thread started, the start
-  stands.
+- **One place at a time per tree.** The new sub-thread's row is made in one short transaction that
+  takes `pg_advisory_xact_lock('tree:<root>')`, counts, and inserts (startThread's `guard`), so two
+  starts at once never both take the last place, and no connection is held while the rest of the
+  start runs. Reopening a finished one takes the same lock with its count.
 - Reviews: Brigade starts the review of a pull request a level-1 sub-thread opens under it (level
   2), and none under a level-2 one (as before: "below which Brigade starts no review"), so nothing is
-  ever deeper than level 2. A review counts towards the eight while it works.
+  ever deeper than level 2.
+- **A sub-thread reports up after its own.** One that waits for sub-threads of its own (or whose
+  note from them is still to reach it) sends no report when its turn ends, and `report` is refused
+  (`childrenHold`), as for a review under way; `needs_parent` still goes. The turn their note brings
+  reports up, also once its wait for them ran out.
 
 ## Where a sub-thread runs
 
@@ -57,7 +62,9 @@ A thread at the top and every sub-thread under it make a tree.
   comes, as for any thread.
 - `mine`: a machine of the member the tree works for (the threads' `startedByMemberId`, which every
   sub-thread inherits): their only one, or `{ mine: "<name>" }` when they have several. For their Mac
-  apps, their signed-in browser, computer use. **Never another member's machine.**
+  apps, their signed-in browser, computer use. **Never another member's machine**, and only on the
+  word of that member: not when another member asked in a thread shared with them, nor in a thread
+  an outside event or a schedule started (`askedBy` must be the machine's member).
 
 Refused at once with the reason, never by falling back to another computer: the machine is offline;
 its runner is older than `SUBTHREADS_PROTOCOL`; or no account of the teammate's login (`loginOf`) is
@@ -75,7 +82,9 @@ They travel with the brief, whatever the work:
 - **library documents**: named by path in the brief; every computer reads the library already.
 - **code**: `repos: [{ repository, branch }]`. The parent's runner pushes each branch to GitHub first,
   from its checkout of that repository (`pushForSubthread`); refused, saying so, when that checkout is
-  on the branch with uncommitted changes. A branch that is only on GitHub is there already. The brief
+  on the branch with uncommitted changes, new files included (named in the error). A branch that is
+  only on GitHub is there already. On a member's machine the checkouts are found with Node, not
+  `find` (Windows has no GNU find). The brief
   tells the sub-thread to check it out with that base and work on a branch of its own.
 
 Results come back as before: the report, through the API, with its files in the parent's working
@@ -111,9 +120,13 @@ writes only within its own tree.
 `follow_thread` works on any thread the teammate may write in (`writableThread`, the same rule as
 `message_thread`): a thread of its own tree, one it started (start_thread), another thread at the top
 it is a teammate of; in a playbook's run, also a child of another run of the same installation (as
-before). Its next report wakes the follower, at most `FOLLOWERS_PER_THREAD` (20) each. A thread at
-the top keeps no report: the end of each of its turns tells its followers what its last message said
-(`noteFollowedEvents`), once, until a new message to it.
+before). Its people must be allowed to write there, as for a message (`peopleMayWrite`), when it
+follows and again when a report is delivered: one no longer allowed is claimed without a wake-up.
+Its next report wakes the follower, at most `FOLLOWERS_PER_THREAD` (20) each. A thread at the top
+keeps no report: the end of each of its turns tells its followers what its last message said
+(`noteFollowedEvents`), once, until a new message to it; one its delivery missed (a failed wake-up,
+an API restart) is woken by the minute's sweep, which reads that turn's end again from the events
+(within the hour).
 
 ## The sidebar
 

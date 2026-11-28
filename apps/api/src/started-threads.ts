@@ -17,7 +17,7 @@ import { memberMayWrite } from './account-sharing.js'
 import { trackAudit } from './analytics.js'
 import { audit } from './audit.js'
 import { markOnChiefsWord } from './chief-answers.js'
-import { messageChild } from './children.js'
+import { messageChild, reopenInTree } from './children.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { pickLines, projectOf } from './lists.js'
 import { usableProject } from './projects.js'
@@ -308,6 +308,21 @@ export async function writableThread(
 }
 
 /**
+ * Whether the people of a thread (its starter, and whoever asked in it when that is another) may
+ * write in `target`: what a message from it there, or its following that thread, needs.
+ */
+export async function peopleMayWrite(
+  db: ScopedDb,
+  session: { id: string; startedByMemberId: string },
+  target: { startedByMemberId: string | null; othersMayPrompt: boolean; computerId: string },
+) {
+  const asker = await askedBy(db, session.id)
+  for (const memberId of new Set([session.startedByMemberId, ...(asker ? [asker] : [])]))
+    if (!(await memberMayWrite(target, memberId))) return false
+  return true
+}
+
+/**
  * Why message_thread may not write in a thread: said plainly, so the teammate knows what to do.
  * Only about a thread this thread's people may write in (and a parent named only when they may
  * write there too): of one they may not, nothing is said, not even that it exists.
@@ -393,15 +408,19 @@ export async function messageThread(
       error:
         'That thread reviews a pull request: only the thread that opened it asks it to look again. Write to that thread instead.',
     }
+  // A sub-thread of the tree that reported is set to work again: under the tree's cap.
+  if (found.kind === 'tree') {
+    const full = await reopenInTree(db, found.id, {})
+    if (full) return { error: full }
+  }
   const target = await loadThread(db, found.id)
   // As a message from this thread's person would: only where they may write. And from whoever
   // asked for it here, when that is another (a thread shared with them): they ask there too.
   const asker = await askedBy(db, session.id)
-  for (const memberId of new Set([session.startedByMemberId, ...(asker ? [asker] : [])]))
-    if (!(await memberMayWrite(target, memberId)))
-      return {
-        error: "The person in this thread may not write in that one: it is someone else's.",
-      }
+  if (!(await peopleMayWrite(db, session, target)))
+    return {
+      error: "The person in this thread may not write in that one: it is someone else's.",
+    }
   if (target.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }
   const place = await takeCommentPlace(scope, target.id, {
