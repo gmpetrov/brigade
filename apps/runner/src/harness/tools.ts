@@ -3180,7 +3180,8 @@ export function childTools(
     read_child,
     ...(starts ? { cancel_child } : {}),
     ...(options.child ? { report } : {}),
-    ...(options.follow ? { follow_thread } : {}),
+    // A child follows only where its API says the tree; before, it had no follow_thread.
+    ...(options.follow && (!options.child || tree) ? { follow_thread } : {}),
   }
 }
 

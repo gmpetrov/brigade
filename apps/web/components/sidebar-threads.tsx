@@ -15,9 +15,9 @@
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
 // A thread's child threads stay out of the list: folded under it, unfolded by the caret
-// after its title (SubThreads); a list's threads fold theirs the same way, one level further
-// in. The thread already shows their
-// state: working while one it waits for works, waiting while one waits on a person.
+// after its title (SubThreads); a sub-thread folds its own the same way, one level further in
+// (docs/sub-threads.md), and so does a list's thread. A row with sub-threads shows the most
+// urgent state below it: waiting while one waits on a person, else working while one works.
 import {
   Archive,
   EllipsisVertical,
@@ -100,6 +100,7 @@ import {
   groupWith,
   holds,
   subThreadRows,
+  urgentBelow,
   withoutReviews,
   type Group,
 } from '@/lib/sub-threads'
@@ -888,7 +889,13 @@ function withAsks(
         : t.status === 'waiting'
           ? 'needs you'
           : undefined)
-    // Children it waits for at work: it shows as working, as for its own background work.
+    // Children it waits for at work: it shows as working, as for its own background work. One
+    // waiting on this member below it, at any level, makes it wait on them too.
+    const below = ask ? null : urgentBelow(t, needsYou)
+    if (below?.status === 'waiting' && t.status !== 'failed') {
+      asks.set(t.id, below.ask)
+      return groupOf(t.status) === 'waiting' ? t : { ...t, status: 'waiting' }
+    }
     if (!ask)
       return t.childrenWorking && groupOf(t.status) === 'rest' ? { ...t, status: 'running' } : t
     asks.set(t.id, ask)

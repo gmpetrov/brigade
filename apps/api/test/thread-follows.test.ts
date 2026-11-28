@@ -39,7 +39,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { childNote, FOLLOWERS_PER_THREAD } = await import('@brigade/contracts')
 const { prisma, scoped } = await import('../src/db.js')
-const { handleChildCall, noteChildEvents, settleOverdueChildren } =
+const { handleChildCall, noteChildEvents, noteFollowedEvents, settleOverdueChildren } =
   await import('../src/children.js')
 
 type Row = Awaited<ReturnType<typeof prisma.session.create>>
@@ -200,14 +200,23 @@ test('follow_thread refuses what it may not follow', { skip }, async () => {
   await refused(mail, mail.id, /cannot follow itself/)
   await refused(mail, 'no-such-thread', /No thread of this workspace/)
   await refused(root, fix.id, /your own child/)
-  // A run's root thread is no child: it ends with no report.
-  await refused(mail, root.id, /Only a child thread/)
-  // A thread outside a playbook, or in a dry run.
-  await refused(await thread({}), fix.id, /for a playbook’s run/)
-  await refused(await runThread(support, { dryRun: true }), fix.id, /for a playbook’s run/)
+  // Another run's root thread: not of its tree, nor another run's child.
+  await refused(mail, root.id, /of your own tree, or a child thread of another run/)
+  // A thread outside a playbook, not in that tree nor at the top with it; or a dry run, which
+  // follows no other run.
+  await refused(await thread({}), fix.id, /only a thread you may write in/)
+  await refused(
+    await runThread(support, { dryRun: true }),
+    fix.id,
+    /only a thread you may write in/,
+  )
   // Another playbook's run, or a child outside any playbook.
-  await refused(await runThread(otherPlaybook), fix.id, /same playbook/)
-  await refused(mail, (await thread({ parentId: (await thread({})).id })).id, /same playbook/)
+  await refused(await runThread(otherPlaybook), fix.id, /another run of this same playbook/)
+  await refused(
+    mail,
+    (await thread({ parentId: (await thread({})).id })).id,
+    /another run of this same playbook/,
+  )
   // Another workspace's thread is not found at all.
   const elsewhere = await prisma.session.findFirst({
     where: { workspaceId: { not: scope.workspaceId } },
@@ -418,5 +427,62 @@ test(
     )
     // Outside a playbook, list_children is as it was.
     assert.equal((await call(await thread({}), { name: 'list_children' })).fromOtherRuns, undefined)
+  },
+)
+
+// Sub-threads (docs/sub-threads.md): follow_thread on any thread the teammate may write in.
+
+test('a sub-thread follows its sibling, and is woken by its report', { skip }, async () => {
+  const top = await thread({})
+  const build = await thread({ title: 'Build the desktop app', parentId: top.id })
+  const notes_ = await thread({ title: 'Write the release notes', parentId: top.id })
+  const out = await follow(notes_, build)
+  assert.equal(out.error, undefined, JSON.stringify(out))
+  assert.equal(out.following.waitingForIt, true)
+  await reports(build, 'Built: Brigade-0.9.dmg.')
+  const [note, ...more] = await notes(notes_)
+  assert.equal(more.length, 0)
+  assert.match(note!, /^The thread you follow “Build the desktop app”/)
+  assert.match(note!, /Brigade-0\.9\.dmg/)
+  // Its own parent still waits for both, as before: the sibling heard it only by following it.
+  assert.equal((await notes(top)).length, 0)
+})
+
+test(
+  'a thread at the top it is a teammate of tells its follower when its turn ends',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: ship the importer' })
+    const watcher = await thread({ title: 'Launch plan' })
+    // Not a teammate of it yet: not a thread it may write in.
+    assert.match((await follow(watcher, builder)).error ?? '', /only a thread you may write in/)
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    await prisma.sessionEvent.create({
+      data: {
+        ...scope,
+        sessionId: builder.id,
+        seq: 1,
+        type: 'message.done',
+        at: new Date(),
+        data: { type: 'message.done', text: 'Opened #31: the importer.' },
+      },
+    })
+    const ended = { event: { type: 'turn.completed', at: new Date().toISOString() } }
+    await noteFollowedEvents(builder, [ended])
+    // The same end seen twice wakes it once.
+    await noteFollowedEvents(builder, [ended])
+    const [note, ...more] = await notes(watcher)
+    assert.equal(more.length, 0)
+    assert.match(note!, /^The thread you follow “Builder: ship the importer”/)
+    assert.match(note!, /Opened #31/)
+    // Written in again, its next turn's end is news again.
+    await noteFollowedEvents(builder, [
+      { event: { type: 'message.user', at: new Date().toISOString() } },
+      ended,
+    ])
+    assert.equal((await notes(watcher)).length, 2)
   },
 )
