@@ -22,8 +22,20 @@ export type ThreadFollowModel = runtime.Types.Result.DefaultSelection<Prisma.$Th
 
 export type AggregateThreadFollow = {
   _count: ThreadFollowCountAggregateOutputType | null
+  _avg: ThreadFollowAvgAggregateOutputType | null
+  _sum: ThreadFollowSumAggregateOutputType | null
   _min: ThreadFollowMinAggregateOutputType | null
   _max: ThreadFollowMaxAggregateOutputType | null
+}
+
+export type ThreadFollowAvgAggregateOutputType = {
+  fromSeq: number | null
+  deliveredSeq: number | null
+}
+
+export type ThreadFollowSumAggregateOutputType = {
+  fromSeq: number | null
+  deliveredSeq: number | null
 }
 
 export type ThreadFollowMinAggregateOutputType = {
@@ -33,6 +45,8 @@ export type ThreadFollowMinAggregateOutputType = {
   sessionId: string | null
   followerId: string | null
   deliveredAt: Date | null
+  fromSeq: number | null
+  deliveredSeq: number | null
   createdAt: Date | null
 }
 
@@ -43,6 +57,8 @@ export type ThreadFollowMaxAggregateOutputType = {
   sessionId: string | null
   followerId: string | null
   deliveredAt: Date | null
+  fromSeq: number | null
+  deliveredSeq: number | null
   createdAt: Date | null
 }
 
@@ -53,10 +69,22 @@ export type ThreadFollowCountAggregateOutputType = {
   sessionId: number
   followerId: number
   deliveredAt: number
+  fromSeq: number
+  deliveredSeq: number
   createdAt: number
   _all: number
 }
 
+
+export type ThreadFollowAvgAggregateInputType = {
+  fromSeq?: true
+  deliveredSeq?: true
+}
+
+export type ThreadFollowSumAggregateInputType = {
+  fromSeq?: true
+  deliveredSeq?: true
+}
 
 export type ThreadFollowMinAggregateInputType = {
   id?: true
@@ -65,6 +93,8 @@ export type ThreadFollowMinAggregateInputType = {
   sessionId?: true
   followerId?: true
   deliveredAt?: true
+  fromSeq?: true
+  deliveredSeq?: true
   createdAt?: true
 }
 
@@ -75,6 +105,8 @@ export type ThreadFollowMaxAggregateInputType = {
   sessionId?: true
   followerId?: true
   deliveredAt?: true
+  fromSeq?: true
+  deliveredSeq?: true
   createdAt?: true
 }
 
@@ -85,6 +117,8 @@ export type ThreadFollowCountAggregateInputType = {
   sessionId?: true
   followerId?: true
   deliveredAt?: true
+  fromSeq?: true
+  deliveredSeq?: true
   createdAt?: true
   _all?: true
 }
@@ -127,6 +161,18 @@ export type ThreadFollowAggregateArgs<ExtArgs extends runtime.Types.Extensions.I
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ThreadFollowAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ThreadFollowSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ThreadFollowMinAggregateInputType
@@ -157,6 +203,8 @@ export type ThreadFollowGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   _count?: ThreadFollowCountAggregateInputType | true
+  _avg?: ThreadFollowAvgAggregateInputType
+  _sum?: ThreadFollowSumAggregateInputType
   _min?: ThreadFollowMinAggregateInputType
   _max?: ThreadFollowMaxAggregateInputType
 }
@@ -168,8 +216,12 @@ export type ThreadFollowGroupByOutputType = {
   sessionId: string
   followerId: string
   deliveredAt: Date | null
+  fromSeq: number | null
+  deliveredSeq: number | null
   createdAt: Date
   _count: ThreadFollowCountAggregateOutputType | null
+  _avg: ThreadFollowAvgAggregateOutputType | null
+  _sum: ThreadFollowSumAggregateOutputType | null
   _min: ThreadFollowMinAggregateOutputType | null
   _max: ThreadFollowMaxAggregateOutputType | null
 }
@@ -199,6 +251,8 @@ export type ThreadFollowWhereInput = {
   sessionId?: Prisma.StringFilter<"ThreadFollow"> | string
   followerId?: Prisma.StringFilter<"ThreadFollow"> | string
   deliveredAt?: Prisma.DateTimeNullableFilter<"ThreadFollow"> | Date | string | null
+  fromSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
+  deliveredSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ThreadFollow"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -212,6 +266,8 @@ export type ThreadFollowOrderByWithRelationInput = {
   sessionId?: Prisma.SortOrder
   followerId?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  fromSeq?: Prisma.SortOrderInput | Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
@@ -229,6 +285,8 @@ export type ThreadFollowWhereUniqueInput = Prisma.AtLeast<{
   sessionId?: Prisma.StringFilter<"ThreadFollow"> | string
   followerId?: Prisma.StringFilter<"ThreadFollow"> | string
   deliveredAt?: Prisma.DateTimeNullableFilter<"ThreadFollow"> | Date | string | null
+  fromSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
+  deliveredSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ThreadFollow"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -242,10 +300,14 @@ export type ThreadFollowOrderByWithAggregationInput = {
   sessionId?: Prisma.SortOrder
   followerId?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  fromSeq?: Prisma.SortOrderInput | Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ThreadFollowCountOrderByAggregateInput
+  _avg?: Prisma.ThreadFollowAvgOrderByAggregateInput
   _max?: Prisma.ThreadFollowMaxOrderByAggregateInput
   _min?: Prisma.ThreadFollowMinOrderByAggregateInput
+  _sum?: Prisma.ThreadFollowSumOrderByAggregateInput
 }
 
 export type ThreadFollowScalarWhereWithAggregatesInput = {
@@ -258,6 +320,8 @@ export type ThreadFollowScalarWhereWithAggregatesInput = {
   sessionId?: Prisma.StringWithAggregatesFilter<"ThreadFollow"> | string
   followerId?: Prisma.StringWithAggregatesFilter<"ThreadFollow"> | string
   deliveredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ThreadFollow"> | Date | string | null
+  fromSeq?: Prisma.IntNullableWithAggregatesFilter<"ThreadFollow"> | number | null
+  deliveredSeq?: Prisma.IntNullableWithAggregatesFilter<"ThreadFollow"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ThreadFollow"> | Date | string
 }
 
@@ -265,6 +329,8 @@ export type ThreadFollowCreateInput = {
   id?: string
   organizationId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadFollowsInput
   session: Prisma.SessionCreateNestedOneWithoutFollowersInput
@@ -278,6 +344,8 @@ export type ThreadFollowUncheckedCreateInput = {
   sessionId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -285,6 +353,8 @@ export type ThreadFollowUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadFollowsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutFollowersNestedInput
@@ -298,6 +368,8 @@ export type ThreadFollowUncheckedUpdateInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -308,6 +380,8 @@ export type ThreadFollowCreateManyInput = {
   sessionId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -315,6 +389,8 @@ export type ThreadFollowUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -325,6 +401,8 @@ export type ThreadFollowUncheckedUpdateManyInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -350,7 +428,14 @@ export type ThreadFollowCountOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   followerId?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
+  fromSeq?: Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type ThreadFollowAvgOrderByAggregateInput = {
+  fromSeq?: Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrder
 }
 
 export type ThreadFollowMaxOrderByAggregateInput = {
@@ -360,6 +445,8 @@ export type ThreadFollowMaxOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   followerId?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
+  fromSeq?: Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -370,7 +457,14 @@ export type ThreadFollowMinOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   followerId?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
+  fromSeq?: Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type ThreadFollowSumOrderByAggregateInput = {
+  fromSeq?: Prisma.SortOrder
+  deliveredSeq?: Prisma.SortOrder
 }
 
 export type ThreadFollowCreateNestedManyWithoutWorkspaceInput = {
@@ -503,6 +597,8 @@ export type ThreadFollowCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
   session: Prisma.SessionCreateNestedOneWithoutFollowersInput
   follower: Prisma.SessionCreateNestedOneWithoutFollowingInput
@@ -514,6 +610,8 @@ export type ThreadFollowUncheckedCreateWithoutWorkspaceInput = {
   sessionId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -553,6 +651,8 @@ export type ThreadFollowScalarWhereInput = {
   sessionId?: Prisma.StringFilter<"ThreadFollow"> | string
   followerId?: Prisma.StringFilter<"ThreadFollow"> | string
   deliveredAt?: Prisma.DateTimeNullableFilter<"ThreadFollow"> | Date | string | null
+  fromSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
+  deliveredSeq?: Prisma.IntNullableFilter<"ThreadFollow"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ThreadFollow"> | Date | string
 }
 
@@ -560,6 +660,8 @@ export type ThreadFollowCreateWithoutFollowerInput = {
   id?: string
   organizationId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadFollowsInput
   session: Prisma.SessionCreateNestedOneWithoutFollowersInput
@@ -571,6 +673,8 @@ export type ThreadFollowUncheckedCreateWithoutFollowerInput = {
   workspaceId: string
   sessionId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -588,6 +692,8 @@ export type ThreadFollowCreateWithoutSessionInput = {
   id?: string
   organizationId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadFollowsInput
   follower: Prisma.SessionCreateNestedOneWithoutFollowingInput
@@ -599,6 +705,8 @@ export type ThreadFollowUncheckedCreateWithoutSessionInput = {
   workspaceId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -650,6 +758,8 @@ export type ThreadFollowCreateManyWorkspaceInput = {
   sessionId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -657,6 +767,8 @@ export type ThreadFollowUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUpdateOneRequiredWithoutFollowersNestedInput
   follower?: Prisma.SessionUpdateOneRequiredWithoutFollowingNestedInput
@@ -668,6 +780,8 @@ export type ThreadFollowUncheckedUpdateWithoutWorkspaceInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -677,6 +791,8 @@ export type ThreadFollowUncheckedUpdateManyWithoutWorkspaceInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -686,6 +802,8 @@ export type ThreadFollowCreateManyFollowerInput = {
   workspaceId: string
   sessionId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -695,6 +813,8 @@ export type ThreadFollowCreateManySessionInput = {
   workspaceId: string
   followerId: string
   deliveredAt?: Date | string | null
+  fromSeq?: number | null
+  deliveredSeq?: number | null
   createdAt?: Date | string
 }
 
@@ -702,6 +822,8 @@ export type ThreadFollowUpdateWithoutFollowerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadFollowsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutFollowersNestedInput
@@ -713,6 +835,8 @@ export type ThreadFollowUncheckedUpdateWithoutFollowerInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -722,6 +846,8 @@ export type ThreadFollowUncheckedUpdateManyWithoutFollowerInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -729,6 +855,8 @@ export type ThreadFollowUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadFollowsNestedInput
   follower?: Prisma.SessionUpdateOneRequiredWithoutFollowingNestedInput
@@ -740,6 +868,8 @@ export type ThreadFollowUncheckedUpdateWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -749,6 +879,8 @@ export type ThreadFollowUncheckedUpdateManyWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   followerId?: Prisma.StringFieldUpdateOperationsInput | string
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fromSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  deliveredSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -761,6 +893,8 @@ export type ThreadFollowSelect<ExtArgs extends runtime.Types.Extensions.Internal
   sessionId?: boolean
   followerId?: boolean
   deliveredAt?: boolean
+  fromSeq?: boolean
+  deliveredSeq?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -774,6 +908,8 @@ export type ThreadFollowSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   sessionId?: boolean
   followerId?: boolean
   deliveredAt?: boolean
+  fromSeq?: boolean
+  deliveredSeq?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -787,6 +923,8 @@ export type ThreadFollowSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   sessionId?: boolean
   followerId?: boolean
   deliveredAt?: boolean
+  fromSeq?: boolean
+  deliveredSeq?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -800,10 +938,12 @@ export type ThreadFollowSelectScalar = {
   sessionId?: boolean
   followerId?: boolean
   deliveredAt?: boolean
+  fromSeq?: boolean
+  deliveredSeq?: boolean
   createdAt?: boolean
 }
 
-export type ThreadFollowOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "followerId" | "deliveredAt" | "createdAt", ExtArgs["result"]["threadFollow"]>
+export type ThreadFollowOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "followerId" | "deliveredAt" | "fromSeq" | "deliveredSeq" | "createdAt", ExtArgs["result"]["threadFollow"]>
 export type ThreadFollowInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -843,6 +983,16 @@ export type $ThreadFollowPayload<ExtArgs extends runtime.Types.Extensions.Intern
      * When the followed thread's report reached the follower; a new report clears it.
      */
     deliveredAt: Date | null
+    /**
+     * A thread at the top (it keeps no report): the followed thread's lastSeq when it was followed;
+     * only a turn end after it is news (docs/sub-threads.md).
+     */
+    fromSeq: number | null
+    /**
+     * A thread at the top: the seq of the last turn end the follower heard, or that the sweep found
+     * it up to date at. By sequence, never by a computer's clock.
+     */
+    deliveredSeq: number | null
     createdAt: Date
   }, ExtArgs["result"]["threadFollow"]>
   composites: {}
@@ -1276,6 +1426,8 @@ export interface ThreadFollowFieldRefs {
   readonly sessionId: Prisma.FieldRef<"ThreadFollow", 'String'>
   readonly followerId: Prisma.FieldRef<"ThreadFollow", 'String'>
   readonly deliveredAt: Prisma.FieldRef<"ThreadFollow", 'DateTime'>
+  readonly fromSeq: Prisma.FieldRef<"ThreadFollow", 'Int'>
+  readonly deliveredSeq: Prisma.FieldRef<"ThreadFollow", 'Int'>
   readonly createdAt: Prisma.FieldRef<"ThreadFollow", 'DateTime'>
 }
     

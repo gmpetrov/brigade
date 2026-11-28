@@ -11376,6 +11376,8 @@ export const ThreadFollowScalarFieldEnum = {
   sessionId: 'sessionId',
   followerId: 'followerId',
   deliveredAt: 'deliveredAt',
+  fromSeq: 'fromSeq',
+  deliveredSeq: 'deliveredSeq',
   createdAt: 'createdAt'
 } as const
 

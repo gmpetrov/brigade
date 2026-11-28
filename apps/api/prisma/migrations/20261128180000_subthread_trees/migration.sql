@@ -4,3 +4,7 @@ ALTER TABLE "Session" ADD COLUMN "rootId" TEXT;
 ALTER TABLE "Session" ADD COLUMN "wakeEach" BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX "Session_rootId_idx" ON "Session"("rootId");
+
+-- A thread at the top that others follow: what they heard of it, by its events' sequence.
+ALTER TABLE "ThreadFollow" ADD COLUMN "fromSeq" INTEGER;
+ALTER TABLE "ThreadFollow" ADD COLUMN "deliveredSeq" INTEGER;

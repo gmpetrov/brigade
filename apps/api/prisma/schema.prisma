@@ -3323,6 +3323,12 @@ model ThreadFollow {
   follower       Session   @relation("ThreadFollower", fields: [followerId], references: [id], onDelete: Cascade)
   /// When the followed thread's report reached the follower; a new report clears it.
   deliveredAt    DateTime?
+  /// A thread at the top (it keeps no report): the followed thread's lastSeq when it was followed;
+  /// only a turn end after it is news (docs/sub-threads.md).
+  fromSeq        Int?
+  /// A thread at the top: the seq of the last turn end the follower heard, or that the sweep found
+  /// it up to date at. By sequence, never by a computer's clock.
+  deliveredSeq   Int?
   createdAt      DateTime  @default(now())
 
   @@unique([sessionId, followerId])

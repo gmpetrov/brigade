@@ -565,14 +565,14 @@ export async function wakeFollowers(
   /** A thread at the top keeps no report: what its turn ended on stands for one (noteFollowedEvents). */
   ended?: ChildReport,
   /**
-   * When the turn `ended` ended: only the follows made before it, and not yet told of it (none
-   * delivered, or delivered before it). A thread at the top is told by the time of its turn's end,
-   * not by a flag a new message resets, which a restart could lose.
+   * The seq of the turn end `ended` stands for: only the follows made before it and not yet told of
+   * it. A thread at the top is told by its events' sequence, never by a computer's clock, nor by a
+   * flag a new message resets, which a restart could lose.
    */
-  before?: Date,
+  endSeq?: number,
 ) {
   const db = scoped(scope)
-  const due = followsDue(before)
+  const due = followsDue(endSeq)
   const [thread, follows] = await Promise.all([
     db.session.findFirst({ where: { id: sessionId }, select: CHILD_SELECT }),
     db.threadFollow.findMany({
@@ -608,7 +608,10 @@ export async function wakeFollowers(
         const { count } = await tx.threadFollow.updateMany({
           where: { id: follow.id, ...due },
           // A thread at the top's follow is marked with the end it heard, so a later end is news.
-          data: { deliveredAt: before ?? new Date() },
+          data: {
+            deliveredAt: new Date(),
+            ...(endSeq !== undefined ? { deliveredSeq: endSeq } : {}),
+          },
         })
         return count && allowed ? reportWakeup(tx, follow.followerId, null, note) : null
       })
@@ -623,14 +626,16 @@ export async function wakeFollowers(
 }
 
 /**
- * The follows still to hear a report: none delivered; for a thread at the top, by the end of its
- * turn (`before`), those made before it and not delivered since it.
+ * The follows still to hear a report: none delivered; for a thread at the top, by the seq of its
+ * turn's end, those made before it (fromSeq) and not told of it or of a later one (deliveredSeq).
  */
-const followsDue = (before?: Date) =>
-  (before
+const followsDue = (endSeq?: number) =>
+  (endSeq !== undefined
     ? {
-        createdAt: { lt: before },
-        OR: [{ deliveredAt: null }, { deliveredAt: { lt: before } }],
+        AND: [
+          { OR: [{ fromSeq: null }, { fromSeq: { lt: endSeq } }] },
+          { OR: [{ deliveredSeq: null }, { deliveredSeq: { lt: endSeq } }] },
+        ],
       }
     : { deliveredAt: null }) satisfies Prisma.ThreadFollowWhereInput
 
@@ -666,23 +671,19 @@ async function wakeWaitingFollowers(workspaceId?: string) {
     const scope = { organizationId: f.organizationId, workspaceId: f.workspaceId }
     const ended = await turnEnded(f.sessionId)
     if (ended)
-      await wakeFollowers(scope, f.sessionId, ended.report, ended.at).catch((error: unknown) =>
+      await wakeFollowers(scope, f.sessionId, ended.report, ended.seq).catch((error: unknown) =>
         console.error(`followers of ${f.sessionId}: could not wake`, error),
       )
-    // Those now told of its last end, or that it does not concern (none ended, or the follow is
-    // newer), are up to date with the thread as it is: their mark moves to its last change, so the
-    // next sweep takes others. One whose wake-up failed again stays behind, for the next.
+    // Those now told of its last end, or that it does not concern (none ended since they followed),
+    // are up to date with the thread as it is: their mark moves to its last event, so the next
+    // sweep takes others. One whose wake-up failed again is still due, and stays behind.
     await scoped(scope).threadFollow.updateMany({
       where: {
         sessionId: f.sessionId,
-        AND: [
-          { OR: [{ deliveredAt: null }, { deliveredAt: { lt: f.updatedAt } }] },
-          ...(ended
-            ? [{ OR: [{ deliveredAt: { gte: ended.at } }, { createdAt: { gte: ended.at } }] }]
-            : []),
-        ],
+        OR: [{ deliveredSeq: null }, { deliveredSeq: { lt: f.lastSeq } }],
+        ...(ended ? { NOT: followsDue(ended.seq) } : {}),
       },
-      data: { deliveredAt: f.updatedAt },
+      data: { deliveredSeq: f.lastSeq },
     })
   }
 }
@@ -698,14 +699,14 @@ async function topFollowsBehind(now: Date, workspaceId?: string, limit = 100) {
   const after = new Date(now.getTime() - STRANDED_WITHIN_MS)
   const before = new Date(now.getTime() - STRANDED_AFTER_MS)
   return prisma.$queryRaw<
-    { sessionId: string; organizationId: string; workspaceId: string; updatedAt: Date }[]
+    { sessionId: string; organizationId: string; workspaceId: string; lastSeq: number }[]
   >`
-    SELECT DISTINCT s.id AS "sessionId", s."organizationId", s."workspaceId", s."updatedAt"
+    SELECT DISTINCT s.id AS "sessionId", s."organizationId", s."workspaceId", s."lastSeq"
     FROM "ThreadFollow" f JOIN "Session" s ON s.id = f."sessionId"
     WHERE s."parentId" IS NULL
       AND s.status NOT IN ('starting', 'running', 'waiting')
       AND s."updatedAt" BETWEEN ${after} AND ${before}
-      AND (f."deliveredAt" IS NULL OR f."deliveredAt" < s."updatedAt")
+      AND COALESCE(f."deliveredSeq", f."fromSeq", 0) < s."lastSeq"
       ${workspaceId ? Prisma.sql`AND s."workspaceId" = ${workspaceId}` : Prisma.empty}
     LIMIT ${limit}`
 }
@@ -714,7 +715,9 @@ async function topFollowsBehind(now: Date, workspaceId?: string, limit = 100) {
  * What a thread at the top last ended a turn on, as its followers hear it (noteFollowedEvents), and
  * when; null when no turn has ended since its last message, or that turn waits on a person.
  */
-async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: Date } | null> {
+async function turnEnded(
+  sessionId: string,
+): Promise<{ report: ChildReport; at: Date; seq: number } | null> {
   const last = (types: string[]) =>
     prisma.sessionEvent.findFirst({
       where: { sessionId, type: { in: types } },
@@ -730,6 +733,7 @@ async function turnEnded(sessionId: string): Promise<{ report: ChildReport; at: 
   if (data.type === 'error' ? data.retrying === true : data.waiting) return null
   return {
     at: end.at,
+    seq: end.seq,
     report:
       data.type === 'error'
         ? { status: 'failed', summary: 'It stopped on an error.', at: end.at.toISOString() }
@@ -784,7 +788,8 @@ export async function noteFollowedEvents(
             fromLastMessage: true,
           }
     // Told by the time its turn ended: the same end seen twice, or by the sweep, tells them once.
-    await wakeFollowers(scope, session.id, report, new Date(event.at))
+    // Without its seq (an older caller), it cannot be placed: the sweep brings it from the events.
+    if (seq !== undefined) await wakeFollowers(scope, session.id, report, seq)
   }
 }
 
@@ -1376,7 +1381,12 @@ async function followThread(
   if (threadId === session.id) return { error: 'A thread cannot follow itself.' }
   const thread = await db.session.findFirst({
     where: { id: threadId },
-    select: { ...CHILD_SELECT, playbookRunId: true, parent: { select: { parentId: true } } },
+    select: {
+      ...CHILD_SELECT,
+      playbookRunId: true,
+      lastSeq: true,
+      parent: { select: { parentId: true } },
+    },
   })
   if (!thread) return { error: 'No thread of this workspace has that id.' }
   if (thread.parentId === session.id)
@@ -1421,6 +1431,8 @@ async function followThread(
           followerId: session.id,
           // Already reported: told now, below; woken only by a report after this one.
           deliveredAt: report ? new Date() : null,
+          // A thread at the top: only a turn end after now is news to it.
+          ...(thread.parentId ? {} : { fromSeq: thread.lastSeq }),
         } as never,
       })
     } catch (error) {

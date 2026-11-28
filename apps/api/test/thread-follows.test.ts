@@ -470,7 +470,7 @@ test(
         data: { type: 'message.done', text: 'Opened #31: the importer.' },
       },
     })
-    const ended = { event: { type: 'turn.completed', at: new Date().toISOString() } }
+    const ended = { seq: 2, event: { type: 'turn.completed', at: new Date().toISOString() } }
     await noteFollowedEvents(builder, [ended])
     // The same end seen twice wakes it once.
     await noteFollowedEvents(builder, [ended])
@@ -480,7 +480,10 @@ test(
     assert.match(note!, /Opened #31/)
     // Its next turn's end is news again: a later end, whatever came between.
     await noteFollowedEvents(builder, [
-      { event: { type: 'turn.completed', at: new Date(Date.now() + 60_000).toISOString() } },
+      {
+        seq: 4,
+        event: { type: 'turn.completed', at: new Date(Date.now() + 60_000).toISOString() },
+      },
     ])
     assert.equal((await notes(watcher)).length, 2)
   },
@@ -517,7 +520,7 @@ test('the sweep wakes a top thread’s follower its turn’s end did not reach',
   // Its own delivery never ran (an API restart): a few minutes later, the sweep brings it, once.
   await prisma.session.update({
     where: { id: builder.id },
-    data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+    data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
   })
   await settleOverdueChildren(scope.workspaceId)
   await settleOverdueChildren(scope.workspaceId)
@@ -557,7 +560,7 @@ test(
           },
         ],
       })
-      return { event: { type: 'turn.completed', at: at.toISOString() } }
+      return { seq: seq + 1, event: { type: 'turn.completed', at: at.toISOString() } }
     }
     const first = new Date(Date.now() - 8 * 60_000)
     // Followed before either end.
@@ -571,7 +574,7 @@ test(
     await end(3, new Date(first.getTime() + 60_000), 'Merged #50.')
     await prisma.session.update({
       where: { id: builder.id },
-      data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+      data: { status: 'idle', lastSeq: 4, updatedAt: new Date(Date.now() - 5 * 60_000) },
     })
     await settleOverdueChildren(scope.workspaceId)
     await settleOverdueChildren(scope.workspaceId)
@@ -625,7 +628,7 @@ test('the sweep reaches a missed follower behind many that are up to date', { sk
   )
   await prisma.session.updateMany({
     where: { id: { in: many.map((t) => t.id) } },
-    data: { status: 'idle', updatedAt: old },
+    data: { status: 'idle', lastSeq: 5, updatedAt: old },
   })
   await prisma.threadFollow.createMany({
     data: many.map((t) => ({
@@ -634,6 +637,7 @@ test('the sweep reaches a missed follower behind many that are up to date', { sk
       followerId: watcher.id,
       createdAt: new Date(old.getTime() - 60_000),
       deliveredAt: old,
+      deliveredSeq: 5,
     })),
   })
   // And one whose last turn its follower never heard.
@@ -670,10 +674,56 @@ test('the sweep reaches a missed follower behind many that are up to date', { sk
   })
   await prisma.session.update({
     where: { id: missed.id },
-    data: { status: 'idle', updatedAt: new Date(Date.now() - 5 * 60_000) },
+    data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
   })
   await settleOverdueChildren(scope.workspaceId)
   const [note] = await notes(late)
   assert.match(note ?? '', /Shipped #77/)
   assert.equal((await notes(watcher)).length, 0)
 })
+
+test(
+  'a turn end with a slow clock still reaches the follower: by sequence, not time',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: slow clock' })
+    const watcher = await thread({ title: 'Watching a slow clock' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const event = (seq: number, type: string, at: Date, text?: string) => ({
+      ...scope,
+      sessionId: builder.id,
+      seq,
+      type,
+      at,
+      data: text ? { type, text } : { type, at: at.toISOString() },
+    })
+    const now = new Date()
+    await prisma.sessionEvent.createMany({
+      data: [event(1, 'message.done', now, 'First.'), event(2, 'turn.completed', now)],
+    })
+    await noteFollowedEvents(builder, [
+      { seq: 2, event: { type: 'turn.completed', at: now.toISOString() } },
+    ])
+    // The sweep finds it up to date and marks it so.
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq: 2, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    assert.equal((await notes(watcher)).length, 1)
+    // The next turn ends on a machine whose clock is ten minutes slow: still news.
+    const slow = new Date(Date.now() - 10 * 60_000)
+    await prisma.sessionEvent.createMany({
+      data: [event(3, 'message.done', slow, 'Second.'), event(4, 'turn.completed', slow)],
+    })
+    await noteFollowedEvents(builder, [
+      { seq: 4, event: { type: 'turn.completed', at: slow.toISOString() } },
+    ])
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[1]!, /Second\./)
+  },
+)
