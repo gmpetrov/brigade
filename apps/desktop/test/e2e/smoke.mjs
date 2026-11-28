@@ -4,7 +4,16 @@
 //   node test/e2e/smoke.mjs [path to the app's executable]
 // On Linux without a display, run it under xvfb-run.
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -69,6 +78,9 @@ const app = await electron.launch({
     BRIGADE_HOME: home,
     HOME: home,
     XDG_CONFIG_HOME: join(home, '.config'),
+    // Installed apps' launcher entries (Linux) and Start menu shortcuts (Windows) go here.
+    XDG_DATA_HOME: join(home, '.local', 'share'),
+    APPDATA: join(home, 'AppData', 'Roaming'),
     BRIGADE_DESKTOP_TEST: '1',
   },
   timeout: 60_000,
@@ -201,6 +213,120 @@ try {
     ),
   )
   check('main has no draft', () => assert.equal(refused, 'refused'))
+
+  // An app installed on this computer (app-windows.ts): Brigade asks, writes the system's own
+  // entry (a signed shim bundle, a Start menu shortcut, a launcher entry), opens the app's window
+  // with a bridge of its own, and uninstalls only what it wrote.
+  lastCheck = 'installed apps'
+  await app.evaluate(({ dialog }) => {
+    globalThis.realMessageBox = dialog.showMessageBox
+    globalThis.appQuestions = []
+    dialog.showMessageBox = async (options) => {
+      globalThis.appQuestions.push(options.title)
+      return { response: 0 }
+    }
+  })
+  // A 1px PNG: Brigade draws every size from it.
+  const png =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+  const installedApp = await main.evaluate(
+    (png) =>
+      window.brigadeDesktop.apps.install({
+        appId: 'doc_app_1',
+        path: 'Projects/Launch/clip-review.webapp',
+        title: 'Clip review',
+        iconPng: Uint8Array.from(atob(png), (c) => c.charCodeAt(0)),
+        workspaceId: 'ws_1',
+        workspaceName: 'Acme',
+      }),
+    png,
+  )
+  check('app installed', () => assert.equal(installedApp?.name, 'Clip review'))
+  const appQuestions = await app.evaluate(() => globalThis.appQuestions)
+  check('install asked first', () =>
+    assert.deepEqual(appQuestions, ['Install “Clip review” as an app?']),
+  )
+  const settings = JSON.parse(readFileSync(join(home, 'desktop.json'), 'utf8'))
+  const entry = settings.installedApps?.[0]
+  check('install kept in the settings', () => {
+    assert.match(entry?.installId ?? '', /^[0-9a-f]{32}$/)
+    assert.equal(entry.appId, 'doc_app_1')
+    assert.ok(existsSync(entry.installedPath), entry.installedPath)
+  })
+  if (process.platform === 'darwin') {
+    const bundle = join(home, 'Applications', 'Brigade Apps', 'Clip review.app')
+    check('macOS shim signed and readable', () => {
+      assert.equal(entry.installedPath, bundle)
+      execFileSync('codesign', ['--verify', '--strict', bundle])
+      const plist = join(bundle, 'Contents', 'Info.plist')
+      const read = (key) =>
+        execFileSync('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, plist])
+          .toString()
+          .trim()
+      assert.equal(read('BrigadeAppInstallId'), entry.installId)
+      assert.equal(read('ElectronAppShimServerName'), 'brigade-apps')
+      assert.equal(read('CFBundleName'), 'Clip review')
+      assert.ok(existsSync(join(bundle, 'Contents', 'Resources', 'app.icns')))
+      // codesign prints what it read on stderr.
+      const signature = spawnSync('codesign', ['-dvvv', bundle], { encoding: 'utf8' }).stderr
+      assert.equal(/^CDHash=([0-9a-f]{40})$/m.exec(signature)?.[1], entry.cdhash)
+    })
+  } else if (process.platform === 'win32') {
+    const link = await app.evaluate(
+      ({ shell }, path) => shell.readShortcutLink(path),
+      entry.installedPath,
+    )
+    check('Windows shortcut', () => {
+      assert.ok(entry.installedPath.endsWith(join('Programs', 'Brigade Apps', 'Clip review.lnk')))
+      assert.equal(link.args, `--app=${entry.installId}`)
+      assert.equal(link.appUserModelId, `ai.brigade.desktop.app.${entry.installId}`)
+      assert.ok(link.icon.endsWith('.ico') && existsSync(link.icon))
+    })
+  } else {
+    check('Linux launcher entry', () => {
+      const text = readFileSync(entry.installedPath, 'utf8')
+      assert.match(text, new RegExp(`--app=${entry.installId}$`, 'm'))
+      assert.match(text, new RegExp(`^StartupWMClass=brigade-app-${entry.installId}$`, 'm'))
+      try {
+        execFileSync('desktop-file-validate', [entry.installedPath], { stdio: 'pipe' })
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw new Error(String(error.stdout))
+      }
+    })
+  }
+  // Its window: the dashboard's page for it, with the app window's bridge only. On macOS it
+  // opens in the shim, which connected to this app.
+  const appWindow = await windowAt('/app/apps/window')
+  const appSeen = await appWindow.evaluate(() => ({
+    info: window.brigadeDesktop?.info?.window,
+    keys: Object.keys(window.brigadeDesktop ?? {}).sort(),
+    badge: typeof window.brigadeDesktop?.apps?.setBadge,
+  }))
+  check("app window's bridge", () =>
+    assert.deepEqual(appSeen, { info: 'app', keys: ['apps', 'info'], badge: 'function' }),
+  )
+  check('app window address', () => {
+    const url = new URL(appWindow.url())
+    assert.equal(url.searchParams.get('id'), 'doc_app_1')
+    assert.equal(url.searchParams.get('workspace'), 'ws_1')
+  })
+  const listed = await main.evaluate(() => window.brigadeDesktop.apps.installed())
+  check('installed list', () =>
+    assert.deepEqual(
+      listed.map((a) => a.appId),
+      ['doc_app_1'],
+    ),
+  )
+  const uninstalled = await main.evaluate(() => window.brigadeDesktop.apps.uninstall('doc_app_1'))
+  check('app uninstalled', () => {
+    assert.equal(uninstalled, true)
+    assert.ok(!existsSync(entry.installedPath))
+  })
+  const after = await main.evaluate(() => window.brigadeDesktop.apps.installed())
+  check('installed list empty', () => assert.deepEqual(after, []))
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = globalThis.realMessageBox
+  })
 
   // ⌘F (Ctrl+F) in the dashboard opens the find bar over it, which finds as the person types and
   // closes on Esc (find.ts).

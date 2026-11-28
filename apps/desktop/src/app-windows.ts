@@ -247,7 +247,7 @@ async function connected(shim: AppShimHost) {
   if (!entry || !trusted) return shim.quit()
   shims.set(entry.installId, shim)
   // Moved by hand (out of the folder, renamed): followed, so Open launches it there.
-  if (shim.bundlePath !== entry.installedPath)
+  if (mac.real(shim.bundlePath) !== mac.real(entry.installedPath))
     installed.update(entry.installId, (a) => {
       a.installedPath = shim.bundlePath
     })

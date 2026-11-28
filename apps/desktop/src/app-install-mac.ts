@@ -13,12 +13,13 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve, sep } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 
 const run = promisify(execFile)
@@ -181,9 +182,19 @@ export function ownFolder(path: string) {
     throw new Error(`${path} belongs to another account`)
 }
 
+/** A path with its links resolved (/tmp is /private/tmp), as far as it exists. */
+export function real(path: string): string {
+  try {
+    return realpathSync(path)
+  } catch {
+    const parent = dirname(path)
+    return parent === path ? path : join(real(parent), basename(path))
+  }
+}
+
 /** Whether `path` is a bundle directly in the apps folder (what uninstall may remove). */
 export const inAppsFolder = (path: string, folder = appsFolder()) =>
-  dirname(resolve(path)) === resolve(folder) && path.endsWith('.app')
+  path.endsWith('.app') && dirname(real(resolve(path))) === real(resolve(folder))
 
 export type Built = { bundle: string; cdhash: string }
 

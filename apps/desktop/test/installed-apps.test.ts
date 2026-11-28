@@ -226,6 +226,8 @@ test('only bundles in the apps folder may be removed, and links are refused', ()
   ownFolder(join(dir, 'made'))
   assert.equal(existsSync(join(dir, 'made')), true)
   symlinkSync(join(dir, 'made'), join(dir, 'link'))
+  // Through a link to the folder (/tmp is /private/tmp on macOS), the same folder.
+  assert.equal(inAppsFolder(join(dir, 'link', 'X.app'), join(dir, 'made')), true)
   assert.throws(() => ownFolder(join(dir, 'link')), /not a folder/)
 })
 
