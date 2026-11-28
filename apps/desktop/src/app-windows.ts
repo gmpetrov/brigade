@@ -243,8 +243,18 @@ async function openWindow(entry: Entry, shim?: AppShimHost) {
       relaunchCommand: win.relaunchCommand(process.execPath, entry.installId),
       relaunchDisplayName: entry.name,
     })
-  if (process.platform === 'linux' && sessionType() === 'x11')
-    await linux.setWmClass(window.getNativeWindowHandle(), linux.wmClass(entry.installId))
+  if (process.platform === 'linux' && sessionType() === 'x11') {
+    const handle = window.getNativeWindowHandle()
+    const name = linux.wmClass(entry.installId)
+    await linux.setWmClass(handle, name)
+    // Just installed: the dock may not have read its new entry yet and grouped the window under
+    // Brigade's icon. Set again once it has: a dock looks the window's app up on each change.
+    if (arrival)
+      for (const ms of linux.WM_CLASS_AGAIN_MS)
+        setTimeout(() => {
+          if (!window.isDestroyed()) void linux.setWmClass(handle, name)
+        }, ms)
+  }
   window.once('ready-to-show', () => {
     // Just installed: it shows as its animation opens out to it.
     if (!arrival?.animation) return bringUp(window)
