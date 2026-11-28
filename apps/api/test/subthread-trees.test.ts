@@ -681,4 +681,46 @@ describe('agent swarm sub-threads', { skip: database ? false : 'no database' }, 
     assert.deepEqual(after.reportDeliveredAt, kept.reportDeliveredAt)
     assert.equal(after.awaited, kept.awaited)
   })
+
+  test('two follow-ups to a Mac that goes off after the check both fail and lose nothing', async () => {
+    const root = await top(computers.cloud)
+    const onMac = await start(root, { computer: { mine: "Ada's Laptop" } })
+    assert.ok(onMac.threadId, JSON.stringify(onMac))
+    await reports({ id: onMac.threadId }, 'report', 'Deck drafted in Keynote.')
+    const kept = await row(onMac.threadId)
+    // Its runner is gone, but the presence check still sees it on (it went off just after).
+    const { localHub } = await import('../src/hub/memory-host.js')
+    const hub = localHub(scope.workspaceId)
+    const presence = hub.presence.bind(hub)
+    hub.presence = ((ids: string[]) =>
+      Object.fromEntries(ids.map((id) => [id, { ...presence([id])[id], online: true }]))) as never
+    const laptop = runners[0]!
+    laptop.close()
+    // A send that does not go must never clear its report, even for a moment (another one
+    // overlapping would then read it cleared): the database refuses any such write.
+    const guard = `keep_report_${suffix}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${guard}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'report cleared'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${guard} BEFORE UPDATE ON "Session" FOR EACH ROW WHEN (NEW.id = '${onMac.threadId}' AND OLD.report IS NOT NULL AND NEW.report IS NULL) EXECUTE FUNCTION ${guard}()`,
+    )
+    try {
+      const send = () =>
+        messageThread(db, scope, root, riley, {
+          threadId: onMac.threadId,
+          text: 'Add a slide on pricing.',
+        }) as Promise<Record<string, any>>
+      const both = await Promise.all([send(), send()])
+      for (const out of both) assert.match(out.error ?? '', /offline/)
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${guard} ON "Session"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${guard}()`)
+      hub.presence = presence as never
+      runners[0] = await fakeRunner(scope, computers.laptop)
+    }
+    const after = await row(onMac.threadId)
+    assert.equal((after.report as { summary?: string } | null)?.summary, 'Deck drafted in Keynote.')
+    assert.deepEqual(after.reportDeliveredAt, kept.reportDeliveredAt)
+  })
 })

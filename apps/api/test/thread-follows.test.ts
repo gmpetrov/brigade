@@ -776,3 +776,66 @@ test('the sweep brings every missed turn end in order, and none past a gap', { s
   assert.equal(all.length, 3)
   assert.match(all[2]!, /Three\./)
 })
+
+test(
+  'a first turn end whose wake-up fails holds the later ones, which come in order',
+  { skip },
+  async () => {
+    const builder = await thread({ title: 'Builder: failing first' })
+    const watcher = await thread({ title: 'Watching a failure' })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: builder.id, teammateId: teammate.id },
+    })
+    assert.equal((await follow(watcher, builder)).error, undefined)
+    const at = new Date(Date.now() - 10 * 60_000)
+    const event = (seq: number, type: string, text?: string) => ({
+      ...scope,
+      sessionId: builder.id,
+      seq,
+      type,
+      at,
+      data: text ? { type, text } : { type, at: at.toISOString() },
+    })
+    await prisma.sessionEvent.createMany({
+      data: [
+        event(1, 'message.done', 'First.'),
+        event(2, 'turn.completed'),
+        event(3, 'message.done', 'Second.'),
+        event(4, 'turn.completed'),
+      ],
+    })
+    // The database refuses the follower's first wake-up once.
+    const name = `fail_first_${id.replace(/-/g, '_')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Wakeup" FOR EACH ROW WHEN (NEW."sessionId" = '${watcher.id}' AND NEW.note LIKE '%First.%') EXECUTE FUNCTION ${name}()`,
+    )
+    try {
+      // Both ends in one live batch: the second must not get ahead of the first.
+      await noteFollowedEvents(builder, [
+        { seq: 2, event: { type: 'turn.completed', at: at.toISOString() } },
+        { seq: 4, event: { type: 'turn.completed', at: at.toISOString() } },
+      ])
+      // Nor in a later batch of its own.
+      await noteFollowedEvents(builder, [
+        { seq: 4, event: { type: 'turn.completed', at: at.toISOString() } },
+      ])
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Wakeup"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
+    assert.equal((await notes(watcher)).length, 0)
+    // The sweep brings both, in order.
+    await prisma.session.update({
+      where: { id: builder.id },
+      data: { status: 'idle', lastSeq: 4, updatedAt: new Date(Date.now() - 5 * 60_000) },
+    })
+    await settleOverdueChildren(scope.workspaceId)
+    const all = await notes(watcher)
+    assert.equal(all.length, 2)
+    assert.match(all[0]!, /First\./)
+    assert.match(all[1]!, /Second\./)
+  },
+)

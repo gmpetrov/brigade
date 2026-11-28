@@ -136,7 +136,14 @@ later end is news whatever happened between, and a machine whose clock is off lo
 delivery missed (a failed wake-up, an API restart) is woken by the minute's sweep, which takes only
 threads whose followers are behind (in SQL, before its limit), reads every turn end they missed in
 order up to the thread's committed `lastSeq` (never an event stored past a gap), and marks them up
-to date there; a wake-up that fails stops it at that end, for the next sweep (within the hour).
+to date there; a wake-up that fails stops it at that end, for the next sweep (within the hour). Live
+and sweep deliver the same way and strictly in order: a follow is told of an end only once it heard
+the one before (`followsDue`), so a later end never moves it past one it missed.
+
+A message to a sub-thread that has reported (from its parent) clears that report only once the
+message is taken in, and only if it is still the same report: a message that does not go (its
+member's machine went off) changes nothing, so overlapping ones that fail lose nothing. One on a
+member's machine that is already off is refused at once.
 
 ## The sidebar
 

@@ -572,7 +572,7 @@ export async function wakeFollowers(
   endSeq?: number,
 ) {
   const db = scoped(scope)
-  const due = followsDue(endSeq)
+  const due = followsDue(endSeq, endSeq !== undefined ? await prevEndSeq(sessionId, endSeq) : 0)
   const [thread, follows] = await Promise.all([
     db.session.findFirst({ where: { id: sessionId }, select: CHILD_SELECT }),
     db.threadFollow.findMany({
@@ -632,15 +632,48 @@ export async function wakeFollowers(
  * The follows still to hear a report: none delivered; for a thread at the top, by the seq of its
  * turn's end, those made before it (fromSeq) and not told of it or of a later one (deliveredSeq).
  */
-const followsDue = (endSeq?: number) =>
+const followsDue = (endSeq?: number, prevSeq = 0) =>
   (endSeq !== undefined
     ? {
         AND: [
           { OR: [{ fromSeq: null }, { fromSeq: { lt: endSeq } }] },
           { OR: [{ deliveredSeq: null }, { deliveredSeq: { lt: endSeq } }] },
+          // In order: only one that heard the end before this one (or followed after it), so a
+          // later end never moves a follow past one it missed.
+          heardThrough(prevSeq),
         ],
       }
     : { deliveredAt: null }) satisfies Prisma.ThreadFollowWhereInput
+
+/** Follows of a thread at the top up to date through `seq`: COALESCE(deliveredSeq, fromSeq, 0) >= seq. */
+const heardThrough = (seq: number) =>
+  ({
+    OR: [
+      { deliveredSeq: { gte: seq } },
+      { deliveredSeq: null, fromSeq: { gte: seq } },
+      ...(seq <= 0 ? [{ deliveredSeq: null, fromSeq: null }] : []),
+    ],
+  }) satisfies Prisma.ThreadFollowWhereInput
+
+/** Whether a turn end is one followers hear: not waiting on a person, nor tried again. */
+const endHeard = (data: StoredEvent | undefined) =>
+  !!data && (data.type === 'error' ? data.retrying !== true : !data.waiting)
+
+/** The seq of the turn end followers heard before `seq` in a thread at the top; 0 when none. */
+async function prevEndSeq(sessionId: string, seq: number) {
+  for (let before = seq; ;) {
+    const ends = await prisma.sessionEvent.findMany({
+      where: { sessionId, type: { in: ['turn.completed', 'error'] }, seq: { lt: before } },
+      orderBy: { seq: 'desc' },
+      select: { seq: true, data: true },
+      take: 20,
+    })
+    const heard = ends.find((e) => endHeard(e.data as StoredEvent | undefined))
+    if (heard) return heard.seq
+    if (ends.length < 20) return 0
+    before = ends[ends.length - 1]!.seq
+  }
+}
 
 /**
  * Follows a report should have woken but did not (a failure before the wake-up was stored):
@@ -680,6 +713,7 @@ async function wakeWaitingFollowers(workspaceId?: string) {
     })
     const from = Math.min(...follows.map((x) => x.deliveredSeq ?? x.fromSeq ?? 0))
     let caughtUp = true
+    let lastEnd = 0
     const { ends, through } = await turnEnds(f.sessionId, from, f.lastSeq)
     for (const ended of ends) {
       const failed = await wakeFollowers(scope, f.sessionId, ended.report, ended.seq).catch(
@@ -693,14 +727,18 @@ async function wakeWaitingFollowers(workspaceId?: string) {
         caughtUp = false
         break
       }
+      lastEnd = ended.seq
     }
     if (!caughtUp) continue
-    // Each end up to `through` reached those it concerned: all are up to date with it, so the next
-    // sweep takes others (or goes on from there).
+    // Those that heard the last end read (or followed after it) are up to date through `through`:
+    // their mark moves there, so the next sweep takes others. One still behind an end stays.
     await scoped(scope).threadFollow.updateMany({
       where: {
         sessionId: f.sessionId,
-        OR: [{ deliveredSeq: null }, { deliveredSeq: { lt: through } }],
+        AND: [
+          { OR: [{ deliveredSeq: null }, { deliveredSeq: { lt: through } }] },
+          heardThrough(lastEnd),
+        ],
       },
       data: { deliveredSeq: through },
     })
@@ -756,7 +794,7 @@ async function turnEnds(
   const out: { report: ChildReport; seq: number }[] = []
   for (const end of ends) {
     const data = end.data as StoredEvent | undefined
-    if (!data || (data.type === 'error' ? data.retrying === true : data.waiting)) continue
+    if (!data || !endHeard(data)) continue
     out.push({
       seq: end.seq,
       report:
@@ -817,9 +855,12 @@ export async function noteFollowedEvents(
             at: event.at,
             fromLastMessage: true,
           }
-    // Told by the time its turn ended: the same end seen twice, or by the sweep, tells them once.
-    // Without its seq (an older caller), it cannot be placed: the sweep brings it from the events.
-    if (seq !== undefined) await wakeFollowers(scope, session.id, report, seq)
+    // Told by its turn end's seq, in order: the same end seen twice, or by the sweep, tells them
+    // once. Without its seq (an older caller), it cannot be placed: the sweep brings it.
+    if (seq === undefined) return
+    // A follower not woken stays at the end before this one; later ends wait for it (followsDue),
+    // and the sweep brings them all in order.
+    if (await wakeFollowers(scope, session.id, report, seq)) return
   }
 }
 
@@ -1544,30 +1585,29 @@ export async function messageChild(
       }
   }
   const until = waitUntil(undefined)
-  // What it was, to put back if the message does not go after all (its computer went off
-  // meanwhile): only while the row is as this message left it (its updatedAt).
+  // The report it has now: cleared only once the message is taken in, and only if it is still that
+  // one (a new report, or its own message clearing it first, is left alone). A message that does
+  // not go changes nothing, so overlapping ones that fail lose nothing.
   const was = await db.session.findFirst({
     where: { id: child.id },
-    select: {
-      report: true,
-      reportDeliveredAt: true,
-      reportDueAt: true,
-      awaited: true,
-      awaitUntil: true,
-      parentTeammateId: true,
-      archivedAt: true,
-    },
+    select: { report: true, reportDeliveredAt: true },
   })
-  const version = new Date()
-  // Set to work again, as before: the tree's cap is on new sub-threads only (start_child), never on
-  // one that goes on with its work (docs/sub-threads.md).
+  // A child thread asking its review to look again: its own parent waits for it that long too.
+  if (reviewed) await outlast(db, parent.id, until)
+  // Work handed on Chief's word goes on it there too; a review stays the review it is.
+  if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordSeq: parent.chiefWordSeq ?? null })
+  const outcome = await promptThread(db, scope, thread, {
+    text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
+    memberId: null,
+    // Whoever asked for it in the parent asks in the child too.
+    onBehalfOf: await askedBy(db, parent.id),
+  })
+  if (outcome === 'offline') return { error: "That child thread's computer is offline." }
+  // Taken in: it works again, and its parent waits for it again. The tree's cap is on new
+  // sub-threads only (start_child), never on one that goes on with its work (docs/sub-threads.md).
   await db.session.updateMany({
     where: { id: child.id },
     data: {
-      updatedAt: version,
-      report: Prisma.DbNull,
-      reportDeliveredAt: null,
-      reportDueAt: null,
       // One whose every report wakes its parent (wake `each`) still does, rather than wait with others.
       ...(child.wakeEach ? {} : { awaited: true, awaitUntil: until }),
       parentTeammateId: teammate.id,
@@ -1575,42 +1615,15 @@ export async function messageChild(
       archivedAt: null,
     },
   })
-  // A child thread asking its review to look again: its own parent waits for it that long too.
-  if (reviewed) await outlast(db, parent.id, until)
-  // Work handed on Chief's word goes on it there too; a review stays the review it is.
-  if (!reviewed) await markOnChiefsWord(db, child.id, { chiefWordSeq: parent.chiefWordSeq ?? null })
-  const putBack = async () => {
-    if (!was) return
+  if (was && reportOf(was.report))
     await db.session.updateMany({
-      where: { id: child.id, updatedAt: version },
-      data: {
-        report: (was.report ?? Prisma.DbNull) as Prisma.InputJsonValue,
+      where: {
+        id: child.id,
+        report: sameReport(was.report),
         reportDeliveredAt: was.reportDeliveredAt,
-        reportDueAt: was.reportDueAt,
-        awaited: was.awaited,
-        awaitUntil: was.awaitUntil,
-        parentTeammateId: was.parentTeammateId,
-        archivedAt: was.archivedAt,
       },
+      data: { report: Prisma.DbNull, reportDeliveredAt: null, reportDueAt: null },
     })
-  }
-  let outcome: Awaited<ReturnType<typeof promptThread>>
-  try {
-    outcome = await promptThread(db, scope, thread, {
-      text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
-      memberId: null,
-      // Whoever asked for it in the parent asks in the child too.
-      onBehalfOf: await askedBy(db, parent.id),
-    })
-  } catch (error) {
-    // Refused before it was taken in: nothing went, its report is as it was.
-    await putBack()
-    throw error
-  }
-  if (outcome === 'offline') {
-    await putBack()
-    return { error: "That child thread's computer is offline." }
-  }
   await parentChanged(scope, parent.id)
   return {
     ok: true,
