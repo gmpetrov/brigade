@@ -250,29 +250,38 @@ test('on this computer, the plain cookie a rewritten one replaces is removed, wh
   // cleared only the partitioned one.
   assert.equal(
     plainCookieRemoval('session=new; Path=/; HttpOnly; SameSite=Lax', '/api/auth/sign-in'),
-    'session=; Path=/; Max-Age=0',
+    'session=; Path=/; Max-Age=0; Secure; HttpOnly',
   )
   // No Path: the browser took the request's directory.
   assert.equal(
     plainCookieRemoval('sid=1; HttpOnly', '/api/auth/sign-in?x=1'),
-    'sid=; Path=/api/auth; Max-Age=0',
+    'sid=; Path=/api/auth; Max-Age=0; Secure; HttpOnly',
   )
-  assert.equal(plainCookieRemoval('sid=1', '/login'), 'sid=; Path=/; Max-Age=0')
+  assert.equal(plainCookieRemoval('sid=1', '/login'), 'sid=; Path=/; Max-Age=0; Secure')
+  // Secure-prefixed names are refused without Secure, so their removal has it too.
+  assert.equal(
+    plainCookieRemoval('__Host-sid=1; Path=/; Secure; HttpOnly', '/'),
+    '__Host-sid=; Path=/; Max-Age=0; Secure; HttpOnly',
+  )
   assert.equal(
     plainCookieRemoval('sid=1; domain=t1.localhost; path=/app', '/app/x'),
-    'sid=; Path=/app; Domain=t1.localhost; Max-Age=0',
+    'sid=; Path=/app; Domain=t1.localhost; Max-Age=0; Secure',
   )
 })
 
 test('through the proxy on this computer, each cookie comes after the removal of its plain one', async (t) => {
-  const server = http.createServer((_req, res) =>
-    res.writeHead(200, { 'set-cookie': ['a=1; Path=/; SameSite=Lax'] }).end('ok'),
+  const server = http.createServer((req, res) =>
+    res
+      .writeHead(200, {
+        'set-cookie': [req.url === '/auth/login' ? 'b=2; HttpOnly' : 'a=1; Path=/; SameSite=Lax'],
+      })
+      .end('ok'),
   )
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
   t.after(() => server.close())
   const options = {
     port: (server.address() as { port: number }).port,
-    ports: [],
+    ports: [(server.address() as { port: number }).port],
     crossSiteCookies: false,
     state: () => 'running' as const,
     onUse: () => undefined,
@@ -281,16 +290,23 @@ test('through the proxy on this computer, each cookie comes after the removal of
   const proxy = new PreviewProxy(options)
   t.after(() => proxy.close())
   const at = await proxy.listen(20_000 + Math.floor(Math.random() * 20_000), [])
-  const cookies = await new Promise<string[] | undefined>((done, fail) => {
-    http
-      .get({ host: '127.0.0.1', port: at, path: '/', agent: false }, (res) => {
-        res.resume()
-        done(res.headers['set-cookie'])
-      })
-      .on('error', fail)
-  })
-  assert.deepEqual(cookies, [
-    'a=; Path=/; Max-Age=0',
+  const cookies = (path: string) =>
+    new Promise<string[] | undefined>((done, fail) => {
+      http
+        .get({ host: '127.0.0.1', port: at, path, agent: false }, (res) => {
+          res.resume()
+          done(res.headers['set-cookie'])
+        })
+        .on('error', fail)
+    })
+  assert.deepEqual(await cookies('/'), [
+    'a=; Path=/; Max-Age=0; Secure',
     'a=1; Path=/; Secure; SameSite=None; Partitioned',
+  ])
+  // On another port, a cookie without Path was the browser's at the address it asked for.
+  const other = `/__ports/${options.port}`
+  assert.deepEqual(await cookies(`${other}/auth/login`), [
+    `b=; Path=${other}/auth; Max-Age=0; Secure; HttpOnly`,
+    'b=2; HttpOnly; Secure; SameSite=None; Partitioned',
   ])
 })

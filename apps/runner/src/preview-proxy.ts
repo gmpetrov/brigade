@@ -74,22 +74,30 @@ export function crossSiteCookie(cookie: string) {
 /**
  * A Set-Cookie value that removes the plain (unpartitioned) cookie a rewritten one replaces:
  * in a tab, a browser keeps both, sends the stale one too, and a sign-out cleared only the
- * partitioned one (Chrome 158). Same name, path (the request's directory when it had none, as
- * the browser chose then) and domain; in the frame, the browser ignores it.
+ * partitioned one (Chrome 158). Same name, path (the directory of the address the browser
+ * asked for when it had none, as the browser chose then) and domain; Secure, which
+ * `__Secure-` and `__Host-` names need and this computer's name allows over http, and HttpOnly
+ * when it had it. In the frame, the browser ignores it.
  */
-export function plainCookieRemoval(cookie: string, requestPath: string) {
+export function plainCookieRemoval(cookie: string, requestUrl: string) {
   const [pair = '', ...attributes] = cookie.split(';').map((a) => a.trim())
   const name = pair.split('=')[0]!.trim()
   const attribute = (key: string) =>
     attributes.find((a) => new RegExp(`^${key}\\s*=`, 'i').test(a))?.replace(/^[^=]*=\s*/, '')
-  const pathname = requestPath.split('?')[0] ?? '/'
+  const pathname = requestUrl.split('?')[0] ?? '/'
   const path =
     attribute('path') ??
     (pathname.lastIndexOf('/') > 0 ? pathname.slice(0, pathname.lastIndexOf('/')) : '/')
   const domain = attribute('domain')
-  return [`${name}=`, `Path=${path}`, ...(domain ? [`Domain=${domain}`] : []), 'Max-Age=0'].join(
-    '; ',
-  )
+  const httpOnly = attributes.some((a) => /^httponly$/i.test(a))
+  return [
+    `${name}=`,
+    `Path=${path}`,
+    ...(domain ? [`Domain=${domain}`] : []),
+    'Max-Age=0',
+    'Secure',
+    ...(httpOnly ? ['HttpOnly'] : []),
+  ].join('; ')
 }
 
 /** A proxy behind the address people open: cookies for the dashboard's frame, and its host. */
@@ -272,7 +280,7 @@ export class PreviewProxy {
         if (tagged) delete headers['content-length']
         if (this.options.crossSiteCookies && headers['set-cookie'])
           headers['set-cookie'] = headers['set-cookie'].flatMap((cookie) => [
-            ...(this.options.clearPlainCookies ? [plainCookieRemoval(cookie, target.path)] : []),
+            ...(this.options.clearPlainCookies ? [plainCookieRemoval(cookie, req.url ?? '/')] : []),
             crossSiteCookie(cookie),
           ])
         // A redirect to the app's own path stays under its prefix.
