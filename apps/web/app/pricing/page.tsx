@@ -1,6 +1,6 @@
-import { Faq, Footer, Pricing } from '@/components/landing/closing'
+import { Faq, Pricing } from '@/components/landing/closing'
 import { AuthLink } from '@/components/landing/auth-link'
-import { Header } from '@/components/landing/hero'
+import { SitePage } from '@/components/home/site-page'
 import { c, Icon, SIGN_UP } from '@/components/landing/parts'
 import { pageMetadata } from '@/lib/page-metadata'
 
@@ -148,25 +148,21 @@ function CompareTable() {
 
 export default function PricingPage() {
   return (
-    <div className={c('page')}>
+    <SitePage>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
-      <Header />
-      <main>
-        <Pricing />
-        <section aria-labelledby="compare-title" className={c('sec pt-sec')}>
-          <div className={c('wrap')}>
-            <h2 className={c('h2 pt-title')} id="compare-title">
-              Compare plans
-            </h2>
-            <CompareTable />
-          </div>
-        </section>
-        <Faq items={QUESTIONS} title="Billing questions" />
-      </main>
-      <Footer />
-    </div>
+      <Pricing />
+      <section aria-labelledby="compare-title" className={c('sec pt-sec')}>
+        <div className={c('wrap')}>
+          <h2 className={c('h2 pt-title')} id="compare-title">
+            Compare plans
+          </h2>
+          <CompareTable />
+        </div>
+      </section>
+      <Faq items={QUESTIONS} title="Billing questions" />
+    </SitePage>
   )
 }
